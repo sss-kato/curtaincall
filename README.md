@@ -131,17 +131,6 @@ app/        flutter analyze && flutter test
 collector/  npm run lint && npx tsc --noEmit && npx vitest run
 ```
 
-## ステータス
-
-| フェーズ | 状態 |
-|---|---|
-| 0. 準備（サイト調査・環境構築） | 調査完了 |
-| 1〜4. 画面・収集・結合・使い勝手 | 設計中 |
-| 5. 通知（Apple Developer Program / FCM） | 未着手 |
-| 6. TestFlight 配布 | 未着手 |
-
-当面は開発者本人のみが利用し、安定後に TestFlight で身内に配布します。App Store での一般公開は現時点でスコープ外です。
-
 ## ライセンス・権利について
 
 本アプリは各団体の公式サイトから**見出し・URL・掲載日のみ**を取得し、記事本文や画像を保持しません。記事の閲覧は必ず公式サイト上で行います。各団体の利用規約と robots.txt を尊重し、1時間に1回、サーバー側で1回のみアクセスします。

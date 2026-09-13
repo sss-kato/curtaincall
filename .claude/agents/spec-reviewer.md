@@ -13,7 +13,8 @@ model: opus
 
 1. `docs/requirements.md` — 機能要件（F-xx）、非機能要件（§5）、データモデル（§7）、画面構成（§8）
 2. `docs/research/site-survey.md` — 各サイトの取得方法・URL 規則・注意点（R-8 / R-9）
-3. `docs/design/` 配下 — 存在すれば詳細設計。実装より設計を優先し、乖離があれば指摘する
+3. `docs/design/` 配下 — `status: approved` の設計書。実装より設計を優先し、乖離があれば指摘する
+4. `docs/screens/` 配下（app のみ）— `status: approved` の画面定義書。要素 `E-nn`・状態 `ST-nn`・操作 `A-nn`・表示ルール §7（文言・書式・並び順）が実装と一致しているか。画面定義書に無い要素・文言を実装が勝手に足していないか
 
 ## チェック観点
 

@@ -1,0 +1,12 @@
+{
+  "name": "curtaincall-docs-tools",
+  "private": true,
+  "type": "module",
+  "description": "docs/design の Markdown を HTML に変換するツール",
+  "scripts": {
+    "render": "node render-design.mjs"
+  },
+  "dependencies": {
+    "marked": "^15.0.0"
+  }
+}

@@ -5,9 +5,17 @@ scope: app | collector | shared    # shared = 両方が従う共通仕様（JSON
 features: []            # カバーする機能 ID（例: [F-01, F-02]）。基盤設計は空
 risks: []               # 対応するリスク ID（例: [R-2, R-8]）
 depends_on: []          # 先に承認されているべき設計書（例: [D-01]）
+screens: []             # scope: app のとき、参照する画面定義書（例: [S-00, S-01]）。すべて approved であること
 status: draft           # draft | reviewed | approved
 review_rounds: 0        # design-review が更新する
 ---
+
+<!--
+所有権（画面定義書との乖離を防ぐ）：
+  画面定義書 docs/screens/S-xx.md が決める：何が見え、何ができ、どう遷移するか（要素 E-nn・状態 ST-nn・操作 A-nn・表示ルール）
+  本書が決める：どう実現するか（UseCase・Provider・Repository・DB・処理手順・状態の判定ロジック）
+本書は画面定義書の ID を参照し、内容を転記しない。画面仕様を変えたいときは画面定義書を先に直す（/screen-doc reopen）。
+-->
 
 ## 1. 目的と範囲
 
@@ -21,6 +29,16 @@ review_rounds: 0        # design-review が更新する
 | R-xx <リスク名> | <どう緩和するか一行> | §6.2 |
 
 <`features` / `risks` に挙げた ID はすべてこの表に載せる。載せられない ID は frontmatter から外す>
+
+### 2.1 画面定義との対応（scope: app のみ）
+
+| 画面定義書の ID | 種類 | 本書での実現 | 節 |
+|---|---|---|---|
+| S-01/A-01 | 操作 | `OpenArticleUseCase` | §5.2 |
+| S-01/ST-04 | 状態 | `ArticlesState.offline`（判定条件は §6） | §5.1 / §6 |
+| S-01/E-03 | 要素のデータ源 | `ArticleRepository.watchByCompany()` | §4 / §5.1 |
+
+<`screens` に挙げた画面定義書の**すべての操作 A-nn と状態 ST-nn** をこの表に載せる。載らない ID があれば実装されない。scope が app 以外なら「該当なし」>
 
 ## 3. 構成
 

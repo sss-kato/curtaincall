@@ -220,23 +220,23 @@ collector/  npm run lint && npx tsc --noEmit && npx vitest run
 |---|---|---|---|
 | 実装 | `flutter-dev` | sonnet | app/ の実装とテスト |
 | 実装 | `collector-dev` | sonnet | collector/ の実装とテスト |
-| レビュー（第1段階） | `spec-reviewer` | opus | 要件・設計書・調査レポートどおりか |
-| レビュー（第1段階） | `architecture-reviewer` | opus | クリーンアーキテクチャ・SOLID・疎結合 |
-| レビュー（第1段階） | `adversarial-reviewer` | opus | 敵対検証。境界値・異常入力・障害シナリオ |
-| レビュー（第1段階） | `security-reviewer` | opus | 脆弱性。Secrets・外部入力・Actions 権限 |
-| レビュー（第1段階） | `flutter-expert-reviewer` | opus | Dart / Flutter / Riverpod / drift の言語仕様（app/ の差分時のみ） |
-| レビュー（第1段階） | `typescript-expert-reviewer` | opus | TypeScript / Node 22 の言語仕様（collector/ の差分時のみ） |
-| レビュー（第2段階） | `readability-reviewer` | opus | 可読性。命名・構造・コメント |
-| レビュー（第2段階） | `maintainability-reviewer` | opus | 保守性。テストの質・変更容易性・重複 |
+| レビュー（第1段階） | `spec-reviewer` | sonnet | 要件・設計書・調査レポートどおりか |
+| レビュー（第1段階） | `architecture-reviewer` | sonnet | クリーンアーキテクチャ・SOLID・疎結合 |
+| レビュー（第1段階） | `adversarial-reviewer` | sonnet | 敵対検証。境界値・異常入力・障害シナリオ |
+| レビュー（第1段階） | `security-reviewer` | sonnet | 脆弱性。Secrets・外部入力・Actions 権限 |
+| レビュー（第1段階） | `flutter-expert-reviewer` | sonnet | Dart / Flutter / Riverpod / drift の言語仕様（app/ の差分時のみ） |
+| レビュー（第1段階） | `typescript-expert-reviewer` | sonnet | TypeScript / Node 22 の言語仕様（collector/ の差分時のみ） |
+| レビュー（第2段階） | `readability-reviewer` | sonnet | 可読性。命名・構造・コメント |
+| レビュー（第2段階） | `maintainability-reviewer` | sonnet | 保守性。テストの質・変更容易性・重複 |
 | 検証 | `verifier` | haiku | 品質ゲートの実行と結果報告 |
 | 設計 | `design-writer` | opus | docs/design/ の設計書の執筆と指摘修正（コードは書かない） |
-| 設計レビュー（第1段階） | `design-spec-reviewer` | opus | 要件・調査レポート・上位設計書とのトレーサビリティ |
-| 設計レビュー（第1段階） | `design-architecture-reviewer` | opus | 設計段階でのクリーンアーキテクチャ・SOLID・規約適合 |
-| 設計レビュー（第1段階） | `design-adversarial-reviewer` | opus | 異常系・境界・障害・データ整合の抜け |
-| 設計レビュー（第2段階） | `design-clarity-reviewer` | opus | 曖昧さ・実装可能性・タスク分割の妥当性 |
+| 設計レビュー（第1段階） | `design-spec-reviewer` | sonnet | 要件・調査レポート・上位設計書とのトレーサビリティ |
+| 設計レビュー（第1段階） | `design-architecture-reviewer` | sonnet | 設計段階でのクリーンアーキテクチャ・SOLID・規約適合 |
+| 設計レビュー（第1段階） | `design-adversarial-reviewer` | sonnet | 異常系・境界・障害・データ整合の抜け |
+| 設計レビュー（第2段階） | `design-clarity-reviewer` | sonnet | 曖昧さ・実装可能性・タスク分割の妥当性 |
 | 画面定義 | `screen-writer` | opus | docs/screens/ の画面定義書の執筆と指摘修正 |
-| 画面定義レビュー | `screen-spec-reviewer` | opus | 要件 F-xx・§8 とのトレーサビリティ、状態の網羅、文言の確定 |
-| 画面定義レビュー | `screen-design-consistency-reviewer` | opus | 画面定義書と app 設計書の乖離（双方向。design-review の scope: app でも呼ばれる） |
+| 画面定義レビュー | `screen-spec-reviewer` | sonnet | 要件 F-xx・§8 とのトレーサビリティ、状態の網羅、文言の確定 |
+| 画面定義レビュー | `screen-design-consistency-reviewer` | sonnet | 画面定義書と app 設計書の乖離（双方向。design-review の scope: app でも呼ばれる） |
 
 レビュアーはすべて読み取り専用（Edit / Write を持たない）。出力は共通フォーマット（`判定: PASS | FAIL` + `[R-n]` 指摘）。設計・画面定義レビューの「場所」はファイル:行ではなく `D-xx.md §節番号` / `S-xx.md §節番号 ID` で示す。
 

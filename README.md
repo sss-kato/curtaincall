@@ -8,6 +8,7 @@
 |---|---|
 | [docs/requirements.md](docs/requirements.md) | 要件定義書（機能 F-xx、非機能、データモデル、リスク R-xx、ロードマップ） |
 | [docs/research/site-survey.md](docs/research/site-survey.md) | Phase 0 調査レポート（各サイトの RSS 有無・HTML 構造・robots.txt・利用規約） |
+| [docs/workflow.md](docs/workflow.md) | 開発フロー（画面定義 → 設計 → タスク → 実装をスキルとエージェントで回す手順） |
 | [CLAUDE.md](CLAUDE.md) | 開発規約（アーキテクチャ・テスト方針・禁止事項・開発フロー） |
 
 ## 主な機能（MVP）

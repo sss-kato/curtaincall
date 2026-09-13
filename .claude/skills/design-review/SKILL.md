@@ -1,6 +1,6 @@
 ---
 name: design-review
-description: 設計書のレビューループ。docs/design/D-xx.md を対象に、第1段階（design-spec / design-architecture / design-adversarial の3人並列）→ 修正 → 第2段階（design-clarity）→ 修正 を回し、指摘ゼロまたは3周で停止して開発者に報告する。通過した設計書は status を reviewed にする。「/design-review D-01」「/design-review all」で起動。承認は /design-doc approve。
+description: 設計書のレビューループ。docs/design/D-xx.md を対象に、第1段階（design-spec / design-architecture / design-adversarial の3人並列。scope: app は screen-design-consistency を加えた4人）→ 修正 → 第2段階（design-clarity）→ 修正 を回し、指摘ゼロまたは3周で停止して開発者に報告する。通過した設計書は status を reviewed にする。「/design-review D-01」「/design-review all」で起動。承認は /design-doc approve。
 ---
 
 # design-review — 設計書のレビューループ
@@ -19,6 +19,7 @@ description: 設計書のレビューループ。docs/design/D-xx.md を対象�
 
 - 対象ファイルが存在し、`status` が `draft` であること。`reviewed` / `approved` なら「レビュー済みです。変更する場合は status を draft に戻してください」と停止
 - `depends_on` の設計書がすべて `approved` であること。違えば警告する（上位が未確定だと整合レビューが無意味になるため）。開発者が続行を選べば進む
+- **scope: app のとき**：`screens` の画面定義書がすべて `approved` であること。違えば「先に `/screen-doc` で承認してください」と停止する
 - `git status` で `docs/design/` 以外に未コミットの変更がないこと。あれば開発者に確認する
 - 開始時の commit を記録する：`BASE=$(git rev-parse HEAD)`。レビュアーには「`git diff $BASE -- docs/design/D-xx.md` で今回の変更を見られる」と伝える（初回レビューでは全文が対象）
 
@@ -26,12 +27,18 @@ description: 設計書のレビューループ。docs/design/D-xx.md を対象�
 
 ### Step 1. 第1段階レビュー（並列）
 
-`design-spec-reviewer`、`design-architecture-reviewer`、`design-adversarial-reviewer` を**1つのメッセージで同時に**呼ぶ。全員に同じ依頼文を渡す。
+以下を**1つのメッセージで同時に**呼ぶ。全員に同じ依頼文を渡す。
+
+| scope | 呼ぶレビュアー |
+|---|---|
+| collector / shared | design-spec / design-architecture / design-adversarial（3人） |
+| app | 上記 + **screen-design-consistency-reviewer**（4人） |
 
 ```
 レビュー対象: docs/design/D-xx.md（全文）
 差分: git diff <BASE> -- docs/design/D-xx.md（第2周以降の修正箇所）
-設計書の scope / features / risks / depends_on: <frontmatter を転記>
+設計書の scope / features / risks / depends_on / screens: <frontmatter を転記>
+突き合わせる画面定義書: <screens の docs/screens/S-xx.md。scope: app 以外は「なし」>
 第 <N> 周目（前回の指摘: <あれば統合済み指摘の一覧、初回は「なし」>）
 出力フォーマットに従って返してください。
 ```
@@ -78,6 +85,8 @@ description: 設計書のレビューループ。docs/design/D-xx.md を対象�
 
 **修正で新たな未決定事項（§9）が生まれた場合**は、`/design-doc write` の Step 2 と同じ手順で AskUserQuestion により開発者に確認し、回答を design-writer に反映させてから次の周へ進む。
 
+**screen-design-consistency-reviewer の指摘で「画面定義書側を直すべき」とされたもの**、および design-writer の報告の「画面定義書側を直すべき点」は、design-writer に修正させず開発者に提示する。AskUserQuestion で「画面定義書を直す（`/screen-doc reopen S-xx`。このループはここで中断）」か「設計を画面定義書に合わせる（指摘を design-writer に渡す）」かを確認する。設計書側で画面仕様を変えて辻褄を合わせる選択肢は出さない。
+
 「対応しなかった指摘」があれば理由を記録しておく（次のレビュー依頼と最終報告に含める）。
 
 周回カウントを +1 し、**3周に達していなければ Step 1 へ**。達していれば Step 6（打ち切り）へ。
@@ -96,8 +105,9 @@ description: 設計書のレビューループ。docs/design/D-xx.md を対象�
 1. frontmatter の `status` を `reviewed`、`review_rounds` を「第1段階の周回数 + 第2段階の周回数」に更新する
 2. `変更履歴` に「design-review 通過（第1段階 N 周 / 第2段階 N 周）」を追記する
 3. `docs/design/README.md` の該当行の status を更新する
-4. コミット：`chore(docs): 設計書 D-xx をレビュー（reviewed）`
-5. 開発者に完了報告（下記フォーマット）
+4. `node docs/tools/render-design.mjs D-xx` で HTML を再生成する
+5. コミット：`chore(docs): 設計書 D-xx をレビュー（reviewed）`（`docs/design/html/` を含める）
+6. 開発者に完了報告（下記フォーマット）
 
 ### Step 6. 打ち切り
 
@@ -135,11 +145,14 @@ status: reviewed
 ### ループ中に開発者が決めたこと
 - <Step 3 で確認した未決定事項と回答。なければ「なし」>
 
+### 画面定義書側への影響（scope: app）
+- <ループ中に開発者が「設計を画面定義書に合わせる」を選んだ件、または保留した「画面定義書側を直すべき点」。なければ「なし」>
+
 ### 開発者に確認してほしいこと
 - <要件書側を直すべき点、上位設計書との矛盾など。なければ「なし」>
 
 次のステップ:
-1. docs/design/D-xx.md を通読
+1. docs/design/html/D-xx.html をブラウザで開いて通読（原稿は docs/design/D-xx.md）
 2. 問題なければ `/design-doc approve D-xx`
 ```
 
@@ -150,6 +163,7 @@ status: reviewed
 ## 禁止事項
 
 - 司令塔が設計書を直接編集すること（`status` / `review_rounds` / `変更履歴` / README の更新を除く。本文は必ず design-writer 経由）
+- `docs/design/html/` を手で編集すること（再生成のみ）
 - レビュアーの指摘を司令塔の判断で却下すること（却下は design-writer が理由付きで行い、開発者が最終判断する）
 - 周回上限を超えて続けること
 - `status` を `approved` にすること（承認は `/design-doc approve` で開発者が行う）

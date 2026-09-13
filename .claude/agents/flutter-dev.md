@@ -12,7 +12,8 @@ model: sonnet
 
 1. `CLAUDE.md` を読む。特に「アーキテクチャ原則」「テスト方針」「app/」の節
 2. 依頼に関係する `docs/requirements.md` の機能 ID（F-xx）を読む
-3. 変更対象の feature ディレクトリの既存コードを読み、既存のパターン（命名・Provider の作り方・テストの書き方）に合わせる
+3. 依頼に関係する `docs/screens/S-xx.md`（`status: approved`）と `docs/design/D-xx.md`（`status: approved`、scope: app）を読む。画面の要素・状態・操作・文言・書式は画面定義書の ID どおりに、UseCase・Provider・DB は設計書どおりに実装する。どちらにも無いものを自分で決めない（報告の「補足」に挙げる）
+4. 変更対象の feature ディレクトリの既存コードを読み、既存のパターン（命名・Provider の作り方・テストの書き方）に合わせる
 
 ## 実装ルール
 

@@ -1,7 +1,7 @@
 # CurtainCall — 開発規約
 
 舞台・ミュージカル5団体の公式情報を集約する iOS 向けニュースアグリゲーター。
-要件は `docs/requirements.md`、情報源の調査結果は `docs/research/site-survey.md`、設計は `docs/design/D-xx.md`（`status: approved` のもの）を正とする。
+要件は `docs/requirements.md`、情報源の調査結果は `docs/research/site-survey.md`、画面は `docs/screens/S-xx.md`、設計は `docs/design/D-xx.md`（いずれも `status: approved` のもの）を正とする。
 
 ## リポジトリ構成
 
@@ -9,7 +9,7 @@
 app/         Flutter アプリ（iOS 16+、iPhone のみ）
 collector/   収集バッチ（TypeScript / Node 22）。GitHub Actions で1時間おきに実行
 data/        collector が生成する articles.json（GitHub Pages で配信）
-docs/        要件・調査・設計ドキュメント
+docs/        要件・調査・画面定義・設計ドキュメント（design/html/ は生成物、tools/ は生成スクリプト）
 .claude/     エージェント・スキル定義
 ```
 
@@ -160,17 +160,28 @@ collector/  npm run lint && npx tsc --noEmit && npx vitest run
 
 ## 開発フロー
 
-設計書を承認してからタスクを切り、機能ごとに**並列**に開発する。設計は `/design-doc` と `/design-review`、タスク管理は `/pm`、各タスクの実装は `/dev-loop` が担当する。
+画面定義書と設計書を承認してからタスクを切り、機能ごとに**並列**に開発する。画面定義は `/screen-doc`、設計は `/design-doc` と `/design-review`、タスク管理は `/pm`、各タスクの実装は `/dev-loop` が担当する。
 
 ```
-/design-doc plan → /design-doc write D-xx → /design-review D-xx → /design-doc approve D-xx
-                                                                          ↓
-                                    /pm plan → /pm dispatch → /dev-loop T-xx → /pm pr → /pm done
+/screen-doc plan → write S-xx → review S-xx → approve S-xx   （app の画面。上流）
+                                                    ↓
+/design-doc plan → write D-xx → /design-review D-xx → /design-doc approve D-xx   （下流。app 設計は S-xx を ID で参照）
+                                                    ↓
+                     /pm plan → /pm dispatch → /dev-loop T-xx → /pm pr → /pm done
 ```
+
+### 画面定義（`/screen-doc`）
+
+- 画面定義書は `docs/screens/S-xx.md`（要件 §8 の 1 画面 = 1 ファイル。共通部品は `S-00`。雛形は `_template.md`、目次は `README.md`）
+- 状態遷移は設計書と同じ `draft` → `reviewed` → `approved`。レビューは screen-spec / screen-design-consistency の 2 人
+- **所有権**：画面定義書は「何が見え・何ができ・どう遷移するか」（要素 `E-nn`・状態 `ST-nn`・操作 `A-nn`・表示ルール）、設計書は「どう実現するか」（UseCase・Provider・DB）。同じ事実を 2 冊に書かない。設計書は ID で参照し、転記しない
+- **画面定義書が上流。** 画面を変えるときは `/screen-doc reopen S-xx`（参照している設計書も連動して `draft` に戻る）→ 画面定義書を直す → 設計書を `/design-review` で追随させる。設計書側で画面仕様を変えない
+- 承認後に ID を振り直さない（廃止は行を残す）
 
 ### 設計（`/design-doc`・`/design-review`）
 
 - 設計書は `docs/design/D-xx.md`（1テーマ1ファイル。雛形は `_template.md`、目次は `README.md`）
+- **成果物は HTML**：`docs/design/html/D-xx.html`（目次は `index.html`）。Markdown が原稿で、`node docs/tools/render-design.mjs` が生成する。HTML は手で編集せず、Markdown を変えたコミットに再生成を必ず含める
 - 状態遷移：`draft`（執筆）→ `reviewed`（design-review 通過）→ `approved`（開発者承認）。**`approved` だけが pm plan と dev-loop の参照対象**
 - 開発者の判断が要る事項は design-writer が §9 に挙げ、司令塔が AskUserQuestion で確認する。エージェントが勝手に決めない
 - `approved` 後に変更するときは `draft` に戻して `/design-review` をやり直す
@@ -223,8 +234,11 @@ collector/  npm run lint && npx tsc --noEmit && npx vitest run
 | 設計レビュー（第1段階） | `design-architecture-reviewer` | opus | 設計段階でのクリーンアーキテクチャ・SOLID・規約適合 |
 | 設計レビュー（第1段階） | `design-adversarial-reviewer` | opus | 異常系・境界・障害・データ整合の抜け |
 | 設計レビュー（第2段階） | `design-clarity-reviewer` | opus | 曖昧さ・実装可能性・タスク分割の妥当性 |
+| 画面定義 | `screen-writer` | opus | docs/screens/ の画面定義書の執筆と指摘修正 |
+| 画面定義レビュー | `screen-spec-reviewer` | opus | 要件 F-xx・§8 とのトレーサビリティ、状態の網羅、文言の確定 |
+| 画面定義レビュー | `screen-design-consistency-reviewer` | opus | 画面定義書と app 設計書の乖離（双方向。design-review の scope: app でも呼ばれる） |
 
-レビュアーはすべて読み取り専用（Edit / Write を持たない）。出力は共通フォーマット（`判定: PASS | FAIL` + `[R-n]` 指摘）。設計レビューの「場所」はファイル:行ではなく `D-xx.md §節番号` で示す。
+レビュアーはすべて読み取り専用（Edit / Write を持たない）。出力は共通フォーマット（`判定: PASS | FAIL` + `[R-n]` 指摘）。設計・画面定義レビューの「場所」はファイル:行ではなく `D-xx.md §節番号` / `S-xx.md §節番号 ID` で示す。
 
 ### ループ
 

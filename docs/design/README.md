@@ -7,7 +7,7 @@ Markdown（`D-xx.md`）が原稿、`html/D-xx.html` が成果物。運用は `do
 
 | ID | タイトル | scope | features / risks | depends_on | screens | status | review_rounds |
 |---|---|---|---|---|---|---|---|
-| [D-01](D-01.md) | 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード） | shared | §7 / R-5, R-8 | — | — | 未作成 | 0 |
+| [D-01](D-01.md) | 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード） | shared | §7 / R-5, R-8 | — | — | draft | 0 |
 | [D-02](D-02.md) | collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信） | collector | F-07, F-11 / R-2, R-7 | D-01 | — | 未作成 | 0 |
 | [D-03](D-03.md) | Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応） | collector | R-5, R-8, R-9 | D-01, D-02 | — | 未作成 | 0 |
 | [D-04](D-04.md) | app 基盤設計（feature 構成・drift スキーマ・Riverpod / DI・HTTP・FCM 購読・100 件保持・通知許可） | app | F-07, F-08, F-09 / R-6 | D-01 | S-00 | 未作成 | 0 |

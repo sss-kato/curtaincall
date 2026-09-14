@@ -147,7 +147,7 @@ test/
 - `sources/` 配下のファイル同士の import 禁止
 - `sources/` からネットワークを直接呼ばない。`infrastructure/http` 経由
 - ヘッドレスブラウザ（Puppeteer 等）は使わない（全サイト静的 HTML を確認済み）
-- User-Agent：`CurtainCall/1.0 (personal news reader; +https://github.com/<user>/CurtainCall)`
+- User-Agent：`CurtainCall/1.0 (personal news reader; +https://github.com/sss-kato/curtaincall)`
 
 ## 品質ゲート
 

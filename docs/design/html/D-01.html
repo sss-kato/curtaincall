@@ -1,0 +1,1508 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード） — CurtainCall 設計書</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#59636e;--line:#d1d9e0;--accent:#0969da;--code:#f6f8fa;--th:#f6f8fa;
+ --draft:#9a6700;--reviewed:#0969da;--approved:#1a7f37}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--line:#3d444d;--accent:#4493f8;--code:#161b22;--th:#161b22}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif}
+.wrap{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+nav{position:sticky;top:0;height:100vh;overflow:auto;padding:24px 16px;border-right:1px solid var(--line);font-size:13px}
+nav a{display:block;color:var(--muted);text-decoration:none;padding:3px 0}
+nav a:hover{color:var(--accent)}
+nav .d3{padding-left:14px}
+nav .home{font-weight:600;color:var(--fg);margin-bottom:12px}
+main{padding:32px 48px;max-width:1000px}
+header h1{margin:0 0 8px;font-size:26px}
+.meta{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;font-size:13px;color:var(--muted);margin:0 0 24px;padding:12px 16px;border:1px solid var(--line);border-radius:6px}
+.meta b{color:var(--fg);font-weight:600}
+.badge{display:inline-block;padding:1px 10px;border-radius:999px;color:#fff;font-size:12px;font-weight:600;vertical-align:middle}
+.badge.draft{background:var(--draft)}.badge.reviewed{background:var(--reviewed)}.badge.approved{background:var(--approved)}
+h2{font-size:20px;margin-top:40px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3{font-size:16px;margin-top:28px}
+.anchor{margin-left:8px;color:var(--line);text-decoration:none;font-weight:400}
+h2:hover .anchor,h3:hover .anchor{color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--th)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--code);padding:12px 16px;border-radius:6px;overflow-x:auto}
+pre code{background:none;padding:0}
+pre.mermaid{background:none;text-align:center}
+blockquote{margin:0;padding:0 16px;color:var(--muted);border-left:4px solid var(--line)}
+a{color:var(--accent)}
+.gen{margin-top:48px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+@media (max-width:800px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:24px 16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+<a class="home" href="index.html">CurtainCall 設計書</a>
+<a href="index.html">目次</a><a href="D-01.html" style="color:var(--accent)">D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</a>
+<hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+<a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 契約の流れ</a><a class="d3" href="#sec-3-2">3.2 collector 側のファイル配置（本書が所有する部分）</a><a class="d3" href="#sec-3-3">3.3 app 側で本書が要求すること（配置は D-04 が決める）</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Article（要件 §7.1）</a><a class="d3" href="#sec-4-2">4.2 articles.json（ファイル全体）</a><a class="d3" href="#sec-4-3">4.3 companies.json（団体定義）</a><a class="d3" href="#sec-4-4">4.4 category の値（要件 §7.1・§3.3、S-00 §7.2）</a><a class="d3" href="#sec-4-5">4.5 並び替えキー（S-01 §7.1 と同一）</a><a class="d3" href="#sec-4-6">4.6 バージョニング</a><a class="d3" href="#sec-4-7">4.7 配信 URL とキャッシュ</a><a class="d3" href="#sec-4-8">4.8 通知ペイロード（要件 §6.3、S-01 §8 #20）</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 ID 算出（<code>normalizeUrl</code> → <code>buildArticleId</code>）</a><a class="d3" href="#sec-5-2">5.2 contentHash 算出と更新判定（<code>normalizeTitle</code> → <code>buildContentHash</code> → 突合）</a><a class="d3" href="#sec-5-3">5.3 category 判定（<code>resolveCategory</code>）</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
+</nav>
+<main>
+<header><h1>D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</h1><div class="meta"><b>status</b><span><span class="badge draft">draft</span></span><b>scope</b><span>shared</span><b>risks</b><span>R-5, R-8</span><b>review_rounds</b><span>0</span></div></header>
+<h2 id="sec-1">1. 目的と範囲<a class="anchor" href="#sec-1">#</a></h2>
+<p>本書は、collector（収集バッチ）と app（Flutter）の<strong>両方が従う契約</strong>を 1 か所に定める。決めるのは次の 8 点：(1) <code>articles.json</code> の構造と zod スキーマ、(2) 団体定義 <code>companies.json</code> の構造と 5 団体の値、(3) 記事 <code>id</code> の算出規則（URL 正規化とハッシュ）、(4) <code>contentHash</code> の算出規則と更新判定、(5) <code>category</code> の値・優先順位・判定の段階、(6) 配信 URL とキャッシュ制御、(7) FCM 通知ペイロードとトピック名、(8) スキーマのバージョニング。決めないのは、collector の層構成・Source 実装・GitHub Actions・FCM 送信手順（<a href="D-02.html">D-02</a>）、団体別のセレクタ・タグ対応表・キーワード表・東宝の団体固有 URL 規則（<a href="D-03.html">D-03</a>）、app の drift スキーマ・Provider・UseCase（<a href="D-04.html">D-04</a>・<a href="D-05.html">D-05</a>）である。型の正は本書の TypeScript コード片であり、app は同じ名前・同じ意味のフィールドを Dart で持つ。</p>
+<h2 id="sec-2">2. 要件との対応<a class="anchor" href="#sec-2">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>要件</th>
+<th>本書での扱い</th>
+<th>節</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>§7.1 記事（Article）</td>
+<td>要件のフィールド名・型をそのまま zod スキーマにし、ファイル全体は <code>schemaVersion</code>・<code>generatedAt</code>・<code>articles</code> のラッパで包む。省略可能フィールドは「キー省略」で表す</td>
+<td>§4.1 / §4.2</td>
+</tr>
+<tr>
+<td>§7.2 端末内で管理する状態</td>
+<td><code>articles</code> テーブルが保持するフィールドは §4.1 と同じ名前・意味。app 側の更新検知は <code>updatedAt</code> の値の変化で行う（<code>contentHash</code> は collector の内部機構）</td>
+<td>§4.1 / §5.2</td>
+</tr>
+<tr>
+<td>§3.1 対象団体（定義は設定ファイルで外出し）</td>
+<td><code>data/companies.json</code> に 5 団体の id・正式名・短縮名・情報源 URL・FCM トピックを持つ。配列の順序が表示順。団体追加はこのファイルの追記と Source 実装の追加だけ（CLAUDE.md 開放閉鎖）</td>
+<td>§4.3</td>
+</tr>
+<tr>
+<td>§5 データ保持（団体ごとに最新 100 件）</td>
+<td><code>articles.json</code> は団体ごとに並び替えキー（§4.5）の上位 100 件だけを含む。app の上限（S-01 §7.5）と同じキーで切り詰める</td>
+<td>§4.2 / §5.2</td>
+</tr>
+<tr>
+<td>§6.1 全体像（articles.json を GitHub Pages で配信）</td>
+<td>配信 URL は <code>https://sss-kato.github.io/curtaincall/articles.json</code>。キャッシュは Pages 既定（<code>max-age=600</code>）と ETag に従い、app はキャッシュバスティングをしない</td>
+<td>§4.7</td>
+</tr>
+<tr>
+<td>§6.3 通知の仕組み（トピック購読・<code>companyId</code> を含める・記事 URL を含めない）</td>
+<td>トピック名は <code>companies.json</code> の <code>fcmTopic</code>（既定は <code>id</code> と同じ）。<code>data.companyId</code> を必ず含め、記事 URL・記事 ID は含めない</td>
+<td>§4.8</td>
+</tr>
+<tr>
+<td>F-07 プッシュ通知（契約部分。送信手順は D-02、受信は D-04）</td>
+<td>通知は「新着」記事のみ。1 回の実行につき団体ごとに 1 通にまとめる。文面は <code>title</code> = 正式名（複数は「（新着 n 件）」付き）、<code>body</code> = 見出し（複数は「ほか n-1 件」付き）。前回スナップショットが無い実行では送らない</td>
+<td>§4.8 / §8 #13〜#15・#29・#30</td>
+</tr>
+<tr>
+<td>F-11 更新記事の再浮上（契約部分。差分検知は D-02、表示は D-05）</td>
+<td><code>contentHash</code> の不一致で <code>updatedAt</code> を実行時刻に更新する。一致すれば前回の <code>updatedAt</code> を引き継ぐ</td>
+<td>§5.2</td>
+</tr>
+<tr>
+<td>R-5 カテゴリの自動判定精度</td>
+<td>判定を「サイト側タグ → 見出しキーワード → <code>other</code>」の 2 段に固定し、複数候補は優先順位表で 1 つに決める。タグ対応表・キーワード表の具体値は D-03 に置き、実データを見て表だけを調整できるようにする</td>
+<td>§4.4 / §5.3</td>
+</tr>
+<tr>
+<td>R-8 東宝のドメイン分散</td>
+<td>URL 正規化を「汎用（本書）」と「団体固有（D-03）」の 2 段に分け、<code>id</code> は団体固有 → 汎用の順で正規化した URL から算出する。<code>Article.url</code> にも正規化後の URL を格納する</td>
+<td>§5.1</td>
+</tr>
+<tr>
+<td>S-00 §7.1 団体の表示名</td>
+<td>短縮名 <code>shortName</code>（宝塚／四季／ホリプロ／東宝／新感線）と正式名 <code>name</code> を <code>companies.json</code> に持つ</td>
+<td>§4.3</td>
+</tr>
+<tr>
+<td>S-00 §7.2 カテゴリの表示対応</td>
+<td><code>category</code> の 7 値は S-00 の表と同じ文字列。未知の値は app 側で <code>other</code> 扱い（S-00 の規則）、collector 側は出力不可（zod enum）</td>
+<td>§4.4</td>
+</tr>
+<tr>
+<td>S-00 §7.3 日時の書式</td>
+<td><code>publishedAt</code> は必ずオフセット付き ISO8601（<code>+09:00</code>）で、日付のみのサイトは <code>T00:00:00+09:00</code> とする。app は端末タイムゾーンへ変換して日付だけを表示する</td>
+<td>§4.1 / §8 #3</td>
+</tr>
+<tr>
+<td>S-01 §7.1 並び順 / §7.5 上限 / §8 #18 タブ順</td>
+<td>並び替えキー <code>updatedAt ?? publishedAt</code> → <code>fetchedAt</code> 降順 → <code>id</code> 昇順を本書で <code>compareArticles</code> として定義し、collector の切り詰めと app の表示で共用する。タブ順は <code>companies.json</code> の配列順</td>
+<td>§4.5 / §4.3</td>
+</tr>
+<tr>
+<td>S-01 §7.4 取得結果の反映 / §8 #20 通知タップ</td>
+<td>新着 = app に無い <code>id</code>、更新 = <code>updatedAt</code> の値が変わった記事。通知の <code>data.companyId</code> でタブを選ぶ</td>
+<td>§5.2 / §4.8</td>
+</tr>
+<tr>
+<td>S-02 §7.3 100 件から外れた保存記事</td>
+<td>100 件から外れた記事は <code>articles.json</code> に含まれないため更新検知の対象外になる（S-02 の前提を本書の切り詰め規則が保証する）</td>
+<td>§4.2 / §6</td>
+</tr>
+<tr>
+<td>S-03 §7.1 通知トグルの団体</td>
+<td>トグルの並び・ラベルは <code>companies.json</code> の配列順と <code>shortName</code>。購読するトピックは <code>fcmTopic</code></td>
+<td>§4.3 / §4.8</td>
+</tr>
+</tbody></table>
+<h3 id="sec-2-1">2.1 画面定義との対応（scope: app のみ）<a class="anchor" href="#sec-2-1">#</a></h3>
+<p>該当なし。本書は scope: shared であり、画面定義書の A-nn / ST-nn への対応は D-04・D-05 が持つ。</p>
+<h2 id="sec-3">3. 構成<a class="anchor" href="#sec-3">#</a></h2>
+<h3 id="sec-3-1">3.1 契約の流れ<a class="anchor" href="#sec-3-1">#</a></h3>
+<pre class="mermaid">flowchart LR
+  CJ[&quot;data/companies.json（団体定義）&quot;] --&gt; COL[&quot;collector（D-02 / D-03）&quot;]
+  COL --&gt; AJ[&quot;data/articles.json&quot;]
+  AJ --&gt; PAGES[&quot;GitHub Pages（§4.7）&quot;]
+  PAGES --&gt; APP[&quot;app（D-04 / D-05）&quot;]
+  CJ -. &quot;同梱アセット app/assets/companies.json（§8 #28）&quot; .-&gt; APP
+  COL --&gt; FCM[&quot;FCM トピック（§4.8）&quot;]
+  FCM --&gt; APP</pre>
+<table>
+<thead>
+<tr>
+<th>契約</th>
+<th>書き手（生成・検証）</th>
+<th>読み手（許容範囲）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>articles.json</code></td>
+<td>collector。書き出し前に <code>ArticlesFileSchema</code>（strict）で検証し、失敗したら書き出さない</td>
+<td>app。未知のフィールドは無視。<code>schemaVersion</code> が対応外なら取得失敗として扱い、端末内の記事を消さない</td>
+</tr>
+<tr>
+<td><code>companies.json</code></td>
+<td>開発者が手で編集。collector は起動時に <code>CompaniesFileSchema</code>（strict）で検証し、失敗したら収集を始めない</td>
+<td>app。<code>data/companies.json</code> と同じ内容を <code>app/assets/companies.json</code> として同梱し、ビルド時に取り込む（§8 #28）。未知のフィールドは無視。記事側に定義に無い <code>companyId</code> があっても記事を隠さない（S-00 §7.1）</td>
+</tr>
+<tr>
+<td><code>id</code> / <code>contentHash</code> / <code>category</code></td>
+<td>collector が §5 の規則で算出</td>
+<td>app は不透明な文字列として保持。再計算しない</td>
+</tr>
+<tr>
+<td>通知ペイロード</td>
+<td>collector が §4.8 の形で送信</td>
+<td>app は <code>data.companyId</code> だけを読む。無ければ「すべて」（S-01 §8 #15）</td>
+</tr>
+</tbody></table>
+<h3 id="sec-3-2">3.2 collector 側のファイル配置（本書が所有する部分）<a class="anchor" href="#sec-3-2">#</a></h3>
+<p>依存の方向は infrastructure → domain のみ。domain は Node の組み込みモジュールを import しない（CLAUDE.md）。ハッシュ計算は <code>node:crypto</code> を使うため、domain には <code>Hasher</code> インターフェースだけを置き、実装は infrastructure に置く。</p>
+<pre><code>collector/
+  src/
+    domain/
+      article.ts            Article 型・Category 値・ArticleSchema・ArticlesFileSchema（§4.1・§4.2・§4.4）
+      company.ts            Company 型・CompanySchema・CompaniesFileSchema（§4.3）
+      category.ts           CATEGORY_PRIORITY・resolveCategory（§5.3）
+      url.ts                normalizeUrl（汎用正規化。§5.1）・TRACKING_PARAMS
+      hasher.ts             Hasher インターフェース
+      article-identity.ts   buildArticleId・normalizeTitle・buildContentHash・compareArticles（§5.1・§5.2・§4.5）
+    infrastructure/
+      hash/
+        sha256-hasher.ts    Hasher 実装（node:crypto）
+  test/
+    domain/
+      contract.test.ts      §7 の契約テスト
+    fixtures/
+      contract/
+        articles.sample.json     §4.2 のサンプル（app のテストにもコピーして使う）
+        companies.sample.json    §4.3 と同じ内容
+data/
+  companies.json            団体定義の正本（§4.3）
+  articles.json             collector の出力（初期状態は articles: []）
+app/
+  assets/
+    companies.json          data/companies.json の同一コピー（app 同梱。§8 #28。pubspec への登録は D-04）</code></pre>
+<pre class="mermaid">flowchart TB
+  subgraph infrastructure
+    H[&quot;hash/sha256-hasher.ts&quot;]
+  end
+  subgraph domain
+    ART[&quot;article.ts&quot;]
+    CMP[&quot;company.ts&quot;]
+    CAT[&quot;category.ts&quot;]
+    URL[&quot;url.ts&quot;]
+    HS[&quot;hasher.ts&quot;]
+    ID[&quot;article-identity.ts&quot;]
+  end
+  H --&gt; HS
+  ID --&gt; HS
+  ID --&gt; ART
+  CAT --&gt; ART</pre>
+<h3 id="sec-3-3">3.3 app 側で本書が要求すること（配置は D-04 が決める）<a class="anchor" href="#sec-3-3">#</a></h3>
+<ul>
+<li><code>Article</code> と同じ名前のフィールドを持つ Dart のエンティティ（<code>thumbnail</code>・<code>updatedAt</code> は nullable）</li>
+<li><code>data/companies.json</code> と同じ内容の同梱アセット <code>app/assets/companies.json</code> の読み込み（<code>pubspec.yaml</code> の <code>assets</code> に登録。実行時に配信 URL から取得しない。§8 #28）。団体追加時は開発者がこのファイルを <code>data/companies.json</code> と同じ内容に更新して再ビルドする</li>
+<li>配信ベース URL <code>https://sss-kato.github.io/curtaincall/</code>（§4.7）を保持する定数</li>
+<li><code>compareArticles</code>（§4.5）と同じ並び替え</li>
+<li>通知の <code>data.companyId</code> の読み取り</li>
+</ul>
+<h2 id="sec-4">4. データ<a class="anchor" href="#sec-4">#</a></h2>
+<h3 id="sec-4-1">4.1 Article（要件 §7.1）<a class="anchor" href="#sec-4-1">#</a></h3>
+<pre><code class="language-ts">// collector/src/domain/article.ts
+import { z } from &quot;zod&quot;;
+
+export const CATEGORIES = [
+  &quot;new_work&quot;, &quot;ticket&quot;, &quot;streaming&quot;, &quot;schedule&quot;, &quot;cast&quot;, &quot;person&quot;, &quot;other&quot;,
+] as const;
+export const CategorySchema = z.enum(CATEGORIES);
+export type Category = z.infer&lt;typeof CategorySchema&gt;;
+
+/** 秒精度・オフセット +09:00 固定の ISO8601（§8 #3）。例: 2026-09-13T00:00:00+09:00 */
+export const DateTimeSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+09:00$/);
+
+/** SHA-256 の 16 進小文字・先頭 16 文字（§8 #25） */
+export const HashSchema = z.string().regex(/^[0-9a-f]{16}$/);
+
+/** 英小文字始まり、英小文字・数字・アンダースコア、2〜32 文字 */
+export const CompanyIdSchema = z.string().regex(/^[a-z][a-z0-9_]{1,31}$/);
+
+export const HttpUrlSchema = z.string().url().regex(/^https?:\/\//).max(2048);
+
+export const ArticleSchema = z
+  .object({
+    id: HashSchema,                          // 正規化した URL のハッシュ（§5.1）
+    companyId: CompanyIdSchema,              // companies.json の id
+    title: z.string().min(1).max(300),       // 正規化後の見出し（§5.2 手順 1）
+    url: HttpUrlSchema,                      // 正規化後の記事 URL（§5.1）。app はこれを開く
+    category: CategorySchema,                // §5.3
+    publishedAt: DateTimeSchema,             // サイト側の掲載日。日付のみのサイトは T00:00:00+09:00
+    fetchedAt: DateTimeSchema,               // その記事を初めて観測した実行の generatedAt（§8 #4）
+    thumbnail: HttpUrlSchema.optional(),     // 取得できた場合のみ。キー省略（null は書かない）
+    contentHash: HashSchema,                 // §5.2
+    updatedAt: DateTimeSchema.optional(),    // 更新を検知した実行の generatedAt。キー省略
+  })
+  .strict();
+export type Article = z.infer&lt;typeof ArticleSchema&gt;;</code></pre>
+<table>
+<thead>
+<tr>
+<th>規則</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>省略可能フィールド</td>
+<td><code>thumbnail</code>・<code>updatedAt</code> は値が無いとき<strong>キーを書かない</strong>。<code>null</code> は書かない。読み手（app）はキー無しと <code>null</code> を同じ「無し」として扱う</td>
+</tr>
+<tr>
+<td>日時</td>
+<td>すべて <code>YYYY-MM-DDTHH:mm:ss+09:00</code>（Asia/Tokyo、秒精度、ミリ秒無し）。RSS の <code>pubDate</code>（RFC822、任意のオフセット）は同じ瞬間を +09:00 に変換する。日付のみのサイトは <code>T00:00:00+09:00</code>。読み手は任意のオフセットの ISO8601 を解釈できること（将来の変更に備える）</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>§5.2 手順 1 で正規化した文字列。空なら記事を破棄（§6）</td>
+</tr>
+<tr>
+<td><code>url</code></td>
+<td>絶対 URL、<code>http</code> または <code>https</code>、2048 文字以内。正規化後（§5.1）の文字列</td>
+</tr>
+<tr>
+<td><code>thumbnail</code></td>
+<td>絶対 URL、<code>http</code> または <code>https</code>、2048 文字以内。条件を満たさないときはフィールドを省略し、記事は残す。app は URL を参照するだけで端末にコピーしない（CLAUDE.md、調査レポート §6.2）</td>
+</tr>
+<tr>
+<td>本文</td>
+<td><strong>持たない</strong>（要件 §7）。本文・抜粋・説明文に相当するフィールドを追加してはならない</td>
+</tr>
+</tbody></table>
+<p>Dart 側は同じフィールド名を使う。<code>publishedAt</code>・<code>fetchedAt</code>・<code>updatedAt</code> は <code>DateTime.parse</code> でオフセット付きとして解釈し、表示時に端末タイムゾーンへ変換する（S-00 §7.3）。</p>
+<h3 id="sec-4-2">4.2 articles.json（ファイル全体）<a class="anchor" href="#sec-4-2">#</a></h3>
+<pre><code class="language-ts">// collector/src/domain/article.ts（続き）
+export const ARTICLES_SCHEMA_VERSION = 1 as const;
+export const MAX_ARTICLES_PER_COMPANY = 100; // 要件 §5
+
+export const ArticlesFileSchema = z
+  .object({
+    schemaVersion: z.literal(ARTICLES_SCHEMA_VERSION),   // §4.6（§8 #27）
+    generatedAt: DateTimeSchema,                          // この実行の基準時刻（1 実行 1 値）
+    articles: z.array(ArticleSchema),
+  })
+  .strict()
+  .superRefine((file, ctx) =&gt; {
+    const ids = new Set&lt;string&gt;();
+    const perCompany = new Map&lt;string, number&gt;();
+    for (const a of file.articles) {
+      if (ids.has(a.id)) ctx.addIssue({ code: &quot;custom&quot;, message: `duplicate id: ${a.id}` });
+      ids.add(a.id);
+      perCompany.set(a.companyId, (perCompany.get(a.companyId) ?? 0) + 1);
+    }
+    for (const [companyId, n] of perCompany) {
+      if (n &gt; MAX_ARTICLES_PER_COMPANY) {
+        ctx.addIssue({ code: &quot;custom&quot;, message: `${companyId}: ${n} &gt; ${MAX_ARTICLES_PER_COMPANY}` });
+      }
+    }
+  });
+export type ArticlesFile = z.infer&lt;typeof ArticlesFileSchema&gt;;</code></pre>
+<table>
+<thead>
+<tr>
+<th>規則</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>件数</td>
+<td>団体ごとに最大 100 件（要件 §5）。合計は 100 × 団体数（5 団体で 500）</td>
+</tr>
+<tr>
+<td>含める記事</td>
+<td>団体ごとに「前回の <code>articles.json</code> に含まれていた記事 ∪ 今回収集した記事」を <code>compareArticles</code>（§4.5）で並べ、上位 100 件。サイトの一覧から消えた記事も、上限で押し出されるまで残す</td>
+</tr>
+<tr>
+<td>並び</td>
+<td><code>companies.json</code> の配列順に団体をまとめ、団体内は <code>compareArticles</code> の順。出力を決定的にして git の差分を最小にする</td>
+</tr>
+<tr>
+<td>書式</td>
+<td>UTF-8（BOM 無し）、2 スペースインデント、キーは §4.1 の宣言順、末尾に改行 1 つ</td>
+</tr>
+<tr>
+<td><code>generatedAt</code></td>
+<td>実行開始時刻。同じ実行で新着になった記事の <code>fetchedAt</code>、更新になった記事の <code>updatedAt</code> はこの値と一致する</td>
+</tr>
+<tr>
+<td>空</td>
+<td><code>articles: []</code> は妥当（初期状態・全 Source 失敗時の前回引き継ぎは D-02）</td>
+</tr>
+</tbody></table>
+<p>サンプル（<code>test/fixtures/contract/articles.sample.json</code> と同じ内容。ハッシュ値は例示で、実値は §5 の規則で算出する）：</p>
+<pre><code class="language-json">{
+  &quot;schemaVersion&quot;: 1,
+  &quot;generatedAt&quot;: &quot;2026-09-13T15:00:12+09:00&quot;,
+  &quot;articles&quot;: [
+    {
+      &quot;id&quot;: &quot;3f9a1c2b7d5e8a10&quot;,
+      &quot;companyId&quot;: &quot;takarazuka&quot;,
+      &quot;title&quot;: &quot;宝塚友の会『ステージトーク in 東京』宙組 無料配信の実施について&quot;,
+      &quot;url&quot;: &quot;https://kageki.hankyu.co.jp/news/20260913_002.html&quot;,
+      &quot;category&quot;: &quot;streaming&quot;,
+      &quot;publishedAt&quot;: &quot;2026-09-13T00:00:00+09:00&quot;,
+      &quot;fetchedAt&quot;: &quot;2026-09-13T10:00:05+09:00&quot;,
+      &quot;contentHash&quot;: &quot;a41d0c9e2b7f6d31&quot;
+    },
+    {
+      &quot;id&quot;: &quot;8c2e5f7a1b3d9e04&quot;,
+      &quot;companyId&quot;: &quot;horipro&quot;,
+      &quot;title&quot;: &quot;【重要】舞台『ハリー・ポッターと呪いの子』公演中止のお詫びと払い戻し対応実施のお知らせ&quot;,
+      &quot;url&quot;: &quot;https://horipro-stage.jp/hpcc_refund/&quot;,
+      &quot;category&quot;: &quot;other&quot;,
+      &quot;publishedAt&quot;: &quot;2026-09-08T18:04:51+09:00&quot;,
+      &quot;fetchedAt&quot;: &quot;2026-09-08T19:00:03+09:00&quot;,
+      &quot;thumbnail&quot;: &quot;https://horipro-stage.jp/wp/wp-content/uploads/2026/09/hpcc.jpg&quot;,
+      &quot;contentHash&quot;: &quot;5d7b9e1f3a2c4e68&quot;,
+      &quot;updatedAt&quot;: &quot;2026-09-10T12:00:07+09:00&quot;
+    },
+    {
+      &quot;id&quot;: &quot;b7d3e9f1a5c2d804&quot;,
+      &quot;companyId&quot;: &quot;shinkansen&quot;,
+      &quot;title&quot;: &quot;／爆烈忠臣蔵／ゲキ×シネ2027年1月8日(金)全国公開決定！！&quot;,
+      &quot;url&quot;: &quot;https://blog.vi-shinkansen.co.jp/?p=13727&quot;,
+      &quot;category&quot;: &quot;streaming&quot;,
+      &quot;publishedAt&quot;: &quot;2026-09-11T12:00:00+09:00&quot;,
+      &quot;fetchedAt&quot;: &quot;2026-09-11T13:00:04+09:00&quot;,
+      &quot;contentHash&quot;: &quot;2e6c8a0d4f1b3957&quot;
+    }
+  ]
+}</code></pre>
+<h3 id="sec-4-3">4.3 companies.json（団体定義）<a class="anchor" href="#sec-4-3">#</a></h3>
+<pre><code class="language-ts">// collector/src/domain/company.ts
+import { z } from &quot;zod&quot;;
+import { CompanyIdSchema, HttpUrlSchema } from &quot;./article&quot;;
+
+export const SourceKindSchema = z.enum([&quot;rss&quot;, &quot;html&quot;]);
+
+export const CompanySchema = z
+  .object({
+    id: CompanyIdSchema,                       // Article.companyId の値
+    name: z.string().min(1).max(30),           // 正式名（要件 §3.1）。通知の title に使う（§4.8）
+    shortName: z.string().min(1).max(10),      // 短縮名（S-00 §7.1）。タブ・記事セル・通知トグルのラベル
+    fcmTopic: z.string().regex(/^[a-zA-Z0-9\-_.~%]+$/).max(64), // FCM トピック名。既定は id と同じ
+    sources: z                                 // 取得元（調査レポート §1〜5）。Source 実装はこの URL を使う
+      .array(z.object({ kind: SourceKindSchema, url: HttpUrlSchema }).strict())
+      .min(1),
+  })
+  .strict();
+export type Company = z.infer&lt;typeof CompanySchema&gt;;
+
+export const COMPANIES_SCHEMA_VERSION = 1 as const;
+export const CompaniesFileSchema = z
+  .object({
+    schemaVersion: z.literal(COMPANIES_SCHEMA_VERSION),
+    companies: z.array(CompanySchema).min(1),  // 配列順 = 表示順（S-01 §8 #18）
+  })
+  .strict()
+  .superRefine((file, ctx) =&gt; {
+    const ids = new Set(file.companies.map((c) =&gt; c.id));
+    const topics = new Set(file.companies.map((c) =&gt; c.fcmTopic));
+    if (ids.size !== file.companies.length) ctx.addIssue({ code: &quot;custom&quot;, message: &quot;duplicate id&quot; });
+    if (topics.size !== file.companies.length) ctx.addIssue({ code: &quot;custom&quot;, message: &quot;duplicate fcmTopic&quot; });
+  });
+export type CompaniesFile = z.infer&lt;typeof CompaniesFileSchema&gt;;</code></pre>
+<p><code>data/companies.json</code> の内容（正本。要件 §3.1・§3.2、調査レポート §1〜5、S-00 §7.1、S-01 §8 #18）：</p>
+<pre><code class="language-json">{
+  &quot;schemaVersion&quot;: 1,
+  &quot;companies&quot;: [
+    {
+      &quot;id&quot;: &quot;takarazuka&quot;,
+      &quot;name&quot;: &quot;宝塚歌劇団&quot;,
+      &quot;shortName&quot;: &quot;宝塚&quot;,
+      &quot;fcmTopic&quot;: &quot;takarazuka&quot;,
+      &quot;sources&quot;: [{ &quot;kind&quot;: &quot;html&quot;, &quot;url&quot;: &quot;https://kageki.hankyu.co.jp/news/&quot; }]
+    },
+    {
+      &quot;id&quot;: &quot;shiki&quot;,
+      &quot;name&quot;: &quot;劇団四季&quot;,
+      &quot;shortName&quot;: &quot;四季&quot;,
+      &quot;fcmTopic&quot;: &quot;shiki&quot;,
+      &quot;sources&quot;: [{ &quot;kind&quot;: &quot;html&quot;, &quot;url&quot;: &quot;https://www.shiki.jp/navi/news/&quot; }]
+    },
+    {
+      &quot;id&quot;: &quot;horipro&quot;,
+      &quot;name&quot;: &quot;ホリプロステージ&quot;,
+      &quot;shortName&quot;: &quot;ホリプロ&quot;,
+      &quot;fcmTopic&quot;: &quot;horipro&quot;,
+      &quot;sources&quot;: [{ &quot;kind&quot;: &quot;rss&quot;, &quot;url&quot;: &quot;https://horipro-stage.jp/feed/&quot; }]
+    },
+    {
+      &quot;id&quot;: &quot;toho&quot;,
+      &quot;name&quot;: &quot;東宝（演劇）&quot;,
+      &quot;shortName&quot;: &quot;東宝&quot;,
+      &quot;fcmTopic&quot;: &quot;toho&quot;,
+      &quot;sources&quot;: [
+        { &quot;kind&quot;: &quot;html&quot;, &quot;url&quot;: &quot;https://www.toho.co.jp/stage/topics/&quot; },
+        { &quot;kind&quot;: &quot;html&quot;, &quot;url&quot;: &quot;https://www.toho.co.jp/stage/news/&quot; }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;shinkansen&quot;,
+      &quot;name&quot;: &quot;劇団☆新感線&quot;,
+      &quot;shortName&quot;: &quot;新感線&quot;,
+      &quot;fcmTopic&quot;: &quot;shinkansen&quot;,
+      &quot;sources&quot;: [{ &quot;kind&quot;: &quot;rss&quot;, &quot;url&quot;: &quot;https://blog.vi-shinkansen.co.jp/?feed=rss2&quot; }]
+    }
+  ]
+}</code></pre>
+<table>
+<thead>
+<tr>
+<th>規則</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>表示順</td>
+<td>配列の順序。<code>order</code> フィールドは持たない。追加団体は末尾に置く（S-01 §8 #18、S-03 §7.1）</td>
+</tr>
+<tr>
+<td>新感線</td>
+<td><code>sources[].url</code> は <code>blog.vi-shinkansen.co.jp</code>。公式ドメイン <code>www.vi-shinkansen.co.jp</code> のフィードは空なので書かない（要件 R-9、調査レポート §2）</td>
+</tr>
+<tr>
+<td>東宝</td>
+<td><code>/stage/topics/</code> を主、<code>/stage/news/</code> を補助として 2 つ持つ（調査レポート §5）。取得順・ページ送りは D-03</td>
+</tr>
+<tr>
+<td>四季</td>
+<td>初回のみ 3〜5 ページ遡る規則（調査レポート §4）は D-03。<code>sources</code> には 1 ページ目の URL だけを書く</td>
+</tr>
+<tr>
+<td>団体の追加</td>
+<td>この配列への追記 + <code>collector/src/infrastructure/sources/&lt;id&gt;.ts</code> の追加 + <code>main.ts</code> の DI 1 行。app 側は <code>app/assets/companies.json</code> を同じ内容に更新して再ビルドする（§8 #28）。更新前の app でも <code>companyId</code> を知らない記事を隠さず「すべて」に表示する（S-00 §7.1）</td>
+</tr>
+<tr>
+<td>同梱コピーの同期</td>
+<td><code>data/companies.json</code> と <code>app/assets/companies.json</code> は常にバイト単位で同一。collector の契約テスト（§7）が両ファイルの一致を検証し、片方だけ直した変更を CI で止める</td>
+</tr>
+<tr>
+<td>Source と <code>sources[]</code></td>
+<td>Source 実装は取得先 URL をコードに埋め込まず、渡された <code>Company.sources</code> を使う（URL 変更を設定変更で済ませる）。Source のコンストラクタ形は D-02</td>
+</tr>
+</tbody></table>
+<h3 id="sec-4-4">4.4 category の値（要件 §7.1・§3.3、S-00 §7.2）<a class="anchor" href="#sec-4-4">#</a></h3>
+<table>
+<thead>
+<tr>
+<th><code>category</code></th>
+<th>要件 §3.3</th>
+<th>判定の根拠になる情報</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>new_work</code></td>
+<td>★1 新作発表</td>
+<td>サイト側タグ／見出しキーワード</td>
+<td>優先順位 1</td>
+</tr>
+<tr>
+<td><code>ticket</code></td>
+<td>★2 チケット情報</td>
+<td>同上</td>
+<td>優先順位 2。先行・一般・抽選・当落を含む</td>
+</tr>
+<tr>
+<td><code>streaming</code></td>
+<td>★3 配信・映像化</td>
+<td>同上</td>
+<td>優先順位 3。DVD・Blu-ray・配信・ゲキ×シネ</td>
+</tr>
+<tr>
+<td><code>schedule</code></td>
+<td>公演スケジュール</td>
+<td>同上</td>
+<td>優先順位 4</td>
+</tr>
+<tr>
+<td><code>cast</code></td>
+<td>キャスト情報</td>
+<td>同上</td>
+<td>優先順位 5</td>
+</tr>
+<tr>
+<td><code>person</code></td>
+<td>出演者ニュース</td>
+<td>同上</td>
+<td>優先順位 6</td>
+</tr>
+<tr>
+<td><code>other</code></td>
+<td>（当日券・立ち見、残席状況、上記以外のすべて）</td>
+<td>フォールバック</td>
+<td>当日券・残席は要件 R-4 のとおり取得困難なため専用値を持たず <code>other</code>（S-00 §7.2 の申し送り）。公演中止・グッズ等スコープ外の記事も除外せず <code>other</code> で収集する（§8 #12）</td>
+</tr>
+</tbody></table>
+<pre><code class="language-ts">// collector/src/domain/category.ts
+import { CATEGORIES, type Category } from &quot;./article&quot;;
+
+/** 複数候補があるときに採用する順。要件 §3.3 の優先度（★1〜★3）→ 記載順 */
+export const CATEGORY_PRIORITY: readonly Category[] = CATEGORIES; // 宣言順がそのまま優先順位
+
+export function resolveCategory(candidates: readonly Category[]): Category {
+  for (const c of CATEGORY_PRIORITY) {
+    if (candidates.includes(c)) return c;
+  }
+  return &quot;other&quot;;
+}</code></pre>
+<p>判定の段階（§5.3）は「サイト側タグ → 見出しキーワード → <code>other</code>」に固定する。タグ対応表（団体別）とキーワード表（全団体共通 + 団体別追加）の具体値は D-03 が持つ。app は対応表に無い値を <code>other</code> として表示する（S-00 §7.2）。</p>
+<h3 id="sec-4-5">4.5 並び替えキー（S-01 §7.1 と同一）<a class="anchor" href="#sec-4-5">#</a></h3>
+<pre><code class="language-ts">// collector/src/domain/article-identity.ts（抜粋）
+import type { Article } from &quot;./article&quot;;
+
+/** S-01 §7.1 の並び順。降順にしたい項目は引数を入れ替えて比較する */
+export function compareArticles(a: Article, b: Article): number {
+  const ka = a.updatedAt ?? a.publishedAt;
+  const kb = b.updatedAt ?? b.publishedAt;
+  if (ka !== kb) return ka &lt; kb ? 1 : -1;                   // 第 1 キー: 並び順の日時 降順
+  if (a.fetchedAt !== b.fetchedAt) return a.fetchedAt &lt; b.fetchedAt ? 1 : -1; // 第 2 キー: fetchedAt 降順
+  return a.id &lt; b.id ? -1 : a.id &gt; b.id ? 1 : 0;            // 第 3 キー: id 昇順
+}</code></pre>
+<p>日時はすべて同じ書式（<code>+09:00</code>、秒精度、ゼロ埋め）なので文字列比較で時系列順になる。collector の「団体ごと 100 件」の切り詰めと、app のホーム一覧（S-01 §7.1・§7.5）は同じ比較関数を使う（Dart 側は同じ規則を移植する）。</p>
+<h3 id="sec-4-6">4.6 バージョニング<a class="anchor" href="#sec-4-6">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>規則</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>schemaVersion</code></td>
+<td><code>articles.json</code>・<code>companies.json</code> の両方が整数で持つ（§8 #27）。現在は <code>1</code></td>
+</tr>
+<tr>
+<td>上げない変更</td>
+<td>省略可能フィールドの追加、<code>category</code> の値の追加（app は未知の値を <code>other</code> として表示するため）</td>
+</tr>
+<tr>
+<td>上げる変更</td>
+<td>フィールドの削除・改名・型変更・意味の変更、<code>id</code> または <code>contentHash</code> の算出規則の変更、日時書式の変更</td>
+</tr>
+<tr>
+<td>読み手の義務</td>
+<td>未知のフィールドを無視する。<code>schemaVersion</code> が対応する値でなければファイル全体を「取得失敗」として扱い（S-00/ST-14・ST-15 相当）、端末内の記事・既読・保存を消さない</td>
+</tr>
+<tr>
+<td>書き手の義務</td>
+<td><code>.strict()</code> で未知フィールドを含めない。<code>schemaVersion</code> を上げるときは app の対応リリースを先に出す（旧 app が新 JSON を取得失敗として扱う期間を作らない）</td>
+</tr>
+<tr>
+<td><code>id</code> の規則変更</td>
+<td>全記事が「新着」に見え、app では重複、通知は全件に出る。変更するときは D-02 の通知抑止（§8 #15 と同じ「前回スナップショット無し」扱い）を併用する</td>
+</tr>
+</tbody></table>
+<h3 id="sec-4-7">4.7 配信 URL とキャッシュ<a class="anchor" href="#sec-4-7">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>値</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>リポジトリ</td>
+<td><code>https://github.com/sss-kato/curtaincall</code>（owner <code>sss-kato</code>、リポジトリ名 <code>curtaincall</code>。小文字。§8 #31）</td>
+</tr>
+<tr>
+<td>ベース URL</td>
+<td><code>https://sss-kato.github.io/curtaincall/</code>（末尾スラッシュ付き。app の定数・D-02 の Pages 設定はこの値を使う）</td>
+</tr>
+<tr>
+<td>記事</td>
+<td><code>https://sss-kato.github.io/curtaincall/articles.json</code></td>
+</tr>
+<tr>
+<td>団体定義</td>
+<td><code>https://sss-kato.github.io/curtaincall/companies.json</code>（<code>data/</code> を丸ごと公開するため配信されるが、app は取得しない。app は同梱アセットを使う。§8 #28）</td>
+</tr>
+<tr>
+<td>User-Agent</td>
+<td>collector が送る UA は <code>CurtainCall/1.0 (personal news reader; +https://github.com/sss-kato/curtaincall)</code>（CLAUDE.md の書式の <code>&lt;user&gt;/CurtainCall</code> を実値に置き換えたもの。実装は D-02 の <code>infrastructure/http</code>）</td>
+</tr>
+<tr>
+<td>リポジトリ上の置き場所</td>
+<td><code>data/articles.json</code>・<code>data/companies.json</code>。GitHub Pages は <code>data/</code> ディレクトリをサイトのルートとして公開する（公開手段は D-02。Actions からの Pages デプロイを推奨）</td>
+</tr>
+<tr>
+<td>Content-Type</td>
+<td><code>application/json</code>（GitHub Pages の既定）</td>
+</tr>
+<tr>
+<td>キャッシュ</td>
+<td>GitHub Pages の既定（<code>Cache-Control: max-age=600</code>、<code>ETag</code>）に従う。app は <code>If-None-Match</code> に前回の <code>ETag</code> を送り、<code>304</code> なら何もしない。クエリでのキャッシュバスティングはしない（収集間隔 1 時間・遅延許容（R-7）に対し 10 分の CDN キャッシュは十分に短い）</td>
+</tr>
+<tr>
+<td>サイズの目安</td>
+<td>500 件 × 約 400 バイト ≒ 200 KB（gzip 後 約 50 KB）</td>
+</tr>
+<tr>
+<td>認証</td>
+<td>無し（公開）。秘密情報は含めない</td>
+</tr>
+</tbody></table>
+<h3 id="sec-4-8">4.8 通知ペイロード（要件 §6.3、S-01 §8 #20）<a class="anchor" href="#sec-4-8">#</a></h3>
+<p>collector が <code>firebase-admin</code> で送る <code>Message</code>（D-02 が組み立てる）：</p>
+<pre><code class="language-ts">// 型は firebase-admin/messaging の Message に一致させる
+export interface NewArticlesNotification {
+  topic: string;                       // Company.fcmTopic
+  notification: {
+    title: string;                     // 新着 1 件: Company.name、2 件以上: `${name}（新着 ${n} 件）`（§8 #29）
+    body: string;                      // 新着 1 件: 見出し、2 件以上: `${見出し} ほか ${n-1} 件`。120 文字で切り「…」（§8 #29）
+  };
+  data: {
+    schemaVersion: &quot;1&quot;;                // ペイロードの版
+    type: &quot;new_articles&quot;;              // 種別。将来の拡張用
+    companyId: string;                 // Article.companyId。app はこれでタブを選ぶ（S-01/ST-15）
+    count: string;                     // 新着件数（FCM の data は文字列のみ）
+  };
+  apns: {
+    headers: { &quot;apns-priority&quot;: &quot;10&quot; };
+    payload: { aps: { sound: &quot;default&quot;; &quot;thread-id&quot;: string } }; // thread-id = companyId（通知センターで団体ごとにまとまる）
+  };
+}</code></pre>
+<p>送信例：</p>
+<pre><code class="language-json">{
+  &quot;topic&quot;: &quot;shinkansen&quot;,
+  &quot;notification&quot;: {
+    &quot;title&quot;: &quot;劇団☆新感線（新着 2 件）&quot;,
+    &quot;body&quot;: &quot;／爆烈忠臣蔵／ゲキ×シネ2027年1月8日(金)全国公開決定！！ ほか 1 件&quot;
+  },
+  &quot;data&quot;: { &quot;schemaVersion&quot;: &quot;1&quot;, &quot;type&quot;: &quot;new_articles&quot;, &quot;companyId&quot;: &quot;shinkansen&quot;, &quot;count&quot;: &quot;2&quot; },
+  &quot;apns&quot;: {
+    &quot;headers&quot;: { &quot;apns-priority&quot;: &quot;10&quot; },
+    &quot;payload&quot;: { &quot;aps&quot;: { &quot;sound&quot;: &quot;default&quot;, &quot;thread-id&quot;: &quot;shinkansen&quot; } }
+  }
+}</code></pre>
+<table>
+<thead>
+<tr>
+<th>規則</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>対象</td>
+<td>1 回の実行で「新着」（§5.2 の判定）になった記事のみ。「更新」は通知しない（§8 #13）</td>
+</tr>
+<tr>
+<td>まとめ方</td>
+<td>団体ごとに 1 通／実行（§8 #30）。新着が複数団体にあれば <code>companies.json</code> の順に 1 通ずつ</td>
+</tr>
+<tr>
+<td>文面</td>
+<td><code>n</code> = その団体の新着件数。<code>n = 1</code>：<code>title</code> = <code>Company.name</code>、<code>body</code> = その記事の <code>title</code>。<code>n ≥ 2</code>：<code>title</code> = <code>${Company.name}（新着 ${n} 件）</code>、<code>body</code> = <code>${見出し} ほか ${n-1} 件</code>（見出しは新着記事を <code>compareArticles</code>（§4.5）で並べた先頭の記事の <code>title</code>。区切りは半角スペース、数字は半角）。例：<code>劇団☆新感線（新着 2 件）</code>／<code>…全国公開決定！！ ほか 1 件</code>（§8 #29）</td>
+</tr>
+<tr>
+<td>含めないもの</td>
+<td>記事 URL（要件 §6.3）、記事 ID、本文。app は通知タップ後に一覧を取得して記事を表示する（S-01/ST-15）</td>
+</tr>
+<tr>
+<td>送らない条件</td>
+<td>前回の <code>articles.json</code> が無い・読めない実行（全件が新着に見えるため。§8 #15）。新着 0 件の団体</td>
+</tr>
+<tr>
+<td>トピック名</td>
+<td><code>Company.fcmTopic</code>。app は通知トグル ON の団体の <code>fcmTopic</code> を購読し、OFF で解除する（D-04）</td>
+</tr>
+<tr>
+<td>文面の切り詰め</td>
+<td><code>body</code> 全体（接尾辞「 ほか n-1 件」を含む）が 120 文字（UTF-16 コード単位）を超えたら、見出し部分を切り詰めて末尾に「…」を付け、全体を 120 文字以内にする（接尾辞は切らない）。制御文字（改行・タブ）は半角スペースに置換</td>
+</tr>
+<tr>
+<td>到達性</td>
+<td>ベストエフォート（要件 §5）。送信失敗の再送はしない（at-most-once。D-02）</td>
+</tr>
+</tbody></table>
+<h2 id="sec-5">5. 処理フロー（正常系）<a class="anchor" href="#sec-5">#</a></h2>
+<p>以下の 3 つは純粋関数として <code>collector/src/domain/</code> に置く。呼び出し箇所（Source の中か <code>collect-articles</code> / <code>detect-diff</code> の中か）は D-02 が決める。推奨は「団体固有の正規化と category 判定は Source、汎用正規化・<code>id</code>・<code>contentHash</code>・<code>fetchedAt</code>・<code>updatedAt</code> の確定は application」。</p>
+<h3 id="sec-5-1">5.1 ID 算出（<code>normalizeUrl</code> → <code>buildArticleId</code>）<a class="anchor" href="#sec-5-1">#</a></h3>
+<ul>
+<li><strong>入力</strong>：Source が出力した記事 URL（絶対 URL。相対 URL の解決と、東宝のドメイン吸収などの団体固有の正規化（R-8）は D-03 の規則で Source が済ませている）</li>
+<li><strong>ステップ</strong>：<ol>
+<li><code>new URL(input)</code> で解釈する。失敗（相対 URL・不正文字列）→ <code>InvalidArticleUrlError</code> を投げる（呼び出し側はその記事を破棄。§6）</li>
+<li><code>protocol</code> が <code>http:</code> / <code>https:</code> 以外 → <code>InvalidArticleUrlError</code></li>
+<li><code>hash</code>（<code>#</code> 以降）を空にする</li>
+<li><code>searchParams</code> から追跡パラメータを削除する。対象は名前が <code>utm_</code> で始まるもの、および <code>fbclid</code>・<code>gclid</code>・<code>yclid</code>・<code>msclkid</code>・<code>mc_cid</code>・<code>mc_eid</code>・<code>_ga</code>。<strong>それ以外のクエリは順序も含めて保持する</strong>（新感線の <code>?p=13727</code> が記事の識別子。調査レポート §2）</li>
+<li><code>url.toString()</code> を正規化後の URL とする（WHATWG URL がホストの小文字化・既定ポート除去・パーセントエンコードの統一・空パスへの <code>/</code> 付与を行う。パスの末尾スラッシュは変更しない）</li>
+<li>長さが 2048 文字を超える → <code>InvalidArticleUrlError</code></li>
+<li><code>id = hasher.sha256Hex(utf8(normalized)).slice(0, 16)</code>（SHA-256・16 進小文字・先頭 16 文字。§8 #25）</li>
+</ol>
+</li>
+<li><strong>出力</strong>：<code>{ url: normalized, id }</code>。<code>Article.url</code> には <code>normalized</code> を格納する（同じ記事が複数の表記で現れても 1 件になる。R-8）</li>
+<li><strong>失敗時</strong>：例外。1 記事の失敗は他の記事・他の Source に波及させない（D-02）</li>
+</ul>
+<pre><code class="language-ts">// collector/src/domain/url.ts
+export const TRACKING_PARAMS = [&quot;fbclid&quot;, &quot;gclid&quot;, &quot;yclid&quot;, &quot;msclkid&quot;, &quot;mc_cid&quot;, &quot;mc_eid&quot;, &quot;_ga&quot;] as const;
+
+export class InvalidArticleUrlError extends Error {}
+
+export function normalizeUrl(input: string): string {
+  let u: URL;
+  try { u = new URL(input); } catch { throw new InvalidArticleUrlError(`not absolute: ${input}`); }
+  if (u.protocol !== &quot;http:&quot; &amp;&amp; u.protocol !== &quot;https:&quot;) throw new InvalidArticleUrlError(`scheme: ${input}`);
+  u.hash = &quot;&quot;;
+  for (const key of [...u.searchParams.keys()]) {
+    if (key.startsWith(&quot;utm_&quot;) || (TRACKING_PARAMS as readonly string[]).includes(key)) u.searchParams.delete(key);
+  }
+  const out = u.toString();
+  if (out.length &gt; 2048) throw new InvalidArticleUrlError(`too long: ${out.length}`);
+  return out;
+}</code></pre>
+<pre><code class="language-ts">// collector/src/domain/hasher.ts
+export interface Hasher {
+  /** UTF-8 でエンコードした入力の SHA-256 を 16 進小文字 64 文字で返す */
+  sha256Hex(input: string): string;
+}
+
+// collector/src/domain/article-identity.ts（抜粋）
+export const HASH_LENGTH = 16;
+export function buildArticleId(hasher: Hasher, normalizedUrl: string): string {
+  return hasher.sha256Hex(normalizedUrl).slice(0, HASH_LENGTH);
+}</code></pre>
+<p>正規化の例：</p>
+<table>
+<thead>
+<tr>
+<th>入力</th>
+<th>出力</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>https://Kageki.Hankyu.co.jp/news/20260913_002.html#top</code></td>
+<td><code>https://kageki.hankyu.co.jp/news/20260913_002.html</code></td>
+<td>ホスト小文字化・フラグメント除去</td>
+</tr>
+<tr>
+<td><code>https://horipro-stage.jp/hpcc_refund/?utm_source=rss&amp;utm_medium=rss</code></td>
+<td><code>https://horipro-stage.jp/hpcc_refund/</code></td>
+<td>追跡パラメータ除去</td>
+</tr>
+<tr>
+<td><code>https://blog.vi-shinkansen.co.jp/?p=13727</code></td>
+<td><code>https://blog.vi-shinkansen.co.jp/?p=13727</code></td>
+<td>通常のクエリは保持</td>
+</tr>
+<tr>
+<td><code>https://www.shiki.jp:443/navi/news/renewinfo/037984.html</code></td>
+<td><code>https://www.shiki.jp/navi/news/renewinfo/037984.html</code></td>
+<td>既定ポート除去</td>
+</tr>
+<tr>
+<td><code>/stage/topics/2026/09/foo.html</code></td>
+<td>例外</td>
+<td>相対 URL は Source が解決してから渡す</td>
+</tr>
+</tbody></table>
+<h3 id="sec-5-2">5.2 contentHash 算出と更新判定（<code>normalizeTitle</code> → <code>buildContentHash</code> → 突合）<a class="anchor" href="#sec-5-2">#</a></h3>
+<ul>
+<li><strong>入力</strong>：Source が抽出した見出し（生文字列）・サムネイル URL（任意）と、前回の <code>articles.json</code> にある同じ <code>id</code> の記事（無いこともある）、この実行の <code>generatedAt</code></li>
+<li><strong>ステップ</strong>：<ol>
+<li>見出しを正規化して <code>Article.title</code> にする：Unicode NFC 正規化 → 連続する空白（<code>\s</code> と全角スペース U+3000）を半角スペース 1 つに置換 → 前後の空白を除去 → 300 文字（UTF-16 コード単位。zod の <code>.max(300)</code> と同じ数え方）を超える分を切り捨て、切れ目がサロゲートペアの途中なら 1 つ手前で切る。結果が空なら記事を破棄（§6）</li>
+<li><code>contentHash = hasher.sha256Hex(title).slice(0, 16)</code>（対象は手順 1 で正規化した <code>title</code> のみ。<code>thumbnail</code>・<code>publishedAt</code> は対象に含めない。§8 #26）</li>
+<li>前回の記事と <code>id</code> で突合し、次のとおり確定する：</li>
+</ol>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>前回</th>
+<th>今回</th>
+<th>判定</th>
+<th><code>fetchedAt</code></th>
+<th><code>updatedAt</code></th>
+<th><code>contentHash</code></th>
+<th><code>title</code>・<code>thumbnail</code>・<code>publishedAt</code>・<code>category</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>無し</td>
+<td>有り</td>
+<td><strong>新着</strong></td>
+<td><code>generatedAt</code></td>
+<td>無し（キー省略）</td>
+<td>今回</td>
+<td>今回の値</td>
+</tr>
+<tr>
+<td>有り</td>
+<td>有り、ハッシュ一致</td>
+<td>継続</td>
+<td>前回の値を引き継ぐ</td>
+<td>前回の値を引き継ぐ（無ければ無し）</td>
+<td>前回と同じ</td>
+<td>今回の値（ハッシュ対象外の変化は静かに反映）</td>
+</tr>
+<tr>
+<td>有り</td>
+<td>有り、ハッシュ不一致</td>
+<td><strong>更新</strong></td>
+<td>前回の値を引き継ぐ</td>
+<td><code>generatedAt</code></td>
+<td>今回</td>
+<td>今回の値</td>
+</tr>
+<tr>
+<td>有り</td>
+<td>無し（一覧から消えた）</td>
+<td>継続（保持）</td>
+<td>前回の値</td>
+<td>前回の値</td>
+<td>前回の値</td>
+<td>前回の値</td>
+</tr>
+</tbody></table>
+<ol start="4">
+<li>団体ごとに <code>compareArticles</code>（§4.5）で並べ、上位 100 件を残す（要件 §5）</li>
+</ol>
+<ul>
+<li><strong>出力</strong>：<code>articles.json</code> に書く記事の配列と、通知対象（新着の記事、団体別）</li>
+<li><strong>失敗時</strong>：前回の <code>articles.json</code> が無い・スキーマ不一致のときは「前回 = 無し」として全件を新着扱いで書き出すが、通知は送らない（§4.8、§8 #15）</li>
+</ul>
+<p>app 側の判定（D-05 が実装。S-01 §7.4）：</p>
+<table>
+<thead>
+<tr>
+<th>app の判定</th>
+<th>条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>新着</td>
+<td>取得した <code>id</code> が端末の <code>articles</code> に無い</td>
+</tr>
+<tr>
+<td>更新</td>
+<td>同じ <code>id</code> の <code>updatedAt</code> が端末の値と異なる（端末が無し・配信が有り、または値が新しい）</td>
+</tr>
+<tr>
+<td>削除</td>
+<td>端末にある <code>id</code> が配信に無い（保存済みは除く。要件 §5）</td>
+</tr>
+<tr>
+<td>変化なし</td>
+<td>上記以外。<code>title</code>・<code>thumbnail</code>・<code>publishedAt</code>・<code>category</code> は配信の値で上書きしてよい（既読・保存・バッジの状態は変えない）</td>
+</tr>
+</tbody></table>
+<h3 id="sec-5-3">5.3 category 判定（<code>resolveCategory</code>）<a class="anchor" href="#sec-5-3">#</a></h3>
+<ul>
+<li><strong>入力</strong>：<code>companyId</code>、正規化後の <code>title</code>、サイト側タグ <code>siteTags: string[]</code>（RSS の <code>category</code> 要素、宝塚の分類タグ。無いサイトは空配列）</li>
+<li><strong>ステップ</strong>：<ol>
+<li><strong>タグ段階</strong>：<code>siteTags</code> の各要素を D-03 の団体別タグ対応表で <code>Category</code> に写像する。対応の無いタグ（作品名・組名など）は無視する。1 つ以上写像できたら候補とし、手順 3 へ</li>
+<li><strong>キーワード段階</strong>：候補が空のとき、<code>title</code> を NFKC 正規化・小文字化した文字列に対して D-03 のキーワード表（全団体共通表 + 団体別追加表。各キーワードも NFKC・小文字で比較）を部分一致させ、一致したキーワードの <code>Category</code> を候補にする。RSS の 2 団体でもこの段階に進む（ホリプロのタグは作品名が中心で写像できないことが多い。調査レポート §1）</li>
+<li>候補が空 → <code>other</code>。候補が 1 つ以上 → <code>resolveCategory(candidates)</code>（<code>CATEGORY_PRIORITY</code> の先頭。§4.4）</li>
+</ol>
+</li>
+<li><strong>出力</strong>：<code>Category</code> 1 値</li>
+<li><strong>失敗時</strong>：例外は発生しない（必ず <code>other</code> にフォールバックする）</li>
+</ul>
+<p>例（キーワード表の具体値は D-03。ここでは規則の適用を示す）：</p>
+<table>
+<thead>
+<tr>
+<th><code>siteTags</code></th>
+<th><code>title</code></th>
+<th>段階</th>
+<th>結果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>[&quot;重要なお知らせ&quot;, &quot;ハリー・ポッターと呪いの子&quot;]</code></td>
+<td>公演中止のお詫びと払い戻し…</td>
+<td>タグ「重要なお知らせ」が対応表に無く、キーワードにも該当なし</td>
+<td><code>other</code></td>
+</tr>
+<tr>
+<td><code>[&quot;NEWS&quot;, &quot;爆烈忠臣蔵&quot;]</code></td>
+<td>ゲキ×シネ…全国公開決定</td>
+<td>タグは写像なし → キーワード「ゲキ×シネ」</td>
+<td><code>streaming</code></td>
+</tr>
+<tr>
+<td><code>[]</code></td>
+<td>『X』東京公演 明日「四季の会」会員先行予約開始！</td>
+<td>キーワード「先行」</td>
+<td><code>ticket</code></td>
+</tr>
+<tr>
+<td><code>[]</code></td>
+<td>『X』上演決定！チケット一般発売は…</td>
+<td>キーワード「上演決定」と「発売」の両方 → 優先順位</td>
+<td><code>new_work</code></td>
+</tr>
+</tbody></table>
+<h2 id="sec-6">6. 異常系・境界<a class="anchor" href="#sec-6">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>ケース</th>
+<th>期待する振る舞い</th>
+<th>担当する層</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>記事 URL が相対・不正・<code>http(s)</code> 以外・2048 文字超</td>
+<td>その記事だけ破棄し、警告ログ。他の記事・Source に波及しない</td>
+<td>collector application（D-02）。判定は domain <code>normalizeUrl</code></td>
+</tr>
+<tr>
+<td>見出しが正規化後に空</td>
+<td>その記事を破棄し、警告ログ（app 側の「（見出しなし）」（S-00 §7.7）は配信データが壊れた場合の保険）</td>
+<td>collector application</td>
+</tr>
+<tr>
+<td>見出しが 300 文字（UTF-16 コード単位）超</td>
+<td>300 で切り捨てて保持（サロゲートペアの途中では切らない。ハッシュも切り捨て後の文字列）</td>
+<td>collector domain</td>
+</tr>
+<tr>
+<td>端末のタイムゾーンが JST でない</td>
+<td>日付のみの記事（<code>T00:00:00+09:00</code>）は端末タイムゾーンへの変換で前日に見えることがある。許容する（利用者は日本国内。要件 §2）。app 側で特別扱いしない</td>
+<td>app（D-05）</td>
+</tr>
+<tr>
+<td><code>thumbnail</code> が相対・不正・2048 文字超</td>
+<td>フィールドを省略し、記事は残す</td>
+<td>collector application</td>
+</tr>
+<tr>
+<td><code>publishedAt</code> を解釈できない</td>
+<td>その記事を破棄し、警告ログ。1 Source の全記事が破棄されたら Source 失敗として扱う（R-2 の検知。D-02）</td>
+<td>collector application</td>
+</tr>
+<tr>
+<td>同じ実行内で同じ <code>id</code> が複数回現れる（東宝の topics と news に同じ記事、一覧の重複）</td>
+<td>最初に現れた 1 件を採用し、以降は捨てる（デバッグログ）</td>
+<td>collector application</td>
+</tr>
+<tr>
+<td>異なる URL が同じ 16 桁ハッシュになる</td>
+<td><code>ArticlesFileSchema</code> の重複検査で検出し、後の記事を捨ててエラーログ。確率は無視できる（§8 #25）</td>
+<td>collector domain / application</td>
+</tr>
+<tr>
+<td><code>companies.json</code> がスキーマ不一致・<code>id</code> 重複・<code>fcmTopic</code> 重複</td>
+<td>収集を始めずに終了（非 0）。前回の <code>articles.json</code> を保持</td>
+<td>collector entry（D-02）</td>
+</tr>
+<tr>
+<td><code>articles.json</code> が書き出し前の検証で不一致（団体 100 件超・<code>id</code> 重複）</td>
+<td>書き出さず、前回のファイルを保持して終了（非 0）</td>
+<td>collector storage（D-02）</td>
+</tr>
+<tr>
+<td>前回の <code>articles.json</code> が無い・スキーマ不一致</td>
+<td>全記事を新着として書き出す。通知は送らない</td>
+<td>collector application</td>
+</tr>
+<tr>
+<td>サイトから記事が消えた（削除・取り下げ）</td>
+<td>上限で押し出されるまで <code>articles.json</code> に残る。app にも残る。意図的な削除は本書の範囲外</td>
+<td>—</td>
+</tr>
+<tr>
+<td>1 回の実行で 100 件を超える新着（サイト改装で URL が全件変わった）</td>
+<td>上位 100 件だけ残り、旧記事は全件押し出される。通知は団体 1 通（<code>count</code> に件数）。app では旧記事が削除され新記事が並ぶ（保存済みは残る）</td>
+<td>collector / app</td>
+</tr>
+<tr>
+<td><code>publishedAt</code> が未来の日付</td>
+<td>そのまま保持する（検証しない）。並び順の先頭に来る</td>
+<td>—</td>
+</tr>
+<tr>
+<td>同じ記事が 2 団体から出る（同じ URL）</td>
+<td><code>id</code> は URL のみから決まるため同じ <code>id</code>。先に処理した団体の記事を採用（同一実行内の重複規則）。5 団体の情報源に重なりは無いため実運用では起きない</td>
+<td>collector application</td>
+</tr>
+<tr>
+<td>app が未知の <code>companyId</code> を受け取る</td>
+<td>記事を隠さず「すべて」に表示。団体名は <code>companyId</code> の文字列（S-00 §7.1、S-01 §8 #16）</td>
+<td>app（D-05）</td>
+</tr>
+<tr>
+<td>app が未知の <code>category</code> を受け取る</td>
+<td><code>other</code> として表示（S-00 §7.2）</td>
+<td>app（D-05）</td>
+</tr>
+<tr>
+<td>app が対応外の <code>schemaVersion</code> を受け取る</td>
+<td>取得失敗として扱い（S-00/ST-14・ST-15）、端末内のデータを消さない</td>
+<td>app（D-04）</td>
+</tr>
+<tr>
+<td>app が <code>thumbnail: null</code> / <code>updatedAt: null</code> を受け取る</td>
+<td>キー無しと同じ「無し」として扱う</td>
+<td>app（D-04）</td>
+</tr>
+<tr>
+<td>app が <code>articles: []</code> を受け取る</td>
+<td>妥当な応答。端末内の記事は削除規則（§5.2 app 側）に従い、保存済み以外を消す。表示は S-01/ST-04</td>
+<td>app（D-05）</td>
+</tr>
+<tr>
+<td>配信が <code>304 Not Modified</code></td>
+<td>何もしない。取得成功として扱う（S-00/ST-11 → 差分なし）</td>
+<td>app（D-04）</td>
+</tr>
+<tr>
+<td>通知の <code>data.companyId</code> が無い・団体定義に無い</td>
+<td>「すべて」タブで開く（S-01 §8 #15）</td>
+<td>app（D-05）</td>
+</tr>
+<tr>
+<td>通知の <code>body</code> が 120 文字超・改行を含む</td>
+<td>見出し部分を切り詰めて「…」を付け、接尾辞「 ほか n-1 件」を含めて 120 文字以内にする（§4.8）。制御文字は半角スペースに置換</td>
+<td>collector（D-02）</td>
+</tr>
+<tr>
+<td>同じ実行で複数団体に新着</td>
+<td>団体ごとに 1 通。1 団体の送信失敗は他の団体の送信を止めない</td>
+<td>collector（D-02）</td>
+</tr>
+</tbody></table>
+<h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
+<p>本書には UseCase が無い。本書の規則は D-02 の UseCase テスト（<code>collect-articles</code>・<code>detect-diff</code>・<code>notify</code>）と D-05 の UseCase テストを通じて検証されるが、それに加えて<strong>契約テスト</strong>を 1 ファイル置く。根拠は CLAUDE.md「テスト方針」のパーサー例外と同じで、app と collector をまたぐ契約の逸脱（フィールドの追加・削除、ハッシュ規則の変更、日時書式の変更）を実装時に検知することが目的である（§8 #21）。ネットワークは使わない。</p>
+<table>
+<thead>
+<tr>
+<th>検証対象</th>
+<th>ケース</th>
+<th>使うもの</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ArticlesFileSchema</code></td>
+<td><code>articles.sample.json</code> が通る／未知フィールドで失敗／<code>thumbnail: null</code> で失敗（collector 出力としては不可）／団体 101 件で失敗／<code>id</code> 重複で失敗／<code>publishedAt</code> が <code>Z</code> 終端で失敗／<code>title</code> 空で失敗／<code>schemaVersion: 2</code> で失敗</td>
+<td><code>test/fixtures/contract/articles.sample.json</code> を基に改変</td>
+</tr>
+<tr>
+<td><code>CompaniesFileSchema</code></td>
+<td><code>data/companies.json</code> が通る（実ファイルを読む）／<code>id</code> 重複で失敗／<code>fcmTopic</code> に <code>/</code> を含むと失敗／<code>sources</code> 空で失敗</td>
+<td><code>data/companies.json</code></td>
+</tr>
+<tr>
+<td>同梱コピーの同期（§4.3）</td>
+<td><code>data/companies.json</code> と <code>app/assets/companies.json</code> がバイト単位で同一（両方をファイルとして読み比較）</td>
+<td><code>data/companies.json</code>、<code>app/assets/companies.json</code></td>
+</tr>
+<tr>
+<td><code>normalizeUrl</code></td>
+<td>§5.1 の表の 5 例（大文字ホスト・フラグメント・<code>utm_</code>・<code>?p=</code> 保持・既定ポート・相対 URL 例外）＋ <code>ftp:</code> 例外 ＋ 2049 文字例外</td>
+<td>無し</td>
+</tr>
+<tr>
+<td><code>buildArticleId</code></td>
+<td><code>sha256Hex(&quot;abc&quot;)</code> の先頭 16 文字が <code>ba7816bf8f01cfea</code>（アルゴリズムの検算）／同じ URL の異表記が同じ <code>id</code>／異なる URL が異なる <code>id</code>／長さ 16・<code>[0-9a-f]</code></td>
+<td><code>infrastructure/hash/sha256-hasher.ts</code></td>
+</tr>
+<tr>
+<td><code>normalizeTitle</code> / <code>buildContentHash</code></td>
+<td>前後空白・全角スペース・連続空白の違いで同じハッシュ／NFC（結合文字と合成済み文字）で同じハッシュ／1 文字違いで異なるハッシュ／301 文字が 300 に切られる／300 文字目がサロゲートペアの前半なら 299 で切られる／空で破棄</td>
+<td>無し</td>
+</tr>
+<tr>
+<td><code>resolveCategory</code></td>
+<td>候補なし → <code>other</code>／<code>[&quot;ticket&quot;,&quot;new_work&quot;]</code> → <code>new_work</code>／<code>[&quot;person&quot;,&quot;cast&quot;]</code> → <code>cast</code>／<code>[&quot;other&quot;,&quot;schedule&quot;]</code> → <code>schedule</code></td>
+<td>無し</td>
+</tr>
+<tr>
+<td><code>compareArticles</code></td>
+<td><code>updatedAt</code> が <code>publishedAt</code> より優先される／同じキーは <code>fetchedAt</code> 降順／それも同じなら <code>id</code> 昇順／ソートの安定性（同じ入力を 2 回並べて同じ結果）</td>
+<td>無し</td>
+</tr>
+<tr>
+<td>更新判定（§5.2 の表）</td>
+<td>新着・継続（一致）・更新（不一致）・消えた記事の 4 行それぞれで <code>fetchedAt</code>・<code>updatedAt</code>・<code>contentHash</code> が表のとおり</td>
+<td>D-02 の <code>detect-diff</code> UseCase テストで検証する（本書は期待値を提供）</td>
+</tr>
+<tr>
+<td>app 側の読み取り</td>
+<td><code>articles.sample.json</code> を Dart のエンティティに変換できる／<code>thumbnail</code> 無しと <code>null</code> が同じ扱い／未知フィールドを無視／<code>schemaVersion: 2</code> を取得失敗にする</td>
+<td>D-04 / D-05 の UseCase テストで検証する（フィクスチャは同じファイルのコピー）</td>
+</tr>
+</tbody></table>
+<h2 id="sec-8">8. 決定事項と根拠<a class="anchor" href="#sec-8">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>決定</th>
+<th>採らなかった案</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><code>articles.json</code> は <code>{ schemaVersion, generatedAt, articles }</code> のラッパにする</td>
+<td>記事配列だけをトップレベルにする</td>
+<td>版とファイルの基準時刻を持てる。<code>generatedAt</code> を新着の <code>fetchedAt</code>・更新の <code>updatedAt</code> と同じ値にすることで「1 実行 1 時刻」が保証され、app が同じ <code>generatedAt</code> を 2 度処理しない判断にも使える</td>
+</tr>
+<tr>
+<td>2</td>
+<td>省略可能フィールドは「キー省略」。<code>null</code> は書かない。読み手はキー無しと <code>null</code> を同じに扱う</td>
+<td><code>null</code> を明示する</td>
+<td>zod <code>.optional()</code> と Dart の nullable がそのまま対応し、ファイルが短い。読み手を寛容にして将来 <code>null</code> を書く実装が混ざっても壊れないようにする</td>
+</tr>
+<tr>
+<td>3</td>
+<td>日時は <code>YYYY-MM-DDTHH:mm:ss+09:00</code> 固定（秒精度）</td>
+<td>UTC <code>Z</code> 固定／サイトごとのオフセット／日付のみのサイトは <code>YYYY-MM-DD</code></td>
+<td>HTML 解析の 3 団体は掲載日のみで時刻を持たない（調査レポート、S-00 §8 #15）。日付を瞬間に変換するにはタイムゾーンが必要で、日本の団体のサイトなので JST 以外の解釈は無い。1 書式に固定すれば zod の正規表現検証と文字列比較による並び替え（§4.5）が成り立ち、フィクスチャが決定的になる。<code>Z</code> 固定では日付のみの記事が <code>T15:00:00Z</code> 前日表記になり読みづらい。日付のみを別書式にすると読み手が 2 書式を解釈する必要がある</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>fetchedAt</code> は「初めて観測した実行の時刻」で、以後の実行では引き継ぐ</td>
+<td>実行のたびに更新する</td>
+<td>S-01 §7.1 が <code>fetchedAt</code> を第 2 キーに使い、S-01 §8 #6 が「初回取得時に全記事が同時刻」と記すのは初回観測時刻の意味。毎回更新すると全記事が同じ値になり第 2 キーの意味が無く、<code>articles.json</code> の差分が毎時全行になる</td>
+</tr>
+<tr>
+<td>5</td>
+<td>更新検知は collector が <code>contentHash</code> で行い、app は <code>updatedAt</code> の値の変化で判定する</td>
+<td>app でも <code>contentHash</code> を比較する</td>
+<td>S-01 §7.4 は「<code>updatedAt</code> が新しくなった記事」を更新と定義している。<code>contentHash</code> の対象（§8 #26）を将来変えても app に影響しない</td>
+</tr>
+<tr>
+<td>6</td>
+<td>「団体ごと 100 件」の切り詰めは <code>compareArticles</code>（<code>updatedAt ?? publishedAt</code> → <code>fetchedAt</code> → <code>id</code>）で行う</td>
+<td><code>publishedAt</code> のみで切る</td>
+<td>S-01 §7.5 が「§7.1 の並び順で上から 100 件」と定義しており、collector と app で違うキーを使うと配信 500 件と表示 500 件がずれる</td>
+</tr>
+<tr>
+<td>7</td>
+<td>サイトの一覧から消えた記事は上限で押し出されるまで保持する</td>
+<td>一覧に無い記事を即削除する</td>
+<td>四季は 1 ページ 10 件、RSS は 10 件しか見えない（調査レポート §1・§2・§4）ため、一覧に無い＝削除ではない。要件 §5「超過分は古い順に削除」に合わせ、削除の契機を上限だけにする</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>id</code> は正規化 URL のみから算出し、<code>companyId</code> を含めない</td>
+<td><code>companyId + url</code> のハッシュ</td>
+<td>要件 §7.1「URL のハッシュ値」のとおり。同一 URL が 2 団体から出ることは 5 団体の情報源に重なりが無いので起きず、起きても「同じ記事」として扱うのが自然</td>
+</tr>
+<tr>
+<td>9</td>
+<td>URL 正規化を「団体固有（D-03、Source 内）→ 汎用（本書、domain）」の 2 段にし、<code>Article.url</code> にも正規化後を格納する</td>
+<td>汎用のみ／東宝の規則も本書に書く／<code>url</code> は生のまま格納しハッシュだけ正規化</td>
+<td>東宝のドメイン分散（R-8）はサイト知識なので Source に閉じ込め、汎用規則は 1 か所で共有する。<code>url</code> を生のままにすると同じ <code>id</code> の <code>url</code> が実行ごとに揺れる</td>
+</tr>
+<tr>
+<td>10</td>
+<td>汎用正規化ではフラグメントと追跡パラメータだけを除去し、他のクエリ・パス・末尾スラッシュ・スキームは変更しない</td>
+<td>クエリ全削除／<code>http</code> → <code>https</code> 昇格／末尾スラッシュ統一</td>
+<td>新感線の記事 URL は <code>?p=13727</code> のクエリが識別子（調査レポート §2）。スキームや末尾スラッシュを変えると開けない URL になる恐れがあり、<code>Article.url</code> は app がそのまま開く（F-03）</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>category</code> は単一値で、複数候補は <code>CATEGORY_PRIORITY</code>（<code>new_work</code> → <code>ticket</code> → <code>streaming</code> → <code>schedule</code> → <code>cast</code> → <code>person</code> → <code>other</code>）で決める。判定は「タグ → キーワード → <code>other</code>」の 2 段で、RSS 団体もキーワード段階に進む</td>
+<td>複数カテゴリの配列／キーワードはタグの無い団体のみ</td>
+<td>要件 §7.1 は <code>category: string</code> の単一値。優先順位は要件 §3.3 の ★1〜★3 と記載順。ホリプロのタグは作品名が中心（調査レポート §1）で写像できない記事が多く、キーワード段階を全団体に適用しないと <code>other</code> に偏る（R-5）</td>
+</tr>
+<tr>
+<td>12</td>
+<td>当日券・残席・公演中止・グッズなどスコープ外の記事も除外せず <code>other</code> として収集する</td>
+<td>該当記事を配信から除く</td>
+<td>要件 §3.4 の「スコープ外」は機能を作らないという意味で、記事を隠す根拠にならない。見出しだけで確実に判定できず、誤除外は見逃しになる。当日券・残席の専用値を持たないのは S-00 §7.2 の申し送りのとおり</td>
+</tr>
+<tr>
+<td>13</td>
+<td>通知は「新着」のみ。「更新」は通知しない</td>
+<td>更新も通知する</td>
+<td>F-07 は「新着記事を検知したら都度通知」。F-11 の更新は一覧の再浮上とバッジで示す（S-00 §7.5）。更新を通知すると見出しの微修正でも通知が飛ぶ</td>
+</tr>
+<tr>
+<td>14</td>
+<td>通知に記事 URL・記事 ID を含めない</td>
+<td><code>data.articleIds</code> を含める</td>
+<td>要件 §6.3「記事 URL は含めない（一覧を経由して開く）」。S-01/ST-15 は一覧の取得後に記事を表示するため ID も使わない。含めると将来「直接開く」実装を招く</td>
+</tr>
+<tr>
+<td>15</td>
+<td>前回の <code>articles.json</code> が無い・読めない実行では通知を送らない</td>
+<td>全件を通知する</td>
+<td>初回実行や破損時に全件（最大 500 件）が新着に見える。通知の意味が無く、身内配布（要件 §2）後には迷惑になる</td>
+</tr>
+<tr>
+<td>16</td>
+<td>APNs は <code>apns-priority: 10</code>・<code>sound: default</code>・<code>thread-id = companyId</code>。<code>collapse-id</code> は使わない</td>
+<td>優先度 5（省電力）／<code>collapse-id</code> で団体ごとに 1 件に置換</td>
+<td>ユーザーに見せる通知は優先度 10 が Apple の規定。<code>thread-id</code> で通知センターが団体ごとにまとまり、S-01 §8 #20「通知が連続して届いても一覧で全件が見える」に合う。<code>collapse-id</code> は未読の通知を上書きし、件数が分からなくなる</td>
+</tr>
+<tr>
+<td>17</td>
+<td>配信は <code>data/</code> を GitHub Pages のルートとして公開し、app はキャッシュバスティングをせず <code>ETag</code> を使う</td>
+<td><code>?t=&lt;epoch&gt;</code> を付けて常に最新を取る／独自 CDN</td>
+<td>収集は 1 時間おき（要件 §5）で遅延は許容（R-7）。10 分の CDN キャッシュは実害が無く、キャッシュバスティングは Pages の CDN を無効化して原点への負荷を増やす</td>
+</tr>
+<tr>
+<td>18</td>
+<td><code>companies.json</code> の表示順は配列の順序で、<code>order</code> フィールドを持たない</td>
+<td><code>order: number</code> を持つ</td>
+<td>S-01 §8 #18「追加団体は末尾」は配列の追記で表せる。番号は欠番・重複の検証が要る</td>
+</tr>
+<tr>
+<td>19</td>
+<td><code>fcmTopic</code> を明示フィールドにし、既定値を <code>id</code> と同じにする</td>
+<td><code>id</code> から導出して持たない</td>
+<td>要件 §6.3 の例はトピック名 = <code>id</code> だが、ペイロードの版が変わったときにトピックだけ切り替える（<code>takarazuka-v2</code>）余地を残す。FCM のトピック名には <code>^[a-zA-Z0-9-_.~%]+$</code> の制約があり、<code>id</code> の規則より緩い</td>
+</tr>
+<tr>
+<td>20</td>
+<td><code>companies.json</code> に <code>sources[]</code>（kind・url）を持ち、Source 実装は渡された URL を使う</td>
+<td>URL を各 Source にハードコード</td>
+<td>要件 §3.1「設定ファイルで外出し」。URL 変更（東宝の移転、新感線のブログ移設）を設定だけで追える。ページ送りや補助 URL の扱いは Source の責務（D-03）</td>
+</tr>
+<tr>
+<td>21</td>
+<td>契約テスト（<code>test/domain/contract.test.ts</code>）を置く</td>
+<td>UseCase テストだけに任せる</td>
+<td>CLAUDE.md はパーサーに限り「実サイトのフィクスチャで検証」を例外としている。app と collector をまたぐ契約も同じく「片側の変更で他方が壊れる」性質があり、フィクスチャ（<code>articles.sample.json</code>）で検知する。個別クラスの振る舞いではなく契約の形を検証する</td>
+</tr>
+<tr>
+<td>22</td>
+<td>JSON は 2 スペース整形・キーは宣言順・末尾改行</td>
+<td>1 行（minify）</td>
+<td><code>articles.json</code> はリポジトリにコミットされる（要件 §6.1）。整形しておけば毎時のコミット差分が行単位で読める。gzip 後のサイズは変わらない</td>
+</tr>
+<tr>
+<td>23</td>
+<td>collector の出力は <code>.strict()</code>、読み手は未知フィールドを無視する</td>
+<td>読み手も strict</td>
+<td>書き手を厳しく、読み手を寛容にすると、フィールド追加を <code>schemaVersion</code> を上げずに行える（§4.6）</td>
+</tr>
+<tr>
+<td>24</td>
+<td>見出しは NFC・空白圧縮・300 コードポイント切り捨てで正規化して格納する</td>
+<td>生のまま格納</td>
+<td>サイト側の空白や改行の揺れで <code>contentHash</code> が変わる誤検知（F-11 の誤バッジ）を防ぐ。表示は S-00 §7.7 が 3 行で省略するため 300 文字で十分</td>
+</tr>
+<tr>
+<td>25</td>
+<td><code>id</code>・<code>contentHash</code> は SHA-256 の 16 進小文字・先頭 16 文字（64 ビット）</td>
+<td>SHA-256 全 64 文字／SHA-1 全 40 文字</td>
+<td>Node <code>node:crypto</code> と Dart <code>crypto</code> の両方にあり、ログ・通知・DB で読みやすい。累計 1 万件でも衝突確率は 10^-11 以下で、衝突しても §6 の重複検査で検出できる。全 64 文字は安全側だが 4 倍長く実利が無い。SHA-1 は用途上問題ないが非推奨アルゴリズムを選ぶ理由が無い（開発者回答 2026-09-15、旧 Q-1）</td>
+</tr>
+<tr>
+<td>26</td>
+<td><code>contentHash</code> の対象は正規化後の <code>title</code> のみ</td>
+<td><code>title</code> + <code>thumbnail</code>／<code>title</code> + <code>thumbnail</code> + <code>publishedAt</code></td>
+<td>見出しの変更が「記事が書き換わった」ことの最も確かな信号。サムネイル URL は CDN やキャッシュ用クエリで揺れる可能性があり、揺れると毎時「更新」バッジが付く誤検知（F-11）になる。掲載日の変更はサイト側の付け直しで、並び順は <code>publishedAt</code> の上書き（§5.2 継続行）で追従する。<code>thumbnail</code>・<code>publishedAt</code> は毎回最新値で上書きされるため、S-02/ST-05「変わっていれば新しい値になる」はこの案でも満たす（開発者回答 2026-09-15、旧 Q-2）</td>
+</tr>
+<tr>
+<td>27</td>
+<td><code>schemaVersion</code> を <code>articles.json</code>・<code>companies.json</code> の両方に整数で持ち、§4.6 の規則で運用する</td>
+<td>持たず、フィールドの有無で判断する</td>
+<td>app と collector のリリースが同時でない（Xcode 手動インストール・TestFlight。要件 §2）ため、旧 app が新 JSON を安全に拒否する手段が要る。持たない案は破壊的変更のたびに読み手側の場当たりな判定が増える（開発者回答 2026-09-15、旧 Q-3）</td>
+</tr>
+<tr>
+<td>28</td>
+<td>app は <code>data/companies.json</code> と同じ内容を <code>app/assets/companies.json</code> として同梱し、実行時に配信 URL から取得しない。団体追加時はアセットを更新して再ビルドする</td>
+<td>起動時に <code>&lt;base&gt;/companies.json</code> を取得して端末 DB に保持し、同梱コピーを初回・オフラインの既定値にする／<code>articles.json</code> に <code>companies</code> を埋め込む</td>
+<td>app は初回起動の取得前にもタブ（S-01/ST-02）と通知トグル（S-03）を描くため、どの案でも同梱コピーは必要。同梱のみなら DB テーブルと取得処理が増えない。追加団体の記事は app 更新前でも「すべて」に出る（S-00 §7.1）ので実害が小さく、配布は開発者が制御する（要件 §2）。要件 §3.1「アプリ本体の改修なし」は「コード改修なし（設定ファイルの更新と再ビルド）」と解釈する。取得案は真に再ビルド不要だが D-04 に <code>companies</code> テーブルと同期処理が増える。埋め込み案は <code>articles.json</code> を読む前に定義が要る問題が残る（開発者回答 2026-09-15、旧 Q-4）</td>
+</tr>
+<tr>
+<td>29</td>
+<td>通知の文面は、1 件なら <code>title</code> = 正式名 <code>name</code>・<code>body</code> = 見出し、複数なら <code>title</code> = <code>name（新着 n 件）</code>・<code>body</code> = <code>先頭の見出し ほか n-1 件</code></td>
+<td><code>title</code> = <code>shortName の新着記事</code>／<code>title</code> 固定「CurtainCall」・<code>body</code> = <code>name：見出し</code></td>
+<td>iOS はアプリ名を通知に別途表示するため <code>title</code> にアプリ名は不要。正式名は通知単体で出典が分かり（調査レポート §6.2「出典を明示」）、<code>body</code> に見出しがあれば開く前に内容が分かる。短縮名は単独では分かりにくく（「東宝の新着記事」）、アプリ名固定はアプリ名が二重になる（開発者回答 2026-09-15、旧 Q-5）</td>
+</tr>
+<tr>
+<td>30</td>
+<td>通知は実行ごと・団体ごとに 1 通にまとめ、件数を <code>data.count</code> と文面に含める</td>
+<td>記事ごとに 1 通（団体 1 実行あたり上限 5 通、超過分はまとめる）</td>
+<td>cron 遅延（R-7）や Source の一時失敗からの復帰で 1 実行に複数の新着が入るのは普通で、記事ごとでは短時間に通知が連続する。通知タップ後は団体タブに全件が並ぶ（S-01/ST-15、#16）ため 1 通で足りる。記事ごとの案は見出しがすべて通知に出る利点があるが <code>thread-id</code> でまとまっても通知センターを埋める（開発者回答 2026-09-15、旧 Q-6）</td>
+</tr>
+<tr>
+<td>31</td>
+<td>配信ベース URL は <code>https://sss-kato.github.io/curtaincall/</code>、リポジトリは <code>https://github.com/sss-kato/curtaincall</code>（小文字）。User-Agent は <code>CurtainCall/1.0 (personal news reader; +https://github.com/sss-kato/curtaincall)</code></td>
+<td>推測値で埋める／リポジトリ名を <code>CurtainCall</code>（大文字混じり）で書く</td>
+<td>実際のリポジトリの owner とリポジトリ名の実値。GitHub Pages の URL は小文字で確定しており、リポジトリ名の表記も小文字にそろえる。CLAUDE.md の UA 書式 <code>+https://github.com/&lt;user&gt;/CurtainCall</code> の <code>&lt;user&gt;/CurtainCall</code> を <code>sss-kato/curtaincall</code> に置き換える（開発者回答 2026-09-15、旧 Q-7）</td>
+</tr>
+</tbody></table>
+<h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>宛先</th>
+<th>内容</th>
+<th>根拠</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>D-02</td>
+<td><code>Hasher</code> の実装は <code>infrastructure/hash/sha256-hasher.ts</code>（<code>node:crypto</code> の <code>createHash(&quot;sha256&quot;)</code>、<code>hex</code>）。<code>buildArticleId</code>・<code>buildContentHash</code> が <code>.slice(0, 16)</code> する</td>
+<td>#25</td>
+</tr>
+<tr>
+<td>D-02</td>
+<td><code>detect-diff</code> は <code>contentHash</code>（<code>title</code> のみ）の不一致で更新を判定する。<code>thumbnail</code>・<code>publishedAt</code> の変化は「継続」として値だけ上書きする</td>
+<td>#26、§5.2</td>
+</tr>
+<tr>
+<td>D-02</td>
+<td><code>notify</code> は団体ごとに 1 通／実行。文面・切り詰め・<code>data</code>・<code>apns</code> は §4.8 のとおり。前回スナップショットが無い実行では送らない</td>
+<td>#29、#30、#15</td>
+</tr>
+<tr>
+<td>D-02</td>
+<td>GitHub Pages は <code>data/</code> をルートとして <code>https://sss-kato.github.io/curtaincall/</code> に公開する。<code>infrastructure/http</code> の UA は §4.7 の文字列</td>
+<td>#31</td>
+</tr>
+<tr>
+<td>D-02</td>
+<td>起動時に <code>data/companies.json</code> を <code>CompaniesFileSchema</code> で検証し、失敗したら収集を始めない。前回の <code>articles.json</code> は <code>ArticlesFileSchema</code> で検証し、<code>schemaVersion</code> 不一致は「前回無し」として扱う</td>
+<td>#27、§3.1、§5.2</td>
+</tr>
+<tr>
+<td>D-03</td>
+<td><code>contentHash</code> にサムネイル URL を含めないため、Source はサムネイル URL のクエリ（キャッシュバスター等）を安定化する必要がない。ただし <code>Article.thumbnail</code> にはそのまま格納する</td>
+<td>#26</td>
+</tr>
+<tr>
+<td>D-04</td>
+<td><code>articles</code> テーブルの <code>id</code>・<code>contentHash</code> 列は 16 文字の英数字テキスト（主キーは <code>id</code>）</td>
+<td>#25</td>
+</tr>
+<tr>
+<td>D-04</td>
+<td><code>app/assets/companies.json</code> を <code>pubspec.yaml</code> の <code>assets</code> に登録し、起動時に読み込む Provider を置く。団体定義の DB テーブル・実行時取得は作らない</td>
+<td>#28</td>
+</tr>
+<tr>
+<td>D-04</td>
+<td>配信ベース URL の定数は <code>https://sss-kato.github.io/curtaincall/</code>。取得は <code>https://sss-kato.github.io/curtaincall/articles.json</code> のみ（<code>companies.json</code> は取得しない）。<code>ETag</code> / <code>If-None-Match</code> を使い、<code>schemaVersion !== 1</code> は取得失敗</td>
+<td>#27、#31、§4.6、§4.7</td>
+</tr>
+<tr>
+<td>D-04</td>
+<td>通知受信では <code>data.companyId</code> だけを読む。<code>data.count</code>・<code>notification</code> 本文は表示に使わない</td>
+<td>§4.8</td>
+</tr>
+<tr>
+<td>D-05</td>
+<td>更新の判定は <code>updatedAt</code> の値の変化のみ（<code>contentHash</code> は比較しない）。並び替えは <code>compareArticles</code> の移植</td>
+<td>#5、§4.5、§5.2</td>
+</tr>
+<tr>
+<td>D-05</td>
+<td>タブ・通知トグルの団体一覧は同梱アセット由来の Provider から取り、記事側にしか無い <code>companyId</code> は「すべて」に表示する</td>
+<td>#28、S-00 §7.1</td>
+</tr>
+</tbody></table>
+<h2 id="sec-9">9. 未決定事項<a class="anchor" href="#sec-9">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>項目</th>
+<th>選択肢</th>
+<th>推奨</th>
+<th>影響範囲</th>
+</tr>
+</thead>
+</table>
+<h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
+<p>本書が定める契約を実装するタスク。collector 側は D-02 のスキャフォールド（<code>package.json</code>・<code>tsconfig</code>・ESLint・Vitest）が先、app 側は D-04 のスキャフォールドが先。</p>
+<table>
+<thead>
+<tr>
+<th>順</th>
+<th>タスク候補</th>
+<th>触るディレクトリ</th>
+<th>依存</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>collector 契約実装：<code>domain/article.ts</code>・<code>company.ts</code>・<code>category.ts</code>・<code>url.ts</code>・<code>hasher.ts</code>・<code>article-identity.ts</code>、<code>infrastructure/hash/sha256-hasher.ts</code>、契約テスト <code>test/domain/contract.test.ts</code>、フィクスチャ <code>test/fixtures/contract/*.json</code></td>
+<td><code>collector/src/domain/</code>、<code>collector/src/infrastructure/hash/</code>、<code>collector/test/domain/</code>、<code>collector/test/fixtures/contract/</code></td>
+<td>D-02 のスキャフォールドタスク</td>
+</tr>
+<tr>
+<td>2</td>
+<td>団体定義と初期データ：<code>data/companies.json</code>（§4.3 の内容）、その同一コピー <code>app/assets/companies.json</code>、<code>data/articles.json</code>（<code>articles: []</code> の初期ファイル）。契約テストが <code>data/companies.json</code> を実ファイルとして検証し、<code>app/assets/companies.json</code> との一致を検証する</td>
+<td><code>data/</code>、<code>app/assets/</code></td>
+<td>1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>app 契約実装：<code>Article</code> エンティティ（Dart）、同梱アセット <code>app/assets/companies.json</code> の <code>pubspec.yaml</code> への登録と読み込み、配信ベース URL 定数（<code>https://sss-kato.github.io/curtaincall/</code>）、<code>compareArticles</code> の移植、<code>articles.sample.json</code> のコピーを使う読み取りの UseCase テスト</td>
+<td><code>app/lib/features/articles/domain/</code>、<code>app/pubspec.yaml</code>、<code>app/test/</code>（配置の詳細は D-04）</td>
+<td>D-04 のスキャフォールドタスク、2（アセット・フィクスチャ）</td>
+</tr>
+</tbody></table>
+<p>各タスクは新規ファイル 5〜10、1 dev-loop で完了する大きさ。1 と 2 は同じ dev-loop にまとめてもよい（合わせて新規 10 ファイル程度）。</p>
+<h2 id="h-変更履歴">変更履歴<a class="anchor" href="#h-変更履歴">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>日付</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2026-09-15</td>
+<td>初版</td>
+</tr>
+<tr>
+<td>2026-09-15</td>
+<td>未決定事項 7 件を反映（Q-1〜Q-7、すべて推奨案。Q-7 は実値）。§8 #25〜#31 に移し、§8.1 に他設計書への申し送りを追加</td>
+</tr>
+</tbody></table>
+
+<p class="gen">生成元: docs/design/D-01.md — このファイルは render-design.mjs の生成物です。編集は Markdown 側で行ってください。</p>
+</main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+if (window.mermaid) {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "default" });
+}
+</script>
+</body>
+</html>

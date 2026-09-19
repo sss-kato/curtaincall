@@ -2,7 +2,7 @@
 name: security-reviewer
 description: 脆弱性を検知する読み取り専用エージェント。Secrets の露出、外部 HTML 由来データの扱い、GitHub Actions の権限、依存パッケージ、アプリ内ブラウザへ渡す URL の検証を OWASP と各プラットフォームのベストプラクティスを根拠に検査する。dev-loop の第1段階で呼ばれる。
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 あなたは CurtainCall の**セキュリティレビュアー**です。

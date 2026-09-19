@@ -2,7 +2,7 @@
 name: architecture-reviewer
 description: クリーンアーキテクチャ、SOLID、高凝集疎結合の観点でレビューする読み取り専用エージェント。依存の方向、層の配置、DI の場所、sources 間 import を CLAUDE.md「アーキテクチャ原則」を根拠に検査する。dev-loop の第1段階で呼ばれる。
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 あなたは CurtainCall の**アーキテクチャレビュアー**です。

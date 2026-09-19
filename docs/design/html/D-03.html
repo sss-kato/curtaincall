@@ -43,12 +43,12 @@ a{color:var(--accent)}
 <div class="wrap">
 <nav>
 <a class="home" href="index.html">CurtainCall 設計書</a>
-<a href="index.html">目次</a><a href="D-01.html">D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</a><a href="D-02.html">D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</a><a href="D-03.html" style="color:var(--accent)">D-03 Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応）</a>
+<a href="index.html">目次</a><a href="D-01.html">D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</a><a href="D-02.html">D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</a><a href="D-03.html" style="color:var(--accent)">D-03 Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応）</a><a href="D-04.html">D-04 app 基盤設計（feature 構成・drift スキーマ・Riverpod / DI・HTTP・FCM 購読・100 件保持・通知許可）</a>
 <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
 <a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 依存の方向</a><a class="d3" href="#sec-3-2">3.2 ファイル配置</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Source の共通構造</a><a class="d3" href="#sec-4-2">4.2 取得 URL・方式・セレクタ（初期値）</a><a class="d3" href="#sec-4-3">4.3 団体固有の URL 正規化</a><a class="d3" href="#sec-4-4">4.4 日付の解釈</a><a class="d3" href="#sec-4-5">4.5 RSS のフィールド対応（ホリプロ・新感線）</a><a class="d3" href="#sec-4-6">4.6 カテゴリ判定の表</a><a class="d3" href="#sec-4-7">4.7 companies.json と Source の対応</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 共通：<code>fetch()</code> の流れとカテゴリ判定</a><a class="d3" href="#sec-5-2">5.2 ホリプロ（RSS）</a><a class="d3" href="#sec-5-3">5.3 新感線（RSS）</a><a class="d3" href="#sec-5-4">5.4 宝塚（HTML）</a><a class="d3" href="#sec-5-5">5.5 四季（HTML + ページ送り）</a><a class="d3" href="#sec-5-6">5.6 東宝（HTML × 2 URL + URL 正規化）</a><a class="d3" href="#sec-5-7">5.7 DI 配線（<code>main.ts</code>）</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d3" href="#sec-7-1">7.1 テストダブル（<code>test/helpers/stub-http-client.ts</code>）</a><a class="d3" href="#sec-7-2">7.2 フィクスチャの取得規則</a><a class="d3" href="#sec-7-3">7.3 Source ごとのケース</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
 </nav>
 <main>
-<header><h1>D-03 Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応）</h1><div class="meta"><b>status</b><span><span class="badge draft">draft</span></span><b>scope</b><span>collector</span><b>risks</b><span>R-5, R-8, R-9</span><b>depends_on</b><span>D-01, D-02</span><b>review_rounds</b><span>0</span></div></header>
+<header><h1>D-03 Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応）</h1><div class="meta"><b>status</b><span><span class="badge draft">draft</span></span><b>scope</b><span>collector</span><b>risks</b><span>R-2, R-5, R-8, R-9</span><b>depends_on</b><span>D-01, D-02</span><b>review_rounds</b><span>0</span></div></header>
 <h2 id="sec-1">1. 目的と範囲<a class="anchor" href="#sec-1">#</a></h2>
 <p>本書は、<a href="D-02.html">D-02</a> §4.1 が定めた <code>Source</code> 契約（入力なし → <code>RawArticle[]</code>、失敗は例外）を <strong>5 団体それぞれについてどう実装するか</strong>を定める。決めるのは、(1) 各 Source の共通構造（ファクトリのシグネチャ・<code>fetch()</code> の流れ・記事単位の破棄規則）、(2) 団体ごとの取得 URL と方式（RSS / HTML、ページ送りの有無と最大ページ数）、(3) パース規則（rss-parser のフィールド、cheerio のセレクタ）、(4) 団体固有の URL 正規化（相対 URL の解決、東宝の 3 ドメイン吸収。R-8）、(5) 日付書式の解釈と <code>domain/datetime.ts</code> への接続、(6) カテゴリ判定に使う表（全団体共通キーワード表 <code>COMMON_CATEGORY_KEYWORDS</code> の具体値、団体別のタグ対応表と追加キーワード表。R-5）、(7) サムネイルの取得方法、(8) パーサーのフィクスチャテストである。決めないのは、<code>RawArticle</code> の確定（<code>id</code>・<code>contentHash</code>・<code>normalizeUrl</code>・<code>normalizeTitle</code>・<code>thumbnail</code> の検証。<a href="D-02.html">D-02</a> §5.1）、Source の並行実行と失敗の集計（D-02 §5.1）、<code>articles.json</code> の形（<a href="D-01.html">D-01</a>）、app 側のすべてである。D-01 の決定（§8 #1〜#34）と D-02 の決定（§8 #1〜#36）は本書の前提であり、変更しない。</p>
 <p>セレクタとタグ文字列は調査レポート（2026-09-13）の記述から<strong>推測した初期値</strong>である。実サイトの HTML / RSS をフィクスチャとして保存した時点で、実装タスク（§10）が §4.2・§4.6 の値をフィクスチャに合わせて確定する。確定してよいのは値だけで、「どのフィールドをどこから取るか」の規則（§5）は変えない。</p>
@@ -62,6 +62,11 @@ a{color:var(--accent)}
 </tr>
 </thead>
 <tbody><tr>
+<td>R-2 サイト改装で収集が壊れる</td>
+<td>HTML 3 団体の抽出規則（セレクタ・日付・URL）を Source ファイルごとに閉じ、他団体へ波及させない。<code>item</code> セレクタが全 URL で不一致なら 0 件 → application の <code>empty</code> で検知。1 URL（ページ）だけ 0 件、または項目は一致したが全項目が破棄された場合は <code>SourceError</code> で Source 失敗にし、部分的な改装も <code>failures</code> に載せる。実サイトのフィクスチャと取得日時の記録で改装を検知する</td>
+<td>§6 / §7.2 / §8 #1・#13・#14・#22・#23</td>
+</tr>
+<tr>
 <td>R-5 カテゴリの自動判定精度</td>
 <td>ホリプロ・新感線は RSS の <code>category</code> 要素を、宝塚は一覧の分類タグを <code>CategoryTagMap</code> で写像し、写像できなければ全団体で見出しキーワードに進む（D-01 §5.3 の 2 段）。全団体共通キーワード表の具体値を <code>domain/category-keywords.ts</code> に、団体別の表を各 Source ファイル内に置き、表だけを差し替えて精度を調整できるようにする。フィクスチャテストで既知記事の判定結果を固定し、表の変更による退行を検知する</td>
 <td>§4.6 / §5.1 / §7</td>
@@ -118,7 +123,7 @@ a{color:var(--accent)}
   end
   subgraph dom[&quot;domain（D-01 / D-02）&quot;]
     PORTS[&quot;source.ts / http-client.ts / logger.ts / company.ts&quot;]
-    PURE[&quot;datetime.ts / category.ts / category-keywords.ts / text.ts&quot;]
+    PURE[&quot;datetime.ts / category.ts / category-keywords.ts / text.ts / url.ts&quot;]
   end
   MAIN --&gt; HOR
   MAIN --&gt; SHN
@@ -141,7 +146,7 @@ a{color:var(--accent)}
   SHK --&gt; PURE
   TOH --&gt; PURE</pre>
 <ul>
-<li><code>sources/</code> の 5 ファイルは互いに import しない（CLAUDE.md）。共通化は domain の純粋関数（<code>toJstDateTime</code>・<code>jstDateOnly</code>・<code>matchCategoryTags</code>・<code>matchCategoryKeywords</code>・<code>resolveCategory</code>・<code>foldText</code>・<code>normalizeTitle</code>）を各ファイルから呼ぶ形に限る（§8 #1）</li>
+<li><code>sources/</code> の 5 ファイルは互いに import しない（CLAUDE.md）。共通化は domain の純粋関数（<code>toJstDateTime</code>・<code>jstDateOnly</code>・<code>matchCategoryTags</code>・<code>matchCategoryKeywords</code>・<code>resolveCategory</code>・<code>foldText</code>・<code>normalizeTitle</code>、四季の <code>visited</code> 比較に使う <code>normalizeUrl</code>）を各ファイルから呼ぶ形に限る（§8 #1）</li>
 <li>ネットワークは <code>HttpClient.getText()</code> だけを使う。rss-parser の <code>parseURL</code> は使わず <code>parseString</code> に本文を渡す（D-02 §4.3、CLAUDE.md）</li>
 <li><code>application</code> への依存は無い。<code>sources/</code> が知るのは domain のポートと純粋関数だけである</li>
 </ul>
@@ -266,6 +271,7 @@ export function createHoriproSource(company: Company, deps: SourceDeps, options:
 <th>方式</th>
 <th>ページ送り</th>
 <th>1 実行のリクエスト数</th>
+<th>1 回の取得で得られる件数（調査時点）</th>
 </tr>
 </thead>
 <tbody><tr>
@@ -274,6 +280,7 @@ export function createHoriproSource(company: Company, deps: SourceDeps, options:
 <td>RSS 2.0（rss-parser）</td>
 <td>無し</td>
 <td>1</td>
+<td>10 件（WordPress 既定。<code>fullCrawl</code> でも増えない。過去分を遡る手段が無い）</td>
 </tr>
 <tr>
 <td>新感線</td>
@@ -281,6 +288,7 @@ export function createHoriproSource(company: Company, deps: SourceDeps, options:
 <td>RSS 2.0（rss-parser）</td>
 <td>無し</td>
 <td>1</td>
+<td>10 件（同上）</td>
 </tr>
 <tr>
 <td>宝塚</td>
@@ -288,6 +296,7 @@ export function createHoriproSource(company: Company, deps: SourceDeps, options:
 <td>HTML（cheerio）</td>
 <td>無し（1 ページに全件。調査レポート §3）</td>
 <td>1</td>
+<td>100 件以上（2016 年まで）</td>
 </tr>
 <tr>
 <td>四季</td>
@@ -295,6 +304,7 @@ export function createHoriproSource(company: Company, deps: SourceDeps, options:
 <td>HTML（cheerio）</td>
 <td>有り。<code>fullCrawl</code> 偽 → 1 ページ、真 → 最大 <code>SHIKI_FULL_CRAWL_PAGES</code> = 5 ページ（§8 #6）</td>
 <td>1 または最大 5</td>
+<td>10 件/ページ（<code>fullCrawl</code> 時 最大 50 件）</td>
 </tr>
 <tr>
 <td>東宝</td>
@@ -302,31 +312,41 @@ export function createHoriproSource(company: Company, deps: SourceDeps, options:
 <td>HTML（cheerio）</td>
 <td>無し（§8 #7）</td>
 <td>2</td>
+<td>topics 12 件以上 + news 4 件程度</td>
 </tr>
 </tbody></table>
+<p>RSS の 2 団体は初回でも 10 件しか得られず、<code>fullCrawl</code> で遡る手段が無い。§10 Task L の完了条件「他 4 団体で 30 件以上」は、ホリプロ 10 + 新感線 10 + 四季 10（定常）または 50（<code>fullCrawl</code>）+ 東宝 16 の合計から、一時的な取りこぼしを見込んで置いた下限である。</p>
+<p><strong>セレクタの規則（3 団体共通）</strong>：</p>
+<ul>
+<li><code>SELECTORS.item</code> は、フィクスチャで確定する時点で<strong>互いに入れ子にならない単一のセレクタ</strong>にする。初期値のカンマ区切りは候補の列挙であり、確定値に複数候補を残さない。候補が入れ子の要素（月見出しの <code>li</code> とその中の記事 <code>li</code> など）に多重一致すると、親項目が子の 1 件目のリンクと連結された見出しで採用され、正しい項目が捨てられる（§7.3 で「一致した項目数 = 記事数」「同じ <code>url</code> の項目が 2 つ出ない」を固定する）</li>
+<li>四季の <code>SELECTORS.next</code> だけは候補の<strong>配列</strong>とし、記述順に 1 つずつ試して最初に 1 件以上一致したセレクタの先頭要素を使う（§5.5）。CSS セレクタリストの結果は DOM 順で返るため、1 本の文字列に連結すると記述順の優先が効かない。確定時には 1 要素の配列に絞り、<code>:contains(...)</code> は残さない</li>
+</ul>
 <pre><code class="language-ts">// takarazuka.ts
 /** 記事 URL の規則（調査レポート §3）。日付は URL から取る */
 export const TAKARAZUKA_NEWS_URL_RE = /\/news\/(\d{4})(\d{2})(\d{2})_(\d{3})\.html$/;
 const SELECTORS = {
-  item: &quot;.news-list li, ul.newsList &gt; li, .newsList li&quot;,   // 一覧の 1 記事。フィクスチャで 1 つに絞る
+  item: &quot;.news-list li, ul.newsList &gt; li, .newsList li&quot;,   // 一覧の 1 記事。候補の列挙。フィクスチャで入れ子にならない 1 本に絞る（上記の規則）
   link: &quot;a[href]&quot;,                                          // item 内の記事リンク
   tags: &quot;.tag, .category, .cat&quot;,                            // item 内の分類タグ（複数可）
-  dateText: &quot;.date, time&quot;,                                  // URL から日付が取れないときの予備
+  dateText: &quot;.date, time&quot;,                                  // URL から日付が取れないときの予備（DATE_DOT_RE。§4.4）
   image: &quot;img&quot;,                                             // item 内の先頭の img
 } as const;</code></pre>
 <pre><code class="language-ts">// shiki.ts
 export const SHIKI_FULL_CRAWL_PAGES = 5;   // fullCrawl 時の最大ページ数（調査レポート §4「3〜5」の上限。§8 #6）
+/** 記事 URL の規則（調査レポート §4: /navi/news/renewinfo/NNNNNN.html）。妥当性の確認（§7.3）にだけ使い、項目を弾く条件には使わない（§8 #13） */
+export const SHIKI_NEWS_URL_RE = /\/navi\/news\/renewinfo\/\d{6}\.html$/;
 const SELECTORS = {
-  item: &quot;.news-list li, ul.newsList &gt; li, .newsList li&quot;,
+  item: &quot;.news-list li, ul.newsList &gt; li, .newsList li&quot;,   // 候補の列挙。フィクスチャで 1 本に絞る
   link: &quot;a[href]&quot;,
   title: &quot;.title, .ttl&quot;,                                    // 無ければ link のテキスト
   dateText: &quot;time[datetime], .date, time&quot;,
   image: &quot;img&quot;,
-  next: 'a[rel=&quot;next&quot;], .pager a.next, .pagination a.next, a:contains(&quot;次へ&quot;)',   // 先頭で一致したものの href
+  /** 「次へ」リンクの候補。記述順に試し、最初に 1 件以上一致したセレクタの先頭要素の href を使う（§5.5）。確定時は 1 要素にし :contains は残さない */
+  next: ['a[rel=&quot;next&quot;]', &quot;.pager a.next&quot;, &quot;.pagination a.next&quot;, 'a:contains(&quot;次へ&quot;)'],
 } as const;</code></pre>
 <pre><code class="language-ts">// toho.ts
 const SELECTORS = {
-  item: &quot;.topics-list li, .news-list li, article, ul.list &gt; li&quot;,   // /stage/topics/ と /stage/news/ で共通。差があればフィクスチャ確認時に pathname で分ける
+  item: &quot;.topics-list li, .news-list li, article, ul.list &gt; li&quot;,   // 候補の列挙。/stage/topics/ と /stage/news/ で共通。差があればフィクスチャ確認時に pathname で分け、各 1 本に絞る
   link: &quot;a[href]&quot;,
   title: &quot;.title, .ttl, h2, h3&quot;,                                    // 無ければ link のテキスト
   dateText: &quot;time[datetime], .date, time&quot;,
@@ -338,7 +358,10 @@ const SELECTORS = {
 <p><strong>共通：相対 URL の解決。</strong> HTML の 3 団体は <code>new URL(href, pageUrl).toString()</code> で絶対化する（<code>pageUrl</code> はその要素を取得したページの URL）。<code>href</code> が空・<code>javascript:</code>・<code>mailto:</code>・<code>#</code> のみ → その記事を破棄（§6）。RSS の 2 団体は <code>link</code> が絶対 URL であることを前提にし、<code>new URL(link)</code> が失敗したら破棄する。</p>
 <p><strong>東宝（R-8）：<code>normalizeTohoUrl(href, pageUrl)</code>。</strong> 汎用正規化の前段として <code>RawArticle.url</code> に格納する値を決める。</p>
 <pre><code class="language-ts">// toho.ts
-/** 東宝系のホスト。これらに限り http → https に揃える（調査レポート §5 の全 URL が https で提供されている） */
+/**
+ * 東宝系のホスト。これらに限り http → https と /index.html の除去を行う（調査レポート §5 の全 URL が https で提供されている）。
+ * stagegate.jp は東宝関連だが記事 URL として現れるか未確認のため対象外。フィクスチャで確認したら追加を検討する（§10 K5）
+ */
 const TOHO_HOSTS: ReadonlySet&lt;string&gt; = new Set([
   &quot;www.toho.co.jp&quot;, &quot;www.tohostage.com&quot;, &quot;teigeki.tohostage.com&quot;, &quot;crea.tohostage.com&quot;,
   &quot;tohostage.toho-navi.com&quot;,
@@ -353,8 +376,10 @@ export function normalizeTohoUrl(href: string, pageUrl: string): string {
   const u = new URL(href, pageUrl);                       // 1. 相対 URL の解決（失敗は呼び出し側が破棄）
   const host = u.hostname.toLowerCase();
   u.hostname = TOHO_HOST_ALIASES.get(host) ?? host;       // 2. 別名の統一
-  if (u.protocol === &quot;http:&quot; &amp;&amp; TOHO_HOSTS.has(u.hostname)) u.protocol = &quot;https:&quot;;   // 3. 東宝系だけ https へ
-  u.pathname = u.pathname.replace(/\/index\.html?$/, &quot;/&quot;); // 4. ディレクトリ既定ページの統一
+  if (TOHO_HOSTS.has(u.hostname)) {
+    if (u.protocol === &quot;http:&quot;) u.protocol = &quot;https:&quot;;       // 3. 東宝系だけ https へ
+    u.pathname = u.pathname.replace(/\/index\.html?$/, &quot;/&quot;); // 4. 東宝系だけディレクトリ既定ページを統一
+  }
   return u.toString();
 }</code></pre>
 <table>
@@ -382,9 +407,14 @@ export function normalizeTohoUrl(href: string, pageUrl: string): string {
 </tr>
 <tr>
 <td><code>http://example.com/a/index.html</code></td>
-<td><code>http://example.com/a/</code>（東宝系でないので https にしない。<code>index.html</code> 除去は全ホスト）</td>
+<td><code>http://example.com/a/index.html</code>（東宝系でないので変更しない。スキームもパスも触らない）</td>
+</tr>
+<tr>
+<td><code>https://stagegate.jp/x/index.html</code></td>
+<td><code>https://stagegate.jp/x/index.html</code>（<code>TOHO_HOSTS</code> に無いので変更しない。D-01 #10「開ける URL を格納する」）</td>
 </tr>
 </tbody></table>
+<p>手順 3・4 を <code>TOHO_HOSTS</code> に限るのは、外部サイトでは <code>/index.html</code> を除いたディレクトリ URL が同じページを返す保証が無く、開けない URL を作りうるためである（§6 の東宝行、§8 #11）。</p>
 <p>他の 4 団体は団体固有の正規化を持たない（相対 URL の解決のみ）。</p>
 <h3 id="sec-4-4">4.4 日付の解釈<a class="anchor" href="#sec-4-4">#</a></h3>
 <p>すべて <code>domain/datetime.ts</code>（D-02 §4.2）に接続する。日付を得られない記事は破棄する（<code>publishedAt</code> に空文字を入れない。D-02 §4.2）。</p>
@@ -407,7 +437,7 @@ export function normalizeTohoUrl(href: string, pageUrl: string): string {
 <td>宝塚</td>
 <td>記事 URL（<code>TAKARAZUKA_NEWS_URL_RE</code> の <code>YYYYMMDD</code>）</td>
 <td><code>20260913</code></td>
-<td><code>jstDateOnly(y, m, d)</code>。URL が規則に合わなければ <code>SELECTORS.dateText</code> の <code>2026.09.13</code> を予備として同じ正規表現群で読む</td>
+<td><code>jstDateOnly(y, m, d)</code>。URL が規則に合わなければ <code>SELECTORS.dateText</code> の先頭要素のテキストに <code>DATE_DOT_RE</code>（<code>2026.09.13</code>）だけを当てる予備を使う（<code>time[datetime]</code> 属性・漢字書式は見ない。§5.4）</td>
 </tr>
 <tr>
 <td>四季</td>
@@ -431,8 +461,22 @@ const DATE_KANJI_RE = /(\d{4})年(\d{1,2})月(\d{1,2})日/;       // 2026年09�
 <pre><code class="language-ts">// horipro.ts / shinkansen.ts
 import Parser from &quot;rss-parser&quot;;
 
-/** media:thumbnail / media:content を拾う。xml2js の出力は { $: { url } } の形 */
-type MediaField = { readonly $?: { readonly url?: string } };
+/** media:thumbnail / media:content を拾う。xml2js の出力は { $: { url, type?, medium? } } の形 */
+type MediaField = { readonly $?: { readonly url?: string; readonly type?: string; readonly medium?: string } };
+
+/** media:* の要素が画像かどうか。type が image/ 始まり、または medium が &quot;image&quot;、または両方欠落のときだけ採用する（動画・音声の URL をサムネイルにしない） */
+function isImageMedia(m: MediaField): boolean {
+  const type = m.$?.type;
+  const medium = m.$?.medium;
+  if (type === undefined &amp;&amp; medium === undefined) return true;
+  return (type !== undefined &amp;&amp; type.startsWith(&quot;image/&quot;)) || medium === &quot;image&quot;;
+}
+
+/** 単体オブジェクトでも配列でも受け取り、配列に揃える */
+function asArray(v: MediaField | readonly MediaField[] | undefined): readonly MediaField[] {
+  if (v === undefined) return [];
+  return Array.isArray(v) ? (v as readonly MediaField[]) : [v as MediaField];
+}
 interface FeedItem {
   readonly title?: string;
   readonly link?: string;
@@ -456,7 +500,7 @@ const parser = new Parser&lt;Record&lt;string, never&gt;, FeedItem&gt;({
 </thead>
 <tbody><tr>
 <td><code>title</code></td>
-<td><code>item.title</code> を <code>trim</code></td>
+<td><code>item.title</code> を <code>trim</code>。rss-parser（xml2js）が CDATA の展開と HTML エンティティのデコードを 1 段行った文字列を<strong>そのまま</strong>使い、追加のデコードは行わない（<code>&amp;amp;amp;</code> のような二重エスケープはサイト側の表記として <code>&amp;amp;</code> のまま残す）。改行・連続空白は <code>trim</code> 以外触らない（圧縮は application の <code>normalizeTitle</code>。§6）</td>
 <td>空 → 破棄</td>
 </tr>
 <tr>
@@ -476,8 +520,8 @@ const parser = new Parser&lt;Record&lt;string, never&gt;, FeedItem&gt;({
 </tr>
 <tr>
 <td><code>thumbnail</code></td>
-<td><code>enclosure.url</code>（<code>type</code> が <code>image/</code> 始まりのときだけ）→ <code>mediaThumbnail[0].$.url</code> → <code>mediaContent[0].$.url</code> の順で最初に得られた絶対 URL</td>
-<td>無ければキー省略。<code>description</code> / <code>content:encoded</code> は読まない（§8 #5・#16）</td>
+<td>(1) <code>enclosure.url</code>（<code>type</code> が <code>image/</code> 始まりのときだけ）→ (2) <code>asArray(mediaThumbnail)</code> の先頭で <code>isImageMedia</code> が真の要素の <code>$.url</code> → (3) <code>asArray(mediaContent)</code> の同上、の順で最初に得られた絶対 URL（<code>new URL()</code> が通ること）。<code>mediaThumbnail</code> / <code>mediaContent</code> が単体オブジェクトのときは 1 要素の配列とみなす（<code>asArray</code>）</td>
+<td>無ければキー省略。<code>media:*</code> の <code>type</code> が <code>video/</code> 等・<code>medium</code> が <code>&quot;video&quot;</code> の要素は飛ばす。<code>description</code> / <code>content:encoded</code> は読まない（§8 #5・#16）</td>
 </tr>
 </tbody></table>
 <h3 id="sec-4-6">4.6 カテゴリ判定の表<a class="anchor" href="#sec-4-6">#</a></h3>
@@ -542,6 +586,35 @@ const TOHO_TABLES: CategoryTables = {
   keywords: { new_work: [], ticket: [&quot;ナビザーブ&quot;, &quot;東宝ナビザーブ&quot;], streaming: [&quot;東宝ステージ配信&quot;, &quot;アーカイブ配信&quot;], schedule: [], cast: [], person: [], other: [] },
 };</code></pre>
 <p>D-01 §4.2 のサンプル 3 件との整合：宝塚「…無料配信の実施について」→ 共通表 <code>配信</code> で <code>streaming</code>、ホリプロ「【重要】…公演中止のお詫びと払い戻し…」→ タグ「重要なお知らせ」は写像なし・キーワード該当なし → <code>other</code>、新感線「／爆烈忠臣蔵／ゲキ×シネ…全国公開決定！！」→ タグ「NEWS」は写像なし → 共通表 <code>ゲキ×シネ</code> で <code>streaming</code>。いずれもサンプルの <code>category</code> と一致する。「公開決定」は <code>new_work</code> の <code>公演決定</code> に一致しない（部分一致は「公演決定」の 4 文字）。</p>
+<p><strong>部分一致による誤判定の扱い（§8 #21）。</strong> キーワード照合は否定・複合語を区別しない部分一致（D-01 §4.4）であり、次の記事は表のとおりに判定される。これを「期待する振る舞い」として §7.3 で固定し、実データで表を直す運用（R-5）で調整する。</p>
+<table>
+<thead>
+<tr>
+<th>見出し</th>
+<th>候補</th>
+<th>結果</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ライブ配信中止のお知らせ</td>
+<td><code>配信</code> → <code>streaming</code></td>
+<td><code>streaming</code></td>
+<td>否定文でも一致する。「中止」を除外する仕組みは持たない</td>
+</tr>
+<tr>
+<td>ゲキ×シネ『◯◯』先行上映決定</td>
+<td><code>先行</code> → <code>ticket</code>、<code>ゲキ×シネ</code> → <code>streaming</code></td>
+<td><code>ticket</code></td>
+<td><code>CATEGORY_PRIORITY</code>（D-01 #11）で <code>ticket</code> が勝つ。新感線の中心的な記事形式だが、開発者確認のうえ現状どおり <code>ticket</code> とする（§8 #21）</td>
+</tr>
+<tr>
+<td>グッズ発売日のお知らせ</td>
+<td><code>発売日</code> → <code>ticket</code></td>
+<td><code>ticket</code></td>
+<td>物販でも一致する</td>
+</tr>
+</tbody></table>
 <h3 id="sec-4-7">4.7 companies.json と Source の対応<a class="anchor" href="#sec-4-7">#</a></h3>
 <p><code>data/companies.json</code> は D-01 §4.3 の内容のまま変更しない。<code>main.ts</code> の <code>SOURCE_FACTORIES</code>（D-02 §5.5 手順 6）に次の 5 行を置く。</p>
 <pre><code class="language-ts">// main.ts（D-02 §5.5 手順 6 の表に値を入れる）
@@ -587,7 +660,7 @@ const SOURCE_FACTORIES: Readonly&lt;Record&lt;string, SourceFactory&gt;&gt; = {
 </li>
 <li><p>本文をパースする。RSS は <code>parser.parseString(body)</code>、HTML は <code>cheerio.load(body)</code>。パーサー自体の例外（XML として壊れている等）は <code>SourceError(&quot;failed to parse &lt;url&gt;&quot;, { cause })</code> に包んで投げる（§6）</p>
 </li>
-<li><p>項目を出現順に走査し、団体別の抽出規則（§5.2〜§5.6）で <code>title</code>・<code>url</code>・<code>publishedAt</code>・<code>siteTags</code>・<code>thumbnail</code> を得る。<code>title</code> が空・<code>url</code> が絶対化できない・日付が得られない・変換できない項目は<strong>その項目だけ</strong>捨て、<code>deps.logger.warn(&quot;article skipped&quot;, { sourceId: this.id, reason, url })</code> を出す（<code>reason</code> は <code>&quot;no_title&quot;</code> / <code>&quot;no_link&quot;</code> / <code>&quot;no_date&quot;</code> / <code>&quot;invalid_date&quot;</code> のいずれか。<code>url</code> は分かる範囲。§6）</p>
+<li><p>項目を出現順に走査し、団体別の抽出規則（§5.2〜§5.6）で <code>title</code>・<code>url</code>・<code>publishedAt</code>・<code>siteTags</code>・<code>thumbnail</code> を得る。<code>title</code> が空・<code>url</code> が絶対化できない・日付が得られない・変換できない項目は<strong>その項目だけ</strong>捨て、<code>deps.logger.warn(&quot;article skipped&quot;, { sourceId: this.id, reason, url })</code> を出す（<code>reason</code> は <code>&quot;no_title&quot;</code> / <code>&quot;no_link&quot;</code> / <code>&quot;no_date&quot;</code> / <code>&quot;invalid_date&quot;</code> のいずれか。<code>url</code> は分かる範囲。§6）。URL（ページ）ごとに「一致した項目数 <code>matched</code>」と「破棄理由ごとの件数」を数え、<code>matched &gt; 0</code> かつ採用 0 件なら <code>SourceError(&quot;all items discarded in &lt;url&gt;: no_date=24&quot;)</code> のように理由の内訳を message に含めて投げる（§6、§8 #23）</p>
 </li>
 <li><p>カテゴリを決める（D-01 §5.3 の手順を各ファイルのローカル関数 <code>classify</code> で呼ぶ。§8 #4）：</p>
 <pre><code class="language-ts">function classify(rawTitle: string, siteTags: readonly string[], tables: CategoryTables): Category {
@@ -603,7 +676,7 @@ const SOURCE_FACTORIES: Readonly&lt;Record&lt;string, SourceFactory&gt;&gt; = {
 </li>
 <li><p><code>RawArticle</code> を組み立てる。<code>thumbnail</code> は得られたときだけ条件付きスプレッドでキーを持たせる（D-02 §4.9）</p>
 </li>
-<li><p>全 <code>sources[]</code>（とページ）の結果を走査順に連結して返す。0 件でも例外にしない（application が <code>empty</code> として失敗に数える。D-02 #3）</p>
+<li><p>全 <code>sources[]</code>（とページ）の結果を走査順に連結して返す。<strong>すべての</strong> URL（ページ）で <code>matched</code> が 0 なら空配列を返し例外にしない（application が <code>empty</code> として失敗に数える。D-02 #3）。<code>sources[]</code> が複数（東宝）で、ある URL の <code>matched</code> が 0 かつ他の URL が 1 件以上なら <code>SourceError(&quot;no items in &lt;url&gt;&quot;)</code> を投げる（1 URL だけの改装を成功扱いにしない。§6、§8 #22）</p>
 </li>
 </ol>
 </li>
@@ -639,7 +712,7 @@ const SOURCE_FACTORIES: Readonly&lt;Record&lt;string, SourceFactory&gt;&gt; = {
 <li>日付：絶対 URL のパスに <code>TAKARAZUKA_NEWS_URL_RE</code> を当て、<code>YYYY</code>・<code>MM</code>・<code>DD</code> → <code>jstDateOnly</code>。一致しなければ <code>SELECTORS.dateText</code> のテキストに <code>DATE_DOT_RE</code> を当てる。どちらも無ければ破棄（<code>no_date</code>）</li>
 <li><code>title</code>：リンク要素のテキストから、項目内の <code>SELECTORS.tags</code>・<code>SELECTORS.dateText</code> に当たる要素のテキストを除いた残り（cheerio で該当要素を <code>remove()</code> した複製から <code>text()</code> を取る）を <code>trim</code>。「新」バッジ等の装飾要素も同じ方法で除く（フィクスチャ確認時にセレクタへ追加する）</li>
 <li><code>siteTags</code>：項目内の <code>SELECTORS.tags</code> の各テキストを <code>trim</code>（例：<code>[&quot;花組&quot;, &quot;宝塚大劇場&quot;]</code>）</li>
-<li><code>thumbnail</code>：項目内の <code>SELECTORS.image</code> の先頭要素の <code>src</code>（無ければ <code>data-src</code>）。<code>data:</code> 始まり・空 → 省略。相対なら <code>pageUrl</code> で絶対化</li>
+<li><code>thumbnail</code>：項目内の <code>SELECTORS.image</code> の先頭要素について、<code>src</code> → <code>data-src</code> → <code>data-original</code> の順に属性を見る。属性が<strong>無い・<code>trim</code> して空・<code>data:</code> 始まり</strong>のときは次の属性へ進み、最初に使える値を <code>new URL(value, pageUrl)</code> で絶対化する（プロトコル相対 <code>//host/x.jpg</code> は <code>pageUrl</code> のスキームで補われる）。3 属性とも使えない、または絶対化に失敗 → キー省略（記事は残す）</li>
 </ul>
 </li>
 <li><strong>カテゴリ</strong>：<code>classify(title, siteTags, TAKARAZUKA_TABLES)</code>。組名・劇場名のタグは表に無いので無視され、キーワード段階に進む</li>
@@ -647,19 +720,23 @@ const SOURCE_FACTORIES: Readonly&lt;Record&lt;string, SourceFactory&gt;&gt; = {
 </ul>
 <h3 id="sec-5-5">5.5 四季（HTML + ページ送り）<a class="anchor" href="#sec-5-5">#</a></h3>
 <pre class="mermaid">flowchart TD
-  A[&quot;url = sources[0].url&lt;br&gt;maxPages = fullCrawl ? SHIKI_FULL_CRAWL_PAGES : 1&lt;br&gt;visited = {url}, page = 1&quot;] --&gt; B[&quot;getText(url) → cheerio.load&quot;]
-  B --&gt; C[&quot;項目を抽出して結果に連結&quot;]
-  C --&gt; D{&quot;page &gt;= 2 かつ 項目 0 件?&quot;}
-  D -- はい --&gt; E[&quot;warn('next page has no articles') → 終了&quot;]
+  A[&quot;url = sources[0].url&lt;br&gt;maxPages = fullCrawl ? SHIKI_FULL_CRAWL_PAGES : 1&lt;br&gt;visited = {normalizeUrl(url)}, page = 1&quot;] --&gt; B[&quot;getText(url) → cheerio.load&lt;br&gt;（HttpError はページ番号を問わずそのまま投げる）&quot;]
+  B --&gt; C[&quot;項目を抽出して結果に連結&lt;br&gt;（matched &gt; 0 かつ採用 0 件 → SourceError）&quot;]
+  C --&gt; D{&quot;項目 0 件?&quot;}
+  D -- &quot;はい（page = 1）&quot; --&gt; E1[&quot;空配列を返して終了（application が empty）&quot;]
+  D -- &quot;はい（page &gt;= 2）&quot; --&gt; E[&quot;warn('next page has no articles') → 終了&quot;]
   D -- いいえ --&gt; F{&quot;page &gt;= maxPages?&quot;}
   F -- はい --&gt; G[&quot;終了&quot;]
-  F -- いいえ --&gt; H[&quot;next = SELECTORS.next の先頭要素の href を pageUrl で絶対化&quot;]
-  H --&gt; I{&quot;next が無い / visited に含む?&quot;}
+  F -- いいえ --&gt; H[&quot;SELECTORS.next を記述順に試し、最初に 1 件以上一致した&lt;br&gt;セレクタの先頭要素の href を pageUrl で絶対化 → next&quot;]
+  H --&gt; I{&quot;next が無い / normalizeUrl(next) が visited に含む?&quot;}
   I -- はい --&gt; G
-  I -- いいえ --&gt; J[&quot;visited に追加, url = next, page += 1&quot;] --&gt; B</pre>
+  I -- いいえ --&gt; J[&quot;visited に normalizeUrl(next) を追加, url = next, page += 1&quot;] --&gt; B</pre>
 <ul>
 <li><strong>取得</strong>：<code>sources[0].url</code> を 1 ページ目とし、<code>fullCrawl</code> が真なら「次へ」リンクを最大 <code>SHIKI_FULL_CRAWL_PAGES</code>（5）ページまで辿る。偽なら 1 ページのみ（D-02 §8.1・#27・#31）。次ページの URL は<strong>リンクの <code>href</code> から取り、規則から組み立てない</strong>（<code>?page=2</code> か <code>/index2.html</code> かが不明で、リンクを使えば改装に追随しやすい）</li>
-<li><strong>終端</strong>：(a) <code>maxPages</code> に達した、(b) 次へリンクが無い、(c) 次へリンクの URL が既に取得済み（自己参照・ループ）、(d) 2 ページ目以降で項目が 0 件（構造不一致）。(d) は <code>warn</code> を出し、それまでのページの結果を返す（1 ページ目が 0 件なら空配列を返し、application が <code>empty</code> に数える）</li>
+<li><strong>次へリンクの選び方</strong>：<code>SELECTORS.next</code> の候補を<strong>記述順に 1 つずつ</strong> <code>$(selector)</code> で試し、最初に 1 件以上一致したセレクタの<strong>先頭要素</strong>の <code>href</code> を使う。1 本の文字列に連結して DOM 順で先頭を取ると、ページャ以外の「次へのご案内」のようなリンクが先に来たときに無関係な URL を辿る（§4.2）</li>
+<li><strong>終端</strong>：(a) <code>maxPages</code> に達した、(b) 次へリンクが無い、(c) 次へリンクの URL が既に取得済み（自己参照・ループ）、(d) 2 ページ目以降で項目が 0 件（構造不一致）。(d) は <code>warn</code> を出し、それまでのページの結果を返す。1 ページ目が 0 件なら「次へ」を見ずに空配列を返し、application が <code>empty</code> に数える（<code>fullCrawl</code> の真偽によらない）</li>
+<li><strong><code>visited</code> の比較</strong>：D-01 §5.1 の <code>normalizeUrl</code>（domain の純粋関数）を通した文字列で行う。<code>?page=2#top</code> と <code>?page=2</code> のような表記違いを別ページと誤認して同じページを 2 度取らないため</li>
+<li><strong>途中ページの失敗</strong>：2 ページ目以降の <code>getText</code> が <code>HttpError</code> を投げたら<strong>そのまま投げ、取得済みページの結果を返さない</strong>（Source 失敗。§6、§8 #24）。「途中で打ち切って部分結果を返す」にすると、初回（<code>fullCrawl</code>）が 10 件だけ埋まった状態で以後 <code>fullCrawl</code> が解除され、残りが自動では取れない</li>
 <li><strong>項目</strong>：各ページの <code>$(SELECTORS.item)</code> を DOM 順に</li>
 <li><strong>抽出</strong>：<ul>
 <li><code>href</code> → <code>pageUrl</code> で絶対化。失敗 → 破棄</li>
@@ -686,6 +763,7 @@ const SOURCE_FACTORIES: Readonly&lt;Record&lt;string, SourceFactory&gt;&gt; = {
 </li>
 <li><strong>カテゴリ</strong>：<code>classify(title, [], TOHO_TABLES)</code></li>
 <li><strong>返却順</strong>：topics の項目 → news の項目。両方に同じ記事があれば application の重複規則（D-02 §5.1 手順 8）で topics 側が残る</li>
+<li><strong>片方だけ 0 件</strong>：topics と news の一方で <code>matched</code> が 0、他方が 1 件以上なら <code>SourceError(&quot;no items in &lt;url&gt;&quot;)</code>（§5.1 手順 6、§8 #22）。両方 0 件なら空配列（<code>empty</code>）</li>
 <li><strong>fullCrawl</strong>：無視</li>
 </ul>
 <h3 id="sec-5-7">5.7 DI 配線（<code>main.ts</code>）<a class="anchor" href="#sec-5-7">#</a></h3>
@@ -740,9 +818,39 @@ const SOURCE_FACTORIES: Readonly&lt;Record&lt;string, SourceFactory&gt;&gt; = {
 <td>ホリプロ・新感線</td>
 </tr>
 <tr>
-<td>HTML で <code>SELECTORS.item</code> が 1 つも一致しない（改装）</td>
-<td>空配列を返す。1 ページ目なら application が <code>empty</code> に数える（R-2 の主要な検知経路）</td>
+<td>RSS の <code>media:thumbnail</code> / <code>media:content</code> の <code>type</code> が <code>video/mp4</code>、または <code>medium</code> が <code>&quot;video&quot;</code></td>
+<td>その要素を飛ばし、次の要素・次のフィールドへ進む（<code>isImageMedia</code>。§4.5）。<code>type</code> と <code>medium</code> の両方が無い要素は画像とみなして採用する</td>
+<td>ホリプロ・新感線</td>
+</tr>
+<tr>
+<td>RSS の <code>media:thumbnail</code> が配列でなく単体オブジェクト</td>
+<td><code>asArray</code> で 1 要素の配列として扱う（§4.5）</td>
+<td>ホリプロ・新感線</td>
+</tr>
+<tr>
+<td>RSS の <code>title</code> が CDATA・HTML エンティティ（<code>&amp;amp;amp;</code>）・改行を含む</td>
+<td>rss-parser がデコードした文字列を <code>trim</code> するだけ。<code>&amp;amp;amp;</code> は <code>&amp;amp;</code> のまま残す（追加デコードしない。§4.5）。改行は残し、application の <code>normalizeTitle</code> が圧縮する</td>
+<td>ホリプロ・新感線</td>
+</tr>
+<tr>
+<td>HTML で <code>SELECTORS.item</code> が<strong>すべての</strong> URL（ページ）で 1 つも一致しない（改装）</td>
+<td>空配列を返す。application が <code>empty</code> に数える（R-2 の主要な検知経路）</td>
 <td>宝塚・四季・東宝</td>
+</tr>
+<tr>
+<td><code>company.sources[]</code> のある要素（東宝の topics）のパース結果が 0 件で、他の要素（news）は 1 件以上</td>
+<td><code>SourceError(&quot;no items in &lt;url&gt;&quot;)</code> で Source 失敗。4 件だけ返して成功扱いにすると、主要ニュース源の改装が <code>failures</code> に載らず毎時成功に見える（§5.1 手順 6、§8 #22）</td>
+<td>東宝</td>
+</tr>
+<tr>
+<td>四季の 1 ページ目が 0 件（<code>fullCrawl</code> の真偽を問わない）</td>
+<td>「次へ」を見ずに空配列を返す（<code>empty</code>）。2 ページ目以降は §5.5 の終端 (d)</td>
+<td>四季</td>
+</tr>
+<tr>
+<td><code>item</code> は N 件一致したが全項目が記事単位で破棄され 0 件（日付要素のクラス名変更で全件 <code>no_date</code> 等）</td>
+<td><code>SourceError(&quot;all items discarded in &lt;url&gt;: no_date=24&quot;)</code> で Source 失敗。message に破棄理由の内訳を載せ、<code>failures</code> の理由からどのセレクタが壊れたかを読めるようにする（<code>empty</code> に潰さない。§5.1 手順 3、§8 #23）</td>
+<td>各 Source</td>
 </tr>
 <tr>
 <td>HTML の一部の項目でリンク・日付・見出しが取れない（改装で一部のカードだけ構造が変わった）</td>
@@ -761,12 +869,22 @@ const SOURCE_FACTORIES: Readonly&lt;Record&lt;string, SourceFactory&gt;&gt; = {
 </tr>
 <tr>
 <td><code>href</code> が <code>#</code>・空・<code>javascript:</code>・<code>mailto:</code></td>
-<td>破棄（<code>no_link</code>）。<code>new URL(&quot;#&quot;, pageUrl)</code> は成功するため、<code>href.trim()</code> が空・<code>#</code> 始まり・<code>javascript:</code> / <code>mailto:</code> 始まりを先に弾く</td>
+<td>破棄（<code>no_link</code>）。<code>new URL(&quot;#&quot;, pageUrl)</code> は成功するため、<code>href.trim()</code> が空・<code>#</code> 始まり・<code>javascript:</code> / <code>mailto:</code> 始まり（大文字小文字を無視）を先に弾く（§7.3 で 3 団体とも固定）</td>
 <td>宝塚・四季・東宝</td>
 </tr>
 <tr>
 <td>四季の「次へ」リンクが無い（最終ページ）</td>
 <td>そこで終了。<code>fullCrawl</code> でも <code>maxPages</code> 未満で止まる</td>
+<td>四季</td>
+</tr>
+<tr>
+<td>四季のページ内に、ページャ以外で「次へ」を含むリンク（「次へのご案内」等）がある</td>
+<td><code>SELECTORS.next</code> の候補を記述順に試すので、<code>a[rel=&quot;next&quot;]</code> 等の先に来る候補が一致すれば <code>:contains(&quot;次へ&quot;)</code> は評価されない。確定時に <code>:contains</code> を残さない（§4.2・§5.5）</td>
+<td>四季</td>
+</tr>
+<tr>
+<td>四季の 2 ページ目以降の <code>getText</code> が <code>HttpError</code>（503 等）</td>
+<td>捕まえずそのまま投げ、1 ページ目の結果を返さない（Source 失敗）。前回が <code>articles: []</code> のまま（全団体失敗）なら次回も全団体 <code>fullCrawl</code>（D-02 §6）、他団体が成功していれば D-02 #27 の <code>warn</code>（<code>workflow_dispatch</code> の <code>full_crawl</code> で補充）が出る。いずれも <code>failures</code> に載って開発者に届く。部分結果を返すと初回が 10 件で確定し、残りが自動では埋まらない（§5.5、§8 #24）</td>
 <td>四季</td>
 </tr>
 <tr>
@@ -790,19 +908,29 @@ const SOURCE_FACTORIES: Readonly&lt;Record&lt;string, SourceFactory&gt;&gt; = {
 <td>東宝</td>
 </tr>
 <tr>
-<td>東宝の <code>href</code> が <code>http://</code> の東宝系ホスト</td>
-<td><code>https://</code> に揃える（§4.3）。東宝系以外のホストは変更しない</td>
+<td>東宝の <code>href</code> が <code>http://</code> の東宝系ホスト、または東宝系ホストの <code>/index.html</code></td>
+<td><code>https://</code> に揃え、<code>/index.html</code> を <code>/</code> にする（§4.3 手順 3・4）。<code>TOHO_HOSTS</code> に無いホスト（<code>stagegate.jp</code>・<code>example.com</code>）はスキームもパスも変更しない</td>
 <td>東宝</td>
 </tr>
 <tr>
-<td>東宝の topics と news に同じ記事</td>
-<td>両方返す。application の重複規則で topics 側（<code>sources[]</code> の先）が残る（D-01 §6）</td>
-<td>東宝 / application</td>
+<td>同じ記事が 2 回出る（東宝の topics と news の両方／同一ページ内に同じリンクが 2 箇所／同一 Source の複数ページに重複）</td>
+<td>Source は重複を除かず出現順にすべて返す。application の重複規則で最初の 1 件（東宝なら topics 側 = <code>sources[]</code> の先）が残る（D-01 §6、D-02 §5.1 手順 8）</td>
+<td>各 Source / application</td>
 </tr>
 <tr>
-<td>サムネイルの <code>src</code> が <code>data:</code> URI・空・相対</td>
-<td><code>data:</code>・空 → 省略。相対 → <code>pageUrl</code> で絶対化。絶対化に失敗 → 省略（記事は残す）</td>
+<td>サムネイルの <code>src</code> が <code>data:</code> URI・空・不在</td>
+<td><code>src</code> → <code>data-src</code> → <code>data-original</code> の順に、<code>trim</code> して空でなく <code>data:</code> 始まりでない最初の値を使う（§5.4）。3 属性とも使えない → 省略（記事は残す）</td>
 <td>宝塚・四季・東宝</td>
+</tr>
+<tr>
+<td>サムネイルの値が相対・プロトコル相対（<code>//cdn.example.com/x.jpg</code>）</td>
+<td><code>new URL(value, pageUrl)</code> で絶対化（プロトコル相対は <code>pageUrl</code> のスキームが補われる）。失敗 → 省略</td>
+<td>宝塚・四季・東宝</td>
+</tr>
+<tr>
+<td>見出しが否定・複合語でキーワードを含む（「ライブ配信中止のお知らせ」「ゲキ×シネ『◯◯』先行上映決定」「グッズ発売日」）</td>
+<td>表のとおり部分一致させる（<code>streaming</code> / <code>ticket</code> / <code>ticket</code>。§4.6 末尾の表）。否定や複合語を除外する仕組みは持たず、誤判定は R-5 の運用で表を直す（§8 #21）。§7.3 で期待値を固定し、表の改訂で結果が変わったらテストで気付く</td>
+<td>各 Source</td>
 </tr>
 <tr>
 <td>見出しに改行・連続空白・全角スペースが含まれる</td>
@@ -891,7 +1019,7 @@ export class StubHttpClient implements HttpClient {
 </thead>
 <tbody><tr>
 <td>共通（5 Source すべて）</td>
-<td>契約：<code>fetch()</code> の結果が 1 件以上／全記事の <code>companyId</code> が定数と一致／<code>url</code> が <code>https?://</code> 始まりの絶対 URL／<code>publishedAt</code> が <code>DateTimeSchema</code> を通る／<code>category</code> が <code>CategorySchema</code> を通る／<code>thumbnail</code> はキーが無いか <code>https?://</code> 始まり／<code>title</code> が空でない／<code>Source.id</code> が <code>company.id</code>／<code>requests</code> が <code>company.sources[].url</code> と一致（四季の <code>fullCrawl</code> 偽・東宝は 2 件）／<code>getText</code> が <code>HttpError</code> を投げたらそのまま伝わる／<code>kind</code> の違う <code>sources</code> を持つ <code>Company</code> で構築すると <code>SourceError</code></td>
+<td>契約：<code>fetch()</code> の結果が 1 件以上／全記事の <code>companyId</code> が定数と一致／<code>url</code> が <code>https?://</code> 始まりの絶対 URL／<code>publishedAt</code> が <code>DateTimeSchema</code> を通る／<code>category</code> が <code>CategorySchema</code> を通る／<code>thumbnail</code> はキーが無いか <code>https?://</code> 始まり／<code>title</code> が空でない／<code>Source.id</code> が <code>company.id</code>／<code>requests</code> が <code>company.sources[].url</code> と一致（四季の <code>fullCrawl</code> 偽・東宝は 2 件）／<code>getText</code> が <code>HttpError</code> を投げたらそのまま伝わる／<code>kind</code> の違う <code>sources</code> を持つ <code>Company</code> で構築すると <code>SourceError</code>／同じ <code>url</code> の <code>RawArticle</code> が 2 件以上出ない（HTML 3 団体：<code>item</code> の入れ子多重一致の検知。§4.2）／項目は一致するが全項目が破棄される本文（HTML は日付要素を全部除いた改変、RSS は全項目の <code>link</code> を除いた合成）で <code>SourceError</code> の message に <code>all items discarded</code> と理由の内訳（<code>no_date=N</code> / <code>no_link=N</code>）が含まれる（§6）</td>
 <td><code>StubHttpClient</code>（フィクスチャ）、<code>RecordingLogger</code>、<code>buildCompanies()</code></td>
 </tr>
 <tr>
@@ -901,18 +1029,23 @@ export class StubHttpClient implements HttpClient {
 </tr>
 <tr>
 <td><code>HoriproSource</code></td>
+<td>サムネイル（合成 RSS）：<code>enclosure</code> の <code>type</code> が <code>audio/mpeg</code> → 飛ばして <code>media:thumbnail</code> を採用／<code>media:thumbnail</code> の <code>type</code> が <code>video/mp4</code> → 飛ばして <code>media:content</code>（<code>medium=&quot;image&quot;</code>）を採用／<code>media:content</code> の <code>type</code> が <code>video/mp4</code> で <code>medium</code> 無し → キー省略／<code>media:thumbnail</code> の <code>type</code>・<code>medium</code> とも無し → 採用／<code>media:thumbnail</code> が単体オブジェクト（1 要素）でも配列でも同じ結果／<code>title</code> が <code>&lt;![CDATA[A &amp;amp;amp; B]]&gt;</code> → <code>A &amp;amp; B</code>（追加デコードしない）／<code>title</code> に改行と連続空白 → <code>trim</code> 以外はそのまま</td>
+<td>合成 RSS</td>
+</tr>
+<tr>
+<td><code>HoriproSource</code></td>
 <td>記事単位の破棄（合成した最小 RSS）：<code>link</code> 無しの項目が捨てられ <code>warn</code> の <code>reason</code> が <code>no_link</code>／<code>pubDate</code> が <code>not a date</code> の項目が捨てられ <code>reason</code> が <code>invalid_date</code>／<code>pubDate</code> 無し・<code>isoDate</code> 有りは採用／<code>title</code> が空白のみの項目が捨てられる／<code>items</code> 0 件のフィードで空配列（例外にならない）／XML として壊れた本文で <code>SourceError</code>（<code>cause</code> あり）</td>
 <td>合成 RSS 文字列</td>
 </tr>
 <tr>
 <td><code>HoriproSource</code></td>
-<td>category（D-01 §7.2 行 4 の 9 ケース。合成 RSS + <code>tables</code> 差し替え）：候補なし → <code>other</code>／見出しに <code>先行</code> と <code>上演決定</code> → <code>new_work</code>（<code>[&quot;ticket&quot;,&quot;new_work&quot;]</code>）／<code>退団</code> と <code>キャスト</code> → <code>cast</code>（<code>[&quot;person&quot;,&quot;cast&quot;]</code>）／<code>日程</code> のみ → <code>schedule</code>（<code>[&quot;other&quot;,&quot;schedule&quot;]</code>）／タグ <code>X</code> → <code>cast</code> の表と見出し <code>上演決定</code> → <code>cast</code>（タグ段階で決まればキーワードに進まない）／タグ <code>作品名</code> が表に無く見出しも該当なし → <code>other</code>（表に無いタグは無視）／見出し「ＢＬＵ－ＲＡＹ」がキーワード <code>Blu-ray</code> に一致 → <code>streaming</code>（全角半角・大小文字を無視）／共通表に無く団体表にだけある語 <code>ホリプロステージ先行</code> → <code>ticket</code>、共通表 <code>配信</code> と団体表 <code>ホリプロステージ先行</code> の両方を含む → <code>ticket</code>（両表の候補が <code>resolveCategory</code> に渡る）／<code>keywords.ticket = [&quot;&quot;]</code> の表で見出し「あ」→ <code>other</code>（空文字は一致しない）</td>
+<td>category（D-01 §7.2 行 4 の 9 ケース。合成 RSS + <code>tables</code> 差し替え）：候補なし → <code>other</code>／見出しに <code>先行</code> と <code>上演決定</code> → <code>new_work</code>（<code>[&quot;ticket&quot;,&quot;new_work&quot;]</code>）／<code>退団</code> と <code>キャスト</code> → <code>cast</code>（<code>[&quot;person&quot;,&quot;cast&quot;]</code>）／<code>日程</code> のみ → <code>schedule</code>（<code>[&quot;other&quot;,&quot;schedule&quot;]</code>）／タグ <code>X</code> → <code>cast</code> の表と見出し <code>上演決定</code> → <code>cast</code>（タグ段階で決まればキーワードに進まない）／タグ <code>作品名</code> が表に無く見出しも該当なし → <code>other</code>（表に無いタグは無視）／見出し「ＢＬＵ－ＲＡＹ」がキーワード <code>Blu-ray</code> に一致 → <code>streaming</code>（全角半角・大小文字を無視）／共通表に無く団体表にだけある語 <code>ホリプロステージ先行</code> → <code>ticket</code>、共通表 <code>配信</code> と団体表 <code>ホリプロステージ先行</code> の両方を含む → <code>ticket</code>（両表の候補が <code>resolveCategory</code> に渡る）／<code>keywords.ticket = [&quot;&quot;]</code> の表で見出し「あ」→ <code>other</code>（空文字は一致しない）／部分一致の固定（既定の表）：「ライブ配信中止のお知らせ」→ <code>streaming</code>、「グッズ発売日のお知らせ」→ <code>ticket</code>（§4.6 末尾の表。表を改訂して結果が変わればここが赤くなる）</td>
 <td>合成 RSS、<code>tables</code> を第 4 引数で差し替え</td>
 </tr>
 <tr>
 <td><code>ShinkansenSource</code></td>
-<td>フィクスチャ：先頭項目の 4 値を固定／<code>url</code> が <code>?p=NNNNN</code> のクエリを保持／「ゲキ×シネ」を含む項目が <code>streaming</code>／<code>requests</code> が <code>https://blog.vi-shinkansen.co.jp/?feed=rss2</code> の 1 件（R-9）</td>
-<td><code>StubHttpClient</code>、<code>buildCompanies()</code></td>
+<td>フィクスチャ：先頭項目の 4 値を固定／<code>url</code> が <code>?p=NNNNN</code> のクエリを保持／「ゲキ×シネ」を含む項目が <code>streaming</code>／<code>requests</code> が <code>https://blog.vi-shinkansen.co.jp/?feed=rss2</code> の 1 件（R-9）／部分一致の固定（合成 RSS、タグ <code>NEWS</code> のみ）：「ゲキ×シネ『◯◯』先行上映決定」→ <code>ticket</code>（優先順位で <code>streaming</code> に勝つ。§4.6 末尾の表、§8 #21）</td>
+<td><code>StubHttpClient</code>、<code>buildCompanies()</code>、合成 RSS</td>
 </tr>
 <tr>
 <td><code>ShinkansenSource</code></td>
@@ -921,38 +1054,53 @@ export class StubHttpClient implements HttpClient {
 </tr>
 <tr>
 <td><code>TakarazukaSource</code></td>
-<td>フィクスチャ：10 件以上／先頭項目の 4 値を固定（<code>publishedAt</code> は URL の <code>YYYYMMDD</code> から <code>T00:00:00+09:00</code>）／<code>url</code> が絶対 URL で <code>/news/YYYYMMDD_NNN.html</code> 形式／返却順が一覧の DOM 順（先頭 3 件の URL 列を固定）／分類タグが <code>siteTags</code> になる（表に載る項目があればその <code>category</code>）／「無料配信」を含む項目が <code>streaming</code></td>
+<td>フィクスチャ：10 件以上／先頭項目の 4 値を固定（<code>publishedAt</code> は URL の <code>YYYYMMDD</code> から <code>T00:00:00+09:00</code>）／<code>url</code> が絶対 URL で <code>/news/YYYYMMDD_NNN.html</code> 形式／返却順が一覧の DOM 順（先頭 3 件の URL 列を固定）／分類タグが <code>siteTags</code> になる（表に載る項目があればその <code>category</code>）／「無料配信」を含む項目が <code>streaming</code>／<code>$(SELECTORS.item).length</code> が返却件数と一致する（入れ子の多重一致が無い。§4.2）</td>
 <td><code>StubHttpClient</code></td>
 </tr>
 <tr>
 <td><code>TakarazukaSource</code></td>
-<td>記事単位の破棄（フィクスチャを改変した HTML）：URL が規則に合わず日付テキストも無い項目 → 破棄・<code>no_date</code>／URL が <code>20261340_001.html</code> → 破棄・<code>invalid_date</code>／<code>href</code> が <code>#</code> → 破棄・<code>no_link</code>／相対 <code>href</code> が絶対化される／<code>item</code> セレクタが 1 つも一致しない HTML → 空配列</td>
+<td>記事単位の破棄（フィクスチャを改変した HTML）：URL が規則に合わず日付テキストも無い項目 → 破棄・<code>no_date</code>／URL が <code>20261340_001.html</code> → 破棄・<code>invalid_date</code>／<code>href</code> が <code>#</code>・空・<code>javascript:void(0)</code>・<code>mailto:a@b</code> の 4 項目 → いずれも破棄・<code>no_link</code>／相対 <code>href</code> が絶対化される／改行と連続空白を含む見出しが <code>trim</code> だけされて返る／<code>item</code> セレクタが 1 つも一致しない HTML → 空配列／全項目の日付要素と URL の日付を壊した HTML → <code>SourceError</code>（<code>all items discarded</code>、<code>no_date=N</code>）</td>
+<td>フィクスチャの文字列置換</td>
+</tr>
+<tr>
+<td><code>TakarazukaSource</code></td>
+<td>サムネイル（改変 HTML）：<code>src</code> が <code>data:image/gif;base64,...</code> で <code>data-src</code> が相対 <code>/img/a.jpg</code> → <code>https://kageki.hankyu.co.jp/img/a.jpg</code>／<code>src</code> と <code>data-src</code> が両方 <code>data:</code> で <code>data-original</code> 無し → キー省略／<code>src</code> がプロトコル相対 <code>//cdn.example.com/a.jpg</code> → <code>https://cdn.example.com/a.jpg</code></td>
 <td>フィクスチャの文字列置換</td>
 </tr>
 <tr>
 <td><code>ShikiSource</code></td>
-<td>ページ送り：<code>fullCrawl: false</code> → <code>requests</code> が 1 件・1 ページ目の項目のみ／<code>fullCrawl: true</code> で p1 → p2 → last の 3 ページ → <code>requests</code> が 3 件で順序どおり・結果が p1・p2・last の項目を順に連結／<code>fullCrawl: true</code> で p2 の「次へ」が p1 を指す → 2 ページで止まり <code>warn(&quot;next page already visited&quot;)</code>／<code>fullCrawl: true</code> で毎回同じ「次へ」先が新しい URL に見える（<code>?page=N</code> を N=2..9 で登録）→ <code>SHIKI_FULL_CRAWL_PAGES</code>（5）で止まり <code>requests</code> が 5 件／<code>fullCrawl: true</code> で p2 が項目 0 件 → p1 の結果だけ返し <code>warn</code>／p1 が項目 0 件 → 空配列</td>
-<td><code>StubHttpClient</code>（複数 URL）、<code>RecordingLogger</code></td>
+<td>ページ送り：<code>fullCrawl: false</code> → <code>requests</code> が 1 件・1 ページ目の項目のみ／<code>fullCrawl: true</code> で p1 → p2 → last の 3 ページ → <code>requests</code> が 3 件で順序どおり・結果が p1・p2・last の項目を順に連結／<code>fullCrawl: true</code> で p2 の「次へ」が p1 を指す → 2 ページで止まり <code>warn(&quot;next page already visited&quot;)</code>／<code>fullCrawl: true</code> で毎回同じ「次へ」先が新しい URL に見える（<code>?page=N</code> を N=2..9 で登録）→ <code>SHIKI_FULL_CRAWL_PAGES</code>（5）で止まり <code>requests</code> が 5 件／<code>fullCrawl: true</code> で p2 が項目 0 件 → p1 の結果だけ返し <code>warn</code>／p1 が項目 0 件 → 空配列（<code>fullCrawl</code> の真偽とも。<code>requests</code> は 1 件）／<code>fullCrawl: true</code> で p2 が <code>HttpError</code>（503） → <code>fetch()</code> が <code>HttpError</code> を投げ、p1 の結果を返さない（§6）／<code>fullCrawl: true</code> で p2 の「次へ」が p1 の URL に <code>#top</code> を付けたもの → <code>normalizeUrl</code> で既出と判定して 2 ページで止まる（§5.5）／ページャの <code>a[rel=&quot;next&quot;]</code> より DOM 上で前に「次へのご案内」リンク（<code>href</code> が別 URL）がある p1 → <code>a[rel=&quot;next&quot;]</code> の先を辿る（§5.5 の候補順）</td>
+<td><code>StubHttpClient</code>（複数 URL）、<code>RecordingLogger</code>、改変 HTML</td>
 </tr>
 <tr>
 <td><code>ShikiSource</code></td>
-<td>フィクスチャ：先頭項目の 4 値を固定（<code>2026.09.12</code> → <code>2026-09-12T00:00:00+09:00</code>）／「四季の会」「先行予約」を含む項目が <code>ticket</code>／相対 <code>href</code> が <code>https://www.shiki.jp/</code> で絶対化</td>
-<td><code>StubHttpClient</code></td>
-</tr>
-<tr>
-<td><code>TohoSource</code></td>
-<td>2 URL：<code>requests</code> が <code>[topics, news]</code> の順／結果が topics の項目 → news の項目の順（各先頭の <code>url</code> を固定）／news 側が <code>HttpError</code> → <code>fetch()</code> が <code>HttpError</code> を投げる（部分結果を返さない）</td>
-<td><code>StubHttpClient</code></td>
-</tr>
-<tr>
-<td><code>TohoSource</code></td>
-<td>URL 正規化（<code>normalizeTohoUrl</code> を Source 経由で。フィクスチャを改変した HTML の <code>href</code>）：相対 <code>/stage/x.html</code> → <code>https://www.toho.co.jp/stage/x.html</code>／<code>http://toho.co.jp/stage/kingdom2/index.html</code> → <code>https://www.toho.co.jp/stage/kingdom2/</code>／<code>http://www.tohostage.com/kingdom2/</code> → <code>https://www.tohostage.com/kingdom2/</code>／<code>https://tohostage.toho-navi.com/t/1?x=1</code> → 変更なし／<code>http://example.com/a/index.html</code> → <code>http://example.com/a/</code>（https にしない）</td>
-<td>フィクスチャの文字列置換</td>
-</tr>
-<tr>
-<td><code>TohoSource</code></td>
-<td>フィクスチャ：先頭項目の 4 値を固定（<code>2026年09月04日</code> → <code>2026-09-04T00:00:00+09:00</code>）／<code>2026年9月4日</code>（1 桁）も同じ値／<code>time[datetime=&quot;2026-09-04&quot;]</code> があれば属性を優先</td>
+<td>フィクスチャ：先頭項目の 4 値を固定（<code>2026.09.12</code> → <code>2026-09-12T00:00:00+09:00</code>）／全記事の <code>url</code> が <code>SHIKI_NEWS_URL_RE</code> に一致する（妥当性の確認。一致しない項目は弾かれず返る）／「四季の会」「先行予約」を含む項目が <code>ticket</code>／相対 <code>href</code> が <code>https://www.shiki.jp/</code> で絶対化／<code>$(SELECTORS.item).length</code> が返却件数と一致する／<code>href</code> が <code>#</code>・<code>javascript:</code> → <code>no_link</code></td>
 <td><code>StubHttpClient</code>、改変 HTML</td>
+</tr>
+<tr>
+<td><code>ShikiSource</code></td>
+<td>サムネイル（改変 HTML）：宝塚と同じ 3 ケース（<code>data:</code> + 相対 <code>data-src</code> → 絶対 URL／両方 <code>data:</code> → 省略／プロトコル相対 → <code>https://</code>）</td>
+<td>改変 HTML</td>
+</tr>
+<tr>
+<td><code>TohoSource</code></td>
+<td>2 URL：<code>requests</code> が <code>[topics, news]</code> の順／結果が topics の項目 → news の項目の順（各先頭の <code>url</code> を固定）／news 側が <code>HttpError</code> → <code>fetch()</code> が <code>HttpError</code> を投げる（部分結果を返さない）／topics 側の <code>item</code> をすべて消した HTML（news は正常） → <code>SourceError</code>（message に <code>no items in</code> と topics の URL）／両方の <code>item</code> を消した HTML → 空配列（<code>empty</code>）</td>
+<td><code>StubHttpClient</code>、改変 HTML</td>
+</tr>
+<tr>
+<td><code>TohoSource</code></td>
+<td>URL 正規化（<code>normalizeTohoUrl</code> を Source 経由で。フィクスチャを改変した HTML の <code>href</code>）：相対 <code>/stage/x.html</code> → <code>https://www.toho.co.jp/stage/x.html</code>／<code>http://toho.co.jp/stage/kingdom2/index.html</code> → <code>https://www.toho.co.jp/stage/kingdom2/</code>／<code>http://www.tohostage.com/kingdom2/</code> → <code>https://www.tohostage.com/kingdom2/</code>／<code>https://tohostage.toho-navi.com/t/1?x=1</code> → 変更なし／<code>http://example.com/a/index.html</code> → 変更なし（https にせず <code>index.html</code> も除かない）／<code>https://stagegate.jp/x/index.html</code> → 変更なし</td>
+<td>フィクスチャの文字列置換</td>
+</tr>
+<tr>
+<td><code>TohoSource</code></td>
+<td>フィクスチャ：先頭項目の 4 値を固定（<code>2026年09月04日</code> → <code>2026-09-04T00:00:00+09:00</code>）／<code>2026年9月4日</code>（1 桁）も同じ値／<code>time[datetime=&quot;2026-09-04&quot;]</code> があれば属性を優先／topics・news それぞれ <code>$(SELECTORS.item).length</code> が各ページの返却件数と一致する／全項目の日付要素を除いた topics（news は正常） → <code>SourceError</code>（<code>all items discarded</code>、<code>no_date=N</code>）／<code>href</code> が <code>#</code>・<code>javascript:</code> → <code>no_link</code></td>
+<td><code>StubHttpClient</code>、改変 HTML</td>
+</tr>
+<tr>
+<td><code>TohoSource</code></td>
+<td>サムネイル（改変 HTML）：宝塚と同じ 3 ケース。加えて <code>src</code> が <code>http://www.toho.co.jp/img/a.jpg</code> → <code>normalizeTohoUrl</code> を通さず <code>http://</code> のまま（§5.6）</td>
+<td>改変 HTML</td>
 </tr>
 </tbody></table>
 <h2 id="sec-8">8. 決定事項と根拠<a class="anchor" href="#sec-8">#</a></h2>
@@ -1027,7 +1175,7 @@ export class StubHttpClient implements HttpClient {
 </tr>
 <tr>
 <td>11</td>
-<td>東宝の団体固有正規化は「相対解決 → ホスト別名（<code>toho.co.jp</code> → <code>www.toho.co.jp</code>、<code>tohostage.com</code> → <code>www.tohostage.com</code>）→ 東宝系ホストのみ <code>http</code> → <code>https</code> → <code>/index.html</code> の除去」の 4 段。パスの書き換え（<code>tohostage.com</code> → <code>toho.co.jp</code>）はしない</td>
+<td>東宝の団体固有正規化は「相対解決 → ホスト別名（<code>toho.co.jp</code> → <code>www.toho.co.jp</code>、<code>tohostage.com</code> → <code>www.tohostage.com</code>）→ 東宝系ホストのみ <code>http</code> → <code>https</code> → 東宝系ホストのみ <code>/index.html</code> の除去」の 4 段。手順 3・4 は <code>TOHO_HOSTS</code> に限り、外部サイト（<code>stagegate.jp</code> 等）はスキームもパスも変更しない。パスの書き換え（<code>tohostage.com</code> → <code>toho.co.jp</code>）はしない</td>
 <td>相対解決だけにする／旧ドメインのパスを新ドメインへ写像する／<code>toho-navi.com</code> のクエリを削る</td>
 <td>R-8 の「不整合」は同じ記事が表記違いで複数の <code>id</code> になることで、ホスト別名・スキーム・<code>index.html</code> の 3 点がその典型（同じサイト内で <code>http://</code> と <code>https://</code>、<code>www</code> 有無が混在するのはよくある）。旧ドメインの作品ページは現存し新ドメインに同じパスが無い（調査レポート §5）ため、パスを写像すると開けない URL を格納する（D-01 #10 に反する）。<code>toho-navi.com</code> のクエリはチケットページの識別子である可能性があり、汎用正規化（D-01 §5.1）が追跡パラメータだけを除く方針と揃える（#17 で確定）</td>
 </tr>
@@ -1085,6 +1233,30 @@ export class StubHttpClient implements HttpClient {
 <td>差し替えを許可せず、D-01 §7.2 行 4 の 9 ケースを実値の表で再現できる範囲だけ検証する</td>
 <td>「空文字のキーワードは一致しない」「タグ段階で決まればキーワードに進まない」を実値の表で再現するには実値に不自然な項目が要る。既定値付き引数は本番の挙動を変えない。開発者の指示により推奨案を採用（2026-09-19、旧 Q-6）</td>
 </tr>
+<tr>
+<td>21</td>
+<td>キーワードの部分一致による誤判定（否定文「配信中止」・複合語「先行上映」・物販「発売日」）は、表のとおり一致させることを期待する振る舞いとし、§7.3 で期待値を固定する。否定語の除外や団体別の優先順位は持たない（§4.6 末尾の表、§6）</td>
+<td>Source 内で「中止」を含む見出しを除外する／団体別表に負のキーワードや優先順位を持たせる</td>
+<td>D-01 §8.1 が「Source 内に照合ロジックを書かない」と定め、<code>CategoryKeywordTable</code> / <code>CATEGORY_PRIORITY</code>（D-01 §4.4、#11）は負のキーワードや団体別の優先順位を持たない。開発者確認済み（2026-09-19、旧 Q-7 の A）。B（団体別優先順位）・C（負のキーワード）は D-01 の改訂を要するため採らない。期待値を固定するのは、R-5 の運用で表を直したとき精度が下がっても赤くならない状態を避けるため（M-12）</td>
+</tr>
+<tr>
+<td>22</td>
+<td><code>company.sources[]</code> が複数（東宝）で、ある URL の <code>item</code> 一致数が 0 かつ他が 1 件以上なら <code>SourceError(&quot;no items in &lt;url&gt;&quot;)</code> で Source 失敗にする。全 URL が 0 件のときだけ空配列（<code>empty</code>）を返す（§5.1 手順 6、§5.6、§6）</td>
+<td>取れた URL の分だけ返す（部分成功）</td>
+<td>#8 が <code>HttpError</code> について「部分結果を返さない」と決めた理由（news 側の故障が <code>failures</code> に載らない）は、パース 0 件にも同じく当てはまる。topics だけ改装されて news の 4 件で成功に見えると、主要ニュース源の新着が止まったまま D-02 #25 の失敗通知に届かない（M-15）</td>
+</tr>
+<tr>
+<td>23</td>
+<td>URL（ページ）ごとに <code>item</code> が 1 件以上一致したのに全項目が記事単位で破棄された場合は <code>SourceError(&quot;all items discarded in &lt;url&gt;: &lt;reason&gt;=&lt;count&gt;,...&quot;)</code> で Source 失敗にし、message に破棄理由の内訳を載せる（§5.1 手順 3、§6）</td>
+<td>空配列を返して <code>empty</code> に任せる／<code>warn</code> だけ出して空配列</td>
+<td>日付要素のクラス名変更のような「一覧はあるが 1 件も取れない」改装は、「一覧に記事が無い」（<code>empty</code>）と原因が違い、<code>failures</code> の理由に破棄内訳が載ればどのセレクタが壊れたかを直接読める。<code>RawArticle</code> の契約を変えずに済む（#8 と同じ制約）。件数を message に埋めるのは <code>SourceError</code> に構造化フィールドを足す（D-02 §4.3 の改訂）を避けるため（M-16）</td>
+</tr>
+<tr>
+<td>24</td>
+<td>四季の 2 ページ目以降で <code>getText</code> が <code>HttpError</code> を投げたら、取得済みページの結果を返さず例外にする（Source 失敗。§5.5、§6）</td>
+<td><code>warn</code> を出して打ち切り、取得済みページの結果を返す</td>
+<td>部分結果を返すと初回（<code>fullCrawl</code>）が 1 ページ分だけ埋まった状態で確定し、D-02 #27 は「その団体に記事がある」と見て以後 <code>fullCrawl</code> にしないため、残りが自動では取れない。例外にすれば <code>failures</code> に載って開発者に届き、前回が <code>articles: []</code> のままなら次回も <code>fullCrawl</code>、他団体が成功していれば D-02 #27 の <code>warn</code> が <code>workflow_dispatch</code> の <code>full_crawl</code> を促す。一時的な 5xx で初回が毎時やり直しになるが、<code>HttpClient</code> のリトライ（D-02 §5.7）と <code>maxRequestsPerRun</code> の天井があり、リクエスト数は D-02 #31 の想定内（M-14）</td>
+</tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
 <table>
@@ -1106,9 +1278,24 @@ export class StubHttpClient implements HttpClient {
 <td>§8 #8、D-02 #33</td>
 </tr>
 <tr>
+<td>D-02（変更不要。確認事項）</td>
+<td>robots.txt の再確認は本書の執筆時ではなく、実装タスク（§10 K1〜K5）の着手時に行う（§8 #12）。design-writer はネットワークにアクセスしないため、D-02 §8.1 の「D-03 の執筆時に再確認」をこのように読み替える。制限が見つかった団体は Source を実装せず <code>SOURCE_FACTORIES</code> に載せないまま開発者へ報告し、Task L の完了条件から外す（§10）</td>
+<td>§8 #12、D-02 #6</td>
+</tr>
+<tr>
+<td>D-02（変更不要。確認事項）</td>
+<td><code>test/helpers/stub-http-client.ts</code>（<code>StubHttpClient</code>。§7.1）を本書 §10 Task J が追加する。D-02 §7.2 のヘルパ一覧への追加であり、<code>stubFetch</code>（グローバル <code>fetch</code> の差し替え。<code>FetchHttpClient</code> のテスト用）とは層が異なり重複しない（<code>StubHttpClient</code> は <code>HttpClient</code> ポートの実装で、Source のテスト用）</td>
+<td>§7.1、D-02 §7.2</td>
+</tr>
+<tr>
 <td>D-01（変更不要。確認事項）</td>
 <td><code>COMMON_CATEGORY_KEYWORDS</code> の値を §4.6 で埋める。D-01 §10 Task B が空配列で作ったものを §10 Task J が上書きする。型・関数は変えない</td>
 <td>D-01 §8.1</td>
+</tr>
+<tr>
+<td>D-01（将来の改訂候補。今回は変更しない）</td>
+<td>次に D-01 を <code>draft</code> に戻す機会があれば、<code>domain/category.ts</code> に <code>classifyCategory(rawTitle, siteTags, tables)</code> と <code>CategoryTables</code> 型を移し、<code>domain/datetime.ts</code> に日付テキストの解釈 <code>parseJstDateText(text)</code>（<code>DATE_ATTR_RE</code> / <code>DATE_DOT_RE</code> / <code>DATE_KANJI_RE</code>）を、<code>domain/url.ts</code> に <code>normalizeHost(url, aliases)</code>（東宝正規化の汎用部分）を置く案。5 ファイルに重複している 2 型・3 正規表現・6 行の関数（§8 #1・#18）を domain に寄せられる。本書は D-01（approved）を変えないため採らない</td>
+<td>§8 #1・#4・#18</td>
 </tr>
 <tr>
 <td>D-04 / D-05</td>
@@ -1117,9 +1304,10 @@ export class StubHttpClient implements HttpClient {
 </tr>
 </tbody></table>
 <h2 id="sec-9">9. 未決定事項<a class="anchor" href="#sec-9">#</a></h2>
-<p>該当なし。初稿の Q-1〜Q-6 は開発者の指示により推奨案を採用し、§8 #15〜#20 に移した（2026-09-19）。</p>
+<p>該当なし。初稿の Q-1〜Q-6 は開発者の指示により推奨案を採用して §8 #15〜#20 に移し、design-review 第 1 段階・第 1 周で加わった Q-7 は開発者確認のうえ A（現状どおり <code>ticket</code>）で確定して §8 #21 に反映した（いずれも 2026-09-19）。</p>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
 <p>D-02 §10 の Task I（<code>main.ts</code>・<code>SOURCE_FACTORIES</code> 空）の後に着手する。K1〜K5 は互いに独立で並列可。各タスクは単独で品質ゲート <code>npm run lint &amp;&amp; npx tsc --noEmit &amp;&amp; npx vitest run</code> を通し、実ネットワークへアクセスするテストを含まない。</p>
+<p><strong>robots.txt の再確認（K1〜K5 共通）</strong>：着手時に各サイトの robots.txt を確認し、結果（取得日時・対象パスの許可）を <code>README.md</code> に記録する（§8 #12）。対象パスに制限が見つかった団体は Source を実装せず、<code>SOURCE_FACTORIES</code> に載せないまま開発者へ報告し、Task L の完了条件（5 団体分の <code>collected</code>）からその団体を外す。</p>
 <table>
 <thead>
 <tr>
@@ -1145,7 +1333,7 @@ export class StubHttpClient implements HttpClient {
 <td><code>src/infrastructure/sources/horipro.ts</code>、<code>test/infrastructure/sources/horipro.test.ts</code>、<code>test/fixtures/sources/horipro/feed.xml</code>・<code>README.md</code>。計 4</td>
 <td><code>src/infrastructure/sources/</code>、<code>test/</code></td>
 <td>J、D-02 Task E（<code>RecordingLogger</code>）、Task F（<code>buildCompanies</code>）</td>
-<td>品質ゲート通過。§7.3 の共通行 + ホリプロ 3 行（フィクスチャ／破棄／category 9 ケース）をすべて含む。着手時に <code>https://horipro-stage.jp/robots.txt</code> を再確認し、結果を <code>README.md</code> に記録（§8 #12）</td>
+<td>品質ゲート通過。§7.3 の共通行 + ホリプロ 4 行（フィクスチャ／サムネイル・見出し／破棄／category 9 ケース + 部分一致 2 ケース）をすべて含む。着手時に <code>https://horipro-stage.jp/robots.txt</code> を再確認し、結果を <code>README.md</code> に記録（§8 #12。制限があれば上記の扱い）</td>
 </tr>
 <tr>
 <td>K2</td>
@@ -1153,7 +1341,7 @@ export class StubHttpClient implements HttpClient {
 <td><code>src/infrastructure/sources/shinkansen.ts</code>、<code>test/infrastructure/sources/shinkansen.test.ts</code>、<code>test/fixtures/sources/shinkansen/feed.xml</code>・<code>README.md</code>。計 4</td>
 <td>同上</td>
 <td>J、E、F</td>
-<td>品質ゲート通過。§7.3 の共通行 + 新感線 2 行。フィクスチャの取得 URL が <code>blog.vi-shinkansen.co.jp</code>（R-9）。robots.txt 再確認</td>
+<td>品質ゲート通過。§7.3 の共通行 + 新感線 2 行（部分一致「先行上映」→ <code>ticket</code> の固定を含む）。フィクスチャの取得 URL が <code>blog.vi-shinkansen.co.jp</code>（R-9）。robots.txt 再確認（制限があれば上記の扱い）</td>
 </tr>
 <tr>
 <td>K3</td>
@@ -1161,7 +1349,7 @@ export class StubHttpClient implements HttpClient {
 <td><code>src/infrastructure/sources/takarazuka.ts</code>、<code>test/infrastructure/sources/takarazuka.test.ts</code>、<code>test/fixtures/sources/takarazuka/news.html</code>・<code>README.md</code>。計 4</td>
 <td>同上</td>
 <td>J、E、F</td>
-<td>品質ゲート通過。§7.3 の共通行 + 宝塚 2 行。<code>SELECTORS</code>・<code>TAKARAZUKA_TABLES.tagMap</code> のキーをフィクスチャの実値で確定し、変更点を PR 説明に書く。robots.txt（404 のままか）再確認</td>
+<td>品質ゲート通過。§7.3 の共通行 + 宝塚 3 行（フィクスチャ／破棄／サムネイル）。<code>SELECTORS.item</code> を入れ子にならない 1 本に確定し、<code>$(SELECTORS.item).length</code> = 返却件数・同じ <code>url</code> が 2 件出ないことをテストで固定（§4.2）。<code>TAKARAZUKA_TABLES.tagMap</code> のキーをフィクスチャの実値で確定し、変更点を PR 説明に書く。robots.txt（404 のままか）再確認（制限があれば上記の扱い）</td>
 </tr>
 <tr>
 <td>K4</td>
@@ -1169,7 +1357,7 @@ export class StubHttpClient implements HttpClient {
 <td><code>src/infrastructure/sources/shiki.ts</code>、<code>test/infrastructure/sources/shiki.test.ts</code>、<code>test/fixtures/sources/shiki/news-p1.html</code>・<code>news-p2.html</code>・<code>news-last.html</code>・<code>README.md</code>。計 6</td>
 <td>同上</td>
 <td>J、E、F</td>
-<td>品質ゲート通過。§7.3 の共通行 + 四季 2 行（ページ送り 6 ケースを含む）。<code>SELECTORS.next</code> をフィクスチャの実値で確定。robots.txt 再確認</td>
+<td>品質ゲート通過。§7.3 の共通行 + 四季 3 行（ページ送り 9 ケース・途中ページの <code>HttpError</code>・<code>visited</code> の正規化比較を含む／フィクスチャ／サムネイル）。<code>SELECTORS.item</code> を 1 本に確定し項目数 = 返却件数・<code>url</code> 重複なしを固定（§4.2）。<code>SELECTORS.next</code> を 1 要素の配列に確定し <code>:contains</code> を残さない。robots.txt 再確認（制限があれば上記の扱い）</td>
 </tr>
 <tr>
 <td>K5</td>
@@ -1177,7 +1365,7 @@ export class StubHttpClient implements HttpClient {
 <td><code>src/infrastructure/sources/toho.ts</code>、<code>test/infrastructure/sources/toho.test.ts</code>、<code>test/fixtures/sources/toho/topics.html</code>・<code>news.html</code>・<code>README.md</code>。計 5</td>
 <td>同上</td>
 <td>J、E、F</td>
-<td>品質ゲート通過。§7.3 の共通行 + 東宝 3 行（正規化 5 ケースを含む）。topics と news でセレクタが異なればファイル内で pathname により分け、本書 §4.2 の注記どおりに README へ記録。robots.txt 再確認</td>
+<td>品質ゲート通過。§7.3 の共通行 + 東宝 4 行（2 URL・片方 0 件の <code>SourceError</code>／正規化 6 ケース（<code>stagegate.jp</code>・<code>example.com</code> は変更なし）／フィクスチャ／サムネイル）。<code>SELECTORS.item</code> を 1 本に確定し項目数 = 返却件数・<code>url</code> 重複なしを固定（§4.2）。topics と news でセレクタが異なればファイル内で pathname により分け、本書 §4.2 の注記どおりに README へ記録。フィクスチャに <code>stagegate.jp</code> へのリンクが現れたら <code>TOHO_HOSTS</code> への追加可否を PR 説明に書く（§4.3）。robots.txt 再確認（制限があれば上記の扱い）</td>
 </tr>
 <tr>
 <td>L</td>
@@ -1185,7 +1373,7 @@ export class StubHttpClient implements HttpClient {
 <td><code>src/main.ts</code>（変更。§4.7 の 5 行）。計 1</td>
 <td><code>src/</code></td>
 <td>D-02 Task I、K1〜K5</td>
-<td>品質ゲート通過。<code>CURTAINCALL_DRY_RUN=1 npm start</code> がローカルで終了コード 0、<code>.run-summary.json</code> の <code>sourceFailures</code> に <code>not_implemented</code> が無い（実サイトの一時障害による <code>error</code> / <code>empty</code> は許容し、PR 説明に記録）。<code>collected</code> が 5 団体分（宝塚 100 件 + 他 4 団体で 30 件以上）。この実行は実サイトへアクセスする<strong>手動の動作確認</strong>であり、テストではない</td>
+<td>品質ゲート通過。<code>CURTAINCALL_DRY_RUN=1 npm start</code> がローカルで終了コード 0、<code>.run-summary.json</code> の <code>sourceFailures</code> に <code>not_implemented</code> が無い（実サイトの一時障害による <code>error</code> / <code>empty</code> は許容し、PR 説明に記録）。<code>collected</code> が 5 団体分（宝塚 100 件 + 他 4 団体で 30 件以上。内訳の根拠は §4.2 の件数列：ホリプロ 10 + 新感線 10 + 四季 10〜50 + 東宝 16。RSS 2 団体は <code>fullCrawl</code> でも 10 件を超えない）。robots.txt の制限で外した団体があれば、その団体を件数から除く。この実行は実サイトへアクセスする<strong>手動の動作確認</strong>であり、テストではない</td>
 </tr>
 </tbody></table>
 <p>K1〜K5 が並行できるのは、新規作成するファイルが団体ごとのディレクトリ・ファイル名で互いに素であり、共有ファイル（<code>category-keywords.ts</code>・<code>stub-http-client.ts</code>）は J が先に作って K は読むだけだからである。<code>main.ts</code> は L だけが触る（K で 1 行ずつ足すと 5 タスクが同じ行の近傍を編集して衝突する）。</p>
@@ -1204,6 +1392,14 @@ export class StubHttpClient implements HttpClient {
 <tr>
 <td>2026-09-19</td>
 <td>未決定事項 6 件を反映（Q-1〜Q-6、開発者の指示により推奨案）。§8 #15〜#20 に移し、§9 を空にした</td>
+</tr>
+<tr>
+<td>2026-09-19</td>
+<td>design-review 第 1 段階・第 1 周の指摘 22 件（M-1〜M-22）を修正。§8 #21〜#24 を追加、#11 の文言を修正、§8.1 に 3 行追加、§9 に Q-7 を追加</td>
+</tr>
+<tr>
+<td>2026-09-19</td>
+<td>未決定事項 Q-7 を開発者確認のうえ A で確定。§8 #21 の理由欄に追記し、§9 を空にした</td>
 </tr>
 </tbody></table>
 

@@ -1,0 +1,1595 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信） — CurtainCall 設計書</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#59636e;--line:#d1d9e0;--accent:#0969da;--code:#f6f8fa;--th:#f6f8fa;
+ --draft:#9a6700;--reviewed:#0969da;--approved:#1a7f37}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--line:#3d444d;--accent:#4493f8;--code:#161b22;--th:#161b22}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif}
+.wrap{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+nav{position:sticky;top:0;height:100vh;overflow:auto;padding:24px 16px;border-right:1px solid var(--line);font-size:13px}
+nav a{display:block;color:var(--muted);text-decoration:none;padding:3px 0}
+nav a:hover{color:var(--accent)}
+nav .d3{padding-left:14px}
+nav .home{font-weight:600;color:var(--fg);margin-bottom:12px}
+main{padding:32px 48px;max-width:1000px}
+header h1{margin:0 0 8px;font-size:26px}
+.meta{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;font-size:13px;color:var(--muted);margin:0 0 24px;padding:12px 16px;border:1px solid var(--line);border-radius:6px}
+.meta b{color:var(--fg);font-weight:600}
+.badge{display:inline-block;padding:1px 10px;border-radius:999px;color:#fff;font-size:12px;font-weight:600;vertical-align:middle}
+.badge.draft{background:var(--draft)}.badge.reviewed{background:var(--reviewed)}.badge.approved{background:var(--approved)}
+h2{font-size:20px;margin-top:40px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3{font-size:16px;margin-top:28px}
+.anchor{margin-left:8px;color:var(--line);text-decoration:none;font-weight:400}
+h2:hover .anchor,h3:hover .anchor{color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--th)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--code);padding:12px 16px;border-radius:6px;overflow-x:auto}
+pre code{background:none;padding:0}
+pre.mermaid{background:none;text-align:center}
+blockquote{margin:0;padding:0 16px;color:var(--muted);border-left:4px solid var(--line)}
+a{color:var(--accent)}
+.gen{margin-top:48px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+@media (max-width:800px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:24px 16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+<a class="home" href="index.html">CurtainCall 設計書</a>
+<a href="index.html">目次</a><a href="D-01.html">D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</a><a href="D-02.html" style="color:var(--accent)">D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</a>
+<hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+<a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 層と依存の方向</a><a class="d3" href="#sec-3-2">3.2 ファイル配置</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Source インターフェースと素材（<code>domain/source.ts</code>）</a><a class="d3" href="#sec-4-2">4.2 日時の変換（<code>domain/datetime.ts</code>）</a><a class="d3" href="#sec-4-3">4.3 HTTP ポート（<code>domain/http-client.ts</code>）</a><a class="d3" href="#sec-4-4">4.4 storage のポート（<code>domain/article-store.ts</code>・<code>domain/articles-publisher.ts</code>）</a><a class="d3" href="#sec-4-5">4.5 通知のポート（<code>domain/notification-gateway.ts</code>）</a><a class="d3" href="#sec-4-6">4.6 UseCase の入出力型（<code>application/</code>）</a><a class="d3" href="#sec-4-7">4.7 ログと時刻のポート（<code>domain/logger.ts</code>・<code>domain/clock.ts</code>）</a><a class="d3" href="#sec-4-8">4.8 実行サマリ（<code>.run-summary.json</code>）</a><a class="d3" href="#sec-4-9">4.9 プロジェクト設定と環境変数</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 collect-articles（全 Source の並行実行と正規化）</a><a class="d3" href="#sec-5-2">5.2 detect-diff（前回との突合・確定・切り詰め）</a><a class="d3" href="#sec-5-3">5.3 publish-articles（書き出し → 検証 → コミット → push）</a><a class="d3" href="#sec-5-4">5.4 notify-new-articles（新着の通知）</a><a class="d3" href="#sec-5-5">5.5 run-collection と main.ts</a><a class="d3" href="#sec-5-6">5.6 GitHub Actions ワークフロー</a><a class="d3" href="#sec-5-7">5.7 http ラッパー（<code>infrastructure/http</code>）</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d3" href="#sec-7-1">7.1 UseCase ごとのケース</a><a class="d3" href="#sec-7-2">7.2 テストダブル（<code>test/helpers/</code>）</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
+</nav>
+<main>
+<header><h1>D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</h1><div class="meta"><b>status</b><span><span class="badge draft">draft</span></span><b>scope</b><span>collector</span><b>features</b><span>F-07, F-11</span><b>risks</b><span>R-2, R-7</span><b>depends_on</b><span>D-01</span><b>review_rounds</b><span>0</span></div></header>
+<h2 id="sec-1">1. 目的と範囲<a class="anchor" href="#sec-1">#</a></h2>
+<p>本書は、収集バッチ <code>collector/</code> が<strong>どう動くか</strong>を定める。<a href="D-01.html">D-01</a> が「何を出力するか（<code>articles.json</code>・<code>companies.json</code>・<code>id</code> / <code>contentHash</code> の規則・通知ペイロード）」を決めたのに対し、本書は (1) 層構成と手動 DI の組み立て、(2) <code>Source</code> インターフェースと Source↔Company の対応付け、(3) <code>infrastructure/http</code> のラッパー（User-Agent・間隔・タイムアウト・文字コード）、(4) application の 5 UseCase（<code>collect-articles</code>・<code>detect-diff</code>・<code>publish-articles</code>・<code>notify-new-articles</code>・<code>run-collection</code>）の入出力と手順、(5) <code>infrastructure/storage</code>（<code>articles.json</code> の読み書き・原子性・git への確定）、(6) <code>infrastructure/fcm</code> の送信、(7) GitHub Actions のワークフロー（cron・権限・Secrets・GitHub Pages デプロイ・失敗の検知）、(8) ログと終了コードを決める。決めないのは、団体別のセレクタ・URL 規則・日付書式・カテゴリ対応表（<a href="D-03.html">D-03</a>）と、app 側のすべて（<a href="D-04.html">D-04</a>・<a href="D-05.html">D-05</a>）である。D-01 の決定（§8 #1〜#34）は本書の前提であり、変更しない。</p>
+<h2 id="sec-2">2. 要件との対応<a class="anchor" href="#sec-2">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>要件</th>
+<th>本書での扱い</th>
+<th>節</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>F-07 プッシュ通知（送信側）</td>
+<td><code>notify-new-articles</code> が団体ごとに 1 通を <code>NotificationGateway</code> へ送る。文面は D-01 §4.8 の <code>buildNotificationText</code>。送信は <code>articles.json</code> が <code>main</code> へ push 成功した後だけ（D-01 #33 の不変条件を <code>run-collection</code> が保証する）</td>
+<td>§5.4 / §5.5</td>
+</tr>
+<tr>
+<td>F-11 更新記事の再浮上（検知側）</td>
+<td><code>detect-diff</code> が前回スナップショットと <code>contentHash</code> で突合し、不一致の記事の <code>updatedAt</code> を <code>generatedAt</code> にする（D-01 §5.2 の表）</td>
+<td>§5.2</td>
+</tr>
+<tr>
+<td>R-2 サイト改装で収集が壊れる</td>
+<td>Source は 1 団体 1 実装で相互に import せず、<code>Promise.allSettled</code> で並行実行する。例外・取得 0 件の両方を Source 失敗として数え、実行サマリと GitHub Actions のジョブ結果で開発者に知らせる（失敗が 1 つでもあればジョブを失敗させ、GitHub の既定のワークフロー失敗通知に任せる。§8 #25）。1 Source の失敗は他団体に波及せず、前回の記事は保持される</td>
+<td>§5.1 / §6 / §5.6</td>
+</tr>
+<tr>
+<td>R-7 cron の遅延</td>
+<td>cron は毎時 7 分に 1 回。遅延しても <code>generatedAt</code>（実行開始時刻）を基準に差分を取るだけで、二重通知・取りこぼしは起きない。<code>concurrency</code> で実行を直列化し、遅延で重なった実行が同時に push しないようにする</td>
+<td>§5.6 / §8 #15</td>
+</tr>
+<tr>
+<td>要件 §5 相手サイトへの配慮</td>
+<td><code>infrastructure/http</code> が User-Agent（D-01 §4.7 の実値）を必ず送り、同一ホストへのリクエストを直列化して最小間隔を空け、タイムアウトを設ける。robots.txt は §8 #6 の扱い</td>
+<td>§5.7 / §8 #6</td>
+</tr>
+<tr>
+<td>要件 §5 収集間隔 1 時間 / 運用コスト 0 円</td>
+<td>GitHub Actions の cron 1 本（1 実行あたり数十秒）と GitHub Pages のみ。外部サーバを持たない</td>
+<td>§5.6</td>
+</tr>
+<tr>
+<td>要件 §6.1 収集手順（巡回 → 正規化 → 差分 → コミット → 通知）</td>
+<td><code>run-collection</code> の 6 ステップがこの順序を実装する</td>
+<td>§5.5</td>
+</tr>
+</tbody></table>
+<h3 id="sec-2-1">2.1 画面定義との対応（scope: app のみ）<a class="anchor" href="#sec-2-1">#</a></h3>
+<p>該当なし。本書は scope: collector であり、画面定義書を参照しない。</p>
+<h2 id="sec-3">3. 構成<a class="anchor" href="#sec-3">#</a></h2>
+<h3 id="sec-3-1">3.1 層と依存の方向<a class="anchor" href="#sec-3-1">#</a></h3>
+<pre class="mermaid">flowchart TB
+  subgraph entry[&quot;entry&quot;]
+    MAIN[&quot;main.ts（DI 組み立て・起動時検証）&quot;]
+  end
+  subgraph app[&quot;application&quot;]
+    RUN[&quot;run-collection.ts&quot;]
+    COL[&quot;collect-articles.ts&quot;]
+    DIF[&quot;detect-diff.ts&quot;]
+    PUB[&quot;publish-articles.ts&quot;]
+    NOT[&quot;notify-new-articles.ts&quot;]
+  end
+  subgraph dom[&quot;domain&quot;]
+    PORTS[&quot;ポート（IF）&lt;br&gt;source.ts / http-client.ts / article-store.ts&lt;br&gt;articles-publisher.ts / notification-gateway.ts&lt;br&gt;logger.ts / clock.ts / hasher.ts&quot;]
+    PURE[&quot;純粋関数・型（D-01 §3.2）&lt;br&gt;article.ts / company.ts / url.ts / text.ts&lt;br&gt;article-id.ts / content-hash.ts / article-order.ts&lt;br&gt;category.ts / notification.ts / datetime.ts&quot;]
+  end
+  subgraph infra[&quot;infrastructure&quot;]
+    HTTP[&quot;http/&quot;]
+    SRC[&quot;sources/（D-03）&quot;]
+    STO[&quot;storage/&quot;]
+    FCM[&quot;fcm/&quot;]
+    LOG[&quot;logging/&quot;]
+    CLK[&quot;clock/&quot;]
+    HSH[&quot;hash/&quot;]
+  end
+  MAIN --&gt; RUN
+  MAIN --&gt; infra
+  RUN --&gt; COL
+  RUN --&gt; DIF
+  RUN --&gt; PUB
+  RUN --&gt; NOT
+  COL --&gt; PORTS
+  COL --&gt; PURE
+  DIF --&gt; PURE
+  PUB --&gt; PORTS
+  NOT --&gt; PORTS
+  NOT --&gt; PURE
+  SRC --&gt; PORTS
+  SRC --&gt; PURE
+  HTTP --&gt; PORTS
+  STO --&gt; PORTS
+  STO --&gt; PURE
+  FCM --&gt; PORTS
+  FCM --&gt; PURE
+  LOG --&gt; PORTS
+  CLK --&gt; PORTS
+  HSH --&gt; PORTS</pre>
+<p>矢印はすべて外側 → 内側で、逆向きは無い。<code>infrastructure</code> から <code>application</code> への矢印も無い（infrastructure は domain のポートだけを実装する）。具象クラスを import するのは <code>main.ts</code> だけ（CLAUDE.md）。<code>run-collection</code> が他の 4 UseCase を呼ぶのは同一層内の依存で、参照はクラスではなく各 UseCase が公開するインターフェース（§4.6）に対して行う。</p>
+<h3 id="sec-3-2">3.2 ファイル配置<a class="anchor" href="#sec-3-2">#</a></h3>
+<p><code>（D-01）</code> は D-01 §3.2 が所有し本書では作らないファイル、<code>（D-03）</code> は D-03 が所有するファイル。</p>
+<pre><code>collector/
+  package.json            scripts / 依存（§4.9）
+  tsconfig.json           strict（§4.9）
+  eslint.config.js        typescript-eslint strict
+  .prettierrc.json
+  vitest.config.ts
+  src/
+    domain/
+      article.ts              （D-01）
+      company.ts              （D-01）
+      category.ts             （D-01）
+      category-keywords.ts    （D-01）
+      url.ts                  （D-01）
+      text.ts                 （D-01）
+      hasher.ts               （D-01）
+      article-id.ts           （D-01）
+      content-hash.ts         （D-01）
+      article-order.ts        （D-01）
+      notification.ts         （D-01）
+      datetime.ts             toJstDateTime / jstDateOnly / InvalidDateTimeError（§4.2）
+      source.ts               RawArticle・Source・SourceError（§4.1）
+      http-client.ts          HttpClient・HttpError（§4.3）
+      article-store.ts        ArticleReader・ArticleWriter・ArticlesValidationError（§4.4）
+      articles-publisher.ts   ArticlesPublisher・PublishOutcome・PublishFailedError（§4.4）
+      notification-gateway.ts NotificationGateway・NotificationSendError（§4.5）
+      logger.ts               Logger・LogLevel・LogFields（§4.7）
+      clock.ts                Clock（§4.7）
+    application/
+      collect-articles.ts     CollectArticles（§5.1）
+      detect-diff.ts          DetectDiff（§5.2）
+      publish-articles.ts     PublishArticles（§5.3）
+      notify-new-articles.ts  NotifyNewArticles（§5.4）
+      run-collection.ts       RunCollection・RunSummary（§5.5）
+    infrastructure/
+      http/
+        fetch-http-client.ts  HttpClient 実装（UA・間隔・タイムアウト・リトライ・文字コード）
+        host-scheduler.ts     ホストごとの直列化と最小間隔
+      sources/
+        takarazuka.ts shiki.ts horipro.ts toho.ts shinkansen.ts   （D-03）
+      storage/
+        articles-file-store.ts    ArticleReader + ArticleWriter 実装（§5.3）
+        companies-file-store.ts   companies.json の読み込みと検証（main.ts が使う）
+        git-articles-publisher.ts ArticlesPublisher 実装（git add / commit / push）
+        json-format.ts            決定的シリアライズ（D-01 §4.2 書式）
+        run-summary-store.ts      実行サマリ（§4.8）の書き出し
+      fcm/
+        firebase-notification-gateway.ts  NotificationGateway 実装
+        noop-notification-gateway.ts      送信せずログだけ残す実装
+      logging/
+        console-logger.ts     Logger 実装
+      clock/
+        system-clock.ts       Clock 実装
+      hash/
+        sha256-hasher.ts      （D-01）
+    main.ts                 DI 組み立てとエントリ（§5.5）
+  test/
+    application/
+      collect-articles.test.ts
+      detect-diff.test.ts
+      publish-articles.test.ts
+      notify-new-articles.test.ts
+      run-collection.test.ts
+    domain/
+      contract.test.ts        （D-01）
+    helpers/                  テストダブル（§7.2）
+    fixtures/
+      contract/               （D-01）
+      sources/                （D-03。実サイトの HTML / RSS）
+data/
+  companies.json            （D-01）
+  articles.json             （D-01）
+.github/workflows/
+  collect.yml               収集 + Pages デプロイ（§5.6）
+  collector-ci.yml          品質ゲート（§5.6）</code></pre>
+<p>CLAUDE.md の <code>infrastructure/</code> の列挙（<code>sources</code> / <code>http</code> / <code>fcm</code> / <code>storage</code>）に <code>logging</code> / <code>clock</code> / <code>hash</code> を加える。いずれも domain のポートの実装であり、依存の方向の規約は満たす（§8 #19）。</p>
+<h2 id="sec-4">4. データ<a class="anchor" href="#sec-4">#</a></h2>
+<h3 id="sec-4-1">4.1 Source インターフェースと素材（<code>domain/source.ts</code>）<a class="anchor" href="#sec-4-1">#</a></h3>
+<pre><code class="language-ts">import type { Category } from &quot;./article&quot;;
+
+/**
+ * Source が抽出した記事の「素材」。
+ * id・contentHash・fetchedAt・updatedAt は持たない（application が確定する。D-01 §5 冒頭の推奨・§8.1）。
+ * 団体固有の URL 正規化（R-8）・相対 URL の解決・publishedAt の書式変換・category 判定は Source が済ませる（D-03）。
+ */
+export interface RawArticle {
+  readonly companyId: string;    // 実装した団体の Company.id。application が呼び出し時の Company.id と突合する（D-01 §4.2）
+  readonly title: string;        // 生の見出し。正規化（normalizeTitle）は application
+  readonly url: string;          // 絶対 URL。汎用正規化（normalizeUrl）は application
+  readonly category: Category;   // D-01 §5.3 の手順で Source が決めた 1 値
+  readonly publishedAt: string;  // D-01 §4.1 の書式（YYYY-MM-DDTHH:mm:ss+09:00）。変換は domain/datetime.ts
+  readonly thumbnail?: string;   // 取得できた場合のみ。検証は application（D-01 §5.4）
+}
+
+/**
+ * 1 団体の取得処理。契約は「入力なし → 記事の配列、失敗は例外」（CLAUDE.md リスコフ置換）。
+ * 取得先 URL は実装に埋め込まず、コンストラクタで受け取った Company.sources を使う（D-01 #20）。
+ * 記事は Company.sources の配列順 → 各ページの出現順（ページ送りは 1 ページ目から）で返す（D-01 §6 の重複規則の根拠）。
+ */
+export interface Source {
+  /** ログ用の識別子。既定は Company.id */
+  readonly id: string;
+  fetch(): Promise&lt;readonly RawArticle[]&gt;;
+}
+
+/** Source が投げる失敗。cause に原因（HttpError・パース失敗）を入れる */
+export class SourceError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = &quot;SourceError&quot;;
+  }
+}</code></pre>
+<p><code>Source</code> の戻り値の要素型を <code>Article</code> ではなく <code>RawArticle</code> にするのは、<code>id</code>・<code>contentHash</code>・<code>fetchedAt</code>・<code>updatedAt</code> を application が確定するという D-01 §5 の推奨に従うためである（§8 #1）。契約の形（入力なし → 配列、失敗は例外）は CLAUDE.md のとおり維持する。</p>
+<h3 id="sec-4-2">4.2 日時の変換（<code>domain/datetime.ts</code>）<a class="anchor" href="#sec-4-2">#</a></h3>
+<p>D-01 §4.1 の書式への変換は 5 団体すべてで必要になるため、Source 間のコピーを避けて domain に置く（CLAUDE.md「共通処理は domain / application の抽象に寄せる」）。</p>
+<pre><code class="language-ts">export class InvalidDateTimeError extends Error {}
+
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** 瞬間 → JST の YYYY-MM-DDTHH:mm:ss+09:00（秒精度。ミリ秒は切り捨て） */
+export function toJstDateTime(instant: Date): string {
+  const ms = instant.getTime();
+  if (!Number.isFinite(ms)) throw new InvalidDateTimeError(&quot;invalid Date&quot;);
+  const shifted = new Date(ms + JST_OFFSET_MS);           // UTC のゲッタで JST の壁時計を読む
+  const p = (n: number, w = 2): string =&gt; String(n).padStart(w, &quot;0&quot;);
+  return (
+    `${p(shifted.getUTCFullYear(), 4)}-${p(shifted.getUTCMonth() + 1)}-${p(shifted.getUTCDate())}` +
+    `T${p(shifted.getUTCHours())}:${p(shifted.getUTCMinutes())}:${p(shifted.getUTCSeconds())}+09:00`
+  );
+}
+
+/** JST の年月日（時刻を持たないサイト）→ YYYY-MM-DDT00:00:00+09:00。実在しない日付は例外（D-01 §6「publishedAt を解釈できない」） */
+export function jstDateOnly(year: number, month: number, day: number): string {
+  const utc = Date.UTC(year, month - 1, day);
+  const d = new Date(utc);
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() + 1 !== month || d.getUTCDate() !== day) {
+    throw new InvalidDateTimeError(`invalid date: ${year}-${month}-${day}`);
+  }
+  return toJstDateTime(new Date(utc - JST_OFFSET_MS));
+}</code></pre>
+<p>RSS の <code>pubDate</code>（RFC822・任意のオフセット）は <code>new Date(pubDate)</code> で瞬間にしてから <code>toJstDateTime</code> を通す（同じ瞬間を +09:00 で表記する。D-01 §4.1）。<code>Number.isNaN(d.getTime())</code> のときは Source が <code>publishedAt</code> に空文字を入れず、その記事を捨てるか <code>InvalidDateTimeError</code> を投げる（D-03）。</p>
+<h3 id="sec-4-3">4.3 HTTP ポート（<code>domain/http-client.ts</code>）<a class="anchor" href="#sec-4-3">#</a></h3>
+<pre><code class="language-ts">export class HttpError extends Error {
+  constructor(
+    message: string,
+    readonly url: string,
+    readonly status?: number,
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = &quot;HttpError&quot;;
+  }
+}
+
+export interface HttpClient {
+  /**
+   * URL を GET し、本文を文字列で返す。
+   * 2xx 以外・タイムアウト・ネットワーク失敗・文字コードのデコード失敗は HttpError を投げる。
+   * リダイレクトは追う。リクエスト間隔・タイムアウト・リトライ・User-Agent は実装（§5.7）が持つ。
+   */
+  getText(url: string): Promise&lt;string&gt;;
+}</code></pre>
+<p><code>sources/</code> はこのインターフェースだけに依存し、<code>fetch</code> を直接呼ばない（CLAUDE.md）。実装は <code>infrastructure/http/fetch-http-client.ts</code>、注入は <code>main.ts</code>。</p>
+<h3 id="sec-4-4">4.4 storage のポート（<code>domain/article-store.ts</code>・<code>domain/articles-publisher.ts</code>）<a class="anchor" href="#sec-4-4">#</a></h3>
+<p>利用側の UseCase が必要とするメソッドだけを持つよう、読み・書き・確定を 3 つに分ける（CLAUDE.md インターフェース分離）。</p>
+<pre><code class="language-ts">// domain/article-store.ts
+import type { ArticlesFile } from &quot;./article&quot;;
+
+export interface ArticleReader {
+  /**
+   * 前回の data/articles.json を読む（D-01 §5.2 の「前回」＝実行開始時にチェックアウトした main の内容）。
+   * ファイルが無い・JSON として壊れている・ArticlesFileSchema に合わない（schemaVersion 違いを含む）ときは
+   * undefined を返す（例外にしない）。undefined は「通知を送らない」根拠になる（D-01 #15）。
+   */
+  readPrevious(): Promise&lt;ArticlesFile | undefined&gt;;
+}
+
+export interface ArticleWriter {
+  /**
+   * data/articles.json を書き出す。buildArticlesFileWriteSchema（D-01 §4.2）で検証し、
+   * 失敗したら ArticlesValidationError を投げて**書き出さない**（D-01 §6）。書き出しは原子的（§5.3）。
+   */
+  write(file: ArticlesFile): Promise&lt;void&gt;;
+}
+
+export class ArticlesValidationError extends Error {}</code></pre>
+<pre><code class="language-ts">// domain/articles-publisher.ts
+export type PublishOutcome = &quot;published&quot; | &quot;no_changes&quot;;
+
+export interface ArticlesPublisher {
+  /**
+   * 書き出し済みの data/articles.json を main へ確定させる（git add → commit → push）。
+   * 変更が無ければ &quot;no_changes&quot;。commit・push のいずれかが失敗したら PublishFailedError（D-01 #33）。
+   */
+  publish(commitMessage: string): Promise&lt;PublishOutcome&gt;;
+}
+
+export class PublishFailedError extends Error {}</code></pre>
+<h3 id="sec-4-5">4.5 通知のポート（<code>domain/notification-gateway.ts</code>）<a class="anchor" href="#sec-4-5">#</a></h3>
+<pre><code class="language-ts">import type { NewArticlesNotification } from &quot;./notification&quot;;
+
+export interface NotificationGateway {
+  /** 1 通送る。失敗は NotificationSendError。再送は行わない（D-01 §4.8 至多 1 回） */
+  send(notification: NewArticlesNotification): Promise&lt;void&gt;;
+}
+
+export class NotificationSendError extends Error {}</code></pre>
+<h3 id="sec-4-6">4.6 UseCase の入出力型（<code>application/</code>）<a class="anchor" href="#sec-4-6">#</a></h3>
+<pre><code class="language-ts">// application/collect-articles.ts
+import type { Article } from &quot;../domain/article&quot;;
+import type { Company } from &quot;../domain/company&quot;;
+import type { Source } from &quot;../domain/source&quot;;
+
+/** id・contentHash まで確定し、fetchedAt・updatedAt がまだ無い記事 */
+export type CollectedArticle = Omit&lt;Article, &quot;fetchedAt&quot; | &quot;updatedAt&quot;&gt;;
+
+/** Source と Company の対応付け（D-01 §8.1）。main.ts が companies.json の配列順に組み立てる */
+export interface SourceBinding {
+  readonly company: Company;
+  readonly source: Source;
+}
+
+export type SourceFailureReason = &quot;error&quot; | &quot;empty&quot; | &quot;all_rejected&quot; | &quot;not_implemented&quot;;
+
+export interface SourceFailure {
+  readonly companyId: string;
+  readonly sourceId: string;
+  readonly reason: SourceFailureReason;
+  readonly message: string;
+}
+
+export interface CollectArticlesResult {
+  /** companies.json の配列順 → Source の返却順。id の重複は除去済み */
+  readonly articles: readonly CollectedArticle[];
+  readonly failures: readonly SourceFailure[];
+  /** 破棄した記事の件数（URL 不正・見出し空・日付不正・companyId 不一致の合計） */
+  readonly discarded: number;
+}
+
+export interface CollectArticlesUseCase {
+  execute(): Promise&lt;CollectArticlesResult&gt;;
+}</code></pre>
+<pre><code class="language-ts">// application/detect-diff.ts
+import type { Article, ArticlesFile } from &quot;../domain/article&quot;;
+import type { Company } from &quot;../domain/company&quot;;
+
+export interface DetectDiffInput {
+  /** 前回の articles.json。undefined なら全件が新着になり、通知対象は空になる（D-01 #15） */
+  readonly previous: ArticlesFile | undefined;
+  readonly collected: readonly CollectedArticle[];
+  readonly companies: readonly Company[];   // companies.json の配列順
+  readonly generatedAt: string;             // 実行開始時刻（D-01 §4.2）
+}
+
+export interface DetectDiffResult {
+  readonly file: ArticlesFile;
+  /** articles 配列が前回と 1 か所でも違うか。false なら書き出さない（§8 #8） */
+  readonly changed: boolean;
+  /** 通知対象。キーは companyId、値は compareArticles 順の新着記事。previous が undefined のときは空 */
+  readonly newArticlesByCompany: ReadonlyMap&lt;string, readonly Article[]&gt;;
+  readonly stats: {
+    readonly created: number;   // 新着
+    readonly updated: number;   // 更新
+    readonly carried: number;   // 継続（今回も取れた + 一覧から消えたが保持）
+    readonly dropped: number;   // 100 件上限で落ちた
+  };
+}
+
+export interface DetectDiffUseCase {
+  execute(input: DetectDiffInput): DetectDiffResult;   // I/O を持たないので同期
+}</code></pre>
+<pre><code class="language-ts">// application/publish-articles.ts
+import type { ArticlesFile } from &quot;../domain/article&quot;;
+import type { PublishOutcome } from &quot;../domain/articles-publisher&quot;;
+
+export interface PublishArticlesInput {
+  readonly file: ArticlesFile;
+  readonly commitMessage: string;
+}
+
+export interface PublishArticlesUseCase {
+  /** 書き出し（検証込み）→ コミット → push。失敗は例外（ArticlesValidationError / PublishFailedError） */
+  execute(input: PublishArticlesInput): Promise&lt;PublishOutcome&gt;;
+}</code></pre>
+<pre><code class="language-ts">// application/notify-new-articles.ts
+import type { Article } from &quot;../domain/article&quot;;
+import type { Company } from &quot;../domain/company&quot;;
+
+export interface NotifyNewArticlesInput {
+  readonly newArticlesByCompany: ReadonlyMap&lt;string, readonly Article[]&gt;;
+  readonly companies: readonly Company[];   // 送信順は配列順（D-01 §4.8）
+}
+
+export interface NotifyNewArticlesResult {
+  readonly sent: number;
+  readonly failed: number;
+}
+
+export interface NotifyNewArticlesUseCase {
+  execute(input: NotifyNewArticlesInput): Promise&lt;NotifyNewArticlesResult&gt;;
+}</code></pre>
+<h3 id="sec-4-7">4.7 ログと時刻のポート（<code>domain/logger.ts</code>・<code>domain/clock.ts</code>）<a class="anchor" href="#sec-4-7">#</a></h3>
+<pre><code class="language-ts">// domain/logger.ts
+export const LOG_LEVELS = [&quot;debug&quot;, &quot;info&quot;, &quot;warn&quot;, &quot;error&quot;] as const;
+export type LogLevel = (typeof LOG_LEVELS)[number];
+
+/** 構造化フィールド。値は 1 行に収まるスカラーのみ（dynamic / any を使わない） */
+export type LogFields = Readonly&lt;Record&lt;string, string | number | boolean&gt;&gt;;
+
+export interface Logger {
+  debug(message: string, fields?: LogFields): void;
+  info(message: string, fields?: LogFields): void;
+  warn(message: string, fields?: LogFields): void;
+  error(message: string, fields?: LogFields): void;
+}</code></pre>
+<pre><code class="language-ts">// domain/clock.ts
+export interface Clock {
+  now(): Date;
+}</code></pre>
+<p><code>ConsoleLogger</code> は <code>debug</code> / <code>info</code> を stdout、<code>warn</code> / <code>error</code> を stderr に 1 行 1 イベントで書く。書式は <code>&lt;level&gt; &lt;message&gt; key=value key=value</code>（値に空白・<code>=</code> が含まれる場合は <code>JSON.stringify</code> で囲む）。出力レベルは環境変数 <code>CURTAINCALL_LOG_LEVEL</code>（既定 <code>info</code>）。秘密情報（サービスアカウント JSON、トークン）は一切フィールドに載せない。</p>
+<h3 id="sec-4-8">4.8 実行サマリ（<code>.run-summary.json</code>）<a class="anchor" href="#sec-4-8">#</a></h3>
+<p>collector は Actions 固有の API（<code>$GITHUB_OUTPUT</code> 等）を知らない。代わりに 1 実行の結果を JSON ファイルに書き、ワークフローがそれを読んでジョブの出力・ステップサマリにする（§8 #13）。リポジトリにはコミットしない（<code>.gitignore</code>）。</p>
+<pre><code class="language-ts">// application/run-collection.ts
+export interface RunSummary {
+  readonly generatedAt: string;          // この実行の基準時刻
+  readonly published: boolean;           // articles.json を main へ push したか
+  readonly changed: boolean;             // 記事配列に変化があったか
+  readonly collected: number;            // 収集して採用した記事数
+  readonly discarded: number;
+  readonly created: number;
+  readonly updated: number;
+  readonly dropped: number;
+  readonly sourceFailures: readonly SourceFailure[];
+  readonly notificationsSent: number;
+  readonly notificationsFailed: number;
+  readonly durationMs: number;
+}</code></pre>
+<pre><code class="language-json">{
+  &quot;generatedAt&quot;: &quot;2026-09-19T15:07:03+09:00&quot;,
+  &quot;published&quot;: true,
+  &quot;changed&quot;: true,
+  &quot;collected&quot;: 142,
+  &quot;discarded&quot;: 0,
+  &quot;created&quot;: 3,
+  &quot;updated&quot;: 1,
+  &quot;dropped&quot;: 2,
+  &quot;sourceFailures&quot;: [{ &quot;companyId&quot;: &quot;toho&quot;, &quot;sourceId&quot;: &quot;toho&quot;, &quot;reason&quot;: &quot;empty&quot;, &quot;message&quot;: &quot;no articles parsed&quot; }],
+  &quot;notificationsSent&quot;: 1,
+  &quot;notificationsFailed&quot;: 0,
+  &quot;durationMs&quot;: 8421
+}</code></pre>
+<h3 id="sec-4-9">4.9 プロジェクト設定と環境変数<a class="anchor" href="#sec-4-9">#</a></h3>
+<pre><code class="language-json">// collector/package.json（抜粋）
+{
+  &quot;name&quot;: &quot;curtaincall-collector&quot;,
+  &quot;private&quot;: true,
+  &quot;type&quot;: &quot;module&quot;,
+  &quot;engines&quot;: { &quot;node&quot;: &quot;&gt;=22&quot; },
+  &quot;scripts&quot;: {
+    &quot;build&quot;: &quot;tsc -p tsconfig.json&quot;,
+    &quot;start&quot;: &quot;node dist/main.js&quot;,
+    &quot;lint&quot;: &quot;eslint . &amp;&amp; prettier --check .&quot;,
+    &quot;typecheck&quot;: &quot;tsc -p tsconfig.json --noEmit&quot;,
+    &quot;test&quot;: &quot;vitest run&quot;
+  },
+  &quot;dependencies&quot;: {
+    &quot;zod&quot;: &quot;^3.23.0&quot;,
+    &quot;cheerio&quot;: &quot;^1.0.0&quot;,
+    &quot;rss-parser&quot;: &quot;^3.13.0&quot;,
+    &quot;firebase-admin&quot;: &quot;^13.0.0&quot;
+  },
+  &quot;devDependencies&quot;: {
+    &quot;typescript&quot;: &quot;^5.6.0&quot;,
+    &quot;vitest&quot;: &quot;^2.1.0&quot;,
+    &quot;eslint&quot;: &quot;^9.0.0&quot;,
+    &quot;typescript-eslint&quot;: &quot;^8.0.0&quot;,
+    &quot;prettier&quot;: &quot;^3.3.0&quot;,
+    &quot;@types/node&quot;: &quot;^22.0.0&quot;
+  }
+}</code></pre>
+<pre><code class="language-jsonc">// collector/tsconfig.json（抜粋）
+{
+  &quot;compilerOptions&quot;: {
+    &quot;target&quot;: &quot;es2023&quot;,
+    &quot;module&quot;: &quot;nodenext&quot;,
+    &quot;moduleResolution&quot;: &quot;nodenext&quot;,
+    &quot;lib&quot;: [&quot;es2023&quot;],
+    &quot;types&quot;: [&quot;node&quot;],
+    &quot;rootDir&quot;: &quot;src&quot;,
+    &quot;outDir&quot;: &quot;dist&quot;,
+    &quot;strict&quot;: true,
+    &quot;noUncheckedIndexedAccess&quot;: true,
+    &quot;exactOptionalPropertyTypes&quot;: true,
+    &quot;noImplicitOverride&quot;: true,
+    &quot;verbatimModuleSyntax&quot;: true,
+    &quot;skipLibCheck&quot;: true
+  },
+  &quot;include&quot;: [&quot;src&quot;, &quot;test&quot;, &quot;vitest.config.ts&quot;, &quot;eslint.config.js&quot;]
+}</code></pre>
+<p><code>exactOptionalPropertyTypes: true</code> のため、省略可能フィールド（<code>thumbnail</code>・<code>updatedAt</code>）は <code>undefined</code> を代入せず、条件付きスプレッドで組み立てる（D-01 #2「キー省略」と一致する）。</p>
+<pre><code class="language-ts">const article: Article = {
+  ...base,
+  ...(thumbnail !== undefined ? { thumbnail } : {}),
+  ...(updatedAt !== undefined ? { updatedAt } : {}),
+};</code></pre>
+<table>
+<thead>
+<tr>
+<th>環境変数</th>
+<th>必須</th>
+<th>既定</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>FIREBASE_SERVICE_ACCOUNT</code></td>
+<td>いいえ</td>
+<td>未設定</td>
+<td>Firebase サービスアカウント JSON の全文。未設定なら <code>NoopNotificationGateway</code> を注入し通知を送らない（§8 #16）</td>
+</tr>
+<tr>
+<td><code>CURTAINCALL_LOG_LEVEL</code></td>
+<td>いいえ</td>
+<td><code>info</code></td>
+<td><code>debug</code> / <code>info</code> / <code>warn</code> / <code>error</code></td>
+</tr>
+<tr>
+<td><code>CURTAINCALL_FULL_CRAWL</code></td>
+<td>いいえ</td>
+<td>未設定</td>
+<td><code>1</code> のとき、ページ送りを持つ Source が<strong>全団体</strong>について初回相当の範囲まで遡る（手動の明示指定）。未設定でも、前回の <code>articles.json</code> にその団体の記事が 1 件も無ければその団体だけ自動で遡る（§5.5 <code>main.ts</code> 手順 5、§8 #27）</td>
+</tr>
+<tr>
+<td><code>CURTAINCALL_SUMMARY_PATH</code></td>
+<td>いいえ</td>
+<td><code>collector/.run-summary.json</code></td>
+<td>実行サマリの出力先</td>
+</tr>
+<tr>
+<td><code>CURTAINCALL_REPO_ROOT</code></td>
+<td>いいえ</td>
+<td><code>main.js</code> から 2 階層上</td>
+<td><code>data/</code> と git 操作の基準ディレクトリ</td>
+</tr>
+<tr>
+<td><code>CURTAINCALL_DRY_RUN</code></td>
+<td>いいえ</td>
+<td>未設定</td>
+<td><code>1</code> のとき書き出し・push・通知を行わない（ローカル確認用）。<code>main.ts</code> が Noop 実装を注入する</td>
+</tr>
+</tbody></table>
+<p><code>.gitignore</code> に <code>collector/dist/</code>・<code>collector/node_modules/</code>・<code>collector/.run-summary.json</code>・<code>data/articles.json.tmp</code> を加える。</p>
+<h2 id="sec-5">5. 処理フロー（正常系）<a class="anchor" href="#sec-5">#</a></h2>
+<h3 id="sec-5-1">5.1 collect-articles（全 Source の並行実行と正規化）<a class="anchor" href="#sec-5-1">#</a></h3>
+<ul>
+<li><strong>責務</strong>：すべての Source を実行し、素材（<code>RawArticle</code>）を <code>CollectedArticle</code> に確定する。1 public メソッド <code>execute()</code>。</li>
+<li><strong>依存（コンストラクタ注入）</strong>：<code>bindings: readonly SourceBinding[]</code>（<code>companies.json</code> の配列順。<code>main.ts</code> が組む）、<code>hasher: Hasher</code>、<code>logger: Logger</code></li>
+<li><strong>入力</strong>：なし</li>
+<li><strong>ステップ</strong>：<ol>
+<li><code>const settled = await Promise.allSettled(bindings.map((b) =&gt; b.source.fetch()))</code>（調査レポート §7.1、R-2）</li>
+<li><code>settled</code> を <code>bindings</code> と同じ添字で走査する（<code>companies.json</code> の配列順。完了順に依存させない。D-01 §6・§8.1）</li>
+<li><code>status === &quot;rejected&quot;</code> の binding：<code>failures</code> に <code>{ reason: &quot;error&quot; }</code> を追加し <code>logger.warn(&quot;source failed&quot;, { companyId, sourceId, error })</code>。その団体の記事は 0 件（前回の記事は <code>detect-diff</code> が保持する）</li>
+<li><code>status === &quot;fulfilled&quot;</code> で配列が空の binding：<code>failures</code> に <code>{ reason: &quot;empty&quot; }</code> を追加し <code>logger.warn</code>。改装でセレクタが一致しなくなった場合は例外ではなく 0 件になるため、0 件も失敗として数える（R-2。§8 #3）</li>
+<li>各 <code>RawArticle</code> を次の順で確定する。いずれかで失敗した記事は<strong>その記事だけ</strong>を捨て、<code>discarded</code> を増やす（D-01 §6）<ol>
+<li><code>companyId</code> の突合：<code>raw.companyId !== binding.company.id</code> → 捨てて <code>logger.warn(&quot;companyId mismatch&quot;, { sourceId, expected, actual })</code>（D-01 §4.2・#32）</li>
+<li><code>url = normalizeUrl(raw.url)</code>：<code>InvalidArticleUrlError</code> → 捨てて <code>warn</code></li>
+<li><code>id = buildArticleId(hasher, url)</code></li>
+<li><code>title = normalizeTitle(raw.title)</code>：空文字 → 捨てて <code>warn</code></li>
+<li><code>publishedAt</code>：<code>DateTimeSchema.safeParse</code> が失敗 → 捨てて <code>warn</code></li>
+<li><code>category</code>：<code>CategorySchema.safeParse</code> が失敗 → <code>other</code> にして <code>warn</code>（記事は残す。型では保証されるが Source は infrastructure なので実行時の防衛を置く）</li>
+<li><code>thumbnail</code>：<code>raw.thumbnail</code> が <code>undefined</code>・空文字・<code>HttpUrlSchema.safeParse</code> 失敗 → キーを省略して <code>logger.debug</code>。成功ならそのまま格納（D-01 §5.4）</li>
+<li><code>contentHash = buildContentHash(hasher, title)</code></li>
+</ol>
+</li>
+<li>1 binding の取得件数が 1 件以上で採用が 0 件 → <code>failures</code> に <code>{ reason: &quot;all_rejected&quot; }</code> を追加（D-01 §6「1 Source の全記事が破棄されたら Source 失敗」）</li>
+<li>重複 <code>id</code>：走査順に <code>Map&lt;string, CollectedArticle&gt;</code> へ入れ、既にあるキーは捨てて <code>logger.debug(&quot;duplicate id&quot;, { id, companyId })</code>。走査順が「<code>companies.json</code> の配列順 → <code>Company.sources</code> の配列順 → 出現順」になるのは手順 2 と <code>Source</code> の契約（§4.1）による</li>
+<li><code>logger.info(&quot;collected&quot;, { companies, articles, discarded, failures })</code></li>
+</ol>
+</li>
+<li><strong>出力</strong>：<code>CollectArticlesResult</code></li>
+<li><strong>失敗時</strong>：Source 由来の失敗は <code>failures</code> に集約して例外にしない（1 サイトの故障を他に波及させない。R-2）。<code>hasher</code> など依存自体の例外は上位へ投げる（<code>run-collection</code> が致命的失敗として扱う）</li>
+</ul>
+<h3 id="sec-5-2">5.2 detect-diff（前回との突合・確定・切り詰め）<a class="anchor" href="#sec-5-2">#</a></h3>
+<ul>
+<li><strong>責務</strong>：前回スナップショットと今回の収集結果から、書き出す <code>ArticlesFile</code> と通知対象を確定する。1 public メソッド <code>execute(input)</code>。</li>
+<li><strong>依存</strong>：<code>logger: Logger</code></li>
+<li><strong>入力</strong>：<code>DetectDiffInput</code>（§4.6）</li>
+<li><strong>ステップ</strong>：<ol>
+<li><code>knownIds = new Set(companies.map((c) =&gt; c.id))</code></li>
+<li><code>previousById</code>：<code>previous?.articles</code> のうち <code>knownIds</code> に含まれる <code>companyId</code> の記事だけを <code>Map&lt;id, Article&gt;</code> にする。除外した記事は <code>logger.info(&quot;dropping article of removed company&quot;, { companyId, id })</code>（D-01 §6）</li>
+<li>今回の各 <code>CollectedArticle</code> を D-01 §5.2 手順 4 の表で確定する（<code>Article</code> は不変なので新しいオブジェクトを作る）</li>
+</ol>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>前回</th>
+<th>今回</th>
+<th>判定</th>
+<th><code>fetchedAt</code></th>
+<th><code>updatedAt</code></th>
+<th><code>contentHash</code></th>
+<th>その他</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>無し</td>
+<td>有り</td>
+<td>新着</td>
+<td><code>generatedAt</code></td>
+<td>キー省略</td>
+<td>今回</td>
+<td>今回の値</td>
+</tr>
+<tr>
+<td>有り・ハッシュ一致</td>
+<td>有り</td>
+<td>継続</td>
+<td>前回</td>
+<td>前回（無ければ省略）</td>
+<td>前回（＝今回）</td>
+<td>今回の値</td>
+</tr>
+<tr>
+<td>有り・ハッシュ不一致</td>
+<td>有り</td>
+<td>更新</td>
+<td>前回</td>
+<td><code>generatedAt</code></td>
+<td>今回</td>
+<td>今回の値</td>
+</tr>
+<tr>
+<td>有り</td>
+<td>無し</td>
+<td>継続（保持）</td>
+<td>前回</td>
+<td>前回</td>
+<td>前回</td>
+<td>前回の値</td>
+</tr>
+</tbody></table>
+<ol start="4">
+<li>今回に現れなかった <code>previousById</code> の記事をそのまま加える（サイトの一覧から消えても上限まで残す。D-01 #7）。Source が失敗した団体の記事もこの行で保持される</li>
+<li>団体ごとに <code>compareArticles</code>（D-01 §4.5）で並べ、上位 <code>MAX_ARTICLES_PER_COMPANY</code>（100）件を残す。落ちた件数を <code>stats.dropped</code> に数える</li>
+<li>出力の <code>articles</code> は <code>companies</code> の配列順に団体ブロックを連結する（D-01 §4.2）。<code>companies</code> に無い <code>companyId</code> は手順 2 で除いてあるため残らない</li>
+<li>通知対象：手順 3 で「新着」と判定され、<strong>かつ手順 5 の切り詰め後にも残っている</strong>記事だけを <code>companyId</code> ごとに集め、<code>compareArticles</code> 順に並べる（<code>articles.json</code> に無い記事は通知しない）</li>
+<li><code>previous === undefined</code> のとき、手順 7 の結果を空の <code>Map</code> に置き換える（D-01 #15。通知抑止の判定はここ 1 か所だけで行う）</li>
+<li><code>changed = previous === undefined || !hasSameArticles(previous.articles, file.articles)</code>。<code>hasSameArticles</code> は長さと各要素の 9 フィールドを順に比較する非公開関数（<code>generatedAt</code> は比較しない。§8 #8）</li>
+<li><code>file = { schemaVersion: ARTICLES_SCHEMA_VERSION, generatedAt, articles }</code></li>
+</ol>
+<ul>
+<li><strong>出力</strong>：<code>DetectDiffResult</code></li>
+<li><strong>失敗時</strong>：I/O を持たないため例外は発生しない（前回ファイルが無い・壊れている場合は <code>previous === undefined</code> として <code>ArticleReader</code> が渡す）</li>
+</ul>
+<h3 id="sec-5-3">5.3 publish-articles（書き出し → 検証 → コミット → push）<a class="anchor" href="#sec-5-3">#</a></h3>
+<ul>
+<li><strong>責務</strong>：今回の <code>articles.json</code> を <code>main</code> に確定させる。1 public メソッド <code>execute(input)</code>。</li>
+<li><strong>依存</strong>：<code>writer: ArticleWriter</code>、<code>publisher: ArticlesPublisher</code>、<code>logger: Logger</code></li>
+<li><strong>入力</strong>：<code>PublishArticlesInput</code>（§4.6）</li>
+<li><strong>ステップ</strong>：<ol>
+<li><code>await writer.write(input.file)</code><ul>
+<li><code>buildArticlesFileWriteSchema(knownCompanyIds).safeParse(file)</code>（<code>knownCompanyIds</code> は <code>ArticlesFileStore</code> のコンストラクタ注入）。失敗 → <code>ArticlesValidationError</code>（issue の先頭 5 件を <code>error</code> ログに出す）。<strong>書き出さない</strong>（D-01 §6）</li>
+<li><code>serializeArticlesFile(file)</code>：<code>JSON.stringify(file, null, 2) + &quot;\n&quot;</code>。キー順は D-01 §4.1 の宣言順（オブジェクトをその順で組み立てる）、<code>undefined</code> のキーは <code>JSON.stringify</code> が自動で省く</li>
+<li>原子的書き出し：同じディレクトリの <code>data/articles.json.tmp</code> に書き → <code>fsync</code> → <code>rename</code> で <code>data/articles.json</code> に置き換える（同一ファイルシステム上の <code>rename</code> は原子的）。途中で失敗したら <code>.tmp</code> を削除して例外</li>
+</ul>
+</li>
+<li><code>const outcome = await publisher.publish(input.commitMessage)</code>。<code>GitArticlesPublisher</code> の手順（<code>execFile(&quot;git&quot;, args, { cwd: repoRoot })</code>。シェルを介さず、引数は固定文字列と <code>commitMessage</code> のみ）：<ol>
+<li><code>git add -- data/articles.json</code></li>
+<li><code>git diff --cached --quiet -- data/articles.json</code> → 終了コード 0（差分なし）なら <code>&quot;no_changes&quot;</code> を返してここで終わる（<code>detect-diff</code> の <code>changed</code> 判定に対する二重の安全網）</li>
+<li><code>git -c user.name=&quot;github-actions[bot]&quot; -c user.email=&quot;41898282+github-actions[bot]@users.noreply.github.com&quot; commit -m &lt;message&gt;</code>（グローバル設定を書き換えない）</li>
+<li><code>git push origin HEAD:main</code></li>
+<li>2〜4 のいずれかが非 0 終了 → <code>PublishFailedError</code>（stderr を <code>error</code> ログに出す）。<strong>リトライ・<code>pull --rebase</code> は行わない</strong>（§8 #10）</li>
+</ol>
+</li>
+<li><code>logger.info(&quot;published&quot;, { outcome, articles: input.file.articles.length })</code></li>
+</ol>
+</li>
+<li><strong>出力</strong>：<code>PublishOutcome</code></li>
+<li><strong>失敗時</strong>：例外（<code>ArticlesValidationError</code> / <code>PublishFailedError</code>）。呼び出し側（<code>run-collection</code>）は通知を送らずに致命的失敗として終了する（D-01 #33）</li>
+</ul>
+<h3 id="sec-5-4">5.4 notify-new-articles（新着の通知）<a class="anchor" href="#sec-5-4">#</a></h3>
+<ul>
+<li><strong>責務</strong>：新着記事を団体ごとに 1 通の通知にして送る。1 public メソッド <code>execute(input)</code>。</li>
+<li><strong>依存</strong>：<code>gateway: NotificationGateway</code>、<code>logger: Logger</code></li>
+<li><strong>入力</strong>：<code>NotifyNewArticlesInput</code>（§4.6）</li>
+<li><strong>ステップ</strong>：<ol>
+<li><code>companies</code> の配列順に走査する（D-01 §4.8「複数団体は <code>companies.json</code> の順に 1 通ずつ」）</li>
+<li>その団体の新着が 0 件（キーが無い・空配列）なら送らない</li>
+<li><code>const text = buildNotificationText(company.name, articles.map((a) =&gt; a.title))</code>（D-01 §4.8。<code>articles</code> は <code>compareArticles</code> 順で渡される）</li>
+<li><code>NewArticlesNotification</code> を組み立てる：<code>topic = company.fcmTopic</code>、<code>notification = text</code>、<code>data = { schemaVersion: &quot;1&quot;, type: &quot;new_articles&quot;, companyId: company.id, count: String(articles.length) }</code>、<code>apns = { headers: { &quot;apns-priority&quot;: &quot;10&quot; }, payload: { aps: { sound: &quot;default&quot;, &quot;thread-id&quot;: company.id } } }</code></li>
+<li><code>await gateway.send(notification)</code> → 成功なら <code>sent++</code> と <code>logger.info(&quot;notified&quot;, { companyId, count })</code></li>
+<li>送信が失敗したら <code>failed++</code> と <code>logger.error(&quot;notification failed&quot;, { companyId, count, error })</code> を記録し、<strong>次の団体へ進む</strong>（1 団体の失敗が他を止めない。D-01 §6）。再送しない（至多 1 回。D-01 §4.8）</li>
+</ol>
+</li>
+<li><strong>出力</strong>：<code>NotifyNewArticlesResult</code></li>
+<li><strong>失敗時</strong>：例外を外へ出さない（この UseCase の失敗は実行全体を失敗にしない。通知はベストエフォート。要件 §5）</li>
+</ul>
+<p><code>FirebaseNotificationGateway</code> は <code>firebase-admin/app</code> の <code>initializeApp({ credential: cert(JSON.parse(env.FIREBASE_SERVICE_ACCOUNT)) })</code>（<code>getApps().length === 0</code> のときだけ）と <code>getMessaging().send(notification)</code> を呼ぶ。<code>NewArticlesNotification</code>（D-01 §4.8）は <code>firebase-admin</code> の <code>Message</code> と構造的に一致しているためそのまま渡せる。例外は <code>NotificationSendError</code> に包んで投げ、原因は <code>cause</code> に入れる。サービスアカウントの内容はログに出さない。</p>
+<h3 id="sec-5-5">5.5 run-collection と main.ts<a class="anchor" href="#sec-5-5">#</a></h3>
+<p><strong><code>RunCollection.execute()</code></strong>（application。順序の不変条件（D-01 #33）を持つ唯一の場所。§8 #11）</p>
+<ul>
+<li><strong>依存</strong>：<code>collectArticles</code>・<code>detectDiff</code>・<code>publishArticles</code>・<code>notify</code>（いずれも §4.6 のインターフェース）、<code>reader: ArticleReader</code>、<code>clock: Clock</code>、<code>companies: readonly Company[]</code>、<code>logger: Logger</code></li>
+<li><strong>ステップ</strong>：<ol>
+<li><code>const startedAt = clock.now()</code>、<code>const generatedAt = toJstDateTime(startedAt)</code></li>
+<li><code>const previous = await reader.readPrevious()</code>（<code>undefined</code> なら <code>logger.warn(&quot;no previous snapshot; notifications suppressed&quot;)</code>）</li>
+<li><code>const collect = await collectArticles.execute()</code></li>
+<li><code>const diff = detectDiff.execute({ previous, collected: collect.articles, companies, generatedAt })</code></li>
+<li><code>diff.changed === false</code> → 書き出さず、コミットもせず、通知もしない。<code>logger.info(&quot;no changes&quot;)</code> → 手順 8（新着があれば必ず <code>changed</code> が真になるため、通知の取りこぼしは起きない）</li>
+<li><code>const outcome = await publishArticles.execute({ file: diff.file, commitMessage: buildCommitMessage(generatedAt) })</code>。例外はそのまま上位（<code>main.ts</code>）へ伝える＝<strong>通知しない</strong></li>
+<li><code>outcome === &quot;published&quot;</code> のときだけ <code>await notify.execute({ newArticlesByCompany: diff.newArticlesByCompany, companies })</code></li>
+<li><code>RunSummary</code>（§4.8）を組み立てて返す</li>
+</ol>
+</li>
+<li><strong>出力</strong>：<code>RunSummary</code></li>
+<li><strong>失敗時</strong>：手順 2〜6 の例外は呼び出し側へ。手順 7 は例外を出さない</li>
+</ul>
+<p>コミットメッセージ：<code>chore(collector): articles.json を更新 (&lt;generatedAt&gt;)</code>（Conventional Commits。scope は CLAUDE.md の 4 つのうち <code>collector</code>）。</p>
+<p><strong><code>main.ts</code></strong>（entry。具象クラスを import してよい唯一の場所）</p>
+<ol>
+<li><code>ConsoleLogger</code> を作る（<code>CURTAINCALL_LOG_LEVEL</code>）</li>
+<li><code>repoRoot</code> を決める（<code>CURTAINCALL_REPO_ROOT</code> → 無ければ <code>main.js</code> の 2 階層上）</li>
+<li><strong>起動時検証</strong>：<code>CompaniesFileStore(repoRoot).load()</code> が <code>data/companies.json</code> を読み <code>CompaniesFileSchema</code>（strict）で検証する。失敗したら <code>error</code> ログを出して終了コード 1（収集を始めない。D-01 §8.1・§6）</li>
+<li>具象を生成する：<code>SystemClock</code>・<code>Sha256Hasher</code>・<code>FetchHttpClient</code>（§5.7 の設定）・<code>ArticlesFileStore(repoRoot, knownCompanyIds, logger)</code>・<code>GitArticlesPublisher(repoRoot, logger)</code>・通知ゲートウェイ（<code>FIREBASE_SERVICE_ACCOUNT</code> があれば <code>FirebaseNotificationGateway</code>、無ければ <code>NoopNotificationGateway</code>。§8 #16）</li>
+<li><strong><code>fullCrawl</code> の決定</strong>（§8 #27）：<code>const previous = await reader.readPrevious()</code> を呼び、<code>fullCrawlCompanyIds: ReadonlySet&lt;string&gt;</code> を次の規則で作る。<code>process.env.CURTAINCALL_FULL_CRAWL === &quot;1&quot;</code> なら <code>companies</code> の全 <code>id</code>、そうでなければ <code>previous</code> が <code>undefined</code> か、<code>previous.articles</code> にその <code>companyId</code> の記事が 1 件も無い団体の <code>id</code>。<code>logger.info(&quot;full crawl&quot;, { companyIds })</code>。ここでの <code>readPrevious()</code> は <code>RunCollection</code> 手順 2 と同じ未変更のファイルを読むため、2 回読んでも結果は一致する（<code>articles.json</code> の書き出しは <code>RunCollection</code> 手順 6 以降）</li>
+<li><code>buildSourceBindings(companies, { http, logger, fullCrawlCompanyIds })</code>：<code>companyId → Source 生成関数</code> の表（<code>SOURCE_FACTORIES</code>）を引いて <code>SourceBinding[]</code> を <code>companies</code> の配列順に組む。各生成関数には <code>fullCrawl: fullCrawlCompanyIds.has(company.id)</code>（真偽値）を渡す。表に無い <code>id</code> は <code>logger.warn</code> で飛ばし、その団体は収集対象外にする（前回の記事は保持される。§6）。団体の追加はこの表への 1 行と <code>companies.json</code> への 1 要素だけで済む（CLAUDE.md 開放閉鎖）</li>
+<li><code>CURTAINCALL_DRY_RUN=1</code> のときは <code>ArticleWriter</code>・<code>ArticlesPublisher</code>・<code>NotificationGateway</code> を Noop 実装に差し替える</li>
+<li>4 つの UseCase と <code>RunCollection</code> を組み立てて <code>execute()</code> を呼ぶ</li>
+<li><code>RunSummaryStore</code> で <code>.run-summary.json</code> を書き、<code>logger.info(&quot;done&quot;, { ... })</code>、終了コード 0</li>
+<li>例外を捕まえたら <code>logger.error</code> を出し、サマリに書ける範囲（<code>generatedAt</code>・<code>published: false</code>）を書いて終了コード 1</li>
+</ol>
+<p>終了コードは 0（正常終了。Source の部分失敗を含む）と 1（致命的失敗）の 2 値だけにし、詳細はサマリに載せる（§8 #13）。<code>process.exit()</code> は呼ばず <code>process.exitCode</code> を設定して自然終了させる（stdout のフラッシュを待つため）。</p>
+<h3 id="sec-5-6">5.6 GitHub Actions ワークフロー<a class="anchor" href="#sec-5-6">#</a></h3>
+<p><strong><code>.github/workflows/collect.yml</code></strong>（収集 → push → 通知 → Pages デプロイ）</p>
+<pre><code class="language-yaml">name: collect
+on:
+  schedule:
+    - cron: &quot;7 * * * *&quot;        # 毎時 7 分（UTC 指定だが毎時なので JST でも毎時 7 分）。遅延は許容（R-7）
+  workflow_dispatch:
+    inputs:
+      full_crawl:
+        description: &quot;ページ送りを持つ情報源を初回相当の範囲まで遡る&quot;
+        type: boolean
+        default: false
+permissions:
+  contents: write            # data/articles.json の push
+  pages: write               # GitHub Pages のデプロイ
+  id-token: write            # deploy-pages の OIDC
+concurrency:
+  group: collect
+  cancel-in-progress: false  # 遅延で重なっても前の実行を殺さず順番に流す（R-7）
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      published: ${{ steps.summary.outputs.published }}
+      failed_sources: ${{ steps.summary.outputs.failed_sources }}
+    steps:
+      - uses: actions/checkout@v4          # 既定で GITHUB_TOKEN を remote に保存 → git push に使える
+      - uses: actions/setup-node@v4
+        with:
+          node-version: &quot;22&quot;
+          cache: npm
+          cache-dependency-path: collector/package-lock.json
+      - run: npm ci
+        working-directory: collector
+      - run: npm run build
+        working-directory: collector
+      - name: 収集・差分・確定・通知
+        working-directory: collector
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          CURTAINCALL_FULL_CRAWL: ${{ inputs.full_crawl &amp;&amp; '1' || '' }}
+        run: npm start                     # 非 0 = 致命的失敗。ここで止まれば push も通知も済んでいない
+      - name: 実行サマリ
+        id: summary
+        working-directory: collector
+        run: |
+          echo &quot;published=$(jq -r '.published' .run-summary.json)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
+          echo &quot;failed_sources=$(jq -r '.sourceFailures | length' .run-summary.json)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
+          jq -r '&quot;収集 \(.collected) 件 / 新着 \(.created) / 更新 \(.updated) / 通知 \(.notificationsSent) / 失敗した情報源 \(.sourceFailures | length)&quot;' \
+            .run-summary.json &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
+          jq -r '.sourceFailures[] | &quot;- \(.companyId): \(.reason) \(.message)&quot;' .run-summary.json &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
+      - name: Pages 用にアップロード
+        if: steps.summary.outputs.published == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: data                        # data/ をサイトのルートとして公開（D-01 §4.7）
+      - name: 情報源の失敗を検知（R-2）
+        if: steps.summary.outputs.failed_sources != '0'
+        run: |
+          echo &quot;失敗した情報源がある。ログとステップサマリを確認する&quot; &gt;&amp;2
+          exit 1                            # ジョブ失敗 → GitHub の既定のワークフロー失敗通知が届く（§8 #25）
+  deploy-pages:
+    needs: collect
+    if: ${{ !cancelled() &amp;&amp; needs.collect.outputs.published == 'true' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4</code></pre>
+<table>
+<thead>
+<tr>
+<th>事項</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pages の公開方式</td>
+<td>リポジトリ設定の Pages ソースを <strong>GitHub Actions</strong> にする（1 回だけの手作業）。ブランチ公開では公開フォルダに <code>/</code> と <code>/docs</code> しか選べず、D-01 §4.7 の「<code>data/</code> をルートとして公開」を満たせない（§8 #14）</td>
+</tr>
+<tr>
+<td>Pages デプロイを同じワークフローに置く理由</td>
+<td><code>GITHUB_TOKEN</code> による push は他のワークフローを起動しない（GitHub の再帰防止）。<code>on: push</code> の別ワークフローにすると永久に発火しない（§8 #14）</td>
+</tr>
+<tr>
+<td>通知と Pages の順序</td>
+<td>通知は collect ジョブの中（push 直後）に送られ、Pages 反映は待たない（D-01 §4.8。反映遅れは D-01 §6 で許容済み）</td>
+</tr>
+<tr>
+<td>Secrets</td>
+<td><code>FIREBASE_SERVICE_ACCOUNT</code>（リポジトリ Secret。サービスアカウント JSON 全文）。<code>GITHUB_TOKEN</code> は既定。<code>permissions</code> は上記 3 つだけに絞る</td>
+</tr>
+<tr>
+<td>前提</td>
+<td><code>main</code> にブランチ保護（push 制限・必須レビュー）をかけない。かける場合は <code>github-actions[bot]</code> を例外にする。かかっていると毎時 push が失敗し、通知も出ない</td>
+</tr>
+<tr>
+<td><code>jq</code></td>
+<td>ubuntu-latest に既定で入っている</td>
+</tr>
+</tbody></table>
+<p><strong><code>.github/workflows/collector-ci.yml</code></strong>（品質ゲート。D-01 §8.1 のパスフィルタ）</p>
+<pre><code class="language-yaml">name: collector-ci
+on:
+  pull_request:
+    paths: [&quot;collector/**&quot;, &quot;data/companies.json&quot;, &quot;app/assets/companies.json&quot;, &quot;.github/workflows/collector-ci.yml&quot;]
+  push:
+    branches: [main]
+    paths: [&quot;collector/**&quot;, &quot;data/companies.json&quot;, &quot;app/assets/companies.json&quot;, &quot;.github/workflows/collector-ci.yml&quot;]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: collector
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: &quot;22&quot;, cache: npm, cache-dependency-path: collector/package-lock.json }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test</code></pre>
+<p><code>app/assets/companies.json</code> を含めるのは、同梱コピーの同期を検証する契約テスト（D-01 §7.1）を、そのファイルだけを変更した PR でも走らせるため。app 側のジョブは D-04 が別ファイル（<code>app-ci.yml</code>）で定義する。</p>
+<h3 id="sec-5-7">5.7 http ラッパー（<code>infrastructure/http</code>）<a class="anchor" href="#sec-5-7">#</a></h3>
+<pre><code class="language-ts">export interface FetchHttpClientOptions {
+  readonly userAgent: string;      // D-01 §4.7 の実値
+  readonly timeoutMs: number;      // 既定 15000（§8 #26）
+  readonly minIntervalMs: number;  // 同一ホストへの最小間隔。既定 1000（§8 #26）
+  readonly maxRetries: number;     // 既定 1。対象は 429 / 5xx / ネットワーク失敗・タイムアウトのみ（§8 #26）
+  readonly retryDelayMs: number;   // 既定 1000（§8 #26）
+}</code></pre>
+<ul>
+<li><strong>手順</strong>：<ol>
+<li><code>new URL(url).host</code> でホストを取り、<code>HostScheduler</code> に入れる。同一ホストのリクエストは<strong>直列</strong>に実行し、直前のリクエスト完了から <code>minIntervalMs</code> 経過するまで待つ（要件 §5「リクエスト間隔を空ける」）。異なるホストは並行（Source 同士は別ホストなので <code>Promise.allSettled</code> の並行度を損なわない）</li>
+<li><code>fetch(url, { method: &quot;GET&quot;, redirect: &quot;follow&quot;, signal: AbortSignal.timeout(timeoutMs), headers })</code>。<code>headers</code> は <code>User-Agent</code>（固定値）、<code>Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8</code>、<code>Accept-Language: ja</code></li>
+<li><code>res.ok</code> でなければ <code>HttpError(status)</code>。<code>429</code> と <code>5xx</code> はリトライ対象、その他の <code>4xx</code> はリトライしない</li>
+<li>ネットワーク失敗・タイムアウト（<code>AbortError</code>）はリトライ対象</li>
+<li>リトライは <code>maxRetries</code> 回まで、<code>retryDelayMs</code> 待ってから。使い切ったら <code>HttpError</code></li>
+<li><code>const buffer = await res.arrayBuffer()</code> → 文字コードを決めて <code>new TextDecoder(label).decode(buffer)</code></li>
+</ol>
+</li>
+<li><strong>文字コードの決定順</strong>：<code>Content-Type</code> ヘッダの <code>charset</code> → 本文先頭 2048 バイトを ASCII として読んだ <code>&lt;meta charset&gt;</code> / <code>&lt;meta http-equiv=&quot;Content-Type&quot;&gt;</code> → <code>utf-8</code>。<code>TextDecoder</code> が知らないラベルなら <code>utf-8</code> にフォールバックして <code>warn</code>。現行の 5 サイトはすべて UTF-8 だが、東宝の旧ドメイン <code>www.tohostage.com</code> は Shift_JIS のページを含む（調査レポート §5）。Node 22 は full ICU を同梱するので <code>shift_jis</code> をデコードできる</li>
+<li><strong>失敗時</strong>：<code>HttpError</code>。Source はこれを捕まえて <code>SourceError</code> に包むか、そのまま投げる（どちらでも <code>collect-articles</code> は Source 失敗として扱う）</li>
+<li><strong>持たないもの</strong>：robots.txt の実行時取得・解釈（§8 #6）、Cookie、<code>If-None-Match</code>（収集側は毎回本文が要る）、ヘッドレスブラウザ（CLAUDE.md）</li>
+</ul>
+<h2 id="sec-6">6. 異常系・境界<a class="anchor" href="#sec-6">#</a></h2>
+<p>D-01 §6 のうち担当層が collector の行は本書が実装する。以下は本書で新たに決める振る舞いを含む行の一覧。</p>
+<table>
+<thead>
+<tr>
+<th>ケース</th>
+<th>期待する振る舞い</th>
+<th>担当</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>data/companies.json</code> が無い・スキーマ不一致・<code>id</code> / <code>fcmTopic</code> 重複</td>
+<td>収集を始めず終了コード 1。<code>articles.json</code> は触らない（前回の内容が残る）</td>
+<td><code>main.ts</code> / <code>CompaniesFileStore</code></td>
+</tr>
+<tr>
+<td><code>companies.json</code> に <code>SOURCE_FACTORIES</code> が持たない <code>id</code> がある</td>
+<td><code>warn</code>（<code>reason: &quot;not_implemented&quot;</code> として <code>failures</code> に数える）。その団体は収集せず、前回の記事は <code>detect-diff</code> が保持する</td>
+<td><code>main.ts</code> / <code>collect-articles</code></td>
+</tr>
+<tr>
+<td>1 つの Source が例外を投げた</td>
+<td><code>Promise.allSettled</code> で受け、<code>failures</code> に記録して他団体を続行。その団体の記事は前回の値のまま残る（R-2）</td>
+<td><code>collect-articles</code></td>
+</tr>
+<tr>
+<td>1 つの Source が 0 件を返した（改装でセレクタが一致しない）</td>
+<td>例外と同じく Source 失敗として数える（<code>reason: &quot;empty&quot;</code>）。記事は前回の値のまま（R-2 の主要な検知経路。§8 #3）</td>
+<td><code>collect-articles</code></td>
+</tr>
+<tr>
+<td>すべての Source が失敗した</td>
+<td>今回の収集結果は 0 件。<code>detect-diff</code> が前回の記事をそのまま出力するので <code>changed</code> は偽になり、書き出しも通知も起きない。<code>failures</code> が 5 件並ぶのでジョブは失敗する（§8 #25）</td>
+<td><code>collect-articles</code> / <code>run-collection</code></td>
+</tr>
+<tr>
+<td>HTTP が 4xx（404・403）</td>
+<td><code>HttpError</code>。リトライせず Source の失敗になる</td>
+<td><code>http</code> / <code>collect-articles</code></td>
+</tr>
+<tr>
+<td>HTTP が 429・5xx、タイムアウト、DNS 失敗</td>
+<td><code>maxRetries</code> 回だけ <code>retryDelayMs</code> 後に再試行し、なお失敗なら <code>HttpError</code></td>
+<td><code>http</code></td>
+</tr>
+<tr>
+<td>応答の文字コードが不明・未知のラベル</td>
+<td>UTF-8 として解釈し <code>warn</code>。記事は取れる限り取る</td>
+<td><code>http</code></td>
+</tr>
+<tr>
+<td>応答が巨大（想定外の大きさ）</td>
+<td>タイムアウトで打ち切られる。サイズ上限は設けない（5 サイトの一覧は数百 KB。要件に規定なし）</td>
+<td><code>http</code></td>
+</tr>
+<tr>
+<td>記事 URL が相対・不正・<code>http(s)</code> 以外・2048 文字超 / 見出しが空 / <code>publishedAt</code> が書式外</td>
+<td>その記事だけ捨てて <code>warn</code>。1 Source の全記事が該当したら Source 失敗（D-01 §6）</td>
+<td><code>collect-articles</code></td>
+</tr>
+<tr>
+<td><code>thumbnail</code> が不正</td>
+<td>キーを省略して記事は残す（<code>debug</code>）</td>
+<td><code>collect-articles</code></td>
+</tr>
+<tr>
+<td>Source の <code>companyId</code> が未知、または呼び出し時の <code>Company.id</code> と違う</td>
+<td>記事を捨てて <code>warn</code>（<code>expected</code> / <code>actual</code> を含む）。全記事が該当したら Source 失敗（D-01 §4.2・#32）</td>
+<td><code>collect-articles</code></td>
+</tr>
+<tr>
+<td>同一実行内で <code>id</code> が重複</td>
+<td>最初の 1 件を採用（走査順は <code>companies.json</code> 順 → <code>sources[]</code> 順 → 出現順）。<code>debug</code> ログ</td>
+<td><code>collect-articles</code></td>
+</tr>
+<tr>
+<td>前回の <code>articles.json</code> が無い・JSON として壊れている・<code>schemaVersion</code> 不一致</td>
+<td><code>readPrevious()</code> が <code>undefined</code> を返し <code>warn</code>。全件が新着として書き出され、<strong>通知は送らない</strong>（D-01 #15）</td>
+<td><code>ArticlesFileStore</code> / <code>detect-diff</code></td>
+</tr>
+<tr>
+<td>前回ファイルにその団体の記事が 1 件も無い（初回実行・団体の追加・その団体だけ記事が消えた）</td>
+<td>その団体だけ <code>fullCrawl: true</code> で Source を生成し、ページ送りを持つ情報源が初回相当の範囲まで遡る（<code>info</code> ログ）。<code>CURTAINCALL_FULL_CRAWL=1</code> / <code>workflow_dispatch</code> の <code>full_crawl</code> なら全団体を遡る（§8 #27）</td>
+<td><code>main.ts</code></td>
+</tr>
+<tr>
+<td><code>companies.json</code> から団体を削除した</td>
+<td>前回ファイルのその団体の記事を引き継がず捨てる（<code>info</code>）</td>
+<td><code>detect-diff</code></td>
+</tr>
+<tr>
+<td>記事配列に変化が無い（毎時の通常ケース）</td>
+<td>書き出さず、コミットも push も通知もしない。<code>generatedAt</code> だけが動くコミットを作らない（§8 #8）。Pages も再デプロイしない</td>
+<td><code>run-collection</code></td>
+</tr>
+<tr>
+<td>書き出し前の検証に失敗（100 件超・<code>id</code> 重複・未知の <code>companyId</code>）</td>
+<td><code>ArticlesValidationError</code>。<code>data/articles.json</code> を書き換えず、通知も送らず終了コード 1</td>
+<td><code>ArticlesFileStore</code></td>
+</tr>
+<tr>
+<td><code>.tmp</code> への書き込み中に失敗</td>
+<td><code>.tmp</code> を削除して例外。<code>articles.json</code> は前回のまま（<code>rename</code> 前なので壊れない）</td>
+<td><code>ArticlesFileStore</code></td>
+</tr>
+<tr>
+<td>前回の実行が残した <code>.tmp</code> が存在する</td>
+<td>上書きする（内容は使わない）。<code>.gitignore</code> に入れてありコミットされない</td>
+<td><code>ArticlesFileStore</code></td>
+</tr>
+<tr>
+<td><code>git push</code> が非 fast-forward で失敗（人手の push と競合）</td>
+<td><code>PublishFailedError</code> → 終了コード 1。<strong>通知は送らない</strong>。ローカルのコミットは runner と共に消え、次回実行が同じ記事を新着として再検出して通知する（遅延するが重複しない。D-01 #33・§6）</td>
+<td><code>GitArticlesPublisher</code> / <code>run-collection</code></td>
+</tr>
+<tr>
+<td>push 成功後、通知の途中で実行が停止した</td>
+<td>未送信分は失われる（至多 1 回）。次回は前回ファイルに含まれるため新着にならず再送されない（D-01 §6、要件 §5 ベストエフォート）</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>FIREBASE_SERVICE_ACCOUNT</code> が未設定（フェーズ 5 より前。要件 §10）</td>
+<td><code>NoopNotificationGateway</code> を注入し、送信せず <code>info</code> ログだけ残す。ジョブは成功（§8 #16）</td>
+<td><code>main.ts</code></td>
+</tr>
+<tr>
+<td><code>FIREBASE_SERVICE_ACCOUNT</code> が JSON として壊れている</td>
+<td>起動時に <code>error</code> ログを出して終了コード 1（収集を始めない。設定ミスを黙って握りつぶさない）</td>
+<td><code>main.ts</code></td>
+</tr>
+<tr>
+<td>1 団体の FCM 送信が失敗した</td>
+<td><code>error</code> ログと <code>notificationsFailed</code> に数え、次の団体を送る。実行は成功扱い（通知はベストエフォート）</td>
+<td><code>notify-new-articles</code></td>
+</tr>
+<tr>
+<td>切り詰めで新着記事が 100 件の外に落ちた</td>
+<td><code>articles.json</code> に無いので通知しない（§5.2 手順 7）</td>
+<td><code>detect-diff</code></td>
+</tr>
+<tr>
+<td>cron が遅延・欠落した（R-7）</td>
+<td>次の実行が同じ差分を検出する。<code>generatedAt</code> は実行開始時刻なので <code>fetchedAt</code> / <code>updatedAt</code> に矛盾は出ない</td>
+<td>—</td>
+</tr>
+<tr>
+<td>遅延で 2 つの実行が重なった</td>
+<td><code>concurrency: group: collect</code> が直列化する。後の実行は前の push 済みの <code>main</code> をチェックアウトする</td>
+<td>ワークフロー</td>
+</tr>
+<tr>
+<td>Pages のデプロイが失敗した</td>
+<td><code>articles.json</code> は push 済みなので次回の実行（または手動再実行）で再デプロイされる。通知は既に送信済み（D-01 §6「反映遅れは許容」）</td>
+<td>ワークフロー</td>
+</tr>
+<tr>
+<td><code>.run-summary.json</code> の書き出しに失敗した</td>
+<td><code>warn</code> を出して終了コード 0 のまま続行（サマリは副次情報。収集結果は既に確定している）</td>
+<td><code>main.ts</code></td>
+</tr>
+</tbody></table>
+<h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
+<p>テストの単位は UseCase（CLAUDE.md）。Source・HTTP・storage・git・FCM・時計はすべて差し替える。ネットワークへは一切アクセスしない。パーサーのフィクスチャテスト（実サイトの HTML / RSS）は D-03 が <code>test/infrastructure/sources/</code> に置く。<code>main.ts</code>・<code>ConsoleLogger</code>・<code>SystemClock</code> の単体テストは書かない。</p>
+<h3 id="sec-7-1">7.1 UseCase ごとのケース<a class="anchor" href="#sec-7-1">#</a></h3>
+<p>「D-01」列は D-01 §7.2 の申し送り行との対応（本書はこれらをすべて含めなければならない）。</p>
+<table>
+<thead>
+<tr>
+<th>UseCase</th>
+<th>ケース</th>
+<th>差し替えるもの</th>
+<th>D-01</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>collect-articles</code></td>
+<td>URL 正規化 5 例（大文字ホスト・フラグメント・<code>utm_</code>・<code>?p=</code> 保持・既定ポート）で <code>url</code> が正規化後になり、異表記が同じ <code>id</code> になる／相対 URL・<code>ftp:</code>・2049 文字は破棄され他は残る／<code>id</code> が 16 文字 <code>[0-9a-f]</code>／既知 URL の <code>id</code> が固定値</td>
+<td>Source スタブ、<code>Sha256Hasher</code> 実物</td>
+<td>§7.2 行 1</td>
+</tr>
+<tr>
+<td><code>collect-articles</code></td>
+<td>見出し正規化：空白・全角スペース・NFC・全角半角・大文字小文字の違いで同じ <code>contentHash</code>／<code>title</code> は入力の表記（NFC）のまま／1 文字違いで別ハッシュ／301 文字が 300 に／300 文字目がサロゲート前半なら 299／空は破棄</td>
+<td>同上</td>
+<td>§7.2 行 2</td>
+</tr>
+<tr>
+<td><code>collect-articles</code></td>
+<td><code>thumbnail</code>：相対・<code>ftp:</code>・2049 文字・空文字で省略され記事は残る／妥当な URL はクエリを含めてそのまま</td>
+<td>同上</td>
+<td>§7.2 行 3</td>
+</tr>
+<tr>
+<td><code>collect-articles</code></td>
+<td>category：候補なし → <code>other</code>／優先順位 3 例／タグ段階で決まればキーワード段階に進まない／対応表に無いタグは無視／全角半角・大小文字を無視／共通表と団体別表の両方が候補になる／空文字は一致しない</td>
+<td>Source スタブ（<code>siteTags</code> / <code>CategoryTagMap</code> / <code>CategoryKeywordTable</code> を渡す）</td>
+<td>§7.2 行 4</td>
+</tr>
+<tr>
+<td><code>collect-articles</code></td>
+<td>同一実行内の重複 <code>id</code>：<code>companies.json</code> 順 → <code>sources[]</code> 順 → 出現順で最初の 1 件が残る／Source の<strong>完了順</strong>を入れ替えても結果が同じ</td>
+<td>完了を遅延させる Source スタブ</td>
+<td>§7.2 行 5</td>
+</tr>
+<tr>
+<td><code>collect-articles</code></td>
+<td><code>companyId</code>：未知 ID は捨てて <code>warn</code>／全記事が該当なら Source 失敗で他団体は無事／既知 ID の取り違え（<code>shiki</code> に配線したスタブが <code>toho</code> を返す）で全件破棄・<code>expected</code> / <code>actual</code> がログに出る・<code>toho</code> の記事は無傷／混在なら一致分だけ残る</td>
+<td>Source スタブ、<code>RecordingLogger</code></td>
+<td>§7.2 行 6</td>
+</tr>
+<tr>
+<td><code>collect-articles</code></td>
+<td>Source が例外を投げても他の Source の記事が残り <code>failures</code> に 1 件入る／0 件を返した Source が <code>reason: &quot;empty&quot;</code> で失敗になる／全 Source 失敗で <code>articles</code> が空・<code>failures</code> が 5 件</td>
+<td>Source スタブ</td>
+<td>追加</td>
+</tr>
+<tr>
+<td><code>detect-diff</code></td>
+<td>D-01 §5.2 の表の 4 行で <code>fetchedAt</code> / <code>updatedAt</code> / <code>contentHash</code> が表どおり／継続で <code>thumbnail</code>・<code>publishedAt</code> が今回値に上書き／前回の未知 <code>companyId</code> は引き継がない</td>
+<td>メモリ上の <code>ArticlesFile</code></td>
+<td>§7.2 行 7</td>
+</tr>
+<tr>
+<td><code>detect-diff</code></td>
+<td>切り詰め：101 件で <code>compareArticles</code> の末尾 1 件が落ちる／<code>updatedAt</code> 優先／<code>fetchedAt</code> 降順／<code>id</code> 昇順／同じ入力で同じ結果／団体順が <code>companies.json</code> 順</td>
+<td>同上</td>
+<td>§7.2 行 8</td>
+</tr>
+<tr>
+<td><code>detect-diff</code></td>
+<td>前回が <code>undefined</code>（無い・<code>schemaVersion: 2</code>・壊れている）→ 全件新着・通知対象が空</td>
+<td><code>previous: undefined</code></td>
+<td>§7.2 行 9</td>
+</tr>
+<tr>
+<td><code>detect-diff</code></td>
+<td><code>changed</code>：記事が同一なら偽（<code>generatedAt</code> だけ違っても偽）／<code>thumbnail</code> だけ変わったら真／新着・更新・消失・切り詰めのいずれでも真／前回が <code>undefined</code> なら真</td>
+<td>同上</td>
+<td>追加</td>
+</tr>
+<tr>
+<td><code>detect-diff</code></td>
+<td>切り詰めで落ちた新着は <code>newArticlesByCompany</code> に入らない</td>
+<td>同上</td>
+<td>追加</td>
+</tr>
+<tr>
+<td><code>notify-new-articles</code></td>
+<td>文面：1 件で <code>title</code> = <code>name</code>・<code>body</code> = 見出し／2 件で <code>name（新着 2 件）</code>・<code>見出し ほか 1 件</code>（先頭は <code>compareArticles</code> の先頭）／<code>data</code> の 4 キーと <code>apns</code> が D-01 §4.8 どおり／<code>data.count</code> が文字列</td>
+<td><code>FakeNotificationGateway</code></td>
+<td>§7.2 行 10</td>
+</tr>
+<tr>
+<td><code>notify-new-articles</code></td>
+<td>切り詰め：130 文字・1 件 → 120 文字で「…」／120 文字・2 件 → 接尾辞を残して見出し側を切る／サロゲートペアの途中なら 1 つ手前／改行・タブ・U+0000 が半角スペースに</td>
+<td>同上</td>
+<td>§7.2 行 11</td>
+</tr>
+<tr>
+<td><code>notify-new-articles</code></td>
+<td>新着 0 件の団体には送らない／複数団体は <code>companies.json</code> 順に 1 通ずつ／1 通の失敗で他は送られる／失敗しても再送しない</td>
+<td>1 件だけ reject する <code>FakeNotificationGateway</code></td>
+<td>§7.2 行 12</td>
+</tr>
+<tr>
+<td><code>publish-articles</code></td>
+<td>検証失敗（団体 101 件・<code>id</code> 重複・未知 <code>companyId</code>）で例外になり <strong>write が呼ばれない</strong>／成功時は write → commit → push の順に呼ばれる／<code>no_changes</code> なら push しない／push 失敗で <code>PublishFailedError</code></td>
+<td><code>InMemoryArticleWriter</code>、呼び出し順を記録する <code>FakePublisher</code></td>
+<td>§7.2 行 13（前半）</td>
+</tr>
+<tr>
+<td><code>run-collection</code></td>
+<td>順序：publish が成功した後にだけ notify が呼ばれる／publish が例外なら notify は呼ばれない／<code>changed</code> が偽なら write も commit も notify も呼ばれない／前回が <code>undefined</code> なら publish はするが notify は 0 件／<code>RunSummary</code> の各数値が結果と一致</td>
+<td>全依存をスタブ、<code>FixedClock</code>、呼び出し順を記録</td>
+<td>§7.2 行 13（後半）</td>
+</tr>
+</tbody></table>
+<h3 id="sec-7-2">7.2 テストダブル（<code>test/helpers/</code>）<a class="anchor" href="#sec-7-2">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>名前</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>StubSource</code></td>
+<td>固定の <code>RawArticle[]</code> を返す。例外を投げる・0 件を返す・完了を遅延させる指定ができる（重複順序の検証用）</td>
+</tr>
+<tr>
+<td><code>InMemoryArticleStore</code></td>
+<td><code>ArticleReader</code> + <code>ArticleWriter</code>。<code>readPrevious</code> の戻り値を指定でき、<code>write</code> の引数を記録する</td>
+</tr>
+<tr>
+<td><code>FakePublisher</code></td>
+<td><code>ArticlesPublisher</code>。戻り値（<code>published</code> / <code>no_changes</code> / 例外）を指定でき、呼び出し順を共有の配列に記録する</td>
+</tr>
+<tr>
+<td><code>FakeNotificationGateway</code></td>
+<td><code>NotificationGateway</code>。送信された <code>NewArticlesNotification</code> を順に記録。特定のトピックだけ reject できる</td>
+</tr>
+<tr>
+<td><code>RecordingLogger</code></td>
+<td><code>Logger</code>。レベル・メッセージ・フィールドを記録し、警告の内容（<code>expected</code> / <code>actual</code> など）を検証する</td>
+</tr>
+<tr>
+<td><code>FixedClock</code></td>
+<td><code>Clock</code>。固定の <code>Date</code> を返す</td>
+</tr>
+<tr>
+<td><code>buildCompanies()</code></td>
+<td><code>data/companies.json</code> を実ファイルから読んで <code>CompaniesFileSchema</code> で parse するヘルパ（テストでも実データを使い、定義のずれを検知する）</td>
+</tr>
+</tbody></table>
+<h2 id="sec-8">8. 決定事項と根拠<a class="anchor" href="#sec-8">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>決定</th>
+<th>採らなかった案</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><code>Source</code> は素材 <code>RawArticle</code>（<code>id</code>・<code>contentHash</code>・<code>fetchedAt</code>・<code>updatedAt</code> を持たない）を返し、application が確定する</td>
+<td><code>Article</code> をそのまま返す</td>
+<td>D-01 §5 冒頭と §8.1 の推奨。<code>id</code> と <code>contentHash</code> は全団体共通の規則（D-01 §5.1・§5.2）なので 5 実装にコピーさせない。<code>fetchedAt</code> / <code>updatedAt</code> は前回スナップショットを見ないと決まらず、Source からは見えない。契約の形（入力なし → 配列、失敗は例外）は CLAUDE.md どおり維持する</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Source と Company の対応付けは <code>SourceBinding { company, source }</code> の配列で持ち、<code>main.ts</code> が <code>companies.json</code> の配列順に組む</td>
+<td>Source 自身に <code>companyId</code> を持たせて application が逆引きする／<code>Map&lt;companyId, Source&gt;</code></td>
+<td>D-01 §4.2 の突合は「呼び出し時の <code>Company.id</code>」との比較なので、呼び出し側が Company を握っている形が要る。配列なら <code>companies.json</code> の順序（重複規則・通知順・出力順の根拠）がそのまま使える。<code>Map</code> では順序の根拠が暗黙になる</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Source が 0 件を返した場合も「Source 失敗」として数える</td>
+<td>0 件は正常とする</td>
+<td>R-2 の主要な壊れ方は「改装でセレクタが一致せず、例外は出ないが 0 件」。5 サイトはいずれも常時 10 件以上を掲載しており、0 件は異常とみなせる。記事は前回値が保持されるので副作用は無く、検知だけが得られる</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>HttpClient</code> のインターフェースを domain に置き、実装を <code>infrastructure/http</code> に置いて <code>main.ts</code> が Source へ注入する</td>
+<td>Source が <code>infrastructure/http</code> の具象を直接 import する</td>
+<td>CLAUDE.md「<code>sources/</code> からネットワークを直接呼ばない」を満たしつつ、D-03 のパーサーのフィクスチャテストで HTTP を差し替えられる。具象 import を <code>main.ts</code> に限る規約とも一致する</td>
+</tr>
+<tr>
+<td>5</td>
+<td>同一ホストへのリクエストは直列化し最小間隔を空ける。別ホストは並行</td>
+<td>すべて直列／すべて並行</td>
+<td>要件 §5「リクエスト間隔を空ける」は 1 サイトへの負荷の話。全直列にすると四季のページ送り中に他 4 団体が待たされ実行時間が伸びる。全並行だと東宝の 2 URL・四季のページ送りが同時に飛ぶ</td>
+</tr>
+<tr>
+<td>6</td>
+<td>robots.txt を実行時に取得・解釈しない</td>
+<td>毎回 robots.txt を取得して判定する</td>
+<td>取得先は <code>companies.json</code> に固定された数個の URL で、リンクを辿る汎用クローラではない。5 サイトの robots.txt は調査済みで対象パスに制限が無い（調査レポート §1〜5、要件 §3.2）。毎時の追加リクエストは「配慮」に反する。サイト側が方針を変えた場合は D-03 の更新時に再確認する（§8.1 の申し送り）</td>
+</tr>
+<tr>
+<td>7</td>
+<td>文字コードは <code>Content-Type</code> → <code>&lt;meta&gt;</code> → UTF-8 の順で決める</td>
+<td>常に UTF-8 として読む</td>
+<td>現行 5 サイトは UTF-8 だが、東宝は旧ドメインに Shift_JIS のページが残る（調査レポート §5）。判定は数行で済み、文字化けした見出しが <code>contentHash</code> を毎時変える事故（F-11 の誤バッジ）を防げる</td>
+</tr>
+<tr>
+<td>8</td>
+<td>記事配列に変化が無い実行では <code>articles.json</code> を書き出さず、コミットも push もしない（<code>generatedAt</code> だけの更新を残さない）</td>
+<td>毎回書き出してコミットする</td>
+<td><code>generatedAt</code> は毎時変わるので、そのまま書くと記事に変化が無くても 1 日 24 コミットの差分が生まれ、D-01 #22（差分を読めるようにする）の狙いが消える。書き出さなければ Pages の <code>ETag</code> も変わらず、app の取得が <code>304</code> で終わる（D-01 §4.7）。<code>generatedAt</code> はそのファイルを生成した実行の開始時刻であり続けるので D-01 §4.2 と矛盾しない</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>git add</code> / <code>commit</code> / <code>push</code> を Node 側の <code>ArticlesPublisher</code> として持ち、<code>run-collection</code> の中で通知の前に実行する</td>
+<td>Actions のステップで <code>git commit &amp;&amp; git push</code> し、通知は別プロセス（別ステップ）で行う</td>
+<td>D-01 #33 の「push 成功後にのみ通知」を 1 プロセス内の順序として保証でき、D-01 §7.2 が求める「storage / git 操作をモックして呼び出し順を記録する」テストが書ける。別プロセス案は新着の一覧をプロセス間で受け渡す一時ファイル（状態）が要り、D-01 #34 が避けた「<code>articles.json</code> の外に状態を持つ」形になる。引数は固定文字列のみで <code>execFile</code>（シェル非経由）のため注入の余地が無い</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>git push</code> の失敗はリトライも <code>pull --rebase</code> もせず例外にする</td>
+<td>失敗したら rebase して再 push する</td>
+<td>rebase は <code>articles.json</code> のコンフリクト解決という新たな分岐を生む。失敗しても次回実行（1 時間後）が同じ差分を再検出し、通知は遅れるだけで重複しない（D-01 #33）。<code>concurrency</code> により自分自身との競合は起きない</td>
+</tr>
+<tr>
+<td>11</td>
+<td>実行手順（収集 → 差分 → 確定 → 通知）は application の <code>RunCollection</code> が持ち、<code>main.ts</code> は DI と起動時検証だけを持つ</td>
+<td><code>main.ts</code> に手順を書く</td>
+<td>「push が成功したときだけ通知する」は D-01 #33 の不変条件でありテストで固定すべき規則。entry に置くとテストできない。<code>RunCollection</code> の責務は「1 回の実行の手順」1 つで、public メソッドも 1 つ</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>companies.json</code> の読み込みと検証は <code>main.ts</code>（起動時）</td>
+<td><code>collect-articles</code> の中で読む</td>
+<td>検証に失敗したら収集そのものを始めない（D-01 §8.1）ため、UseCase より前に置く必要がある。UseCase 側は検証済みの <code>Company[]</code> を受け取るだけになり、テストが単純になる</td>
+</tr>
+<tr>
+<td>13</td>
+<td>終了コードは 0（正常。Source の部分失敗を含む）と 1（致命的失敗）の 2 値。実行結果の詳細は <code>.run-summary.json</code> に書き、ワークフローが読む</td>
+<td>部分失敗に専用の終了コード（2）を割り当てる／Node から <code>$GITHUB_OUTPUT</code> に直接書く</td>
+<td>状態の組み合わせ（公開の有無 × 失敗の有無 × 通知の有無）を終了コードで表すと桁が足りず意味が読めない。サマリ JSON なら項目を増やしても互換が保て、ローカル実行でも同じものが得られる。<code>$GITHUB_OUTPUT</code> への直接書き込みは collector を Actions に結合させる</td>
+</tr>
+<tr>
+<td>14</td>
+<td>GitHub Pages は Actions からデプロイし（<code>upload-pages-artifact</code> + <code>deploy-pages</code>、<code>path: data</code>）、収集と<strong>同じワークフロー</strong>の後続ジョブに置く</td>
+<td>ブランチ公開（<code>main</code> の <code>/docs</code>）／<code>gh-pages</code> ブランチに <code>data/</code> をコピー／<code>on: push</code> の別ワークフロー</td>
+<td>ブランチ公開では公開フォルダに <code>/</code> と <code>/docs</code> しか選べず、D-01 §4.7 の「<code>data/</code> をルートとして公開」にできない（<code>/</code> を選ぶとリポジトリ全体が公開される）。<code>gh-pages</code> ブランチ案はコピーのコミットが増える。別ワークフロー案は、<code>GITHUB_TOKEN</code> による push が他のワークフローを起動しないという GitHub の仕様のため発火しない</td>
+</tr>
+<tr>
+<td>15</td>
+<td>cron は <code>7 * * * *</code>（毎時 7 分）、<code>concurrency: { group: collect, cancel-in-progress: false }</code></td>
+<td>毎時 0 分／<code>cancel-in-progress: true</code></td>
+<td>毎時 0 分は GitHub 全体で実行が集中し遅延が大きくなる（R-7 の悪化）。遅延で実行が重なったとき、後発を待たせれば「前回 = 直前の push 結果」という前提（D-01 #33）が保たれる。前を殺すと push 前の実行が捨てられ、通知が遅れるだけでなく <code>.run-summary.json</code> も残らない</td>
+</tr>
+<tr>
+<td>16</td>
+<td><code>FIREBASE_SERVICE_ACCOUNT</code> が未設定なら <code>NoopNotificationGateway</code> を注入し、ジョブは成功させる</td>
+<td>未設定を致命的失敗にする</td>
+<td>要件 §10 のロードマップではフェーズ 2 で collector を動かし、通知（Firebase 設定）はフェーズ 5。未設定を失敗にすると、その間 1 時間おきに失敗通知が届く。JSON が壊れている場合だけは設定ミスなので失敗させる（§6）</td>
+</tr>
+<tr>
+<td>17</td>
+<td><code>firebase-admin</code> の import は <code>infrastructure/fcm</code> の 1 ファイルに閉じ、domain の <code>NewArticlesNotification</code>（D-01 §4.8）をそのまま <code>send()</code> に渡す</td>
+<td>domain の型を <code>firebase-admin</code> の <code>Message</code> にする</td>
+<td>domain がフレームワークに依存しない（CLAUDE.md）。D-01 §4.8 が「構造的に一致させる」と定めているため変換コードも要らない</td>
+</tr>
+<tr>
+<td>18</td>
+<td>ビルドは <code>tsc</code> で <code>dist/</code> を出し、<code>npm start</code> は <code>node dist/main.js</code></td>
+<td><code>tsx</code> / <code>ts-node</code> で直接実行／<code>--experimental-strip-types</code></td>
+<td>実行時依存を増やさず、型エラーを実行前に確実に落とせる。<code>--experimental-strip-types</code> は実験的機能で Node のマイナー更新で挙動が変わりうる</td>
+</tr>
+<tr>
+<td>19</td>
+<td><code>Logger</code> / <code>Clock</code> をポートにし、<code>infrastructure/logging</code>・<code>infrastructure/clock</code> に実装を置く。ログライブラリは入れない</td>
+<td><code>console</code> を直接呼ぶ／<code>pino</code> を入れる</td>
+<td><code>console</code> 直呼びは UseCase テストで警告内容を検証できない（D-01 §7.2 は <code>expected</code> / <code>actual</code> の検証を求める）。出力先は Actions のログ 1 つで、JSON ログの検索性も要らないため依存を増やす利益が無い。<code>Clock</code> は <code>generatedAt</code> を固定してテストを決定的にするために要る</td>
+</tr>
+<tr>
+<td>20</td>
+<td><code>data/articles.json</code> の書き出しは <code>.tmp</code> への書き込み → <code>rename</code> で原子的に行う</td>
+<td>直接上書きする</td>
+<td>途中で落ちた場合に壊れた JSON がリポジトリに残ると、次回実行が「前回無し」と判断して全件を新着にし、通知が全件に飛ぶ（D-01 #15 の抑止は効くが、<code>fetchedAt</code> が全件リセットされる）</td>
+</tr>
+<tr>
+<td>21</td>
+<td>コミットメッセージは <code>chore(collector): articles.json を更新 (&lt;generatedAt&gt;)</code>、コミッタは <code>github-actions[bot]</code> を <code>git -c</code> で一時指定する</td>
+<td><code>chore(data): ...</code>／<code>git config --global</code> で設定する</td>
+<td>CLAUDE.md の scope は <code>app</code> / <code>collector</code> / <code>docs</code> / <code>ci</code> の 4 つで、生成物の出所は collector。<code>--global</code> の書き換えは runner 以外（ローカル実行）で副作用が残る</td>
+</tr>
+<tr>
+<td>22</td>
+<td><code>main</code> にブランチ保護をかけない（かける場合は <code>github-actions[bot]</code> を除外する）ことを運用の前提とする</td>
+<td>保護をかけて PR 経由で <code>articles.json</code> を更新する</td>
+<td>毎時の自動コミットを PR にすると 1 日 24 個の PR ができ、マージを人手でやることになって収集が止まる（要件 §6.1 は直接コミットを前提にしている）。開発者確認済み（2026-09-19）</td>
+</tr>
+<tr>
+<td>23</td>
+<td>CI（<code>collector-ci.yml</code>）のパスフィルタに <code>data/companies.json</code> と <code>app/assets/companies.json</code> を含める</td>
+<td><code>collector/**</code> だけ</td>
+<td>D-01 §8.1 の申し送り。同梱コピーの同期を検証する契約テスト（D-01 §7.1）が、アセットだけを変えた PR でも走るようにする</td>
+</tr>
+<tr>
+<td>24</td>
+<td><code>exactOptionalPropertyTypes: true</code> を有効にし、省略可能フィールドは条件付きスプレッドで組み立てる</td>
+<td>既定（false）のまま <code>thumbnail: undefined</code> を許す</td>
+<td>D-01 #2「キー省略。<code>null</code> は書かない」を型で守れる。<code>detect-diff</code> の <code>hasSameArticles</code> が「キー無し」と「<code>undefined</code>」を同じに扱う場合分けを持たずに済む</td>
+</tr>
+<tr>
+<td>25</td>
+<td>情報源の失敗（例外・0 件・未実装）が 1 つでもあれば collect ジョブを失敗させ、開発者への通知は GitHub の既定のワークフロー失敗通知（メール）に任せる（§5.6 の「情報源の失敗を検知」ステップ）。収集自体は最後まで実行し、<code>articles.json</code> の push と通知は失敗判定の前に済ませる</td>
+<td>ジョブは成功のままステップサマリにだけ残す／同じ情報源が連続 N 回失敗したときだけ失敗させる／開発者向けの FCM トピック（<code>ops</code>）へ送る</td>
+<td>追加の状態も権限も要らず、改装による 0 件化を初回で検知できる（R-2）。サマリだけに残す案は改装に気付けず R-2 を満たさない。連続 N 回案は「前回の失敗」という状態を <code>articles.json</code> の外に持つことになり D-01 #34 の方針に反する。<code>ops</code> トピック案は Firebase 未設定のフェーズ（要件 §10）で機能しない。一時的な 5xx でメールが届くノイズは #26 のリトライ 1 回で減らし、個人利用の規模では許容する。開発者の指示により推奨案を採用（2026-09-19、旧 Q-1）</td>
+</tr>
+<tr>
+<td>26</td>
+<td><code>infrastructure/http</code> の既定値は同一ホスト間隔 <code>minIntervalMs = 1000</code>、<code>timeoutMs = 15000</code>、<code>maxRetries = 1</code>、<code>retryDelayMs = 1000</code>（リトライ対象は 429 / 5xx / ネットワーク失敗・タイムアウトのみ）</td>
+<td>間隔 2000ms・タイムアウト 30 秒・リトライ 2 回（より保守的）／間隔 500ms・タイムアウト 10 秒・リトライ 0 回（最短）</td>
+<td>1 実行のリクエスト総数は定常時 6 件（5 団体 + 東宝の 2 URL 目）、初回で最大 10 件程度。この値なら実行時間は十数秒に収まり、1 サイトあたり毎時 1〜2 リクエストで要件 §5 の「リクエスト間隔を空ける」を満たす。リトライ 1 回は一時的な 5xx でジョブを失敗させず、#25 の失敗通知のノイズを減らす。保守的な案は四季のページ送りで実行時間が伸び、最短の案は一時障害がそのまま Source 失敗になる。開発者の指示により推奨案を採用（2026-09-19、旧 Q-2）</td>
+</tr>
+<tr>
+<td>27</td>
+<td>四季の「初回のみ 3〜5 ページ遡る」（調査レポート §4）の初回判定は自動と手動の併用。<code>main.ts</code> が前回の <code>articles.json</code> を読み、その団体の記事が 1 件も無ければ（前回ファイル自体が無い場合を含む）その団体だけ <code>fullCrawl: true</code> にする。加えて <code>CURTAINCALL_FULL_CRAWL=1</code>（<code>workflow_dispatch</code> の <code>full_crawl</code>）で全団体を明示的に遡れる</td>
+<td>自動判定のみ／手動指定のみ／初回の遡りをしない（常に 1 ページ）</td>
+<td>初回や <code>articles.json</code> を作り直したときは人手を介さず埋まり、取りこぼしに気付いたときは手動で再実行できる。自動のみでは事故で記事が消えたときに手で直せず、手動のみでは初回に人手が要る。遡らない案は最初の 1 日で 10 件程度しか集まらない。判定を <code>main.ts</code> に置くのは、Source に前回スナップショットを見せない（<code>Source</code> の契約は入力なし。§4.1）ため。開発者の指示により推奨案を採用（2026-09-19、旧 Q-3）</td>
+</tr>
+</tbody></table>
+<h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>宛先</th>
+<th>内容</th>
+<th>根拠</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>D-03</td>
+<td>Source の実装は <code>Source</code>（§4.1）を満たし、コンストラクタで <code>Company</code>・<code>HttpClient</code>・<code>Logger</code>（必要なら <code>fullCrawl</code> フラグ）を受け取る。取得先 URL は <code>Company.sources</code> から取り、コードに埋め込まない</td>
+<td>§4.1、D-01 #20</td>
+</tr>
+<tr>
+<td>D-03</td>
+<td>Source は <code>RawArticle</code> を返す。<code>id</code>・<code>contentHash</code>・<code>fetchedAt</code>・<code>updatedAt</code> は作らない。汎用 URL 正規化・見出しの正規化・<code>thumbnail</code> の検証も application が行うため Source では行わない。Source が行うのは団体固有の URL 正規化（R-8）・相対 URL の解決・<code>publishedAt</code> の書式化（<code>domain/datetime.ts</code>）・<code>category</code> 判定（D-01 §5.3 の関数を呼ぶ）</td>
+<td>§4.1、§5.1、D-01 §5</td>
+</tr>
+<tr>
+<td>D-03</td>
+<td>記事は <code>Company.sources</code> の配列順 → 各ページの出現順（ページ送りは 1 ページ目から）で返す。同一実行内の重複 <code>id</code> の採用規則（D-01 §6）がこの順序に依存する</td>
+<td>§5.1 手順 7</td>
+</tr>
+<tr>
+<td>D-03</td>
+<td>ネットワークは <code>HttpClient.getText()</code> だけを使う。失敗は <code>HttpError</code> のまま投げるか <code>SourceError</code> に包む。0 件を返すと Source 失敗として数えられるので、記事が 1 件も無いページを正常系にしない</td>
+<td>§4.3、§8 #3</td>
+</tr>
+<tr>
+<td>D-03</td>
+<td>パーサーのフィクスチャテストは <code>test/infrastructure/sources/</code> に置き、<code>HttpClient</code> のスタブに <code>test/fixtures/sources/</code> の HTML / RSS を返させる。実サイトへアクセスしない</td>
+<td>CLAUDE.md テスト方針</td>
+</tr>
+<tr>
+<td>D-03</td>
+<td><code>COMMON_CATEGORY_KEYWORDS</code>（<code>domain/category-keywords.ts</code>）を埋める。団体別のタグ対応表・追加キーワード表は各 Source ファイル内に閉じ、Source 同士を import しない</td>
+<td>D-01 §8.1</td>
+</tr>
+<tr>
+<td>D-03</td>
+<td>サイトの robots.txt を D-03 の執筆時に再確認し、対象パスに制限が入っていたらその情報源を外す（実行時には確認しない。§8 #6）</td>
+<td>§8 #6</td>
+</tr>
+<tr>
+<td>D-03</td>
+<td>四季の Source はコンストラクタで <code>fullCrawl: boolean</code> を受け取り、真のときだけ調査レポート §4 の範囲（3〜5 ページ）まで遡り、偽のときは 1 ページ目だけを取る。初回かどうかの判定は <code>main.ts</code> が行う（§5.5 手順 5）ので、Source は前回ファイルを見ない。遡るページ数の確定値は D-03 が決める</td>
+<td>§8 #27</td>
+</tr>
+<tr>
+<td>D-04</td>
+<td>app 側の CI ジョブは <code>.github/workflows/app-ci.yml</code> として別ファイルに置く（本書は <code>collector-ci.yml</code> のみを定義する）。パスフィルタに <code>app/assets/companies.json</code> を含める場合も、collector 側の契約テストは <code>collector-ci.yml</code> で走る</td>
+<td>§5.6</td>
+</tr>
+</tbody></table>
+<h2 id="sec-9">9. 未決定事項<a class="anchor" href="#sec-9">#</a></h2>
+<p>該当なし。初稿で挙げた 3 件（Q-1 情報源の失敗の通知手段・Q-2 http の既定値・Q-3 四季の初回判定）は開発者の回答を得て §8 #25〜#27 に移した（2026-09-19）。</p>
+<h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
+<p>D-01 §10 の Task A（契約スキーマ・契約データ）・Task B（純粋関数群）と合わせた順序で並べる。Task S は D-01 Task A の前提（D-01 §10 の「collector 側は D-02 のスキャフォールドが先」）。各タスクは単独で品質ゲート <code>npm run lint &amp;&amp; npx tsc --noEmit &amp;&amp; npx vitest run</code> を通す。</p>
+<table>
+<thead>
+<tr>
+<th>順</th>
+<th>タスク候補</th>
+<th>成果物（新規ファイル）</th>
+<th>触るディレクトリ</th>
+<th>依存</th>
+<th>完了条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>S</td>
+<td>collector スキャフォールド</td>
+<td><code>collector/package.json</code>・<code>package-lock.json</code>・<code>tsconfig.json</code>・<code>eslint.config.js</code>・<code>.prettierrc.json</code>・<code>vitest.config.ts</code>・<code>.gitignore</code> 追記・<code>.github/workflows/collector-ci.yml</code>（§4.9・§5.6）。計 8</td>
+<td><code>collector/</code>、<code>.github/workflows/</code></td>
+<td>—</td>
+<td><code>npm ci &amp;&amp; npm run lint &amp;&amp; npx tsc --noEmit &amp;&amp; npx vitest run</code> が通る（テスト 0 件でも成功する設定にする）</td>
+</tr>
+<tr>
+<td>A</td>
+<td>（D-01）契約スキーマと契約データ</td>
+<td>D-01 §10 Task A</td>
+<td>—</td>
+<td>S</td>
+<td>D-01 §10</td>
+</tr>
+<tr>
+<td>B</td>
+<td>（D-01）純粋関数群</td>
+<td>D-01 §10 Task B</td>
+<td>—</td>
+<td>A</td>
+<td>D-01 §10</td>
+</tr>
+<tr>
+<td>D</td>
+<td>domain のポートと日時変換</td>
+<td><code>src/domain/source.ts</code>・<code>http-client.ts</code>・<code>article-store.ts</code>・<code>articles-publisher.ts</code>・<code>notification-gateway.ts</code>・<code>logger.ts</code>・<code>clock.ts</code>・<code>datetime.ts</code>（§4.1〜§4.7）、<code>src/infrastructure/logging/console-logger.ts</code>、<code>src/infrastructure/clock/system-clock.ts</code>。計 10</td>
+<td><code>src/domain/</code>、<code>src/infrastructure/logging/</code>、<code>src/infrastructure/clock/</code></td>
+<td>B</td>
+<td>型エラー・lint ゼロ。テストは追加しない（ポートに振る舞いが無く、<code>datetime.ts</code> は <code>collect-articles</code> / D-03 のテストで検証する）</td>
+</tr>
+<tr>
+<td>E</td>
+<td>http ラッパー</td>
+<td><code>src/infrastructure/http/fetch-http-client.ts</code>・<code>host-scheduler.ts</code>（§5.7）。計 2</td>
+<td><code>src/infrastructure/http/</code></td>
+<td>D</td>
+<td>型エラー・lint ゼロ。テストは追加しない（UseCase テストでは差し替え、実 HTTP テストは禁止）</td>
+</tr>
+<tr>
+<td>F</td>
+<td>collect-articles と detect-diff</td>
+<td><code>src/application/collect-articles.ts</code>・<code>detect-diff.ts</code>（§5.1・§5.2）、<code>test/helpers/</code>（<code>StubSource</code>・<code>RecordingLogger</code>・<code>FixedClock</code>・<code>buildCompanies</code>）、<code>test/application/collect-articles.test.ts</code>・<code>detect-diff.test.ts</code>（§7.1 の 11 行）。計 8</td>
+<td><code>src/application/</code>、<code>test/</code></td>
+<td>D、B</td>
+<td>品質ゲート通過。§7.1 の <code>collect-articles</code> 7 行・<code>detect-diff</code> 4 行をすべて含む</td>
+</tr>
+<tr>
+<td>G</td>
+<td>storage と publish-articles</td>
+<td><code>src/infrastructure/storage/articles-file-store.ts</code>・<code>companies-file-store.ts</code>・<code>git-articles-publisher.ts</code>・<code>json-format.ts</code>・<code>run-summary-store.ts</code>、<code>src/application/publish-articles.ts</code>、<code>test/helpers/</code>（<code>InMemoryArticleStore</code>・<code>FakePublisher</code>）、<code>test/application/publish-articles.test.ts</code>。計 8</td>
+<td><code>src/infrastructure/storage/</code>、<code>src/application/</code>、<code>test/</code></td>
+<td>D、F（<code>CollectedArticle</code> は使わないが <code>RunSummary</code> の型を F で定義しないため独立可）</td>
+<td>品質ゲート通過。§7.1 の <code>publish-articles</code> 1 行を含む</td>
+</tr>
+<tr>
+<td>H</td>
+<td>FCM と notify</td>
+<td><code>src/infrastructure/fcm/firebase-notification-gateway.ts</code>・<code>noop-notification-gateway.ts</code>、<code>src/application/notify-new-articles.ts</code>、<code>test/helpers/FakeNotificationGateway</code>、<code>test/application/notify-new-articles.test.ts</code>。計 5</td>
+<td><code>src/infrastructure/fcm/</code>、<code>src/application/</code>、<code>test/</code></td>
+<td>D、B（<code>buildNotificationText</code>）</td>
+<td>品質ゲート通過。§7.1 の <code>notify-new-articles</code> 3 行を含む</td>
+</tr>
+<tr>
+<td>I</td>
+<td>run-collection・main.ts・収集ワークフロー</td>
+<td><code>src/application/run-collection.ts</code>（§4.8・§5.5）、<code>src/main.ts</code>（§5.5。<code>SOURCE_FACTORIES</code> は空で作り D-03 が埋める）、<code>.github/workflows/collect.yml</code>（§5.6）、<code>test/application/run-collection.test.ts</code>。計 4</td>
+<td><code>src/application/</code>、<code>src/</code>、<code>.github/workflows/</code>、<code>test/</code></td>
+<td>F、G、H</td>
+<td>品質ゲート通過。§7.1 の <code>run-collection</code> 1 行（順序の不変条件）を含む。<code>CURTAINCALL_DRY_RUN=1</code> のローカル実行が Source 0 件で最後まで通る</td>
+</tr>
+</tbody></table>
+<p>D-03（5 団体の Source 実装）は I の後に団体ごとのタスクへ分ける。E を F より前に置くのは、D-03 の各 Source が <code>HttpClient</code> の実装を前提にするためで、F・G・H は互いに独立なので並行できる。</p>
+<h2 id="h-変更履歴">変更履歴<a class="anchor" href="#h-変更履歴">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>日付</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2026-09-19</td>
+<td>初版</td>
+</tr>
+<tr>
+<td>2026-09-19</td>
+<td>未決定事項 3 件を反映（Q-1〜Q-3、開発者の指示により推奨案）</td>
+</tr>
+</tbody></table>
+
+<p class="gen">生成元: docs/design/D-02.md — このファイルは render-design.mjs の生成物です。編集は Markdown 側で行ってください。</p>
+</main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+if (window.mermaid) {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "default" });
+}
+</script>
+</body>
+</html>

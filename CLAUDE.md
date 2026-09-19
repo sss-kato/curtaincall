@@ -46,7 +46,7 @@ presentation / entry   →   application (UseCase)   →   domain (Entity, Repos
 |---|---|
 | S 単一責任 | UseCase・Source・Repository は1責務。「〜と〜をする」クラスは分割 |
 | O 開放閉鎖 | 団体の追加は `Source` 実装の追加と設定ファイルの追記のみで済ませ、既存コードを変更しない |
-| L リスコフ置換 | すべての `Source` 実装は同じ契約（入力なし → `Article[]`、失敗は例外）を守る |
+| L リスコフ置換 | すべての `Source` 実装は同じ契約（入力なし → `RawArticle[]`、失敗は例外）を守る。`id`・`contentHash`・`fetchedAt`・`updatedAt` は application が確定する（D-01 §8.1、D-02 §4.1） |
 | I インターフェース分離 | Repository IF は利用側の UseCase が必要とするメソッドだけを持つ。肥大化したら分割 |
 | D 依存性逆転 | UseCase は具象ではなくインターフェースに依存。具象はコンストラクタ注入（app は Riverpod、collector は手動 DI） |
 
@@ -62,6 +62,7 @@ presentation / entry   →   application (UseCase)   →   domain (Entity, Repos
 - **テストの単位は Feature（UseCase）。** UseCase を入口として、Repository / Source / 外部 I/O はモックまたはフィクスチャに差し替える
 - Widget テスト・個別クラスのユニットテストは**書かない**（UseCase テストで振る舞いを担保する）
 - 例外：infrastructure のパーサー（cheerio / rss-parser）は**実サイトの HTML / RSS をフィクスチャとして保存**し、パース結果を検証する。サイト改装（R-2）の検知が目的
+- 例外：外部境界の infrastructure 実装（http ラッパー・ファイル storage）は、外部 I/O を **fetch のスタブ・一時ディレクトリに差し替えて**検証してよい（対象は `FetchHttpClient`・`ArticlesFileStore`。D-02 §7.3・§8 #30）
 - ネットワーク呼び出しはテスト内で**必ずモック**。実サイトへアクセスするテストは禁止
 
 ## app/（Flutter）
@@ -115,16 +116,23 @@ test/
 
 ### ディレクトリ
 
+D-01・D-02（approved）の §3.2 を正とする。要点のみ。
+
 ```
 src/
   domain/
-    article.ts         Article エンティティ・zod スキーマ
-    source.ts          Source インターフェース
-    company.ts         団体定義（companies.json の型）
+    article.ts / company.ts / category.ts / category-keywords.ts   契約・zod スキーマ（D-01）
+    url.ts / text.ts / hasher.ts / article-id.ts / content-hash.ts / article-order.ts / notification.ts（D-01）
+    source.ts            RawArticle・SourceOptions・Source インターフェース
+    collected-article.ts id・contentHash まで確定した記事
+    datetime.ts / http-client.ts / article-store.ts / articles-publisher.ts / notification-gateway.ts / logger.ts / clock.ts   ポート
   application/
-    collect-articles.ts   全 Source を並行実行（Promise.allSettled）し正規化
+    collect-articles.ts   全 Source を並行実行（Promise.allSettled）し正規化・突合
     detect-diff.ts        前回 JSON との差分検知（新着・更新）
-    notify.ts             新着を FCM トピックへ送信
+    publish-articles.ts   検証 → 書き出し → コミット → push
+    notify-new-articles.ts 新着を FCM トピックへ送信（push 成功後のみ）
+    full-crawl-policy.ts  fullCrawl 判定（純粋関数）
+    run-collection.ts     上記の合成と順序の不変条件
   infrastructure/
     sources/
       horipro.ts         RSS
@@ -132,14 +140,23 @@ src/
       takarazuka.ts      HTML
       shiki.ts           HTML + 初回のみページ送り
       toho.ts            HTML + URL 正規化（toho.co.jp / tohostage.com / toho-navi.com）
-    http/                fetch ラッパー（UA・間隔・タイムアウト）
+    http/                fetch ラッパー（UA・間隔・タイムアウト・文字コード）
     fcm/                 firebase-admin ラッパー
-    storage/             articles.json の読み書き
-  main.ts              DI 組み立てとエントリ
+    storage/             articles.json の読み書き・git publish
+    logging/             Logger 実装
+    clock/               Clock 実装
+    hash/                sha256 Hasher 実装
+  main.ts              DI 組み立て（SourceBinding）とエントリ
 test/
   application/         UseCase テスト
-  infrastructure/sources/
-    fixtures/          実サイトの HTML / RSS スナップショット
+  domain/              D-01 の契約テスト（スキーマ・フィクスチャ整合）
+  infrastructure/
+    http/ storage/     外部境界の実装テスト（fetch スタブ・一時ディレクトリ）
+    sources/           パーサーのフィクスチャテスト（D-03）
+  helpers/             テストダブル（StubSource・FakePublisher 等）
+  fixtures/
+    contract/          articles.sample.json
+    sources/           実サイトの HTML / RSS スナップショット
 ```
 
 ### 禁止・制限事項

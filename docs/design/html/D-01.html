@@ -48,7 +48,7 @@ a{color:var(--accent)}
 <a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 契約の流れ</a><a class="d3" href="#sec-3-2">3.2 collector 側のファイル配置（本書が所有する部分）</a><a class="d3" href="#sec-3-3">3.3 app 側で本書が要求すること（配置は D-04 が決める）</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Article（要件 §7.1）</a><a class="d3" href="#sec-4-2">4.2 articles.json（ファイル全体）</a><a class="d3" href="#sec-4-3">4.3 companies.json（団体定義）</a><a class="d3" href="#sec-4-4">4.4 category の値（要件 §7.1・§3.3、S-00 §7.2）</a><a class="d3" href="#sec-4-5">4.5 並び替えキー（S-01 §7.1 と同一）</a><a class="d3" href="#sec-4-6">4.6 バージョニング</a><a class="d3" href="#sec-4-7">4.7 配信 URL とキャッシュ</a><a class="d3" href="#sec-4-8">4.8 通知ペイロード（要件 §6.3、S-01 §8 #20）</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 ID 算出（<code>normalizeUrl</code> → <code>buildArticleId</code>）</a><a class="d3" href="#sec-5-2">5.2 contentHash 算出と更新判定（<code>normalizeTitle</code> → <code>foldText</code> → <code>buildContentHash</code> → 突合）</a><a class="d3" href="#sec-5-3">5.3 category 判定（<code>matchCategoryTags</code> → <code>matchCategoryKeywords</code> → <code>resolveCategory</code>）</a><a class="d3" href="#sec-5-4">5.4 thumbnail の検証</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d3" href="#sec-7-1">7.1 契約テスト（<code>test/domain/contract.test.ts</code>）</a><a class="d3" href="#sec-7-2">7.2 D-02 の UseCase テストで検証すべきケース（申し送り）</a><a class="d3" href="#sec-7-3">7.3 app 側（D-04・D-05 の UseCase テストで検証する）</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
 </nav>
 <main>
-<header><h1>D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</h1><div class="meta"><b>status</b><span><span class="badge reviewed">reviewed</span></span><b>scope</b><span>shared</span><b>risks</b><span>R-5, R-8, R-9</span><b>review_rounds</b><span>5</span></div></header>
+<header><h1>D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</h1><div class="meta"><b>status</b><span><span class="badge approved">approved</span></span><b>scope</b><span>shared</span><b>risks</b><span>R-5, R-8, R-9</span><b>review_rounds</b><span>5</span></div></header>
 <h2 id="sec-1">1. 目的と範囲<a class="anchor" href="#sec-1">#</a></h2>
 <p>本書は、collector（収集バッチ）と app（Flutter）の<strong>両方が従う契約</strong>を 1 か所に定める。決めるのは次の 8 点：(1) <code>articles.json</code> の構造と zod スキーマ、(2) 団体定義 <code>companies.json</code> の構造と 5 団体の値、(3) 記事 <code>id</code> の算出規則（URL 正規化とハッシュ）、(4) <code>contentHash</code> の算出規則と更新判定、(5) <code>category</code> の値・優先順位・判定の段階、(6) 配信 URL とキャッシュ制御、(7) FCM 通知ペイロードとトピック名、(8) スキーマのバージョニング。決めないのは、collector の層構成・Source 実装・GitHub Actions・FCM 送信手順（<a href="D-02.html">D-02</a>）、団体別のセレクタ・タグ対応表・キーワード表・東宝の団体固有 URL 規則（<a href="D-03.html">D-03</a>）、app の drift スキーマ・Provider・UseCase（<a href="D-04.html">D-04</a>・<a href="D-05.html">D-05</a>）である。型の正は本書の TypeScript コード片であり、app は同じ名前・同じ意味のフィールドを Dart で持つ。本書は F-07（通知）・F-11（更新の再浮上）の<strong>契約部分</strong>（ペイロードの形、更新判定の規則）だけを扱い、機能そのものの実現は D-02・D-04・D-05 が持つため、frontmatter の <code>features</code> は空とする（機能 ID の所有者を 1 冊にするため）。</p>
 <h2 id="sec-2">2. 要件との対応<a class="anchor" href="#sec-2">#</a></h2>
@@ -1872,6 +1872,10 @@ export function buildContentHash(hasher: Hasher, title: string): string {
 <tr>
 <td>2026-09-19</td>
 <td>design-review 通過（第 1 段階 3 周 / 第 2 段階 2 周）</td>
+</tr>
+<tr>
+<td>2026-09-19</td>
+<td>承認（approved）</td>
 </tr>
 </tbody></table>
 

@@ -6,7 +6,7 @@
 
 | ID | 設計書 | §10 | タスク | stack | depends_on | status |
 |---|---|---|---|---|---|---|
-| T-01 | D-02 | S | collector スキャフォールド | collector | — | todo |
+| T-01 | D-02 | S | collector スキャフォールド | collector | — | done |
 | T-02 | D-01 | A | 契約スキーマと契約データ | collector | T-01 | todo |
 | T-03 | D-01 | B | 純粋関数群 | collector | T-02 | todo |
 | T-04 | D-02 | D | domain のポートと日時変換 | collector | T-03 | todo |

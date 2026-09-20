@@ -63,6 +63,7 @@ presentation / entry   →   application (UseCase)   →   domain (Entity, Repos
 - Widget テスト・個別クラスのユニットテストは**書かない**（UseCase テストで振る舞いを担保する）
 - 例外：infrastructure のパーサー（cheerio / rss-parser）は**実サイトの HTML / RSS をフィクスチャとして保存**し、パース結果を検証する。サイト改装（R-2）の検知が目的
 - 例外：外部境界の infrastructure 実装（http ラッパー・ファイル storage）は、外部 I/O を **fetch のスタブ・一時ディレクトリに差し替えて**検証してよい（対象は `FetchHttpClient`・`ArticlesFileStore`。D-02 §7.3・§8 #30）
+- 例外：入出力が値だけで I/O・Provider・Widget に触れない**純粋関数**（状態判定・並び順・日時書式・ライフサイクル判定・通知ペイロードの写像。app では `resolveListStatus`・`resolveReadDisplayState`・`compareArticles`・`formatPublishedDate`・`shouldSyncOnResume`・`parseNotificationTap`）は、関数ごとのテーブル駆動テストを実装ファイルと同じ相対パス（`test/features/<feature>/{domain,presentation}/`・`test/app/`・`test/core/ui/article/`）に置いてよい。対象は設計書 §7 に列挙したものに限る（D-04 §7・§8 #28）
 - ネットワーク呼び出しはテスト内で**必ずモック**。実サイトへアクセスするテストは禁止
 
 ## app/（Flutter）
@@ -76,23 +77,36 @@ presentation / entry   →   application (UseCase)   →   domain (Entity, Repos
 
 ### ディレクトリ（feature-first × クリーンアーキテクチャ）
 
+D-04（approved）の §3.2 を正とする。要点のみ。
+
 ```
 lib/
+  app/             ルート Widget・起動処理（bootstrap）・下部タブ・ライフサイクル監視（feature に属さない）
   core/
-    di/            Provider の組み立て（具象の import を許可する唯一の場所）
+    di/            Provider の組み立て（具象の import を許可する唯一の場所）。
+                   providers.dart（基盤・Repository）/ articles_providers.dart / notifications_providers.dart /
+                   bootstrap_overrides.dart（DB・アセット・Logger を生成し ProviderScope の overrides を組み立てる）
     database/      drift の定義・migration
     network/       HTTP クライアント
+    logging/       logger の生成
+    ui/
+      status/      S-00 の共通状態表示 Widget
+      article/     S-00 の記事セル（articles/domain にのみ依存）
   features/
-    articles/      ホーム（記事一覧）
-      domain/      Article, ArticleRepository (IF)
-      application/ FetchArticlesUseCase, MarkAsReadUseCase, ...
-      infrastructure/ ArticleRepositoryImpl (drift + HTTP)
+    articles/      記事の取得・反映・一覧
+      domain/      Article, ArticlesFeed (IF), ArticleSyncRepository / ArticleQueryRepository (IF)
+      application/ SyncArticlesUseCase, SyncCoordinator, ...
+      infrastructure/ HttpArticlesFeed, DriftArticleRepository
       presentation/ 画面・Widget・Provider
+    companies/     同梱 companies.json の読み込み
     saved/         保存（あとで読む）
     settings/      設定
-    notifications/ FCM トピック購読
+    notifications/ FCM トピック購読・通知許可
 test/
   features/<feature>/application/   UseCase テスト
+  features/<feature>/{domain,presentation}/, app/, core/ui/article/   純粋関数の直接テスト（例外。テスト方針を参照）
+  helpers/         テストダブル（in-memory DB・MockClient・FakePushGateway・記事ビルダ）
+  fixtures/        articles.sample.json
 ```
 
 ### 禁止・制限事項
@@ -101,6 +115,7 @@ test/
 - `dynamic` 禁止
 - `!`（null 強制 unwrap）は直前に理由コメントを付ける
 - `presentation` から `infrastructure` の直接 import 禁止
+- feature の `presentation` から他の feature の `presentation` を import することを禁止（共通 Widget は `core/ui/` に置く）
 - 画像（サムネイル）を端末にコピー保存しない。URL 参照のみ（調査レポート §6.2）
 
 ## collector/（TypeScript）

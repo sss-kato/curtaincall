@@ -1,0 +1,18 @@
+# very_good_analysis を基準に静的解析する（CLAUDE.md）。
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - ios/**
+    - "**/*.g.dart"
+    - "**/*.drift.dart"
+
+# riverpod_lint 3.1 以降は custom_lint を介さず analyzer 公式プラグイン方式で有効化する。
+# 注意: `flutter analyze` はこの plugins: を実行しない。riverpod_lint の確認は
+# CI と同じく `flutter analyze` に加えて `dart analyze --fatal-infos` を実行すること
+# （.github/workflows/app-ci.yml と一致させる）。
+# バージョンは完全一致で固定する（範囲指定だと pub 解決が CI 実行時に変わり、
+# コード変更のない PR で新ルールにより突然 FAIL しうるため）。更新は明示的なコミットで行う。
+plugins:
+  riverpod_lint: 3.1.9

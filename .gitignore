@@ -10,3 +10,10 @@ data/articles.json.tmp
 !.env.example
 **/serviceAccount*.json
 **/*-firebase-adminsdk-*.json
+# Firebase の設定ファイル。手元の app/ios/Runner/ に置く（D-04 §8 #27）
+**/GoogleService-Info.plist
+# iOS 署名関連
+*.p12
+*.mobileprovision
+*.cer
+app/ios/ExportOptions.plist

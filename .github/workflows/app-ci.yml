@@ -1,0 +1,22 @@
+name: app-ci
+on:
+  pull_request:
+    paths: ["app/**", ".github/workflows/app-ci.yml"]
+  push:
+    branches: [main]
+    paths: ["app/**", ".github/workflows/app-ci.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest # analyze / test に iOS ビルドは不要。macOS ランナーを使わない
+    defaults: { run: { working-directory: app } }
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with: { channel: stable, flutter-version: "3.47.4", cache: true }
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: dart analyze --fatal-infos # riverpod_lint（analysis_options.yaml の plugins:）用。flutter analyze はプラグインを実行しないため別実行する。通常の lint 失敗は先行の flutter analyze を見る
+      - run: flutter test
+        if: hashFiles('app/test/**/*_test.dart') != '' # T-18 でテストを追加したら削除する

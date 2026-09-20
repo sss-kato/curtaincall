@@ -1,0 +1,556 @@
+// 参照する § は特記なき限り docs/design/D-02.md（§7.1）
+import { describe, expect, it } from "vitest";
+import { DetectDiff, type DetectDiffInput } from "../../src/application/detect-diff.js";
+import {
+  ARTICLES_SCHEMA_VERSION,
+  type Article,
+  type ArticlesFile,
+} from "../../src/domain/article.js";
+import type { Company } from "../../src/domain/company.js";
+import type { CollectedArticle } from "../../src/domain/collected-article.js";
+import { at } from "../helpers/array.js";
+import { company } from "../helpers/build-company.js";
+import { RecordingLogger } from "../helpers/recording-logger.js";
+
+const GENERATED_AT = "2026-09-20T10:00:00+09:00";
+const COMPANIES: readonly Company[] = [company("co_a")];
+
+/** SHA-256 の 16 進小文字 16 文字の体裁を満たすダミー id/contentHash */
+function hex(n: number): string {
+  return n.toString(16).padStart(16, "0");
+}
+
+/** 秒精度のダミー日時（+09:00 固定）。i を増やすほど新しい日時になる */
+function isoAt(i: number): string {
+  const d = new Date(Date.UTC(2026, 0, 1, 0, 0, 0) + i * 1000);
+  const pad = (n: number): string => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear().toString()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}+09:00`;
+}
+
+function collectedArticle(overrides: Partial<CollectedArticle> = {}): CollectedArticle {
+  return {
+    id: hex(1),
+    companyId: "co_a",
+    title: "見出し",
+    url: "https://example.com/a",
+    category: "other",
+    publishedAt: "2026-09-13T00:00:00+09:00",
+    contentHash: hex(100),
+    ...overrides,
+  };
+}
+
+function article(overrides: Partial<Article> = {}): Article {
+  return {
+    ...collectedArticle(),
+    fetchedAt: "2026-09-13T00:00:00+09:00",
+    ...overrides,
+  };
+}
+
+function articlesFile(
+  articles: readonly Article[],
+  generatedAt = "2026-09-01T00:00:00+09:00",
+): ArticlesFile {
+  return { schemaVersion: ARTICLES_SCHEMA_VERSION, generatedAt, articles };
+}
+
+function newUseCase(): DetectDiff {
+  return new DetectDiff(new RecordingLogger());
+}
+
+describe("突合の確定規則", () => {
+  it("D-01 §5.2 の表の 4 行で fetchedAt / updatedAt / contentHash が表どおり", () => {
+    const uc = newUseCase();
+
+    // 新着：前回無し・今回有り
+    {
+      const collected = [collectedArticle({ id: hex(1), contentHash: hex(11) })];
+      const input: DetectDiffInput = {
+        previous: undefined,
+        collected,
+        companies: COMPANIES,
+        generatedAt: GENERATED_AT,
+      };
+      const a = at(uc.execute(input).file.articles, 0);
+      expect(a.fetchedAt).toBe(GENERATED_AT);
+      expect("updatedAt" in a).toBe(false);
+      expect(a.contentHash).toBe(hex(11));
+    }
+
+    // 継続（ハッシュ一致・前回 updatedAt 無し）
+    {
+      const prev = article({
+        id: hex(2),
+        contentHash: hex(22),
+        fetchedAt: "2026-09-01T00:00:00+09:00",
+      });
+      const collected = [collectedArticle({ id: hex(2), contentHash: hex(22) })];
+      const input: DetectDiffInput = {
+        previous: articlesFile([prev]),
+        collected,
+        companies: COMPANIES,
+        generatedAt: GENERATED_AT,
+      };
+      const a = at(uc.execute(input).file.articles, 0);
+      expect(a.fetchedAt).toBe(prev.fetchedAt);
+      expect("updatedAt" in a).toBe(false);
+      expect(a.contentHash).toBe(hex(22));
+    }
+
+    // 継続（ハッシュ一致・前回 updatedAt 有り）→ 前回の updatedAt を引き継ぐ
+    {
+      const prev = article({
+        id: hex(3),
+        contentHash: hex(33),
+        fetchedAt: "2026-09-01T00:00:00+09:00",
+        updatedAt: "2026-09-05T00:00:00+09:00",
+      });
+      const collected = [collectedArticle({ id: hex(3), contentHash: hex(33) })];
+      const input: DetectDiffInput = {
+        previous: articlesFile([prev]),
+        collected,
+        companies: COMPANIES,
+        generatedAt: GENERATED_AT,
+      };
+      const a = at(uc.execute(input).file.articles, 0);
+      expect(a.updatedAt).toBe(prev.updatedAt);
+    }
+
+    // 更新（ハッシュ不一致）
+    {
+      const prev = article({
+        id: hex(4),
+        contentHash: hex(44),
+        fetchedAt: "2026-09-01T00:00:00+09:00",
+      });
+      const collected = [collectedArticle({ id: hex(4), contentHash: hex(45) })];
+      const input: DetectDiffInput = {
+        previous: articlesFile([prev]),
+        collected,
+        companies: COMPANIES,
+        generatedAt: GENERATED_AT,
+      };
+      const a = at(uc.execute(input).file.articles, 0);
+      expect(a.fetchedAt).toBe(prev.fetchedAt);
+      expect(a.updatedAt).toBe(GENERATED_AT);
+      expect(a.contentHash).toBe(hex(45));
+    }
+
+    // 前回有り・今回無し（消えた記事）→ 継続（保持）。前回の値のまま
+    {
+      const prev = article({
+        id: hex(5),
+        contentHash: hex(55),
+        fetchedAt: "2026-09-01T00:00:00+09:00",
+        updatedAt: "2026-09-02T00:00:00+09:00",
+      });
+      const input: DetectDiffInput = {
+        previous: articlesFile([prev]),
+        collected: [],
+        companies: COMPANIES,
+        generatedAt: GENERATED_AT,
+      };
+      const a = at(uc.execute(input).file.articles, 0);
+      expect(a).toEqual(prev);
+    }
+  });
+
+  it("継続で thumbnail・publishedAt が今回値に上書き", () => {
+    const uc = newUseCase();
+    const prev = article({
+      id: hex(6),
+      contentHash: hex(66),
+      thumbnail: "https://example.com/old.png",
+      publishedAt: "2026-09-01T00:00:00+09:00",
+      fetchedAt: "2026-09-01T00:00:00+09:00",
+    });
+    const collected = [
+      collectedArticle({
+        id: hex(6),
+        contentHash: hex(66),
+        thumbnail: "https://example.com/new.png",
+        publishedAt: "2026-09-10T00:00:00+09:00",
+      }),
+    ];
+    const input: DetectDiffInput = {
+      previous: articlesFile([prev]),
+      collected,
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const a = at(uc.execute(input).file.articles, 0);
+    expect(a.thumbnail).toBe("https://example.com/new.png");
+    expect(a.publishedAt).toBe("2026-09-10T00:00:00+09:00");
+  });
+
+  it("前回の未知 companyId は引き継がない", () => {
+    const logger = new RecordingLogger();
+    const uc = new DetectDiff(logger);
+    const prev = article({ id: hex(7), companyId: "co_removed", contentHash: hex(77) });
+    const input: DetectDiffInput = {
+      previous: articlesFile([prev]),
+      collected: [],
+      companies: COMPANIES, // co_a のみ。co_removed は含まない
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(result.file.articles).toHaveLength(0);
+    expect(
+      logger.entries.some(
+        (e) => e.level === "info" && e.message === "dropping article of removed company",
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("切り詰めと並び順", () => {
+  it("1 団体 101 件 → compareArticles 順の末尾 1 件が落ち、stats.dropped が 1", () => {
+    const uc = newUseCase();
+    const collected = Array.from({ length: 101 }, (_, i) =>
+      collectedArticle({
+        id: hex(2000 + i),
+        contentHash: hex(3000 + i),
+        url: `https://example.com/${i.toString()}`,
+        publishedAt: isoAt(i),
+      }),
+    );
+    const input: DetectDiffInput = {
+      previous: undefined,
+      collected,
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(result.file.articles).toHaveLength(100);
+    expect(result.stats.dropped).toBe(1);
+    // i=0（最古の publishedAt）が落ち、i=100（最新）が先頭になる
+    expect(at(result.file.articles, 0).id).toBe(hex(2100));
+    expect(result.file.articles.some((a) => a.id === hex(2000))).toBe(false);
+  });
+
+  it("1 団体ちょうど 100 件 → 全件残り dropped が 0", () => {
+    const uc = newUseCase();
+    const collected = Array.from({ length: 100 }, (_, i) =>
+      collectedArticle({
+        id: hex(4000 + i),
+        contentHash: hex(5000 + i),
+        url: `https://example.com/${i.toString()}`,
+        publishedAt: isoAt(i),
+      }),
+    );
+    const input: DetectDiffInput = {
+      previous: undefined,
+      collected,
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(result.file.articles).toHaveLength(100);
+    expect(result.stats.dropped).toBe(0);
+  });
+
+  it("updatedAt を持つ記事と持たない記事の混在 → updatedAt を持つ記事が先", () => {
+    const uc = newUseCase();
+    const withUpdatedAt = article({
+      id: hex(10),
+      contentHash: hex(110),
+      publishedAt: isoAt(0),
+      updatedAt: isoAt(1000),
+    });
+    const withoutUpdatedAt = article({
+      id: hex(11),
+      contentHash: hex(111),
+      publishedAt: isoAt(500),
+    });
+    const previous = articlesFile([withUpdatedAt, withoutUpdatedAt]);
+    const input: DetectDiffInput = {
+      previous,
+      collected: [],
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(at(result.file.articles, 0).id).toBe(hex(10));
+    expect(at(result.file.articles, 1).id).toBe(hex(11));
+  });
+
+  it("同じ updatedAt 条件で fetchedAt が異なる 2 件 → fetchedAt 降順", () => {
+    const uc = newUseCase();
+    const older = article({
+      id: hex(12),
+      contentHash: hex(112),
+      publishedAt: isoAt(0),
+      fetchedAt: isoAt(0),
+    });
+    const newer = article({
+      id: hex(13),
+      contentHash: hex(113),
+      publishedAt: isoAt(0),
+      fetchedAt: isoAt(10),
+    });
+    const previous = articlesFile([older, newer]);
+    const input: DetectDiffInput = {
+      previous,
+      collected: [],
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(at(result.file.articles, 0).id).toBe(hex(13));
+    expect(at(result.file.articles, 1).id).toBe(hex(12));
+  });
+
+  it("updatedAt・fetchedAt が同じ 2 件 → id 昇順", () => {
+    const uc = newUseCase();
+    const high = article({
+      id: hex(99),
+      contentHash: hex(199),
+      publishedAt: isoAt(0),
+      fetchedAt: isoAt(0),
+    });
+    const low = article({
+      id: hex(20),
+      contentHash: hex(120),
+      publishedAt: isoAt(0),
+      fetchedAt: isoAt(0),
+    });
+    const previous = articlesFile([high, low]);
+    const input: DetectDiffInput = {
+      previous,
+      collected: [],
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(at(result.file.articles, 0).id).toBe(hex(20));
+    expect(at(result.file.articles, 1).id).toBe(hex(99));
+  });
+
+  it("同じ入力を 2 回渡す → 同じ結果（決定的）", () => {
+    const uc = newUseCase();
+    const collected = Array.from({ length: 5 }, (_, i) =>
+      collectedArticle({
+        id: hex(4000 + i),
+        contentHash: hex(5000 + i),
+        url: `https://example.com/x${i.toString()}`,
+        publishedAt: isoAt(i),
+      }),
+    );
+    const input: DetectDiffInput = {
+      previous: undefined,
+      collected,
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result1 = uc.execute(input);
+    const result2 = uc.execute(input);
+    expect(result1.file.articles).toEqual(result2.file.articles);
+  });
+
+  it("2 団体の記事を混ぜて渡す → 出力の団体ブロックが companies.json 順", () => {
+    const uc = newUseCase();
+    const companyA = company("co_a");
+    const companyB = company("co_b");
+    const collected = [
+      collectedArticle({
+        id: hex(30),
+        companyId: "co_b",
+        url: "https://example.com/b1",
+        contentHash: hex(130),
+      }),
+      collectedArticle({
+        id: hex(31),
+        companyId: "co_a",
+        url: "https://example.com/a1",
+        contentHash: hex(131),
+      }),
+    ];
+    const input: DetectDiffInput = {
+      previous: undefined,
+      collected,
+      companies: [companyA, companyB],
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(result.file.articles.map((a) => a.companyId)).toEqual(["co_a", "co_b"]);
+  });
+});
+
+describe("前回なし", () => {
+  it("前回が undefined（無い・schemaVersion: 2・壊れている）→ 全件新着・通知対象が空", () => {
+    // 「無い」「schemaVersion: 2」「壊れている」はいずれも ArticleReader が undefined に変換した後の状態
+    // （D-01 #15）。detect-diff は previous: undefined だけを受け取る
+    const uc = newUseCase();
+    const collected = [
+      collectedArticle({ id: hex(40), contentHash: hex(140) }),
+      collectedArticle({ id: hex(41), url: "https://example.com/b", contentHash: hex(141) }),
+    ];
+    const input: DetectDiffInput = {
+      previous: undefined,
+      collected,
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(result.file.articles).toHaveLength(2);
+    for (const a of result.file.articles) expect(a.fetchedAt).toBe(GENERATED_AT);
+    expect(result.newArticlesByCompany.size).toBe(0);
+  });
+});
+
+describe("changed", () => {
+  it("記事が同一なら偽（generatedAt だけ違っても偽）", () => {
+    const uc = newUseCase();
+    const prev = article({
+      id: hex(50),
+      contentHash: hex(150),
+      fetchedAt: "2026-01-01T00:00:00+09:00",
+    });
+    const collected = [collectedArticle({ id: hex(50), contentHash: hex(150) })];
+    const input: DetectDiffInput = {
+      previous: articlesFile([prev], "2026-01-01T00:00:00+09:00"),
+      collected,
+      companies: COMPANIES,
+      generatedAt: "2026-02-01T00:00:00+09:00",
+    };
+    const result = uc.execute(input);
+    expect(result.changed).toBe(false);
+    expect(result.file.generatedAt).toBe("2026-02-01T00:00:00+09:00");
+  });
+
+  it("thumbnail だけ変わったら真", () => {
+    const uc = newUseCase();
+    const prev = article({
+      id: hex(51),
+      contentHash: hex(151),
+      thumbnail: "https://example.com/old.png",
+    });
+    const collected = [
+      collectedArticle({
+        id: hex(51),
+        contentHash: hex(151),
+        thumbnail: "https://example.com/new.png",
+      }),
+    ];
+    const input: DetectDiffInput = {
+      previous: articlesFile([prev]),
+      collected,
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    expect(uc.execute(input).changed).toBe(true);
+  });
+
+  it("新着・更新・消失・切り詰めのいずれでも真", () => {
+    const uc = newUseCase();
+
+    // 新着
+    {
+      const input: DetectDiffInput = {
+        previous: articlesFile([]),
+        collected: [collectedArticle({ id: hex(60), contentHash: hex(160) })],
+        companies: COMPANIES,
+        generatedAt: GENERATED_AT,
+      };
+      expect(uc.execute(input).changed).toBe(true);
+    }
+
+    // 更新
+    {
+      const prev = article({ id: hex(61), contentHash: hex(161) });
+      const input: DetectDiffInput = {
+        previous: articlesFile([prev]),
+        collected: [collectedArticle({ id: hex(61), contentHash: hex(162) })],
+        companies: COMPANIES,
+        generatedAt: GENERATED_AT,
+      };
+      expect(uc.execute(input).changed).toBe(true);
+    }
+
+    // 消失（一覧から消えたが保持。フィールドは前回のままだが articles 配列の中身自体は変わらないため、
+    // 「消失」で真になるのは他に記事が残らない団体構成のときではなく、配列長や内容が前回と異なるケースを指す。
+    // ここでは前回に無い companyId を混ぜて除外させることで、articles 配列を前回と変える
+    {
+      const prev1 = article({ id: hex(62), contentHash: hex(162), companyId: "co_removed" });
+      const input: DetectDiffInput = {
+        previous: articlesFile([prev1]),
+        collected: [],
+        companies: COMPANIES, // co_removed を含まないため prev1 は落ちる
+        generatedAt: GENERATED_AT,
+      };
+      expect(uc.execute(input).changed).toBe(true);
+    }
+
+    // 切り詰め
+    {
+      const existing = Array.from({ length: 100 }, (_, i) =>
+        article({
+          id: hex(6300 + i),
+          contentHash: hex(6400 + i),
+          url: `https://example.com/e${i.toString()}`,
+          publishedAt: isoAt(1000 + i),
+          fetchedAt: isoAt(1000 + i),
+        }),
+      );
+      const input: DetectDiffInput = {
+        previous: articlesFile(existing),
+        collected: [
+          collectedArticle({
+            id: hex(9000),
+            contentHash: hex(9001),
+            url: "https://example.com/new",
+            publishedAt: isoAt(5000),
+          }),
+        ],
+        companies: COMPANIES,
+        generatedAt: GENERATED_AT,
+      };
+      expect(uc.execute(input).changed).toBe(true);
+    }
+  });
+
+  it("前回が undefined なら真", () => {
+    const uc = newUseCase();
+    const input: DetectDiffInput = {
+      previous: undefined,
+      collected: [collectedArticle({ id: hex(70), contentHash: hex(170) })],
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    expect(uc.execute(input).changed).toBe(true);
+  });
+});
+
+describe("切り詰めと通知対象", () => {
+  it("切り詰めで落ちた新着は newArticlesByCompany に入らない", () => {
+    const uc = newUseCase();
+    const existing: Article[] = Array.from({ length: 100 }, (_, i) =>
+      article({
+        id: hex(7000 + i),
+        contentHash: hex(7100 + i),
+        url: `https://example.com/existing-${i.toString()}`,
+        publishedAt: isoAt(1000 + i),
+        fetchedAt: isoAt(1000 + i),
+      }),
+    );
+    const previous = articlesFile(existing, "2026-01-01T00:00:00+09:00");
+    const collected = [
+      collectedArticle({
+        id: hex(9999),
+        contentHash: hex(9998),
+        url: "https://example.com/new",
+        publishedAt: isoAt(0), // 既存 100 件より古いので切り詰めで落ちる
+      }),
+    ];
+    const input: DetectDiffInput = {
+      previous,
+      collected,
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(result.stats.dropped).toBe(1);
+    expect(result.newArticlesByCompany.get("co_a")).toBeUndefined();
+  });
+});

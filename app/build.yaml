@@ -1,0 +1,8 @@
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          # 日時列を ISO8601 テキスト（UTC、Z 付き）で保存する（D-04 §4.2・§8 #4）。
+          # 既定の unix 秒だと sqlite3 で開いたとき読めず、UTC の往復も自明でないため。
+          store_date_time_values_as_text: true

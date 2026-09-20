@@ -2,3 +2,7 @@ dist/
 node_modules/
 .run-summary.json
 package-lock.json
+# 実サイトの HTML / RSS スナップショット。D-03 §7.2「応答本文をそのまま（改変しない）」のため対象外
+# （同ディレクトリの README.md は対象。html/xml のみ除く）
+test/fixtures/sources/**/*.html
+test/fixtures/sources/**/*.xml

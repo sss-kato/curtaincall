@@ -48,7 +48,7 @@ a{color:var(--accent)}
 <a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 依存の方向</a><a class="d3" href="#sec-3-2">3.2 ファイル配置</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Source の共通構造</a><a class="d3" href="#sec-4-2">4.2 取得 URL・方式・セレクタ（初期値）</a><a class="d3" href="#sec-4-3">4.3 団体固有の URL 正規化</a><a class="d3" href="#sec-4-4">4.4 日付の解釈</a><a class="d3" href="#sec-4-5">4.5 RSS のフィールド対応（ホリプロ・新感線）</a><a class="d3" href="#sec-4-6">4.6 カテゴリ判定の表</a><a class="d3" href="#sec-4-7">4.7 companies.json と Source の対応</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 共通：<code>fetch()</code> の流れとカテゴリ判定</a><a class="d3" href="#sec-5-2">5.2 ホリプロ（RSS）</a><a class="d3" href="#sec-5-3">5.3 新感線（RSS）</a><a class="d3" href="#sec-5-4">5.4 宝塚（HTML）</a><a class="d3" href="#sec-5-5">5.5 四季（HTML + ページ送り）</a><a class="d3" href="#sec-5-6">5.6 東宝（HTML × 2 URL + URL 正規化）</a><a class="d3" href="#sec-5-7">5.7 DI 配線（<code>main.ts</code>）</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d3" href="#sec-7-1">7.1 テストダブル（<code>test/helpers/stub-http-client.ts</code>）</a><a class="d3" href="#sec-7-2">7.2 フィクスチャの取得規則</a><a class="d3" href="#sec-7-3">7.3 Source ごとのケース</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
 </nav>
 <main>
-<header><h1>D-03 Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応）</h1><div class="meta"><b>status</b><span><span class="badge reviewed">reviewed</span></span><b>scope</b><span>collector</span><b>risks</b><span>R-2, R-5, R-8, R-9</span><b>depends_on</b><span>D-01, D-02</span><b>review_rounds</b><span>6</span></div></header>
+<header><h1>D-03 Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応）</h1><div class="meta"><b>status</b><span><span class="badge approved">approved</span></span><b>scope</b><span>collector</span><b>risks</b><span>R-2, R-5, R-8, R-9</span><b>depends_on</b><span>D-01, D-02</span><b>review_rounds</b><span>6</span></div></header>
 <h2 id="sec-1">1. 目的と範囲<a class="anchor" href="#sec-1">#</a></h2>
 <p>本書は、<a href="D-02.html">D-02</a> §4.1 が定めた <code>Source</code> 契約（入力なし → <code>RawArticle[]</code>、失敗は例外）を <strong>5 団体それぞれについてどう実装するか</strong>を定める。決めるのは、(1) 各 Source の共通構造（ファクトリのシグネチャ・<code>fetch()</code> の流れ・記事単位の破棄規則）、(2) 団体ごとの取得 URL と方式（RSS / HTML、ページ送りの有無と最大ページ数）、(3) パース規則（rss-parser のフィールド、cheerio のセレクタ）、(4) 団体固有の URL 正規化（相対 URL の解決、東宝の 3 ドメイン吸収。R-8）、(5) 日付書式の解釈と <code>domain/datetime.ts</code> への接続、(6) カテゴリ判定に使う表（全団体共通キーワード表 <code>COMMON_CATEGORY_KEYWORDS</code> の具体値、団体別のタグ対応表と追加キーワード表。R-5）、(7) サムネイルの取得方法、(8) パーサーのフィクスチャテストである。決めないのは、<code>RawArticle</code> の確定（<code>id</code>・<code>contentHash</code>・<code>normalizeUrl</code>・<code>normalizeTitle</code>・<code>thumbnail</code> の検証。<a href="D-02.html">D-02</a> §5.1）、Source の並行実行と失敗の集計（D-02 §5.1）、<code>articles.json</code> の形（<a href="D-01.html">D-01</a>）、app 側のすべてである。D-01 の決定（§8 #1〜#34）と D-02 の決定（§8 #1〜#36）は本書の前提であり、変更しない。</p>
 <p>セレクタとタグ文字列は調査レポート（2026-09-13）の記述から<strong>推測した初期値</strong>である。実サイトの HTML / RSS をフィクスチャとして保存した時点で、実装タスク（§10）が §4.2・§4.6 の値をフィクスチャに合わせて確定する。確定してよいのは値だけで、「どのフィールドをどこから取るか」の規則（§5）は変えない。</p>
@@ -1459,6 +1459,10 @@ export class StubHttpClient implements HttpClient {
 <tr>
 <td>2026-09-20</td>
 <td>design-review 通過（第 1 段階 3 周 / 第 2 段階 3 周）</td>
+</tr>
+<tr>
+<td>2026-09-20</td>
+<td>承認（approved）</td>
 </tr>
 </tbody></table>
 

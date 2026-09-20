@@ -19,4 +19,3 @@ jobs:
       - run: flutter analyze
       - run: dart analyze --fatal-infos # riverpod_lint（analysis_options.yaml の plugins:）用。flutter analyze はプラグインを実行しないため別実行する。通常の lint 失敗は先行の flutter analyze を見る
       - run: flutter test
-        if: hashFiles('app/test/**/*_test.dart') != '' # T-18 でテストを追加したら削除する

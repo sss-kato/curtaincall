@@ -19,6 +19,9 @@ dependencies:
   flutter_riverpod: ^3.0.0
   http: ^1.2.0
   logger: ^2.4.0
+  # TODO(T-18): D-04 §4.1・§4.8 に @immutable / meta 依存を追記したら
+  # このコメントを消す。
+  meta: ^1.18.0
   riverpod_annotation: ^3.0.0
 
 dev_dependencies:

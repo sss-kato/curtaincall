@@ -63,7 +63,7 @@ presentation / entry   →   application (UseCase)   →   domain (Entity, Repos
 - Widget テスト・個別クラスのユニットテストは**書かない**（UseCase テストで振る舞いを担保する）
 - 例外：infrastructure のパーサー（cheerio / rss-parser）は**実サイトの HTML / RSS をフィクスチャとして保存**し、パース結果を検証する。サイト改装（R-2）の検知が目的
 - 例外：外部境界の infrastructure 実装（http ラッパー・ファイル storage）は、外部 I/O を **fetch のスタブ・一時ディレクトリに差し替えて**検証してよい（対象は `FetchHttpClient`・`ArticlesFileStore`。D-02 §7.3・§8 #30）
-- 例外：入出力が値だけで I/O・Provider・Widget に触れない**純粋関数**（状態判定・並び順・日時書式・ライフサイクル判定・通知ペイロードの写像。app では `resolveListStatus`・`resolveReadDisplayState`・`compareArticles`・`formatPublishedDate`・`shouldSyncOnResume`・`parseNotificationTap`）は、関数ごとのテーブル駆動テストを実装ファイルと同じ相対パス（`test/features/<feature>/{domain,presentation}/`・`test/app/`・`test/core/ui/article/`）に置いてよい。対象は設計書 §7 に列挙したものに限る（D-04 §7・§8 #28）
+- 例外：入出力が値だけで I/O・Provider・Widget に触れない**純粋関数**（状態判定・並び順・日時書式・ライフサイクル判定・通知ペイロードの写像。app では `resolveListStatus`・`resolveReadDisplayState`・`compareArticles`・`formatPublishedDate`・`shouldSyncOnResume`・`parseNotificationTap`・`mergeSavedList`・`buildArticleCellModel`）は、関数ごとのテーブル駆動テストを実装ファイルと同じ相対パス（`test/features/<feature>/{domain,presentation}/`・`test/app/`・`test/core/ui/article/`）に置いてよい。対象は設計書 §7 に列挙したものに限る（D-04 §7・§8 #28、D-05 §7）
 - ネットワーク呼び出しはテスト内で**必ずモック**。実サイトへアクセスするテストは禁止
 
 ## app/（Flutter）
@@ -77,7 +77,7 @@ presentation / entry   →   application (UseCase)   →   domain (Entity, Repos
 
 ### ディレクトリ（feature-first × クリーンアーキテクチャ）
 
-D-04（approved）の §3.2 を正とする。要点のみ。
+D-04・D-05（approved）の §3.2 を正とする。要点のみ。
 
 ```
 lib/
@@ -92,6 +92,7 @@ lib/
     ui/
       status/      S-00 の共通状態表示 Widget
       article/     S-00 の記事セル（articles/domain にのみ依存）
+      list/        位置保持つき一覧（AnchoredListView。Flutter SDK にのみ依存）
   features/
     articles/      記事の取得・反映・一覧
       domain/      Article, ArticlesFeed (IF), ArticleSyncRepository / ArticleQueryRepository (IF)
@@ -102,6 +103,7 @@ lib/
     saved/         保存（あとで読む）
     settings/      設定
     notifications/ FCM トピック購読・通知許可
+    browser/       記事を開く（url_launcher）・ブラウザ選択
 test/
   features/<feature>/application/   UseCase テスト
   features/<feature>/{domain,presentation}/, app/, core/ui/article/   純粋関数の直接テスト（例外。テスト方針を参照）

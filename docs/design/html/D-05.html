@@ -1413,7 +1413,7 @@ final screenStatus = resolveListStatus(feed, hasVisible: true);          // hasV
 </tr>
 <tr>
 <td>全面表示</td>
-<td><code>screenStatus.full</code> が <code>loading</code> / <code>error</code> / <code>offline</code> のとき（<code>content</code>・<code>empty</code> は <code>PageView</code> を出す。<code>empty</code> のときは各 <code>HomePage</code> が ST-04 の <code>EmptyView</code> を <code>AnchoredListView.emptyView</code> に置く。S-01 §8 #14「空表示でも引っ張り更新できる」）は <code>PageView</code> の代わりに <code>FullLoadingView</code> / <code>FullErrorView(kind, onRetry)</code> をページ領域全体に出す（S-01 §8 #13。上部タブは表示したまま）</td>
+<td><code>screenStatus.full</code> が <code>loading</code> / <code>error</code> / <code>offline</code> のとき、<code>PageView</code> の代わりに <code>FullLoadingView</code> / <code>FullErrorView(kind, onRetry)</code> をページ領域全体に出す（S-01 §8 #13。上部タブは表示したまま）。<code>content</code> / <code>empty</code> のときは <code>PageView</code> を出す（<code>empty</code> の扱いは下記「ページの状態判定」）</td>
 </tr>
 <tr>
 <td>S-01/E-11</td>
@@ -1688,7 +1688,7 @@ bool _isHomeVisible() =&gt; ref.read(tabControllerProvider).index == 0 &amp;&amp
 <li><strong>失敗時</strong>：drift の例外はそのまま投げる（<code>logger.w</code>）</li>
 </ul>
 <p>呼び出し側（<code>SettingsScreen</code>）：<code>rejectedChromeUnavailable</code> を受けたら <code>ref.invalidate(chromeAvailableProvider)</code>（E-13 が活性のままだった = 表示が古い。再評価で S-03/ST-05 の見た目になる）。<code>applied</code> なら何もしない（チェックマークは <code>browserChoiceProvider</code> の再発火で移る）。§4.6 の唯一の形に当てはめると、結果の分岐は <code>try</code> の中に置く：<code>unawaited(() async { try { final r = await ref.read(selectBrowserUseCaseProvider).execute(choice); if (r == SelectBrowserResult.rejectedChromeUnavailable) ref.invalidate(chromeAvailableProvider); } on Object catch (e, s) { _logger.w(&#39;ブラウザの選択に失敗&#39;, error: e, stackTrace: s); } }())</code>。</p>
-<p><strong><code>OpenNotificationSettingsUseCase</code></strong>（<code>notifications/application</code>。S-03/A-02）：<code>Future&lt;bool&gt; execute()</code> → <code>opener.openAppSettings()</code>。false は <code>logger.w</code>。画面は変えない（戻ったときの E-09 は D-04 の invalidate で更新）。呼び出し側（<code>SettingsScreen</code>）は §4.6 の唯一の形の <code>try</code> の中で <code>final ok = await ref.read(openNotificationSettingsUseCaseProvider).execute(); if (!ok) _logger.w(&#39;通知設定画面を開けなかった&#39;);</code> と書く（false は戻り値であって例外ではないので <code>catch</code> には乗らない。<code>catch</code> 側は <code>openAppSettings()</code> が例外を投げない契約（§4.4）のため実質的に到達しない）。</p>
+<p><strong><code>OpenNotificationSettingsUseCase</code></strong>（<code>notifications/application</code>。S-03/A-02）：<code>Future&lt;bool&gt; execute()</code> → <code>opener.openAppSettings()</code>。false は呼び出し側（<code>SettingsScreen</code>）が <code>logger.w</code>（UseCase はログを出さない）。画面は変えない（戻ったときの E-09 は D-04 の invalidate で更新）。呼び出し側（<code>SettingsScreen</code>）は §4.6 の唯一の形の <code>try</code> の中で <code>final ok = await ref.read(openNotificationSettingsUseCaseProvider).execute(); if (!ok) _logger.w(&#39;通知設定画面を開けなかった&#39;);</code> と書く（false は戻り値であって例外ではないので <code>catch</code> には乗らない。<code>catch</code> 側は <code>openAppSettings()</code> が例外を投げない契約（§4.4）のため実質的に到達しない）。</p>
 <h3 id="sec-5-10">5.10 ClearReadStatesUseCase（S-03/A-04〜A-06。F-05）<a class="anchor" href="#sec-5-10">#</a></h3>
 <ul>
 <li>A-04：<code>showCupertinoDialog&lt;bool&gt;</code> で <code>CupertinoAlertDialog</code>（S-03/E-16 の文言。「クリア」は <code>isDestructiveAction: true</code>）。A-05 = <code>false</code>、A-06 = <code>true</code></li>
@@ -1731,6 +1731,7 @@ bool _isHomeVisible() =&gt; ref.read(tabControllerProvider).index == 0 &amp;&amp
 /// 呼び出し側（HomePage・SavedScreen）が initState で生成し dispose で破棄する
 final class AnchoredListController {
   final ScrollController scrollController = ScrollController();   // AnchoredListView が CustomScrollView に渡す
+  _AnchoredListTarget? _target;   // attach() で保持、detach() で null
   /// animated = true：300ms・Curves.easeOut で先頭へ。false：jumpTo。標準形への復帰を含む（下記手順）
   Future&lt;void&gt; scrollToTop({required bool animated});
   /// State との接続。AnchoredListView の State が initState で attach(this)、dispose で detach() を呼ぶ。
@@ -2808,6 +2809,10 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <tr>
 <td>2026-09-20</td>
 <td>design-review 通過（第 1 段階 4 周 / 第 2 段階 3 周）</td>
+</tr>
+<tr>
+<td>2026-09-20</td>
+<td>design-review 第 2 段階・第 3 周で残った低 3 件を修正（承認前）。書き方のみで §8 の決定は変えていない：§5.1「全面表示」行の括弧を分割、§5.9 <code>OpenNotificationSettingsUseCase</code> の <code>logger.w</code> の層を明記、§5.11 <code>AnchoredListController</code> に <code>_target</code> の宣言を追加</td>
 </tr>
 </tbody></table>
 

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "companies": [
+    {
+      "id": "takarazuka",
+      "name": "宝塚歌劇団",
+      "shortName": "宝塚",
+      "fcmTopic": "takarazuka",
+      "sources": [{ "kind": "html", "url": "https://kageki.hankyu.co.jp/news/" }]
+    },
+    {
+      "id": "shiki",
+      "name": "劇団四季",
+      "shortName": "四季",
+      "fcmTopic": "shiki",
+      "sources": [{ "kind": "html", "url": "https://www.shiki.jp/navi/news/" }]
+    },
+    {
+      "id": "horipro",
+      "name": "ホリプロステージ",
+      "shortName": "ホリプロ",
+      "fcmTopic": "horipro",
+      "sources": [{ "kind": "rss", "url": "https://horipro-stage.jp/feed/" }]
+    },
+    {
+      "id": "toho",
+      "name": "東宝（演劇）",
+      "shortName": "東宝",
+      "fcmTopic": "toho",
+      "sources": [
+        { "kind": "html", "url": "https://www.toho.co.jp/stage/topics/" },
+        { "kind": "html", "url": "https://www.toho.co.jp/stage/news/" }
+      ]
+    },
+    {
+      "id": "shinkansen",
+      "name": "劇団☆新感線",
+      "shortName": "新感線",
+      "fcmTopic": "shinkansen",
+      "sources": [{ "kind": "rss", "url": "https://blog.vi-shinkansen.co.jp/?feed=rss2" }]
+    }
+  ]
+}

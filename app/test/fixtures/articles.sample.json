@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-13T15:00:12+09:00",
+  "articles": [
+    {
+      "id": "3f9a1c2b7d5e8a10",
+      "companyId": "takarazuka",
+      "title": "宝塚友の会『ステージトーク in 東京』宙組 無料配信の実施について",
+      "url": "https://kageki.hankyu.co.jp/news/20260913_002.html",
+      "category": "streaming",
+      "publishedAt": "2026-09-13T00:00:00+09:00",
+      "fetchedAt": "2026-09-13T10:00:05+09:00",
+      "contentHash": "a41d0c9e2b7f6d31"
+    },
+    {
+      "id": "8c2e5f7a1b3d9e04",
+      "companyId": "horipro",
+      "title": "【重要】舞台『ハリー・ポッターと呪いの子』公演中止のお詫びと払い戻し対応実施のお知らせ",
+      "url": "https://horipro-stage.jp/hpcc_refund/",
+      "category": "other",
+      "publishedAt": "2026-09-08T18:04:51+09:00",
+      "fetchedAt": "2026-09-08T19:00:03+09:00",
+      "thumbnail": "https://horipro-stage.jp/wp/wp-content/uploads/2026/09/hpcc.jpg",
+      "contentHash": "5d7b9e1f3a2c4e68",
+      "updatedAt": "2026-09-10T12:00:07+09:00"
+    },
+    {
+      "id": "b7d3e9f1a5c2d804",
+      "companyId": "shinkansen",
+      "title": "／爆烈忠臣蔵／ゲキ×シネ2027年1月8日(金)全国公開決定！！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=13727",
+      "category": "streaming",
+      "publishedAt": "2026-09-11T12:00:00+09:00",
+      "fetchedAt": "2026-09-11T13:00:04+09:00",
+      "contentHash": "2e6c8a0d4f1b3957"
+    }
+  ]
+}

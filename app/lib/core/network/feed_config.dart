@@ -8,6 +8,9 @@ const String articlesFeedUrl = '${feedBaseUrl}articles.json';
 /// モバイル回線でも十分な長さ（D-04 §4.3）。
 const Duration feedTimeout = Duration(seconds: 15);
 
+/// 配信取得後の DB 反映に見込む余裕（D-04 §5.3）。
+const Duration syncOverallTimeoutMargin = Duration(seconds: 5);
+
 /// app 側の User-Agent。collector の UA（D-01 §4.7）と同じ書式で製品名を分ける。
 const String appUserAgent =
     'CurtainCall-iOS/1.0 (personal news reader; +https://github.com/sss-kato/curtaincall)';

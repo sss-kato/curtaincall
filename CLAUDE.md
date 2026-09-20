@@ -263,7 +263,7 @@ collector/  npm run lint && npx tsc --noEmit && npx vitest run
 | レビュー（第2段階） | `readability-reviewer` | opus | 可読性。命名・構造・コメント |
 | レビュー（第2段階） | `maintainability-reviewer` | opus | 保守性。テストの質・変更容易性・重複 |
 | 検証 | `verifier` | haiku | 品質ゲートの実行と結果報告 |
-| 設計 | `design-writer` | fable | docs/design/ の設計書の執筆と指摘修正（コードは書かない） |
+| 設計 | `design-writer` | opus | docs/design/ の設計書の執筆と指摘修正（コードは書かない） |
 | 設計レビュー（第1段階） | `design-spec-reviewer` | opus | 要件・調査レポート・上位設計書とのトレーサビリティ |
 | 設計レビュー（第1段階） | `design-architecture-reviewer` | opus | 設計段階でのクリーンアーキテクチャ・SOLID・規約適合 |
 | 設計レビュー（第1段階） | `design-adversarial-reviewer` | opus | 異常系・境界・障害・データ整合の抜け |
@@ -274,6 +274,12 @@ collector/  npm run lint && npx tsc --noEmit && npx vitest run
 
 レビュアーはすべて読み取り専用（Edit / Write を持たない）。出力は共通フォーマット（`判定: PASS | FAIL` + `[R-n]` 指摘）。設計・画面定義レビューの「場所」はファイル:行ではなく `D-xx.md §節番号` / `S-xx.md §節番号 ID` で示す。
 
+### モデルの運用
+
+- 実装エージェント（flutter-dev / collector-dev）は **sonnet で始める**。設計書がコード片・ファイル名・テストの group 名まで定めているため、設計書どおりに書く作業は sonnet で足りる想定
+- 同じタスクで第 1 段階が 3 周収束しない、または指摘が「設計書の読み違え」に集中する場合は、そのタスクから **opus に上げる**（`.claude/agents/*-dev.md` の `model` を変更してコミット）。判断は dev-loop の打ち切り報告を見て開発者が行う
+- レビュアーは精度優先で全員 opus。verifier は haiku（判断しないため）
+
 ### ループ
 
 1. 実装エージェントが実装とテストを書き、品質ゲートを通す
@@ -281,6 +287,6 @@ collector/  npm run lint && npx tsc --noEmit && npx vitest run
 3. 1人でも FAIL なら、全レビュアーの指摘をまとめて実装エージェントに渡して修正 → 手順2へ
 4. 全員 PASS なら **第2段階レビュー**：readability / maintainability（2人）を並列実行
 5. FAIL なら修正 → 手順4へ（第2段階は動作を変えないため第1段階に戻らない）
-6. **各段階とも3周で打ち切り。** 収束しなければ残課題を列挙して開発者に判断を仰ぐ
+6. **各段階とも3周で打ち切り。** 収束しなければ残課題を列挙して開発者に判断を仰ぐ（定型：FAIL したレビュアーだけで追加 1 周）。周ごとに WIP コミットを積み、`pm pr` で 1 コミットにまとめる
 7. `verifier` が品質ゲートを実行
 8. 開発者本人が最終レビューと動作確認

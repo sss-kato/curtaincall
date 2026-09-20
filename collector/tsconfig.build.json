@@ -1,0 +1,10 @@
+{
+  // 型検査用の tsconfig.json は test/ と vitest.config.ts も include するため rootDir を
+  // 置けない。dist/ に src/ だけを出力するビルド専用の設定として分離した
+  // （D-02 §4.9 の `tsc -p tsconfig.json` をこのファイルに置き換えている）。
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src"
+  },
+  "include": ["src"]
+}

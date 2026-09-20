@@ -1,1 +1,12 @@
 docs/tools/node_modules/
+collector/dist/
+collector/node_modules/
+collector/.run-summary.json
+data/articles.json.tmp
+
+# 秘密情報（CLAUDE.md「秘密情報は .env と GitHub Secrets のみ」）
+.env
+.env.*
+!.env.example
+**/serviceAccount*.json
+**/*-firebase-adminsdk-*.json

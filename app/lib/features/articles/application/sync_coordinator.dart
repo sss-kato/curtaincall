@@ -60,7 +60,7 @@ final class SyncCompleted extends SyncEvent {
 
 /// `SyncArticlesUseCase` の実行を 1 つに絞る（S-01 §8 #12。D-04 §5.3）。
 /// Riverpod・Flutter に依存しない。
-class SyncCoordinator {
+final class SyncCoordinator {
   /// [_execute] を呼び出し、1 回の実行に [overallTimeout] を掛ける
   /// [SyncCoordinator] を作る。
   SyncCoordinator({required this._execute, required this.overallTimeout});

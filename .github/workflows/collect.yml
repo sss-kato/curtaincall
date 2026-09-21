@@ -1,0 +1,107 @@
+name: collect
+on:
+  schedule:
+    - cron: "7 * * * *" # 毎時 7 分（UTC 指定だが毎時なので JST でも毎時 7 分）。遅延は許容（R-7）
+  workflow_dispatch:
+    inputs:
+      full_crawl:
+        description: "ページ送りを持つ情報源を初回相当の範囲まで遡る"
+        type: boolean
+        default: false
+permissions: {} # 既定は無権限。必要な権限は job 単位で最小限を宣言する（D-02 §5.6）
+concurrency:
+  group: collect
+  cancel-in-progress: false # 遅延で重なっても前の実行を殺さず順番に流す（R-7）
+jobs:
+  reject-non-main: # workflow_dispatch を main 以外のブランチで実行したときだけ動き、明示的に失敗する（§8 #35 の前提。§6）
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "collect は main でのみ実行する（ref: $REF）。workflow_dispatch の「Use workflow from」を main にして再実行する" >&2
+          exit 1
+  collect:
+    if: github.ref == 'refs/heads/main' # main 以外では収集・push・Pages アップロードのいずれも行わない（schedule は既定ブランチ = main でしか動かないので、効くのは workflow_dispatch だけ）
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # data/articles.json の push
+    outputs:
+      published: ${{ steps.summary.outputs.published }}
+      failed_sources: ${{ steps.summary.outputs.failed_sources }}
+      notifications_all_failed: ${{ steps.summary.outputs.notifications_all_failed }}
+    steps:
+      # 既定で GITHUB_TOKEN を remote に保存 → git push に使える。fetch-depth は既定の 1（shallow）
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: collector/.node-version
+          cache: npm
+          cache-dependency-path: collector/package-lock.json
+      - run: npm ci
+        working-directory: collector
+      - run: npm run build
+        working-directory: collector
+      - name: 収集・差分・確定・通知
+        working-directory: collector
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          CURTAINCALL_REQUIRE_NOTIFICATIONS: "" # フェーズ 5（Firebase 設定後）に "1" へ変える（§4.9、§8 #32）
+          CURTAINCALL_FULL_CRAWL: ${{ inputs.full_crawl && '1' || '' }}
+        run: npm start # 非 0 = 致命的失敗。ここで止まれば push も通知も済んでいない
+      - name: 実行サマリ
+        id: summary
+        if: ${{ !cancelled() }} # 前のステップが失敗してもサマリを出す（サマリ欠落で Pages を止めない）
+        working-directory: collector
+        run: |
+          if [ ! -f .run-summary.json ]; then
+            echo "published=unknown" >> "$GITHUB_OUTPUT"
+            echo "failed_sources=unknown" >> "$GITHUB_OUTPUT"
+            echo "notifications_all_failed=false" >> "$GITHUB_OUTPUT"
+            echo "実行サマリ .run-summary.json が無い（collector が書けなかった）" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "published=$(jq -r '.published' .run-summary.json)" >> "$GITHUB_OUTPUT"
+          # sourceFailures キー自体が欠けている（想定外の形）場合を「失敗 0 件」と誤解釈しないよう unknown に倒す
+          echo "failed_sources=$(jq -r '.sourceFailures | if type == "array" then length else "unknown" end' .run-summary.json)" >> "$GITHUB_OUTPUT"
+          echo "notifications_all_failed=$(jq -r '.notificationsSent == 0 and .notificationsFailed > 0' .run-summary.json)" >> "$GITHUB_OUTPUT"
+          # length は null でも 0 を返すため sourceFailures は無ガードで良い。join・to_entries は null で落ちるため // []・// {} を付ける
+          jq -r '"収集 \(.collected) 件 / 破棄 \(.discarded) / 新着 \(.created) / 更新 \(.updated) / 通知 \(.notificationsSent) 失敗 \(.notificationsFailed)（\(.notificationGateway)）/ 失敗した情報源 \(.sourceFailures | length) / fullCrawl \((.fullCrawlCompanyIds // []) | join(","))"' \
+            .run-summary.json >> "$GITHUB_STEP_SUMMARY"
+          # message は改行・制御文字を含み得る（collector 側で sanitizeFailureMessage 済みだが多層防御。§4.8）
+          jq -r '(.sourceFailures // [])[] | "- \(.companyId): \(.reason) \(.message | gsub("[\\r\\n]"; " ") | .[0:200])"' \
+            .run-summary.json >> "$GITHUB_STEP_SUMMARY"
+          jq -r '(.discardedByCompany // {}) | to_entries[] | select(.value > 0) | "- \(.key): 破棄 \(.value) 件（部分破棄。D-03 のセレクタを確認）"' .run-summary.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Pages 用にアップロード
+        if: ${{ !cancelled() && steps.summary.outputs.published != 'false' }} # true と unknown で行う（安全側。前回と同じ内容の再デプロイは無害）
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: data # data/ をサイトのルートとして公開（D-01 §4.7）
+      - name: 情報源の失敗を検知（R-2）
+        if: steps.summary.outputs.failed_sources != '0' # unknown も失敗にする（サマリが書けない状態を知らせる）
+        run: |
+          echo "失敗した情報源がある。ログとステップサマリを確認する" >&2
+          exit 1 # ジョブ失敗 → GitHub の既定のワークフロー失敗通知が届く（§8 #25）
+      - name: 通知の全滅を検知（F-07）
+        # sent == 0 かつ failed > 0（FCM 鍵の失効・権限剥奪。§8 #34）。!cancelled() が無いと直前の
+        # 「情報源の失敗を検知」が exit 1 したときにスキップされ、鍵失効のメッセージが出ない
+        if: ${{ !cancelled() && steps.summary.outputs.notifications_all_failed == 'true' }}
+        run: |
+          echo "新着があったが FCM 送信がすべて失敗した。FIREBASE_SERVICE_ACCOUNT の鍵と権限を確認する" >&2
+          exit 1 # articles.json は push 済みで Pages のアップロードも上で済んでいる。配信は止めない
+  deploy-pages:
+    needs: collect
+    if: ${{ !cancelled() && needs.collect.outputs.published != 'false' && needs.collect.outputs.published != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write # GitHub Pages のデプロイ
+      id-token: write # deploy-pages の OIDC
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

@@ -1,9 +1,9 @@
 // 参照する § は特記なき限り docs/design/D-02.md（§7.1）
 import { describe, expect, it } from "vitest";
-import type { Article } from "../../src/domain/article.js";
 import type { Company } from "../../src/domain/company.js";
 import { NOTIFICATION_BODY_MAX } from "../../src/domain/notification.js";
 import { NotifyNewArticles } from "../../src/application/notify-new-articles.js";
+import { buildArticle } from "../helpers/build-article.js";
 import { FakeNotificationGateway } from "../helpers/fake-notification-gateway.js";
 import { RecordingLogger } from "../helpers/recording-logger.js";
 
@@ -14,20 +14,6 @@ function buildCompany(overrides: Partial<Company> = {}): Company {
     shortName: "宝塚",
     fcmTopic: "takarazuka",
     sources: [{ kind: "html", url: "https://example.com/news" }],
-    ...overrides,
-  };
-}
-
-function buildArticle(overrides: Partial<Article> = {}): Article {
-  return {
-    id: "0123456789abcdef",
-    companyId: "takarazuka",
-    title: "見出し",
-    url: "https://example.com/news/1",
-    category: "other",
-    publishedAt: "2026-09-20T10:00:00+09:00",
-    fetchedAt: "2026-09-21T00:07:00+09:00",
-    contentHash: "fedcba9876543210",
     ...overrides,
   };
 }

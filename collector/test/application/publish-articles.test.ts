@@ -1,21 +1,15 @@
 // 参照する § は特記なき限り docs/design/D-02.md（§7.1）
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   PublishArticles,
   type PublishArticlesInput,
 } from "../../src/application/publish-articles.js";
-import {
-  ARTICLES_SCHEMA_VERSION,
-  type Article,
-  type ArticlesFile,
-} from "../../src/domain/article.js";
 import { PublishFailedError, type PublishOutcome } from "../../src/domain/articles-publisher.js";
-import { at } from "../helpers/array.js";
+import { buildArticle, buildArticlesFile } from "../helpers/build-article.js";
 import { FakePublisher } from "../helpers/fake-publisher.js";
 import { InMemoryArticleStore } from "../helpers/in-memory-article-store.js";
 import { RecordingLogger } from "../helpers/recording-logger.js";
 
-const GENERATED_AT = "2026-09-20T10:00:00+09:00";
 const KNOWN_COMPANY_IDS: ReadonlySet<string> = new Set(["co_a"]);
 
 /** SHA-256 の 16 進小文字 16 文字の体裁を満たすダミー id/contentHash */
@@ -23,46 +17,31 @@ function hex(n: number): string {
   return n.toString(16).padStart(16, "0");
 }
 
-function article(overrides: Partial<Article> = {}): Article {
-  return {
-    id: hex(1),
-    companyId: "co_a",
-    title: "見出し",
-    url: "https://example.com/a",
-    category: "other",
-    publishedAt: "2026-09-13T00:00:00+09:00",
-    fetchedAt: "2026-09-13T00:00:00+09:00",
-    contentHash: hex(100),
-    ...overrides,
-  };
-}
-
-function articlesFile(articles: readonly Article[]): ArticlesFile {
-  return { schemaVersion: ARTICLES_SCHEMA_VERSION, generatedAt: GENERATED_AT, articles };
-}
-
 interface Setup {
   readonly useCase: PublishArticles;
   readonly store: InMemoryArticleStore;
   readonly publisher: FakePublisher;
   readonly logger: RecordingLogger;
+  /** store.write・publisher.publish の呼び出し順を記録する共有配列 */
+  readonly calls: string[];
 }
 
 function setup(outcome: PublishOutcome | Error = "published"): Setup {
-  const store = new InMemoryArticleStore();
-  const publisher = new FakePublisher(outcome);
+  const calls: string[] = [];
+  const store = new InMemoryArticleStore(undefined, calls);
+  const publisher = new FakePublisher(outcome, calls);
   const logger = new RecordingLogger();
   const useCase = new PublishArticles(store, publisher, KNOWN_COMPANY_IDS, logger);
-  return { useCase, store, publisher, logger };
+  return { useCase, store, publisher, logger, calls };
 }
 
 describe("検証失敗", () => {
   it("団体 101 件で ArticlesValidationError になり writer.write が呼ばれない・issues に該当メッセージが入る・error ログが出る", async () => {
     const { useCase, store, publisher, logger } = setup();
     const articles = Array.from({ length: 101 }, (_, i) =>
-      article({ id: hex(1000 + i), url: `https://example.com/${i.toString()}` }),
+      buildArticle({ id: hex(1000 + i), url: `https://example.com/${i.toString()}` }),
     );
-    const input: PublishArticlesInput = { file: articlesFile(articles), note: "note" };
+    const input: PublishArticlesInput = { file: buildArticlesFile(articles), note: "note" };
 
     await expect(useCase.execute(input)).rejects.toMatchObject({
       name: "ArticlesValidationError",
@@ -78,10 +57,10 @@ describe("検証失敗", () => {
   it("id 重複で ArticlesValidationError になり writer.write が呼ばれない・issues に該当メッセージが入る", async () => {
     const { useCase, store } = setup();
     const articles = [
-      article({ id: hex(2), url: "https://example.com/x" }),
-      article({ id: hex(2), url: "https://example.com/y" }),
+      buildArticle({ id: hex(2), url: "https://example.com/x" }),
+      buildArticle({ id: hex(2), url: "https://example.com/y" }),
     ];
-    const input: PublishArticlesInput = { file: articlesFile(articles), note: "note" };
+    const input: PublishArticlesInput = { file: buildArticlesFile(articles), note: "note" };
 
     await expect(useCase.execute(input)).rejects.toMatchObject({
       name: "ArticlesValidationError",
@@ -92,8 +71,8 @@ describe("検証失敗", () => {
 
   it("未知 companyId で ArticlesValidationError になり writer.write が呼ばれない・issues に該当メッセージが入る", async () => {
     const { useCase, store } = setup();
-    const articles = [article({ id: hex(3), companyId: "co_unknown" })];
-    const input: PublishArticlesInput = { file: articlesFile(articles), note: "note" };
+    const articles = [buildArticle({ id: hex(3), companyId: "co_unknown" })];
+    const input: PublishArticlesInput = { file: buildArticlesFile(articles), note: "note" };
 
     await expect(useCase.execute(input)).rejects.toMatchObject({
       name: "ArticlesValidationError",
@@ -105,10 +84,8 @@ describe("検証失敗", () => {
 
 describe("成功時", () => {
   it("成功時は write → publish の順に呼ばれ、note がそのまま渡る", async () => {
-    const { useCase, store, publisher } = setup("published");
-    const writeSpy = vi.spyOn(store, "write");
-    const publishSpy = vi.spyOn(publisher, "publish");
-    const file = articlesFile([article()]);
+    const { useCase, store, publisher, calls } = setup("published");
+    const file = buildArticlesFile([buildArticle()]);
     const input: PublishArticlesInput = { file, note: "chore(collector): note" };
 
     const outcome = await useCase.execute(input);
@@ -116,14 +93,12 @@ describe("成功時", () => {
     expect(outcome).toBe("published");
     expect(store.writes).toEqual([file]);
     expect(publisher.notes).toEqual(["chore(collector): note"]);
-    const writeOrder = at(writeSpy.mock.invocationCallOrder, 0);
-    const publishOrder = at(publishSpy.mock.invocationCallOrder, 0);
-    expect(writeOrder).toBeLessThan(publishOrder);
+    expect(calls).toEqual(["write", "publish"]);
   });
 
   it("no_changes が返る", async () => {
     const { useCase } = setup("no_changes");
-    const input: PublishArticlesInput = { file: articlesFile([article()]), note: "note" };
+    const input: PublishArticlesInput = { file: buildArticlesFile([buildArticle()]), note: "note" };
 
     await expect(useCase.execute(input)).resolves.toBe("no_changes");
   });
@@ -133,7 +108,7 @@ describe("PublishFailedError の伝播", () => {
   it("publish が PublishFailedError を投げたらそのまま伝わる", async () => {
     const publishError = new PublishFailedError("push failed");
     const { useCase } = setup(publishError);
-    const input: PublishArticlesInput = { file: articlesFile([article()]), note: "note" };
+    const input: PublishArticlesInput = { file: buildArticlesFile([buildArticle()]), note: "note" };
 
     await expect(useCase.execute(input)).rejects.toBe(publishError);
   });
@@ -146,17 +121,17 @@ describe("issues の先頭 5 件", () => {
     // 100 件超過 1 issue + companyId 不明の記事を 6 件（6 issue）→ 合計 7 issue を発生させる
     const articles = [
       ...Array.from({ length: 101 }, (_, i) =>
-        article({ id: hex(4000 + i), url: `https://example.com/o${i.toString()}` }),
+        buildArticle({ id: hex(4000 + i), url: `https://example.com/o${i.toString()}` }),
       ),
       ...Array.from({ length: 6 }, (_, i) =>
-        article({
+        buildArticle({
           id: hex(5000 + i),
           companyId: "co_unknown",
           url: `https://example.com/u${i.toString()}`,
         }),
       ),
     ];
-    const input: PublishArticlesInput = { file: articlesFile(articles), note: "note" };
+    const input: PublishArticlesInput = { file: buildArticlesFile(articles), note: "note" };
 
     await expect(useCase.execute(input)).rejects.toMatchObject({
       name: "ArticlesValidationError",

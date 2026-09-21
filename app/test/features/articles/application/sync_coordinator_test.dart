@@ -5,28 +5,7 @@ import 'package:curtaincall/features/articles/application/sync_result.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// [SyncExecutor] のスタブ。呼び出しごとに [Completer] を作り、テストが
-/// 任意のタイミングで完了させられるようにする（D-04 §7）。
-class _StubExecutor {
-  final List<SyncTrigger> calls = [];
-  final List<bool Function()> isCancelledFns = [];
-  final List<Completer<SyncResult>> _completers = [];
-
-  int get callCount => calls.length;
-
-  Completer<SyncResult> completerAt(int index) => _completers[index];
-
-  Future<SyncResult> call(
-    SyncTrigger trigger, {
-    required bool Function() isCancelled,
-  }) {
-    calls.add(trigger);
-    isCancelledFns.add(isCancelled);
-    final completer = Completer<SyncResult>();
-    _completers.add(completer);
-    return completer.future;
-  }
-}
+import '../../../helpers/completer_stub.dart';
 
 const _timeout = SyncFailed(SyncFailureReason.timeout);
 const _succeeded = SyncSucceeded(
@@ -40,7 +19,7 @@ void main() {
   group('同時実行の抑止', () {
     test('実行中に run(pullToRefresh) を 2 回呼ぶ → execute は 1 回だけ呼ばれ、'
         ' 3 つの Future が同じ結果で完了する', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -59,7 +38,7 @@ void main() {
     });
 
     test('完了後に run を呼ぶ → 再び execute が呼ばれる', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -93,7 +72,7 @@ void main() {
     test('execute が完了しない → overallTimeout 経過後に SyncFailed(timeout) で完了し、'
         ' その後は新しい run が実行できる（FakeAsync）', () {
       fakeAsync((async) {
-        final stub = _StubExecutor();
+        final stub = SyncExecutorStub();
         final coordinator = SyncCoordinator(
           execute: stub.call,
           overallTimeout: const Duration(seconds: 5),
@@ -115,7 +94,7 @@ void main() {
         '1 回流れる（SyncStarted と対になり、inProgress が戻る）。'
         ' その後に遅れて完了した execute の結果は流れない', () {
       fakeAsync((async) {
-        final stub = _StubExecutor();
+        final stub = SyncExecutorStub();
         final coordinator = SyncCoordinator(
           execute: stub.call,
           overallTimeout: const Duration(seconds: 5),
@@ -140,7 +119,7 @@ void main() {
 
     test('タイムアウトした execute の isCancelled() → true になっている', () {
       fakeAsync((async) {
-        final stub = _StubExecutor();
+        final stub = SyncExecutorStub();
         SyncCoordinator(
           execute: stub.call,
           overallTimeout: const Duration(seconds: 5),
@@ -154,7 +133,7 @@ void main() {
     test('タイムアウトした execute を後から SyncSucceeded で完了させる → events に流れず、'
         ' run の戻り値も変わらない', () {
       fakeAsync((async) {
-        final stub = _StubExecutor();
+        final stub = SyncExecutorStub();
         final coordinator = SyncCoordinator(
           execute: stub.call,
           overallTimeout: const Duration(seconds: 5),
@@ -189,7 +168,7 @@ void main() {
         '[Started(launch), Completed(launch, timeout), '
         'Started(notificationTap)]', () {
       fakeAsync((async) {
-        final stub = _StubExecutor();
+        final stub = SyncExecutorStub();
         final coordinator = SyncCoordinator(
           execute: stub.call,
           overallTimeout: const Duration(seconds: 5),
@@ -213,7 +192,7 @@ void main() {
 
     test('タイムアウト後に始めた新しい run の isCancelled() → false', () {
       fakeAsync((async) {
-        final stub = _StubExecutor();
+        final stub = SyncExecutorStub();
         final coordinator = SyncCoordinator(
           execute: stub.call,
           overallTimeout: const Duration(seconds: 5),
@@ -231,7 +210,7 @@ void main() {
   group('通知タップの後追い', () {
     test('launch 実行中に run(notificationTap) → launch の完了後に '
         'execute(notificationTap) が 1 回呼ばれ、その結果で完了する', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -272,7 +251,7 @@ void main() {
     });
 
     test('実行中にさらに run(notificationTap) を呼ぶ → 後追いは 1 回のまま', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -295,7 +274,7 @@ void main() {
 
     test('notificationTap 実行中の run(notificationTap) → 後追いせず実行中の '
         'Future を返す', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -312,7 +291,7 @@ void main() {
     });
 
     test('後追いの予約中 → isRunning は後追いの完了まで true', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -334,7 +313,7 @@ void main() {
     test('launch の Completer を完了させた直後（後追いの開始と同じマイクロタスク内）に '
         'run(pullToRefresh) → execute(notificationTap) は 1 回だけで、'
         ' isRunning はその間 false にならない（後追い開始前の窓）', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -359,7 +338,7 @@ void main() {
 
   group('完了通知', () {
     test('実行 1 回 → events に SyncStarted と SyncCompleted が 1 回ずつ流れる', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -380,7 +359,7 @@ void main() {
 
     test('1 つの実行を 3 つの run が共有 → SyncCompleted は 1 回'
         ' （SyncController の sequence が 1 しか進まないことの根拠）', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -400,7 +379,7 @@ void main() {
 
     test('後追いがある → SyncCompleted(launch) の直後に SyncStarted(notificationTap) '
         'が流れる', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -427,7 +406,7 @@ void main() {
     test('実行中に dispose() を呼び、その後 execute を完了させる → 例外にならず'
         ' （閉じたコントローラに add しない）、run の Future はその結果で完了し、'
         ' その execute の isCancelled() は true', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -446,7 +425,7 @@ void main() {
     test('launch 実行中に run(notificationTap) で後追いを予約してから dispose() → '
         '予約の Future は SyncFailed(timeout) で完了し、その後 launch の execute を'
         ' 完了させても execute は追加で呼ばれない（呼び出し回数は 1 のまま）', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),
@@ -467,7 +446,7 @@ void main() {
 
     test('dispose() 後の run(pullToRefresh) → execute を呼ばず SyncFailed(timeout) '
         'で完了する', () async {
-      final stub = _StubExecutor();
+      final stub = SyncExecutorStub();
       final coordinator = SyncCoordinator(
         execute: stub.call,
         overallTimeout: const Duration(seconds: 30),

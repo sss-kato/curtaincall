@@ -8,6 +8,8 @@ environment:
   flutter: ">=3.47.0"
 
 dependencies:
+  # PushSubscriptionSyncResult の == / hashCode（リストの値比較）に使う。
+  collection: ^1.19.0
   drift: ^2.20.0
   drift_flutter: ^0.2.0
   flutter:

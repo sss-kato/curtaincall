@@ -156,3 +156,109 @@ final class SyncCoordinatorProvider
 }
 
 String _$syncCoordinatorHash() => r'554918924a24acf2c217d7cfeb4fca0fc98ea5f0';
+
+/// D-05 §5.2。ホーム一覧の表示対象の絞り込みと並び。
+
+@ProviderFor(watchHomeArticlesUseCase)
+const watchHomeArticlesUseCaseProvider = WatchHomeArticlesUseCaseProvider._();
+
+/// D-05 §5.2。ホーム一覧の表示対象の絞り込みと並び。
+
+final class WatchHomeArticlesUseCaseProvider
+    extends
+        $FunctionalProvider<
+          WatchHomeArticlesUseCase,
+          WatchHomeArticlesUseCase,
+          WatchHomeArticlesUseCase
+        >
+    with $Provider<WatchHomeArticlesUseCase> {
+  /// D-05 §5.2。ホーム一覧の表示対象の絞り込みと並び。
+  const WatchHomeArticlesUseCaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'watchHomeArticlesUseCaseProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$watchHomeArticlesUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<WatchHomeArticlesUseCase> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  WatchHomeArticlesUseCase create(Ref ref) {
+    return watchHomeArticlesUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(WatchHomeArticlesUseCase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<WatchHomeArticlesUseCase>(value),
+    );
+  }
+}
+
+String _$watchHomeArticlesUseCaseHash() =>
+    r'2f933f7e4d569c64963ec64035fe0a3cde8721e3';
+
+/// D-05 §5.10。既読の一括クリア（S-03/A-06）。
+
+@ProviderFor(clearReadStatesUseCase)
+const clearReadStatesUseCaseProvider = ClearReadStatesUseCaseProvider._();
+
+/// D-05 §5.10。既読の一括クリア（S-03/A-06）。
+
+final class ClearReadStatesUseCaseProvider
+    extends
+        $FunctionalProvider<
+          ClearReadStatesUseCase,
+          ClearReadStatesUseCase,
+          ClearReadStatesUseCase
+        >
+    with $Provider<ClearReadStatesUseCase> {
+  /// D-05 §5.10。既読の一括クリア（S-03/A-06）。
+  const ClearReadStatesUseCaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'clearReadStatesUseCaseProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$clearReadStatesUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<ClearReadStatesUseCase> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ClearReadStatesUseCase create(Ref ref) {
+    return clearReadStatesUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ClearReadStatesUseCase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ClearReadStatesUseCase>(value),
+    );
+  }
+}
+
+String _$clearReadStatesUseCaseHash() =>
+    r'1ce81d1aa187e04c047f191e3da5a06a432d746b';

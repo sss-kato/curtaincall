@@ -6,8 +6,10 @@ library;
 
 import 'package:curtaincall/core/di/providers.dart';
 import 'package:curtaincall/core/network/feed_config.dart';
+import 'package:curtaincall/features/articles/application/clear_read_states_use_case.dart';
 import 'package:curtaincall/features/articles/application/sync_articles_use_case.dart';
 import 'package:curtaincall/features/articles/application/sync_coordinator.dart';
+import 'package:curtaincall/features/articles/application/watch_home_articles_use_case.dart';
 import 'package:curtaincall/features/articles/domain/articles_feed.dart';
 import 'package:curtaincall/features/articles/infrastructure/http_articles_feed.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -40,3 +42,13 @@ SyncCoordinator syncCoordinator(Ref ref) {
   ref.onDispose(coordinator.dispose);
   return coordinator;
 }
+
+/// D-05 §5.2。ホーム一覧の表示対象の絞り込みと並び。
+@Riverpod(keepAlive: true)
+WatchHomeArticlesUseCase watchHomeArticlesUseCase(Ref ref) =>
+    WatchHomeArticlesUseCase(ref.watch(articleQueryRepositoryProvider));
+
+/// D-05 §5.10。既読の一括クリア（S-03/A-06）。
+@Riverpod(keepAlive: true)
+ClearReadStatesUseCase clearReadStatesUseCase(Ref ref) =>
+    ClearReadStatesUseCase(ref.watch(readStateRepositoryProvider));

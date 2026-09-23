@@ -8,7 +8,7 @@ environment:
   flutter: ">=3.47.0"
 
 dependencies:
-  # PushSubscriptionSyncResult の == / hashCode（リストの値比較）に使う。
+  # リストの値比較（== / hashCode）に使う（D-04 §8 #24）。
   collection: ^1.19.0
   # CupertinoIcons のフォント本体。クラスは Flutter SDK にあるため
   # analyze は通るが、このパッケージが無いとアイコンが欠損グリフで描画される。

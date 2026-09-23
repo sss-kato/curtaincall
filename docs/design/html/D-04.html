@@ -45,7 +45,7 @@ a{color:var(--accent)}
 <a class="home" href="index.html">CurtainCall 設計書</a>
 <a href="index.html">目次</a><a href="D-01.html">D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</a><a href="D-02.html">D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</a><a href="D-03.html">D-03 Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応）</a><a href="D-04.html" style="color:var(--accent)">D-04 app 基盤設計（feature 構成・drift スキーマ・Riverpod / DI・HTTP・FCM 購読・100 件保持・通知許可）</a><a href="D-05.html">D-05 app 機能設計（UseCase 一覧・画面遷移・S-00〜S-03 の対応表・既読 / 保存 / フィルタ / ブラウザ選択）</a>
 <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
-<a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 層と依存の方向</a><a class="d3" href="#sec-3-2">3.2 ファイル配置</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Article と ArticlesFile（<code>features/articles/domain/</code>）</a><a class="d3" href="#sec-4-2">4.2 drift スキーマ（<code>lib/core/database/</code>）</a><a class="d3" href="#sec-4-3">4.3 配信の取得（<code>features/articles/domain/articles_feed.dart</code>・<code>core/network/</code>）</a><a class="d3" href="#sec-4-4">4.4 Repository インターフェースと UseCase の入出力型</a><a class="d3" href="#sec-4-5">4.5 Company（<code>features/companies/</code>）</a><a class="d3" href="#sec-4-6">4.6 PushGateway と NotificationTap（<code>features/notifications/domain/</code>）</a><a class="d3" href="#sec-4-7">4.7 Riverpod / DI（<code>lib/core/di/</code>）</a><a class="d3" href="#sec-4-8">4.8 プロジェクト設定と CI</a><a class="d3" href="#sec-4-9">4.9 ログ</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 起動（<code>bootstrap</code> → <code>runApp</code>）</a><a class="d3" href="#sec-5-2">5.2 SyncArticlesUseCase（配信の取得と端末 DB への反映）</a><a class="d3" href="#sec-5-3">5.3 取得の契機：<code>SyncCoordinator</code>（application）・<code>SyncController</code>（presentation）・<code>AppLifecycleSync</code>（app）</a><a class="d3" href="#sec-5-4">5.4 共通状態表示の判定（<code>core/ui/status/list_status.dart</code>・<code>features/articles/presentation/list_status.dart</code>）</a><a class="d3" href="#sec-5-5">5.5 記事セルの既読・更新バッジの判定（<code>features/articles/domain/read_display_state.dart</code>）</a><a class="d3" href="#sec-5-6">5.6 SyncPushSubscriptionsUseCase（購読の同期）</a><a class="d3" href="#sec-5-7">5.7 RequestNotificationPermissionUseCase と通知タップの受け取り</a><a class="d3" href="#sec-5-8">5.8 下部タブバー（<code>lib/app/root_tabs.dart</code>・<code>tab_controller.dart</code>・<code>tab_reselect.dart</code>・<code>root_tab.dart</code>）</a><a class="d3" href="#sec-5-9">5.9 共通 Widget と外観</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
+<a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 層と依存の方向</a><a class="d3" href="#sec-3-2">3.2 ファイル配置</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Article と ArticlesFile（<code>features/articles/domain/</code>）</a><a class="d3" href="#sec-4-2">4.2 drift スキーマ（<code>lib/core/database/</code>）</a><a class="d3" href="#sec-4-3">4.3 配信の取得（<code>features/articles/domain/articles_feed.dart</code>・<code>core/network/</code>）</a><a class="d3" href="#sec-4-4">4.4 Repository インターフェースと UseCase の入出力型</a><a class="d3" href="#sec-4-5">4.5 Company（<code>features/companies/</code>）</a><a class="d3" href="#sec-4-6">4.6 PushGateway と NotificationTap（<code>features/notifications/domain/</code>）</a><a class="d3" href="#sec-4-7">4.7 Riverpod / DI（<code>lib/core/di/</code>）</a><a class="d3" href="#sec-4-8">4.8 プロジェクト設定と CI</a><a class="d3" href="#sec-4-9">4.9 ログ</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 起動（<code>bootstrap</code> → <code>runApp</code>）</a><a class="d3" href="#sec-5-2">5.2 SyncArticlesUseCase（配信の取得と端末 DB への反映）</a><a class="d3" href="#sec-5-3">5.3 取得の契機：<code>SyncCoordinator</code>（application）・<code>SyncController</code>（presentation）・<code>AppLifecycleSync</code>（app）</a><a class="d3" href="#sec-5-4">5.4 共通状態表示の判定（<code>core/ui/status/list_status.dart</code>・<code>features/articles/presentation/list_status.dart</code>）</a><a class="d3" href="#sec-5-5">5.5 記事セルの既読・更新バッジの判定（<code>features/articles/domain/read_display_state.dart</code>）</a><a class="d3" href="#sec-5-6">5.6 購読の同期（<code>SyncPushSubscriptionsUseCase</code> と <code>PushSubscriptionCoordinator</code>）</a><a class="d3" href="#sec-5-7">5.7 RequestNotificationPermissionUseCase と通知タップの受け取り</a><a class="d3" href="#sec-5-8">5.8 下部タブバー（<code>lib/app/root_tabs.dart</code>・<code>tab_controller.dart</code>・<code>tab_reselect.dart</code>・<code>root_tab.dart</code>）</a><a class="d3" href="#sec-5-9">5.9 共通 Widget と外観</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
 </nav>
 <main>
 <header><h1>D-04 app 基盤設計（feature 構成・drift スキーマ・Riverpod / DI・HTTP・FCM 購読・100 件保持・通知許可）</h1><div class="meta"><b>status</b><span><span class="badge draft">draft</span></span><b>scope</b><span>app</span><b>features</b><span>F-02, F-05, F-06, F-07, F-08, F-09, F-10, F-11</span><b>risks</b><span>R-6</span><b>depends_on</b><span>D-01</span><b>screens</b><span>S-00, S-01, S-02, S-03</span><b>review_rounds</b><span>8</span></div></header>
@@ -490,6 +490,7 @@ a{color:var(--accent)}
   SC --&gt; SHARED
   SC --&gt; PV
   SC --&gt; UC
+  SC --&gt; ENT
   PV --&gt; UC
   PV --&gt; IMPL
   UC --&gt; IF
@@ -527,12 +528,11 @@ a{color:var(--accent)}
 </tr>
 <tr>
 <td>feature の presentation（<code>articles</code> / <code>saved</code> / <code>settings</code>。D-05 を含む）</td>
-<td><code>lib/app/</code> の<strong>共有 Provider ファイルだけ</strong>（<code>tab_controller.dart</code>・<code>tab_reselect.dart</code>・<code>root_tab.dart</code>。図の <code>SHARED</code>）</td>
-<td>S-00/A-01・A-02 と S-01/ST-15 は下部タブの状態を画面から触る必要がある。参照先を「feature の presentation を import しないファイル」に限ることで、他 feature の presentation を推移的に取り込まない（<code>app.dart</code>・<code>root_tabs.dart</code>・<code>app_lifecycle_sync.dart</code> は参照禁止。§5.8・§8 #46）</td>
+<td><code>lib/app/</code> の<strong>共有 Provider ファイルだけ</strong>（<code>tab_controller.dart</code> = <code>tabControllerProvider</code>・<code>tab_reselect.dart</code> = <code>tabReselectProvider</code>・<code>root_tab.dart</code>。図の <code>SHARED</code>）</td>
+<td>S-00/A-01・A-02 と S-01/ST-15 は下部タブの状態を画面から触る必要がある。<strong>共有 Provider は「feature の presentation を import しないファイル」に置く</strong>：3 画面の presentation を import する Widget ファイル（<code>root_tabs.dart</code>）に Provider を置くと、それを読む feature の presentation が他 feature の presentation を推移的に取り込み、CLAUDE.md の禁止事項に反する（<code>app.dart</code>・<code>root_tabs.dart</code>・<code>app_lifecycle_sync.dart</code> は参照禁止。§5.8・§8 #46）。D-05 が同じ規則で <code>lib/app/</code> に足す <code>minuteClockProvider</code> も同じ制約に従う（置き場と定義は <strong>D-05 の所管</strong>で、本書 §3.2 のツリーには載せない）</td>
 </tr>
 </tbody></table>
 <p><code>articles/infrastructure</code> が <code>settings</code> の <code>feed_*</code> キーのために <code>settings/domain</code> を import することはしない。同期状態のキーは <code>articles/infrastructure/feed_state_keys.dart</code>（<code>FeedStateKeys</code>）に置き（読み書きするのは <code>DriftArticleRepository</code> だけで、domain の型・UseCase は参照しない。§8 #47）、<code>settings</code> テーブルへの読み書きは <code>AppDatabase</code>（<code>core/database</code>）の共通アクセサ経由で行う（§4.2・§4.4）。</p>
-<p><strong>feature の presentation が参照してよい <code>lib/app/</code> の共有 Provider</strong>（<code>tabReselectProvider</code>・<code>tabControllerProvider</code>・D-05 の <code>minuteClockProvider</code>）は、<strong>feature の presentation を import しないファイル</strong>に置く（<code>tab_reselect.dart</code>・<code>tab_controller.dart</code>）。3 画面の presentation を import する Widget ファイル（<code>root_tabs.dart</code>）に Provider を置くと、それを読む feature の presentation が他 feature の presentation を推移的に取り込み、CLAUDE.md の禁止事項に反する（§5.8。§8 #46）。</p>
 <h3 id="sec-3-2">3.2 ファイル配置<a class="anchor" href="#sec-3-2">#</a></h3>
 <pre><code>app/
   pubspec.yaml                  §4.8。assets に assets/companies.json を登録（D-01 §8 #28）
@@ -644,7 +644,7 @@ a{color:var(--accent)}
       mock_feed_client.dart       package:http の MockClient を組み立てる
       fake_push_gateway.dart      PushGateway のフェイク（呼び出し記録・許可状態の設定）
       test_articles.dart          Article のビルダ（フィクスチャの改変用）
-      completer_stub.dart         Coordinator の execute スタブ（Completer で完了を制御・呼び出し記録。§7）
+      completer_stub.dart         Coordinator の execute スタブ（Completer で完了を制御・呼び出し記録。作るのは T-D、T-E も使う。§7・§10）
     fixtures/
       articles.sample.json        collector/test/fixtures/contract/articles.sample.json のコピー（D-01 §4.2）
     app/
@@ -667,7 +667,32 @@ a{color:var(--accent)}
 <h2 id="sec-4">4. データ<a class="anchor" href="#sec-4">#</a></h2>
 <h3 id="sec-4-1">4.1 Article と ArticlesFile（<code>features/articles/domain/</code>）<a class="anchor" href="#sec-4-1">#</a></h3>
 <p>D-01 §4.1 と同じ名前のフィールドを持つ。日時は <code>DateTime.parse</code> でオフセット付きとして解釈し（結果は <code>isUtc == true</code>）、表示時に <code>toLocal()</code> する（S-00 §7.3）。<code>category</code> は配信の文字列をそのまま保持し、表示時に <code>Category.fromValue</code> で 7 値に写す（未知の値は <code>other</code>。S-00 §7.2）。<code>id</code>・<code>contentHash</code>・<code>companyId</code> は不透明な文字列として扱い、再計算・検証しない（D-01 §3.1）。本文に相当するフィールドは持たない（要件 §7）。</p>
-<p><strong>domain の不変クラス（値オブジェクト）には <code>@immutable</code>（<code>package:meta</code>。§4.8）を付ける</strong>（§4.1・§4.3・§4.4・§4.5・§4.6・§4.7 で定義するもの。可変フィールドの混入を analyzer が検出する。<code>ignore_for_file</code> で lint を黙らせない。T-18 の追随事項）。<code>sealed</code> 階層は基底クラスに 1 つ付ければ派生にも効く。<code>core/ui/</code> 側の Widget・モデル（<code>ArticleCellModel</code>・<code>ListStatus</code>）は <code>package:meta</code> ではなく <code>package:flutter/foundation.dart</code> の <code>@immutable</code> を使う（<code>core/ui/</code> の import を Flutter SDK と <code>articles/domain</code> に限るため。§10 T-F2a・T-F2b）。<strong><code>core/ui/status/list_status.dart</code> の import も <code>package:flutter/foundation.dart</code> 1 つだけ</strong>とし、feature・application・riverpod は import しない（§8 #51 の目的は「<code>core/ui/status</code> → <code>articles/application</code> の辺を作らない」ことであり、Flutter SDK の import はこれを損なわない）。</p>
+<p><strong>不変クラス（値オブジェクト）には <code>@immutable</code> を付ける。対象は節ではなくクラスで決める</strong>（節で決めると同じ節の中で付け忘れても気づけず、<code>dart analyze</code> でも差が出ないため）：</p>
+<table>
+<thead>
+<tr>
+<th>対象</th>
+<th>クラス</th>
+<th><code>@immutable</code> の import 元</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>§8 #24 に挙げた不変クラス<strong>すべて</strong></td>
+<td><code>Article</code>・<code>Company</code>・<code>ArticlesFile</code>・<code>FeedApplyPlan</code>・<code>FeedApplyResult</code>・<code>SyncResult</code>（<code>SyncSucceeded</code>・<code>SyncOffline</code>・<code>SyncFailed</code>）・<code>StaleFeedDiscarded</code>・<code>SyncStatus</code>・<code>SyncEvent</code>（<code>SyncStarted</code>・<code>SyncCompleted</code>）・<code>FeedStatus</code>・<code>ResumeSyncDecision</code>・<code>NotificationTap</code>・<code>PushSubscriptionSyncResult</code></td>
+<td><code>package:meta</code>（§4.8）</td>
+</tr>
+<tr>
+<td>同上のうち <code>core/ui/</code> に置くもの</td>
+<td><code>ArticleCellModel</code>（§5.9）・<code>ListStatus</code>（§5.4）</td>
+<td><code>package:flutter/foundation.dart</code>（<code>core/ui/</code> の import を Flutter SDK と <code>articles/domain</code> に限るため。§10 T-F2a・T-F2b）</td>
+</tr>
+<tr>
+<td>§4.3 の取得結果と例外</td>
+<td><code>FeedFetchResult</code>（<code>FeedNotModified</code>・<code>FeedFetched</code>）・<code>FeedOfflineException</code>・<code>FeedErrorException</code></td>
+<td><code>package:meta</code></td>
+</tr>
+</tbody></table>
+<p><code>enum</code>・インターフェース（<code>abstract interface class</code>）・定数置き場（<code>abstract final class</code> の <code>FeedStateKeys</code>・<code>SettingKeys</code>）には付けない（インスタンスを持たないため）。<code>sealed</code> 階層は基底クラスに 1 つ付ければ派生にも効く（上表の <code>SyncResult</code>・<code>SyncEvent</code>・<code>FeedFetchResult</code>）。可変フィールドの混入を analyzer が検出する。<code>ignore_for_file</code> で lint を黙らせない（T-18 の追随事項）。<strong><code>core/ui/status/list_status.dart</code> の import も <code>package:flutter/foundation.dart</code> 1 つだけ</strong>とし、feature・application・riverpod は import しない（§8 #51 の目的は「<code>core/ui/status</code> → <code>articles/application</code> の辺を作らない」ことであり、Flutter SDK の import はこれを損なわない）。</p>
 <pre><code class="language-dart">// lib/features/articles/domain/article.dart
 /// 記事（D-01 §4.1）。不変。== と hashCode は全フィールドで手書きする（freezed は使わない。§8 #24）
 @immutable
@@ -1051,6 +1076,7 @@ final class FeedApplyPlan {
                                   //   null = 行を変えない（前回の値を保持）。端末時計より feedGeneratedAtFutureTolerance 以上未来の値を基準に採らないための指定（§5.2 手順 4 (a)）
 }
 
+@immutable
 final class FeedApplyResult {
   const FeedApplyResult({required this.deleted});
   final int deleted;              // 削除した記事数（保存済みは含まれない）
@@ -1151,6 +1177,7 @@ sealed class SyncResult {
 }
 
 /// 後退防止（§5.2 手順 4）で 200 の本文を破棄したことの記録。SyncController が logger.w に出す（UseCase は Logger を持たない。§4.9）
+@immutable
 final class StaleFeedDiscarded {
   const StaleFeedDiscarded({required this.previous, required this.received});
   final DateTime previous;   // settings.feed_generated_at（前回反映した版）
@@ -1187,6 +1214,7 @@ final class SyncFailed extends SyncResult {
 /// SyncPushSubscriptionsUseCase の結果（§5.6）。値はトピック名（Company.fcmTopic）。画面には出さない（S-03 §8 #4）。
 /// List を持つため const コンストラクタにせず、受け取った List を List.unmodifiable で複製して不変にする
 /// （呼び出し側が後から add しても結果が変わらない。§8 #24）
+@immutable
 final class PushSubscriptionSyncResult {
   PushSubscriptionSyncResult({
     required List&lt;String&gt; subscribed,
@@ -1198,7 +1226,7 @@ final class PushSubscriptionSyncResult {
 
   final List&lt;String&gt; subscribed;
   final List&lt;String&gt; unsubscribed;
-  final List&lt;String&gt; failed;      // subscribe / unsubscribe が例外を投げた団体。1 件以上ならフォアグラウンド復帰時に再実行する（§5.6 resyncIfNeeded、§8 #37）
+  final List&lt;String&gt; failed;      // subscribe / unsubscribe が例外を投げた団体。1 件以上ならフォアグラウンド復帰時に再実行する（§5.6.3、§8 #37）
   bool get hasFailure =&gt; failed.isNotEmpty;
 
   /// List フィールドの比較は package:collection の ListEquality で行う（§4.8・§8 #24）
@@ -1550,7 +1578,7 @@ jobs:
 </ol>
 </li>
 <li><strong>出力</strong>：画面（<code>CurtainCallApp</code> → <code>RootTabs</code>。初期タブはホーム = S-00/ST-20）</li>
-<li><strong>失敗時</strong>：<code>buildOverrides</code> 手順 4 の失敗（アセット欠落・<code>schemaVersion</code> 不一致・<code>id</code> 重複）はビルドの不備なので <code>StateError</code> をそのまま投げてクラッシュさせる（黙って空のタブで起動しない。§6）。手順 3 は例外を投げない（open の失敗は最初のクエリで <code>SyncFailed(storage)</code> または各画面の Stream エラーとして現れる）</li>
+<li><strong>失敗時</strong>：<code>buildOverrides</code> 手順 4 の失敗（アセットを読み出せない、または <strong>§4.5 の検証 6 件のいずれかに反した</strong>）はビルドの不備なので例外（検証違反は <code>StateError</code>）をそのまま投げてクラッシュさせる（黙って空のタブで起動しない。§6）。手順 3 は例外を投げない（open の失敗は最初のクエリで <code>SyncFailed(storage)</code> または各画面の Stream エラーとして現れる）</li>
 </ul>
 <p>取得は <code>runApp</code> の後に <code>AppLifecycleSync</code>（§5.3）が始める。DB の記事は取得を待たずに表示される（要件 §5 起動速度）。</p>
 <h3 id="sec-5-2">5.2 SyncArticlesUseCase（配信の取得と端末 DB への反映）<a class="anchor" href="#sec-5-2">#</a></h3>
@@ -1672,6 +1700,7 @@ typedef SyncExecutor = Future&lt;SyncResult&gt; Function(SyncTrigger trigger, {r
 
 /// 完了通知（§8 #40）。SyncController はこれだけを購読して SyncStatus を更新する。
 /// 2 クラスとも == / hashCode を全フィールドで定義する（テストが emitsInOrder で期待値と比較するため。§8 #24）
+@immutable
 sealed class SyncEvent {
   const SyncEvent();
 }
@@ -1736,7 +1765,7 @@ final class SyncCoordinator {
 <li><code>events</code> に <code>SyncStarted(trigger)</code> を流す</li>
 <li><code>future = execute(trigger, isCancelled: isCancelled).timeout(overallTimeout, onTimeout: () { _generation += 1; return const SyncFailed(SyncFailureReason.timeout); }).catchError((_) =&gt; const SyncFailed(SyncFailureReason.storage))</code>（<code>onTimeout</code> で <code>_generation</code> を進めることで、裏で生き続ける <code>execute</code> の <code>isCancelled()</code> が true になり、<code>applyFeed</code> の直前で破棄される。§5.2。Dart の <code>Future.timeout</code> は元の処理を中断しない。<code>.timeout()</code> の戻り値 <code>future</code> は 1 度しか完了しないので、裏の <code>execute</code> が後から完了しても手順 5 は再び走らない）</li>
 <li><code>_current = (trigger, future)</code></li>
-<li><code>future.then((result) { if (!_disposed) events に SyncCompleted(trigger, result); _onFinished(); })</code>。<strong>流すかどうかの判定は <code>!_disposed</code> だけで行い、世代番号と比べない</strong>（<code>_disposed</code> は <code>dispose()</code> で true。閉じたコントローラに add しない。同様に手順 2 の <code>SyncStarted</code> も <code>_disposed</code> なら流さない）。世代比較が不要な理由：<code>_start</code> は <code>_current</code> が空のときにしか呼ばれず（手順 3）、実行が終わるまで次の <code>_start</code> が始まらないため、<code>_start</code> 1 回 = <code>future</code> 1 つ = <code>SyncCompleted</code> 1 回が構造的に保たれる。タイムアウトで諦めた実行の遅れた完了は <code>.timeout()</code> が張った <code>future</code> には届かない（既に完了済み）ので、手順 5 が再び走ることはない。逆に世代比較（<code>gen == _generation</code>）を入れると、タイムアウト時に <code>_generation</code> を進めた自分自身の <code>SyncFailed(timeout)</code> が捨てられて <code>inProgress</code> が true のまま戻らなくなるため、それを救うための <code>_timedOutGeneration</code> が必要になっていた。<code>!_disposed</code> だけにすればその補助状態を持たずに済む。<code>_onFinished</code>：<code>_disposed</code> なら <code>_current = null</code> にするだけで後追いを始めない（<code>_reserved</code> は <code>dispose()</code> が既に完了させて null にしている。§8 #39）。<code>_disposed</code> でなく <code>_reserved</code> があれば <strong>同じ同期処理の中で</strong> <code>final c = _reserved; _reserved = null; _start(notificationTap).then(c.complete);</code> を行い（<code>_current</code> を空にせず次の実行に置き換える = スロットが空く瞬間が無い。§8 #39）、無ければ <code>_current = null</code>。<strong>後追いを開始する時点で <code>_reserved</code> を null に戻す</strong>のは、予約の意味を「次に始める 1 回」に限定するため（後追いの実行中に入った <code>run(notificationTap)</code> は新しい予約を作れる。<code>dispose()</code> が予約を完了させるときも同じ <code>final c = _reserved; _reserved = null; …</code> の形。<code>PushSubscriptionCoordinator</code> の §5.6 手順 3 が前例として引く）</li>
+<li><code>future.then((result) { if (!_disposed) events に SyncCompleted(trigger, result); _onFinished(); })</code>。<strong>流すかどうかの判定は <code>!_disposed</code> だけで行い、世代番号と比べない</strong>（<code>_disposed</code> は <code>dispose()</code> で true。閉じたコントローラに add しない。同様に手順 2 の <code>SyncStarted</code> も <code>_disposed</code> なら流さない）。世代比較が不要な理由：<code>_start</code> は <code>_current</code> が空のときにしか呼ばれず（手順 3）、実行が終わるまで次の <code>_start</code> が始まらないため、<code>_start</code> 1 回 = <code>future</code> 1 つ = <code>SyncCompleted</code> 1 回が構造的に保たれる。タイムアウトで諦めた実行の遅れた完了は <code>.timeout()</code> が張った <code>future</code> には届かない（既に完了済み）ので、手順 5 が再び走ることはない。逆に世代比較（<code>gen == _generation</code>）を入れると、タイムアウト時に <code>_generation</code> を進めた自分自身の <code>SyncFailed(timeout)</code> が捨てられて <code>inProgress</code> が true のまま戻らなくなるため、それを救うための <code>_timedOutGeneration</code> が必要になっていた。<code>!_disposed</code> だけにすればその補助状態を持たずに済む。<code>_onFinished</code>：<code>_disposed</code> なら <code>_current = null</code> にするだけで後追いを始めない（<code>_reserved</code> は <code>dispose()</code> が既に完了させて null にしている。§8 #39）。<code>_disposed</code> でなく <code>_reserved</code> があれば <strong>同じ同期処理の中で</strong> <code>final c = _reserved; _reserved = null; _start(notificationTap).then(c.complete);</code> を行い（<code>_current</code> を空にせず次の実行に置き換える = スロットが空く瞬間が無い。§8 #39）、無ければ <code>_current = null</code>。<strong>後追いを開始する時点で <code>_reserved</code> を null に戻す</strong>のは、予約の意味を「次に始める 1 回」に限定するため（後追いの実行中に入った <code>run(notificationTap)</code> は新しい予約を作れる。<code>dispose()</code> が予約を完了させるときも同じ <code>final c = _reserved; _reserved = null; …</code> の形。<code>PushSubscriptionCoordinator</code> の §5.6.2 不変条件 I-2 が前例として引く）</li>
 <li><code>future</code> を返す</li>
 </ol>
 </li>
@@ -1747,6 +1776,7 @@ final class SyncCoordinator {
 <li><strong>タイムアウト後の遅れた完了</strong>：<code>execute</code> が <code>applyFeed</code> の直前で <code>isCancelled()</code> を見て破棄するため DB は変わらない。<code>SyncFailed(timeout)</code> を返す前に <code>isCancelled()</code> を通過していた（<code>applyFeed</code> の実行中にタイムアウトした）場合は <code>applyFeed</code> は完了するが、その結果は <code>.timeout</code> が既に <code>SyncFailed(timeout)</code> で完了させた Future には届かず、<code>events</code> にも流れない。<strong>この古い <code>applyFeed</code> が新しい取得の <code>applyFeed</code> より先にコミットされること</strong>は、(1) drift が同じ DB へのトランザクションを呼び出し順に直列化すること、(2) §5.2 手順 8 が「<code>isCancelled()</code> の確認から <code>transaction()</code> の開始まで <code>await</code> を挟まない」ことの 2 つで保証する。どちらかが崩れると旧版が新版を上書きし、新着記事の削除と <code>feed_etag</code> の巻き戻りが起きる（§8 #39 が防ごうとした事象）</li>
 </ul>
 <pre><code class="language-dart">// lib/features/articles/presentation/sync_controller.dart
+@immutable
 final class SyncStatus {
   const SyncStatus({required this.inProgress, required this.lastResult, required this.sequence});
   final bool inProgress;
@@ -1832,6 +1862,7 @@ class SyncController extends _$SyncController {
 <p><code>launch</code> / <code>foreground</code> は対応外スキーマを検知済みなら UseCase の手順 0 で抑止される（§5.2、§8 #32）。</p>
 <pre><code class="language-dart">// lib/app/resume_sync_policy.dart
 /// resolveResumeSync の出力。== / hashCode は 2 フィールドで定義（§8 #24）
+@immutable
 final class ResumeSyncDecision {
   const ResumeSyncDecision({required this.shouldSync, required this.wasBackgrounded});
   final bool shouldSync;        // フォアグラウンド取得（SyncTrigger.foreground）を起動するか
@@ -1897,7 +1928,7 @@ Future&lt;void&gt; _syncSubscriptions() async {
   try {
     await ref.read(pushSubscriptionCoordinatorProvider).run();   // 直列化された唯一の入口（§5.6。§8 #41）
   } on Object catch (e, s) {
-    // run() は execute の例外（CompanyRepository.loadAll の StateError）を再スローする（§5.6「失敗時」）。
+    // run() は execute の例外（CompanyRepository.loadAll の StateError）を再スローする（§5.6.2「失敗時」）。
     // Error（StateError）も捕捉するため Exception ではなく Object で受ける（avoid_catches_without_on_clauses 対応）。記録するだけ
     _logger.w('購読同期に失敗', error: e, stackTrace: s);
   }
@@ -1919,14 +1950,14 @@ Future&lt;void&gt; _resyncSubscriptions() async {
   try {
     await ref.read(pushSubscriptionCoordinatorProvider).resyncIfNeeded();
   } on Object catch (e, s) {
-    // resyncIfNeeded() が始めた実行の例外はそのまま伝わる（§5.6「失敗時」）。
+    // resyncIfNeeded() が始めた実行の例外はそのまま伝わる（§5.6.3 手順 4・§5.6.2「失敗時」）。
     // Error（StateError）も捕捉するため Exception ではなく Object で受ける（avoid_catches_without_on_clauses 対応）。記録するだけ
     _logger.w('購読同期に失敗', error: e, stackTrace: s);
   }
 }</code></pre>
-<p><code>_onLaunch</code> の 3 手順は逐次（2 を await してから 3）で、1 だけを await しない。復帰時の 3 手順はすべて await せず独立に始める（互いに依存しない）。手順 3 は飛行中の実行を待つ間に次の復帰が来ても、<code>resyncIfNeeded()</code> が「待っている間に新しい実行が始まっていたら重ねない」規則を持ち（§5.6）、<code>run()</code> 自体も <code>PushSubscriptionCoordinator</code> が直列化するため <code>execute</code> が並走しない。D-05 の通知トグル（S-03/A-01）による購読同期も同じ <code>PushSubscriptionCoordinator.run()</code> を通るため、復帰時の再同期の実行中にトグルを操作しても直列化され、Coordinator が持つ直近の結果はトグル経路の失敗も含む（トグル操作で失敗した団体も次の復帰で再実行される。§8 #37・#41・#52）。</p>
+<p><code>_onLaunch</code> の 3 手順は逐次（2 を await してから 3）で、1 だけを await しない。復帰時の 3 手順はすべて await せず独立に始める（互いに依存しない）。手順 3 は飛行中の実行を待つ間に次の復帰が来ても、<code>resyncIfNeeded()</code> が「待っている間に新しい実行が始まっていたら重ねない」規則を持ち（§5.6.3 手順 2）、<code>run()</code> 自体も <code>PushSubscriptionCoordinator</code> が直列化するため <code>execute</code> が並走しない。D-05 の通知トグル（S-03/A-01）による購読同期も同じ <code>PushSubscriptionCoordinator.run()</code> を通るため、復帰時の再同期の実行中にトグルを操作しても直列化され、Coordinator が持つ直近の結果はトグル経路の失敗も含む（トグル操作で失敗した団体も次の復帰で再実行される。§8 #37・#41・#52）。</p>
 <h3 id="sec-5-4">5.4 共通状態表示の判定（<code>core/ui/status/list_status.dart</code>・<code>features/articles/presentation/list_status.dart</code>）<a class="anchor" href="#sec-5-4">#</a></h3>
-<p>S-00 §5.2 の「取得済みの記事の有無 × 取得中 × 直近の結果 × 表示対象の有無」を 1 か所で計算する純粋関数。入力のうち <code>hasArticles</code>・<code>inProgress</code>・<code>lastResult</code> は本書の Provider から、<code>hasVisible</code>（絞り込み後の表示対象が 1 件以上か）は配置画面（D-05）から与える。</p>
+<p>S-00 §5.2 の「取得済みの記事の有無 × 取得中 × 直近の結果 × 表示対象の有無」を<strong>ホーム（S-01）について</strong> 1 か所で計算する純粋関数。状態表示の<strong>型</strong>は 3 画面で共有し、<strong>判定</strong>はホーム専用に置く（置き場は下記。§8 #51）。入力のうち <code>hasArticles</code>・<code>inProgress</code>・<code>lastResult</code> は本書の Provider から、<code>hasVisible</code>（絞り込み後の表示対象が 1 件以上か）は配置画面（D-05）から与える。</p>
 <p><strong>置き場を 2 つに分ける</strong>（§8 #51）：状態表示の<strong>型</strong>（<code>ListStatus</code>・<code>FullView</code>）は 3 画面が使うため <code>lib/core/ui/status/list_status.dart</code>（import は <code>package:flutter/foundation.dart</code> だけ。§4.1）に置き、<strong>判定</strong>（<code>FeedStatus</code>・<code>resolveListStatus</code>・<code>resolveHasArticles</code>・<code>shouldLogCountError</code> と 2 つの Provider）はホーム（S-01）だけが使うため <code>lib/features/articles/presentation/list_status.dart</code> に置く。<strong><code>resolveListStatus</code> はホーム専用</strong>で、保存画面（S-02）は通さない（D-05 が <code>hasVisible</code> から <code>content</code> / <code>empty</code> を直接組み立てる。S-02 §3・§5（前文と「該当なし」の 3 行） が定めるとおり、本画面で発生する S-00 の共通状態表示は ST-12 のみ）。こうすることで <code>saved/presentation → articles/presentation</code> の import（CLAUDE.md の禁止事項）が生じない。</p>
 <pre><code class="language-dart">// lib/core/ui/status/list_status.dart（import は package:flutter/foundation.dart のみ。3 画面が使う型）
 enum FullView { content, loading, empty, error, offline }   // content 以外は排他の全面表示
@@ -1942,6 +1973,7 @@ final class ListStatus {
 }</code></pre>
 <pre><code class="language-dart">// lib/features/articles/presentation/list_status.dart（ホームの判定。core/ui/status/list_status.dart を import する）
 /// 判定の入力。hasArticles = 端末に記事が 1 件以上ある（in_feed を問わない）。null = 件数が未確定（写像は resolveHasArticles）
+@immutable
 final class FeedStatus {
   const FeedStatus({required this.hasArticles, required this.inProgress, required this.lastResult});
   final bool? hasArticles;
@@ -2168,7 +2200,9 @@ ReadDisplayState resolveReadDisplayState({required bool isRead, required bool ha
 </tr>
 </tbody></table>
 <p>端末に初めて入った記事は、配信に <code>updatedAt</code> があっても「新着」なのでバッジを付けない（S-01 §7.4「新着は未読として表示」。§8 #11）。</p>
-<h3 id="sec-5-6">5.6 SyncPushSubscriptionsUseCase（購読の同期）<a class="anchor" href="#sec-5-6">#</a></h3>
+<h3 id="sec-5-6">5.6 購読の同期（<code>SyncPushSubscriptionsUseCase</code> と <code>PushSubscriptionCoordinator</code>）<a class="anchor" href="#sec-5-6">#</a></h3>
+<p>購読の同期は 3 つに分けて定める。<strong>§5.6.1</strong> が購読・解除そのものを行う UseCase、<strong>§5.6.2</strong> がその実行を直列化する <code>PushSubscriptionCoordinator.run()</code>、<strong>§5.6.3</strong> がフォアグラウンド復帰時の再同期 <code>resyncIfNeeded()</code> と「<code>run()</code> と重ならない保証」である。手順番号は節ごとに独立しているので、他の節から参照するときは <code>§5.6.2 手順 1</code> のように節番号を添える。</p>
+<h4 id="sec-5-6-1">5.6.1 SyncPushSubscriptionsUseCase（購読・解除の実行）<a class="anchor" href="#sec-5-6-1">#</a></h4>
 <ul>
 <li><strong>入力</strong>：なし</li>
 <li><strong>依存</strong>：<code>CompanyRepository companies</code>、<code>SettingsRepository settings</code>、<code>PushGateway push</code>（フィールド名は §4.7 の Provider 引数と同じ）</li>
@@ -2181,9 +2215,10 @@ ReadDisplayState resolveReadDisplayState({required bool isRead, required bool ha
 </li>
 <li><strong>出力</strong>：<code>PushSubscriptionSyncResult(subscribed: List&lt;String&gt;, unsubscribed: List&lt;String&gt;, failed: List&lt;String&gt;)</code>（トピック名。ログとテスト用。画面には出さない。S-03 §8 #4）。<code>bool get hasFailure =&gt; failed.isNotEmpty;</code>（§4.4。<code>PushSubscriptionCoordinator.resyncIfNeeded()</code> の再実行判定に使う）</li>
 <li><strong>失敗時</strong>：手順 4（<code>subscribe</code> / <code>unsubscribe</code>）の失敗だけを捕捉して <code>failed</code> に積み、例外にしない。<strong>手順 1 <code>companies.loadAll()</code> と手順 2 <code>settings.notificationSettings()</code> の失敗はそのまま伝播する</strong>（前者は <code>StateError</code>＝ビルドの不備、後者は drift の例外＝DB 障害で、どちらも「全団体の購読状態が不明」であり <code>failed</code> を空のまま成功として返すと障害が隠れる）。呼び出し側は <code>PushSubscriptionCoordinator.run()</code> の戻り値を必ず await し、<code>on Object catch</code> で捕捉して <code>logger.w</code> に残す（§5.3・§8 #41）</li>
-<li><strong>呼び出し</strong>：起動時・復帰時（§5.3）と、D-05 の通知トグル操作（S-03/A-01）で設定を保存した直後（§8.1）。いずれも UseCase を直接呼ばず、下記の <code>PushSubscriptionCoordinator.run()</code> を通す。毎回全団体を冪等に同期し、前回の購読状態を端末に持たない（§8 #13）</li>
+<li><strong>呼び出し</strong>：起動時・復帰時（§5.3）と、D-05 の通知トグル操作（S-03/A-01）で設定を保存した直後（§8.1）。いずれも UseCase を直接呼ばず、<code>PushSubscriptionCoordinator.run()</code>（§5.6.2）を通す。毎回全団体を冪等に同期し、前回の購読状態を端末に持たない（§8 #13）</li>
 </ul>
-<p><strong><code>PushSubscriptionCoordinator</code></strong>（<code>notifications/application/push_subscription_coordinator.dart</code>。§8 #41・#52）：<code>SyncPushSubscriptionsUseCase</code> の呼び出しを直列化し、直近の結果を保持し、<strong>フォアグラウンド復帰時に再同期が要るかの判定も持つ</strong>。<code>SyncCoordinator</code> と同型で、Riverpod・Flutter に依存しない。<strong>公開するのは <code>run()</code> と <code>resyncIfNeeded()</code> の 2 メソッドだけ</strong>で、直近の結果（<code>_lastResult</code>）・直近が例外で終わったか（<code>_lastRunFailed</code>）・飛行中の Future（<code>_pending</code>）は内部状態にする（呼び出し側に組み合わせ判定をさせない。§8 #52）。</p>
+<h4 id="sec-5-6-2">5.6.2 PushSubscriptionCoordinator と <code>run()</code> の直列化<a class="anchor" href="#sec-5-6-2">#</a></h4>
+<p><strong><code>PushSubscriptionCoordinator</code></strong>（<code>notifications/application/push_subscription_coordinator.dart</code>。§8 #41・#52）：<code>SyncPushSubscriptionsUseCase</code>（§5.6.1）の呼び出しを直列化し、直近の結果を保持し、<strong>フォアグラウンド復帰時に再同期が要るかの判定も持つ</strong>（判定そのものは §5.6.3）。<code>SyncCoordinator</code> と同型で、Riverpod・Flutter に依存しない。<strong>公開するのは <code>run()</code> と <code>resyncIfNeeded()</code> の 2 メソッドだけ</strong>で、直近の結果（<code>_lastResult</code>）・直近が例外で終わったか（<code>_lastRunFailed</code>）・飛行中の Future（<code>_pending</code>）は内部状態にする（呼び出し側に組み合わせ判定をさせない。§8 #52）。</p>
 <pre><code class="language-dart">final class PushSubscriptionCoordinator {
   PushSubscriptionCoordinator({required Future&lt;PushSubscriptionSyncResult&gt; Function() execute});
 
@@ -2192,53 +2227,59 @@ ReadDisplayState resolveReadDisplayState({required bool isRead, required bool ha
   /// （**1 回の実行中は**予約 1 つまで。同じ実行の最中の 3 回目以降の呼び出しは予約済みの Future を返す。
   ///   再実行が始まると予約は空になるため、その再実行の最中に呼ばれた run() は**新しい予約**を作る。§8 #41）。
   /// 再実行は設定を読み直すため、実行中に変えた設定（トグル）が必ず反映される。
-  /// execute が例外を投げた場合（CompanyRepository.loadAll の StateError、SettingsRepository の DB 例外。§5.6「失敗時」）は、その実行を待つ run() の Future を同じ例外で完了させる（結果型に写さない）。
+  /// execute が例外を投げた場合（CompanyRepository.loadAll の StateError、SettingsRepository の DB 例外。§5.6.1「失敗時」）は、その実行を待つ run() の Future を同じ例外で完了させる（結果型に写さない）。
   /// 内部の直近結果は変えず「直近が例外で終わった」ことだけを記録する。予約があれば完了時と同じく次の execute() を始める。
   /// 呼び出し側（AppLifecycleSync・D-05 のトグル）は catch して logger.w に残す
   Future&lt;PushSubscriptionSyncResult&gt; run();
 
-  /// フォアグラウンド復帰時の再同期（§5.3 手順 3。§8 #37・#50・#52）。
+  /// フォアグラウンド復帰時の再同期（§5.3 手順 3・§5.6.3。§8 #37・#50・#52）。
   /// 「未開始なら開始／飛行中なら最後に完了する実行を待ってから判定／直近に failed か例外があれば再実行／
   ///   それ以外は何もしない」を 1 つのメソッドに閉じる。待っている間に起きた例外は握り潰して判定に進み、
   ///   **自分が開始した run() の例外はそのまま伝播する**（呼び出し側が logger.w に残す）。
-  /// 何も起動しなかった場合も正常に完了する（呼び出し側は unawaited で呼んでよい）
+  /// 何も起動しなかった場合も正常に完了する（例外だけが伝播する）。呼び出し側は戻り値を await して
+  ///   on Object catch で記録し、その**ラッパ**を unawaited で起動する（§5.3 の _resyncSubscriptions）
   Future&lt;void&gt; resyncIfNeeded();
 }</code></pre>
 <ul>
 <li><strong>内部状態</strong>：<code>_current</code>（実行中の <code>execute()</code> の Future。null = 実行中なし）、<code>_rerun</code>（再実行の予約。<code>Completer</code> 1 つまで）、<code>_lastResult</code>（直近に<strong>正常完了</strong>した実行の結果。起動をまたいで保持しない）、<code>_lastRunFailed</code>（直近の実行が例外で終わったか。正常完了のたびに false に戻す）、<code>_pending</code>（= <code>_rerun?.future ?? _current</code>。<strong>直列化された一連の実行のうち最後に完了する Future</strong>。予約が連鎖している間はいちばん新しい予約の Future。実行中でも予約でもなければ null）</li>
-<li><strong>ステップ</strong>（<code>run</code>）：<ol start="0">
-<li><strong>手順 1〜2 は <code>run()</code> の同期部分（最初の <code>await</code> より前）で行う。</strong> <code>run()</code> を <code>async</code> にして先頭で <code>await</code> を挟んだり、<code>_current</code> への代入を <code>execute()</code> の完了後に回したりしない。<code>_current</code>（と <code>_pending</code>）が <code>run()</code> の呼び出しと同じマイクロタスクで立つことが、<code>resyncIfNeeded()</code> の「重ねない」保証（下記ステップ 2）の前提になっている</li>
+<li><strong>手順</strong>（<code>run()</code>。上から順に 1 つだけが成立する分岐）：<ol>
 <li><code>_current</code> があれば、<code>_rerun</code>（<code>Completer</code> 1 つまで）を作って（あれば既存を）その Future を返す。<strong>同じ実行の最中の 3 回目以降の呼び出しは同じ <code>_rerun</code> の Future を返す</strong>（その実行中は予約が増えない）</li>
 <li><code>_current</code> が無ければ <code>execute()</code> を始め、完了時に <code>_lastResult</code> を更新（例外で終わった場合は <code>_lastResult</code> を変えず <code>_lastRunFailed = true</code>。正常完了なら <code>_lastRunFailed = false</code>）し、<code>_rerun</code> があれば同じ同期処理の中で次の <code>execute()</code> を始めて <code>_rerun</code> を完了させる（スロットを空けない）。無ければ <code>_current = null</code></li>
-<li><strong>再実行を開始する時点で <code>_rerun</code> を null に戻す。</strong> <code>final c = _rerun; _rerun = null; _start().then(c.complete, onError: c.completeError);</code> と書く（<code>SyncCoordinator</code> が <code>_onFinished</code> で後追いを始めるとき・<code>dispose()</code> で予約を完了させるときと同じ <code>final c = _reserved; _reserved = null; …</code> の形。§5.3 <code>_start</code> 手順 5・<code>dispose()</code>）。<strong>戻さないと、再実行の最中に呼ばれた <code>run()</code> が「既に設定を読み終えた再実行」の Future を受け取るだけになり、その間に変えた設定が FCM に反映されないまま成功として完了する</strong>（復帰時の再同期中に宝塚を OFF → 再実行が開始 → その最中に四季を OFF、というときに四季の変更が落ちる）。null に戻せば 3 回目の <code>run()</code> は新しい予約を作り、再実行の完了後にもう 1 回 <code>execute()</code> が走る（§8 #41 の「実行中に変えた設定が必ず反映される」が再実行中にも成り立つ）</li>
 </ol>
 </li>
-<li><strong>実行回数の上限</strong>：予約は「1 回の実行につき 1 つ」なので、<strong><code>execute()</code> の境界をまたぐ操作 1 回につき後続が 1 回積まれる（直列。回数の上限は設けない）</strong>。<code>execute()</code> 1 回の最悪所要時間は 15 秒（<code>FcmPushGateway</code> の <code>subscribe</code> / <code>unsubscribe</code> のタイムアウト。§6）× 5 団体の逐次 = 75 秒で、機内モードのまま 5 団体のトグルを続けて操作すると最大 6 回 × 75 秒 ≈ <strong>7.5 分</strong>の直列再試行になる。その間 <code>_pending</code> は完了せず、復帰時の <code>resyncIfNeeded()</code> もその完了を待つ（<code>unawaited</code> で呼ぶため画面は止まらない）。FCM の購読・解除は冪等で（§8 #13）、<strong>最後の実行が必ず最新の設定を読む</strong>ため、途中の実行が古い設定で発行しても最終状態は正しい。回数を制限（例：予約を積まない）すると、実行中に変えた設定が落ちる（§8 #41 が防いだ事象）ため上限は設けない</li>
-<li><strong>ステップ</strong>（<code>resyncIfNeeded</code>）：<ol>
+<li><strong>不変条件</strong>（手順ではなく、実装が常に満たすべき性質。どちらも <code>dart analyze</code> では検出できないため設計書で固定する）：<ul>
+<li><strong>I-1：手順 1〜2 は <code>run()</code> の同期部分（最初の <code>await</code> より前）で行う。</strong> <code>run()</code> を <code>async</code> にして先頭で <code>await</code> を挟んだり、<code>_current</code> への代入を <code>execute()</code> の完了後に回したりしない。<code>_current</code>（と <code>_pending</code>）が <code>run()</code> の呼び出しと同じマイクロタスクで立つことが、§5.6.3 の「重ならない保証」の<strong>規則 2</strong> の前提になっている</li>
+<li><strong>I-2：再実行を開始する時点で <code>_rerun</code> を null に戻す。</strong> <code>final c = _rerun; _rerun = null; _start().then(c.complete, onError: c.completeError);</code> と書く（<code>SyncCoordinator</code> が <code>_onFinished</code> で後追いを始めるとき・<code>dispose()</code> で予約を完了させるときと同じ <code>final c = _reserved; _reserved = null; …</code> の形。§5.3 <code>_start</code> 手順 5・<code>dispose()</code>）。<strong>戻さないと、再実行の最中に呼ばれた <code>run()</code> が「既に設定を読み終えた再実行」の Future を受け取るだけになり、その間に変えた設定が FCM に反映されないまま成功として完了する</strong>（復帰時の再同期中に宝塚を OFF → 再実行が開始 → その最中に四季を OFF、というときに四季の変更が落ちる）。null に戻せば 3 回目の <code>run()</code> は新しい予約を作り、再実行の完了後にもう 1 回 <code>execute()</code> が走る（§8 #41 の「実行中に変えた設定が必ず反映される」が再実行中にも成り立つ）</li>
+</ul>
+</li>
+<li><strong>実行回数（上限を設けない理由）</strong>：予約は「1 回の実行につき 1 つ」なので、<strong><code>execute()</code> の境界をまたぐ操作 1 回につき後続が 1 回積まれる（直列。回数の上限は設けない）</strong>。<code>execute()</code> 1 回の最悪所要時間は 15 秒（<code>FcmPushGateway</code> の <code>subscribe</code> / <code>unsubscribe</code> のタイムアウト。§6）× 5 団体の逐次 = 75 秒で、機内モードのまま 5 団体のトグルを続けて操作すると最大 6 回 × 75 秒 ≈ <strong>7.5 分</strong>の直列再試行になる。その間 <code>_pending</code> は完了せず、復帰時の <code>resyncIfNeeded()</code> もその完了を待つ（<code>unawaited</code> で呼ぶため画面は止まらない）。FCM の購読・解除は冪等で（§8 #13）、<strong>最後の実行が必ず最新の設定を読む</strong>ため、途中の実行が古い設定で発行しても最終状態は正しい。回数を制限（例：予約を積まない）すると、実行中に変えた設定が落ちる（§8 #41 が防いだ事象）ため上限は設けない</li>
+<li><strong>予約経路の完了の渡し方</strong>：再実行の結果を予約側に渡すときは <code>_start().then(reserved.complete, onError: reserved.completeError)</code> と書く（<code>then(reserved.complete)</code> だけだと、再実行が例外で終わったときに <code>_rerun</code> の Future が<strong>永久に完了せず</strong>、それを await している <code>AppLifecycleSync</code> と D-05 のトグルが宙に浮く。同時に未処理の非同期エラーにもなる）</li>
+<li><strong>失敗時</strong>：<code>execute()</code> が例外を投げた場合は、その実行を待つ <code>run()</code> の Future（と <code>_pending</code>）を<strong>同じ例外で完了させる</strong>（再スロー。<code>PushSubscriptionSyncResult</code> に写さない）。<code>_lastResult</code> は変えず、<strong><code>_lastRunFailed</code> を true にする</strong>（次のフォアグラウンド復帰で <code>resyncIfNeeded()</code> が再実行できるようにする。§5.3・§8 #50）。<code>execute()</code> が正常に完了したときは <code>_lastRunFailed</code> を false に戻す。後処理は完了時と同じ（<code>_rerun</code> があれば次の <code>execute()</code> を始めて <code>_rerun</code> をその結果で完了させ、無ければ <code>_current</code> を空にする）ため、例外の後も <code>run()</code> は再び <code>execute()</code> を呼べる。呼び出し側は <code>AppLifecycleSync</code>（§5.3 の擬似コード）と D-05 のトグル経路（§8.1）で、<strong>どちらも <code>run()</code> / <code>resyncIfNeeded()</code> の戻り値を必ず await し</strong>、<code>on Object catch</code> で捕捉して <code>logger.w</code> に残す（await せずに捨てると例外が未処理の非同期エラーになる。<code>execute</code> が投げるのは <code>CompanyRepository.loadAll</code> の <code>StateError</code> と <code>SettingsRepository</code> の DB 例外。§5.6.1「失敗時」・§8 #41）</li>
+<li><strong><code>dispose()</code> は持たない</strong>（<code>SyncCoordinator</code> との非対称は意図したもの。§8 #54）。公開面は <code>run()</code> と <code>resyncIfNeeded()</code> の 2 つのままで、<code>pushSubscriptionCoordinatorProvider</code> に <code>ref.onDispose</code> は置かない（§4.7）。理由は §8 #54</li>
+</ul>
+<h4 id="sec-5-6-3">5.6.3 <code>resyncIfNeeded()</code>（復帰時の再同期）と <code>run()</code> と重ならない保証<a class="anchor" href="#sec-5-6-3">#</a></h4>
+<p>シグネチャは §5.6.2 のコード片。<code>AppLifecycleSync</code> は復帰のたびにこれを呼ぶだけで、再実行の要否の判定を持たない（§5.3・§8 #52）。</p>
+<ul>
+<li><strong>手順</strong>（<code>resyncIfNeeded()</code>）：<ol>
 <li><code>final pending = _pending;</code> を取る。<code>pending != null</code> なら <strong>内側の try/catch</strong> で <code>await pending</code> する。例外で終わっても<strong>再スローせず</strong>（<code>_lastRunFailed</code> に記録済み）手順 2 へ落ちる（<strong>この握り潰しが無いと、復帰の最中に観測した失敗がそのまま外へ飛び、再実行の判定に到達しない</strong>）</li>
 <li>待ち終わった時点で <code>_pending != null</code>（待つ間に D-05 のトグル等が新しい実行を始めた）なら<strong>何もせず終える</strong>（その実行が最新の設定を読むため重ねない）</li>
 <li><code>final last = _lastResult;</code> を読み直す（<strong>手順 1 の前に読んだ古い値で判定しない</strong>）。<code>last == null</code>（一度も正常完了していない = 未開始、または直近が例外で終わった）・<code>last.hasFailure</code>（1 団体以上の失敗）・<code>_lastRunFailed</code>（直近が例外）のいずれかなら <code>await run()</code>、どれでもなければ何もしない</li>
 <li><code>run()</code> が例外で完了した場合はそのまま伝播する（呼び出し側の <code>AppLifecycleSync</code> が <code>logger.w</code> に残す。§5.3）</li>
 </ol>
-<ul>
-<li><code>_pending</code> も <code>_lastResult</code> も null のときに <code>await null</code> へ退化する書き方（<code>_lastResult ?? await _pending</code>）はしない。手順 1〜3 を上記のとおり<strong>明示的な分岐</strong>で書く</li>
-<li><strong><code>resyncIfNeeded()</code> が 2 本重なっても <code>run()</code> に進むのは 1 本だけ</strong>（背景化 → 復帰を短い間隔で 2 回行い、どちらも同じ <code>_pending</code> を待つ場合）。これを成り立たせる規則は次の 2 つで、どちらが欠けても <code>execute()</code> が余分に 1 回走る（崩れたときの被害は規則ごとに違う。下の「崩れたときの被害」を参照）：<ol>
-<li><strong>手順 2 と手順 3 の間、および手順 3 の <code>run()</code> 呼び出しまでに <code>await</code> を置かない。</strong> 手順 3 は <code>_lastResult</code> / <code>_lastRunFailed</code> を<strong>同期的に読む</strong>（<code>final last = await _readLastResult();</code> のように待つ形にしない）。同じ <code>_pending</code> の完了で起こされた 2 本は同じマイクロタスク列で手順 2 に入るため、先に起きた 1 本が手順 2〜3 を中断なく通り切る必要がある</li>
-<li><strong><code>run()</code> は <code>_current</code>（したがって <code>_pending</code>）を最初の <code>await</code> より前に設定する</strong>（ステップ <code>run</code> の手順 0）。先に起きた 1 本が <code>run()</code> を呼んだ時点で <code>_pending != null</code> が立つため、後から起きた 1 本は手順 2 で降りる</li>
+</li>
+<li><strong>書き方の制約</strong>：<code>_pending</code> も <code>_lastResult</code> も null のときに <code>await null</code> へ退化する書き方（<code>_lastResult ?? await _pending</code>）はしない。手順 1〜3 を上記のとおり<strong>明示的な分岐</strong>で書く</li>
+<li><strong>重ならない保証</strong>：<strong><code>resyncIfNeeded()</code> が 2 本重なっても <code>run()</code> に進むのは 1 本だけ</strong>（背景化 → 復帰を短い間隔で 2 回行い、どちらも同じ <code>_pending</code> を待つ場合）。これを成り立たせる規則は次の 2 つで、どちらが欠けても <code>execute()</code> が余分に 1 回走る（崩れたときの被害は規則ごとに違う。下の「崩れたときの被害」を参照）：<ol>
+<li><strong><code>resyncIfNeeded()</code> の手順 2 と手順 3 の間、および手順 3 の <code>run()</code> 呼び出しまでに <code>await</code> を置かない。</strong> 手順 3 は <code>_lastResult</code> / <code>_lastRunFailed</code> を<strong>同期的に読む</strong>（<code>final last = await _readLastResult();</code> のように待つ形にしない）。同じ <code>_pending</code> の完了で起こされた 2 本は同じマイクロタスク列で手順 2 に入るため、先に起きた 1 本が手順 2〜3 を中断なく通り切る必要がある</li>
+<li><strong><code>run()</code> は <code>_current</code>（したがって <code>_pending</code>）を最初の <code>await</code> より前に設定する</strong>（§5.6.2 の<strong>不変条件 I-1</strong>）。先に起きた 1 本が <code>run()</code> を呼んだ時点で <code>_pending != null</code> が立つため、後から起きた 1 本は手順 2 で降りる</li>
 </ol>
 </li>
 <li><strong>崩れたときの被害</strong>（2 つの規則で異なる。両方を「直列に 1 回余分」とまとめない）：<ul>
-<li><strong>規則 1 が崩れた場合</strong>（手順 2 と手順 3 の間に <code>await</code> が入る）は、後から起きた 1 本も <code>run()</code> に達するが、そのとき先に起きた 1 本が立てた <code>_current</code> が既にあるため <code>run()</code> の手順 1 で予約 1 つに畳まれる。<code>execute()</code> は<strong>並走せず、直列に 1 回余分に走るだけ</strong>（予約の連鎖が 1 段伸び、最悪 75 秒/回が積み増される。§6）</li>
-<li><strong>規則 2 が崩れた場合</strong>（<code>run()</code> が <code>_current</code> を最初の <code>await</code> より後に設定する）は、<strong>手順 1 が畳めず <code>execute()</code> が並走しうる</strong>。先に <code>run()</code> に入った 1 本がまだ <code>_current</code> を立てていないため、後から起きた 1 本は手順 2 で <code>_pending == null</code> を見て手順 3 へ進み、その <code>run()</code> も手順 1 で <code>_current == null</code> を見て 2 つ目の <code>execute()</code> を開始する。こうなると 2 本が同時に <code>SettingsRepository</code> を読んで FCM へ発行し、<code>PushSubscriptionCoordinator</code> が唯一の入口として保証している直列化（§8 #41）が成り立たなくなる（購読・解除は冪等（§8 #13）なので FCM 側の最終状態は壊れないが、「実行中の操作は完了後に 1 回だけ再実行する」という設計の前提が消える）</li>
-<li>したがって <strong><code>run()</code> の手順 0（<code>_current</code> を最初の <code>await</code> より前に立てる）は最適化ではなく必須</strong>であり、規則 2 を「守らなくても直列になるだけ」と読んではならない</li>
-<li>検証は §7 <code>group(&#39;復帰時の再同期&#39;)</code> の「実行中に <code>resyncIfNeeded()</code> を 2 回呼ぶ」ケース（どちらの違反でも <code>execute</code> の追加呼び出しが 2 回になるため、2 つの規則の違反をこの 1 ケースで検出する）</li>
+<li><strong>規則 1 が崩れた場合</strong>（<code>resyncIfNeeded()</code> の手順 2 と手順 3 の間に <code>await</code> が入る）は、後から起きた 1 本も <code>run()</code> に達するが、そのとき先に起きた 1 本が立てた <code>_current</code> が既にあるため <strong><code>run()</code> の手順 1</strong>（§5.6.2）で予約 1 つに畳まれる。<code>execute()</code> は<strong>並走せず、直列に 1 回余分に走るだけ</strong>（予約の連鎖が 1 段伸び、最悪 75 秒/回が積み増される。§6）</li>
+<li><strong>規則 2 が崩れた場合</strong>（<code>run()</code> が <code>_current</code> を最初の <code>await</code> より後に設定する）は、<strong><code>run()</code> の手順 1 が畳めず <code>execute()</code> が並走しうる</strong>。先に <code>run()</code> に入った 1 本がまだ <code>_current</code> を立てていないため、後から起きた 1 本は手順 2 で <code>_pending == null</code> を見て手順 3 へ進み、その <code>run()</code> も <strong><code>run()</code> の手順 1</strong> で <code>_current == null</code> を見て 2 つ目の <code>execute()</code> を開始する。こうなると 2 本が同時に <code>SettingsRepository</code> を読んで FCM へ発行し、<code>PushSubscriptionCoordinator</code> が唯一の入口として保証している直列化（§8 #41）が成り立たなくなる（購読・解除は冪等（§8 #13）なので FCM 側の最終状態は壊れないが、「実行中の操作は完了後に 1 回だけ再実行する」という設計の前提が消える）</li>
+<li>したがって <strong>§5.6.2 の不変条件 I-1（<code>_current</code> を最初の <code>await</code> より前に立てる）は最適化ではなく必須</strong>であり、規則 2 を「守らなくても直列になるだけ」と読んではならない</li>
 </ul>
 </li>
-</ul>
-</li>
-<li><strong>予約経路の完了の渡し方</strong>：再実行の結果を予約側に渡すときは <code>_start().then(reserved.complete, onError: reserved.completeError)</code> と書く（<code>then(reserved.complete)</code> だけだと、再実行が例外で終わったときに <code>_rerun</code> の Future が<strong>永久に完了せず</strong>、それを await している <code>AppLifecycleSync</code> と D-05 のトグルが宙に浮く。同時に未処理の非同期エラーにもなる）</li>
-<li><strong>失敗時</strong>：<code>execute()</code> が例外を投げた場合は、その実行を待つ <code>run()</code> の Future（と <code>_pending</code>）を<strong>同じ例外で完了させる</strong>（再スロー。<code>PushSubscriptionSyncResult</code> に写さない）。<code>_lastResult</code> は変えず、<strong><code>_lastRunFailed</code> を true にする</strong>（次のフォアグラウンド復帰で <code>resyncIfNeeded()</code> が再実行できるようにする。§5.3・§8 #50）。<code>execute()</code> が正常に完了したときは <code>_lastRunFailed</code> を false に戻す。後処理は完了時と同じ（<code>_rerun</code> があれば次の <code>execute()</code> を始めて <code>_rerun</code> をその結果で完了させ、無ければ <code>_current</code> を空にする）ため、例外の後も <code>run()</code> は再び <code>execute()</code> を呼べる。呼び出し側は <code>AppLifecycleSync</code>（§5.3 の擬似コード）と D-05 のトグル経路（§8.1）で、<strong>どちらも <code>run()</code> / <code>resyncIfNeeded()</code> の戻り値を必ず await し</strong>、<code>on Object catch</code> で捕捉して <code>logger.w</code> に残す（await せずに捨てると例外が未処理の非同期エラーになる。<code>execute</code> が投げるのは <code>CompanyRepository.loadAll</code> の <code>StateError</code> と <code>SettingsRepository</code> の DB 例外。§5.6「失敗時」・§8 #41）</li>
-<li><strong><code>dispose()</code> は持たない</strong>（<code>SyncCoordinator</code> との非対称は意図したもの。§8 #54）。公開面は <code>run()</code> と <code>resyncIfNeeded()</code> の 2 つのままで、<code>pushSubscriptionCoordinatorProvider</code> に <code>ref.onDispose</code> は置かない（§4.7）。理由は §8 #54</li>
+<li><strong>検証</strong>：§7 <code>group(&#39;復帰時の再同期&#39;)</code> の「実行中に <code>resyncIfNeeded()</code> を 2 回呼ぶ」ケース（どちらの違反でも <code>execute</code> の追加呼び出しが 2 回になるため、2 つの規則の違反をこの 1 ケースで検出する）</li>
 <li><strong>同時実行の例</strong>：機内モード起動で 5 団体 <code>failed</code> → 復帰時に <code>resyncIfNeeded()</code> が再同期を走らせる（数秒）→ その最中に設定で宝塚を OFF → D-05 が <code>run()</code> を呼ぶ → 復帰側の完了後に 1 回だけ再実行され、宝塚は <code>unsubscribe</code> される。内部の直近結果は再実行の結果になる（§6）</li>
 </ul>
 <h3 id="sec-5-7">5.7 RequestNotificationPermissionUseCase と通知タップの受け取り<a class="anchor" href="#sec-5-7">#</a></h3>
@@ -2331,7 +2372,7 @@ class TabReselect extends _$TabReselect {
 <td><code>formatPublishedDate</code></td>
 <td><code>core/ui/article/published_date_format.dart</code></td>
 <td><code>DateTime publishedAt</code>、<code>DateTime now</code></td>
-<td><strong>S-00 §7.3 の書式に従う純粋関数</strong>（書式を本書に転記しない）。<strong>両引数を関数の内部で <code>toLocal()</code> してから使う</strong>（呼び出し側に変換を任せない。<code>Article.publishedAt</code> は UTC）。暦日の比較は、変換後の年月日を <code>DateTime.utc(y, m, d)</code> に詰め直して差を取る（<code>DateTime(y, m, d)</code>（ローカル）で引き算すると、夏時間の開始・終了をまたぐ日の差が 23 時間 / 25 時間になり「昨日」の判定が 1 日ずれる。UTC の暦日どうしなら常に 24 時間刻み）。未来日（<code>local</code> が <code>now</code> より後の暦日。サイト側の日付誤り）は S-00 §7.3 が定めていないため、本書は新たな書式を決めず、§7.3 の 4 行を機械的に当てはめる（「今日」「昨日」に該当しないので同年／前年以前の行に落ちる）。時刻は出さない</td>
+<td><strong>S-00 §7.3 の書式に従う純粋関数</strong>（書式を本書に転記しない）。<strong>両引数を関数の内部で <code>toLocal()</code> してから使う</strong>（呼び出し側に変換を任せない。<code>Article.publishedAt</code> は UTC）。暦日の比較は、変換後の年月日を <code>DateTime.utc(y, m, d)</code> に詰め直して差を取る（<code>DateTime(y, m, d)</code>（ローカル）で引き算すると、夏時間の開始・終了をまたぐ日の差が 23 時間 / 25 時間になり「昨日」の判定が 1 日ずれる。UTC の暦日どうしなら常に 24 時間刻み）。未来日（<code>publishedAt.toLocal()</code> の暦日が <code>now.toLocal()</code> の暦日より後。サイト側の日付誤り）は S-00 §7.3 が定めていないため、本書は新たな書式を決めず、§7.3 の 4 行を機械的に当てはめる（「今日」「昨日」に該当しないので同年／前年以前の行に落ちる）。時刻は出さない</td>
 </tr>
 <tr>
 <td><code>FullLoadingView</code></td>
@@ -2372,7 +2413,7 @@ class TabReselect extends _$TabReselect {
 <tr>
 <td><code>TransientNotice</code></td>
 <td>同</td>
-<td><code>String message</code>、<code>Duration(seconds: 3)</code></td>
+<td><strong><code>static void show(BuildContext context, {required String message})</code></strong>（表示時間は 3 秒固定で引数に取らない。<code>Overlay</code> への挿入・除去は本 Widget が内包し、呼び出し側は <code>OverlayEntry</code>・<code>Timer</code> を持たない）</td>
 <td>E-25。<code>Overlay</code> に挿入し 3 秒で自動除去。<strong>同時に 1 枚だけ</strong>：保持するのは <code>(OverlayEntry, Timer)</code> の<strong>組</strong>を static に 1 つだけで、新しい 1 枚を挿す前に<strong>直前の <code>Timer</code> を <code>cancel()</code> してから</strong> <code>entry.remove()</code> を呼ぶ。除去タイマーの発火時は、<strong>自分が保持中の entry と同一のときだけ</strong> <code>remove()</code> する（<code>identical</code> で確認し、違えば何もしない）。<code>Timer</code> を取り消さないと、3 秒以内に E-25 が 2 回要求されたとき（取得失敗 → 0.5 秒後に再試行 → 1.5 秒後にも失敗）に 1 枚目のタイマーが 2 枚目を除去して表示が 1.5 秒に縮むか、除去済みの entry に <code>remove()</code> を呼んで assert / 例外になる。Widget テストを書かない方針（§7）のため実装時に気づく機会が無く、規則をここで固定する。<strong>渡す <code>context</code> は配置画面（<code>CupertinoTabView</code> 配下）のもの</strong>にする（ルートの <code>Overlay</code> に挿すと下部タブより上に重なり、タブを切り替えても残る）。<code>message</code> は呼び出し側が渡す<strong>固定文言のみ</strong>（S-00 の確定文言。例外メッセージ・URL など外部由来の文字列を渡さない）。表示の可否（配置画面表示中か）は呼び出し側（D-05）</td>
 </tr>
 </tbody></table>
@@ -2573,7 +2614,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>取得中にアプリがバックグラウンドへ</td>
-<td>取得は続く。iOS が停止させた場合は次の復帰で <code>foreground</code> の取得が走る。中断された取得の <code>Future</code> が完了しない場合に備え、<code>SyncCoordinator</code> は <code>feedTimeout + 5 秒</code>（<code>overallTimeout</code>）で実行中の Future を諦めて <code>SyncFailed(timeout)</code> にする</td>
+<td>取得は続く。iOS が停止させた場合は次の復帰で <code>foreground</code> の取得が走る。中断された取得の <code>Future</code> が完了しない場合に備え、<code>SyncCoordinator</code> は <code>overallTimeout</code>（<code>feedTimeout + syncOverallTimeoutMargin</code>。現在は 20 秒。§4.3）で実行中の Future を諦めて <code>SyncFailed(timeout)</code> にする</td>
 <td>application（<code>SyncCoordinator</code>）</td>
 </tr>
 <tr>
@@ -2627,28 +2668,28 @@ class TabReselect extends _$TabReselect {
 <td>presentation（<code>notification_tap_providers.dart</code>）</td>
 </tr>
 <tr>
-<td><code>companies.json</code> が読めない・<code>schemaVersion != 1</code>・<code>id</code> 重複</td>
+<td><code>companies.json</code> が読めない、または <strong>§4.5 の検証 6 件</strong>のいずれかに反した</td>
 <td>起動時に <code>StateError</code> でクラッシュ（ビルドの不備。collector の契約テストが CI で先に検出する。D-01 §7.1）</td>
 <td>app（<code>core/di</code> の <code>buildOverrides()</code>。§8 #43）</td>
 </tr>
 <tr>
 <td>購読同期の <code>settings.notificationSettings()</code> が DB 例外で失敗した（起動時。一過性の <code>database is locked</code> 等）</td>
-<td>例外をそのまま伝播し、<code>PushSubscriptionCoordinator.run()</code> の呼び出し側（<code>AppLifecycleSync</code>・D-05 のトグル）が <code>on Object catch</code> で捕捉して <code>logger.w</code> に残す。内部の直近結果は変えない（<code>failed</code> が空の成功として記録しない）。<strong><code>_lastRunFailed = true</code> になるため、次のフォアグラウンド復帰の <code>resyncIfNeeded()</code> で再実行される</strong>（§5.3・§5.6「失敗時」・§8 #50）。これが無いと、1 団体単位の軽い失敗（<code>failed</code>）は復帰で再試行されるのに、全団体の購読状態が不明になる重い失敗だけが再試行されないという逆転が起きる</td>
+<td>例外をそのまま伝播し、<code>PushSubscriptionCoordinator.run()</code> の呼び出し側（<code>AppLifecycleSync</code>・D-05 のトグル）が <code>on Object catch</code> で捕捉して <code>logger.w</code> に残す。内部の直近結果は変えない（<code>failed</code> が空の成功として記録しない）。<strong><code>_lastRunFailed = true</code> になるため、次のフォアグラウンド復帰の <code>resyncIfNeeded()</code> で再実行される</strong>（§5.3・§5.6.2「失敗時」・§8 #50）。これが無いと、1 団体単位の軽い失敗（<code>failed</code>）は復帰で再試行されるのに、全団体の購読状態が不明になる重い失敗だけが再試行されないという逆転が起きる</td>
 <td>application / app</td>
 </tr>
 <tr>
 <td>復帰時に待った実行が<strong>例外で終わった</strong>（起動直後の購読同期が飛行中に背景化 → 復帰 → その実行が <code>database is locked</code> で失敗）</td>
-<td><code>resyncIfNeeded()</code> が <code>await _pending</code> を<strong>内側の try/catch</strong> で包み、例外を握り潰してそのまま判定へ進むため、<strong>その復帰の中で <code>run()</code> を 1 回やり直す</strong>（回復がもう 1 往復の背景化・復帰まで遅れない。§5.6 ステップ 1・§8 #37・#52）</td>
+<td><code>resyncIfNeeded()</code> が <code>await _pending</code> を<strong>内側の try/catch</strong> で包み、例外を握り潰してそのまま判定へ進むため、<strong>その復帰の中で <code>run()</code> を 1 回やり直す</strong>（回復がもう 1 往復の背景化・復帰まで遅れない。§5.6.3 手順 1・§8 #37・#52）</td>
 <td>application（<code>PushSubscriptionCoordinator</code>）</td>
 </tr>
 <tr>
 <td>復帰時に<strong>過去の成功結果が残っている</strong>まま新しい実行が飛行中（起動時に成功 → トグル操作で再同期が飛行中に背景化 → 復帰）</td>
-<td><code>resyncIfNeeded()</code> は「直近結果があれば待たない」ではなく**<code>_pending</code> があれば必ず待ってから**直近結果と <code>_lastRunFailed</code> を読み直すため、飛行中の実行が <code>failed</code> で終わればその場で再実行される（古い成功結果で「再実行不要」と判定しない。§5.6 ステップ 1・3）</td>
+<td><code>resyncIfNeeded()</code> は「直近結果があれば待たない」ではなく**<code>_pending</code> があれば必ず待ってから**直近結果と <code>_lastRunFailed</code> を読み直すため、飛行中の実行が <code>failed</code> で終わればその場で再実行される（古い成功結果で「再実行不要」と判定しない。§5.6.3 手順 1・3）</td>
 <td>application（<code>PushSubscriptionCoordinator</code>）</td>
 </tr>
 <tr>
 <td>再実行（2 回目）の実行中にさらにトグルを操作した（機内モードで 5 団体を連続操作）</td>
-<td>予約が 1 つ積まれ、<code>execute()</code> が 3 回目として<strong>直列に</strong>走る（回数の上限は設けない。<code>execute()</code> の境界をまたぐ操作 1 回につき後続が 1 回）。FCM の購読・解除は冪等で最後の実行が必ず最新の設定を読むため最終状態は正しい。最悪は 5 団体 × 15 秒 = 75 秒/回 × 6 回 ≈ 7.5 分の直列再試行で、その間 <code>resyncIfNeeded()</code> は待ち続ける（<code>unawaited</code> で呼ぶため画面は止まらない。§5.6「実行回数の上限」・§8 #41）</td>
+<td>予約が 1 つ積まれ、<code>execute()</code> が 3 回目として<strong>直列に</strong>走る（回数の上限は設けない。<code>execute()</code> の境界をまたぐ操作 1 回につき後続が 1 回）。FCM の購読・解除は冪等で最後の実行が必ず最新の設定を読むため最終状態は正しい。最悪は 5 団体 × 15 秒 = 75 秒/回 × 6 回 ≈ 7.5 分の直列再試行で、その間 <code>resyncIfNeeded()</code> は待ち続ける（<code>unawaited</code> で呼ぶため画面は止まらない。§5.6.2「実行回数（上限を設けない理由）」・§8 #41）</td>
 <td>application（<code>PushSubscriptionCoordinator</code>）</td>
 </tr>
 <tr>
@@ -2678,12 +2719,12 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>起動時の購読同期が実行中（直近結果がまだ無い）に <code>paused → resumed</code> した後、5 団体 <code>failed</code> で完了した</td>
-<td><code>resyncIfNeeded()</code> は <code>_pending</code> の完了を待ってから <code>hasFailure</code> を見るため、完了直後に <code>run()</code> が呼ばれて再実行される（次の復帰まで持ち越さない。§8 #37）。待つ間に再度復帰して <code>resyncIfNeeded()</code> が 2 本走っても、先に起きた方が<strong>同じマイクロタスクの中で</strong>手順 2・3 を通って <code>run()</code> を始める（手順 2 と 3 の間に <code>await</code> を置かない／<code>run()</code> は <code>_current</code> を最初の <code>await</code> より前に設定する。§5.6「重ならない保証」）ため、後から起きた方は手順 2 で <code>_pending != null</code> を見て降りる（<code>execute</code> の追加呼び出しは 1 回だけ。§7 で検証）。<strong>この 2 規則が崩れたときの被害は規則ごとに異なる</strong>：規則 1（手順 2〜3 に <code>await</code> を置かない）が崩れた場合は両方が <code>run()</code> に達しても予約 1 つに畳まれ <code>execute</code> は並走しない（直列に 1 回余分）。<strong>規則 2（<code>run()</code> は <code>_current</code> を最初の <code>await</code> より前に設定する）が崩れた場合は手順 1 が <code>_current</code> を見られず <code>execute</code> が並走しうる</strong>（§5.6「崩れたときの被害」）</td>
+<td><code>resyncIfNeeded()</code> は <code>_pending</code> の完了を待ってから <code>hasFailure</code> を見るため、完了直後に <code>run()</code> が呼ばれて再実行される（次の復帰まで持ち越さない。§8 #37）。待つ間に再度復帰して <code>resyncIfNeeded()</code> が 2 本走っても、先に起きた方が<strong>同じマイクロタスクの中で</strong> <code>resyncIfNeeded()</code> の手順 2・3 を通って <code>run()</code> を始める（手順 2 と 3 の間に <code>await</code> を置かない／<code>run()</code> は <code>_current</code> を最初の <code>await</code> より前に設定する。§5.6.3「重ならない保証」）ため、後から起きた方は手順 2 で <code>_pending != null</code> を見て降りる（<code>execute</code> の追加呼び出しは 1 回だけ。§7 で検証）。<strong>この 2 規則が崩れたときの被害は規則ごとに異なる</strong>：規則 1（<code>resyncIfNeeded()</code> の手順 2〜3 に <code>await</code> を置かない）が崩れた場合は両方が <code>run()</code> に達しても予約 1 つに畳まれ <code>execute</code> は並走しない（直列に 1 回余分）。<strong>規則 2（<code>run()</code> は <code>_current</code> を最初の <code>await</code> より前に設定する。§5.6.2 の不変条件 I-1）が崩れた場合は <code>run()</code> の手順 1 が <code>_current</code> を見られず <code>execute</code> が並走しうる</strong>（§5.6.3「崩れたときの被害」）</td>
 <td>app（<code>AppLifecycleSync</code>）/ application</td>
 </tr>
 <tr>
 <td>復帰時の購読再同期の実行中に通知トグルを操作した（設定で宝塚を OFF）</td>
-<td>D-05 のトグル経路も <code>PushSubscriptionCoordinator.run()</code> を通るため直列化され、実行中の完了後に 1 回だけ再実行される。再実行は設定を読み直すので宝塚は <code>unsubscribe</code> され、変更前の設定で <code>subscribe</code> が後から発行されることは無い。内部の直近結果は再実行の結果（§5.6。§8 #41）</td>
+<td>D-05 のトグル経路も <code>PushSubscriptionCoordinator.run()</code> を通るため直列化され、実行中の完了後に 1 回だけ再実行される。再実行は設定を読み直すので宝塚は <code>unsubscribe</code> され、変更前の設定で <code>subscribe</code> が後から発行されることは無い。内部の直近結果は再実行の結果（§5.6.2。§8 #41）</td>
 <td>application（<code>PushSubscriptionCoordinator</code>）</td>
 </tr>
 <tr>
@@ -2800,7 +2841,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td><code>completer_stub.dart</code></td>
-<td><code>SyncCoordinator</code> / <code>PushSubscriptionCoordinator</code> の <code>execute</code> に渡すスタブ。<code>Completer</code> で完了・例外を外から制御し、呼び出し回数・引数（<code>SyncTrigger</code>・<code>isCancelled</code>）を記録する。2 つの Coordinator のテストが同じ骨格を複製しないために共有する</td>
+<td><code>SyncCoordinator</code> / <code>PushSubscriptionCoordinator</code> の <code>execute</code> に渡すスタブ。<code>Completer</code> で完了・例外を外から制御し、呼び出し回数・引数（<code>SyncTrigger</code>・<code>isCancelled</code>）を記録する。2 つの Coordinator のテストが同じ骨格を複製しないために共有する。<strong>作るのは T-D</strong>（<code>SyncTrigger</code>・<code>SyncResult</code> を参照するため）で、<strong>T-E はこれを再利用する</strong>（T-E が T-D に依存する理由。§10）</td>
 </tr>
 </tbody></table>
 <p>テストの配置先と <code>group</code> の割り当て：</p>
@@ -2964,11 +3005,11 @@ class TabReselect extends _$TabReselect {
 <li>再実行の <code>execute</code> → 最初の完了後に始まる（呼び出し順の記録で最初の実行の完了が先 = <code>subscribe</code> / <code>unsubscribe</code> が二重発行されない）</li>
 <li>スタブが 2 回目の呼び出しで別の結果を返す → 予約側の Future がその 2 回目の結果で完了する（再実行が設定を読み直す）</li>
 <li>実行中に <code>run()</code> を 3 回以上呼ぶ → 予約は増えず（<code>execute</code> は計 2 回）、2 回目以降の呼び出しはすべて<strong>同じ Future</strong>（<code>identical</code>）を返す</li>
-<li><strong>再実行（2 回目）の実行中に <code>run()</code> を呼ぶ</strong> → <code>execute</code> が計 3 回呼ばれ、3 回目は 2 回目の完了後に始まる（再実行を開始する時点で <code>_rerun</code> を null に戻す。§5.6 手順 3。<strong>予約は連鎖してよい</strong>。§8 #41）</li>
+<li><strong>再実行（2 回目）の実行中に <code>run()</code> を呼ぶ</strong> → <code>execute</code> が計 3 回呼ばれ、3 回目は 2 回目の完了後に始まる（再実行を開始する時点で <code>_rerun</code> を null に戻す。§5.6.2 の不変条件 I-2。<strong>予約は連鎖してよい</strong>。§8 #41）</li>
 <li>再実行（2 回目）の実行中の <code>run()</code> が返す Future → 1 回目・2 回目のいずれとも<strong>異なる</strong>（<code>identical</code> でない）。3 回目の結果で完了する（実行中に変えた設定が落ちない。§8 #41）</li>
-<li>3 回目の実行中にさらに <code>run()</code> を呼ぶ → <code>execute</code> が計 4 回呼ばれ、いずれも直列（並走しない。回数の上限は設けない。§5.6「実行回数の上限」）</li>
+<li>3 回目の実行中にさらに <code>run()</code> を呼ぶ → <code>execute</code> が計 4 回呼ばれ、いずれも直列（並走しない。回数の上限は設けない。§5.6.2「実行回数（上限を設けない理由）」）</li>
 </ul>
-<p><strong><code>PushSubscriptionCoordinator</code> — <code>group(&#39;失敗&#39;)</code></strong>（§5.6「失敗時」。§8 #41）：</p>
+<p><strong><code>PushSubscriptionCoordinator</code> — <code>group(&#39;失敗&#39;)</code></strong>（§5.6.2「失敗時」。§8 #41）：</p>
 <ul>
 <li><code>execute</code> が例外を投げる → <code>run()</code> の Future が同じ例外で完了する（再スロー。結果型に写さない）</li>
 <li>例外の後に <code>run()</code> → 再び <code>execute</code> が呼ばれる（実行中が空いている）</li>
@@ -2976,7 +3017,7 @@ class TabReselect extends _$TabReselect {
 <li>実行中に <code>run()</code> で予約し、<strong>予約側の再実行が例外を投げる</strong> → 予約の Future が<strong>同じ例外で完了する</strong>（<code>completeError</code> 経路。ここを <code>then(complete)</code> だけで書くと Future が永久に完了しない）</li>
 <li><code>execute</code> が同期的に throw する（<code>async</code> を付け忘れた実装に相当） → <code>run()</code> の Future が同じ例外で完了し、実行中が空いて次の <code>run()</code> が <code>execute</code> を呼べる</li>
 </ul>
-<p><strong><code>PushSubscriptionCoordinator</code> — <code>group(&#39;復帰時の再同期&#39;)</code></strong>（<code>resyncIfNeeded()</code>。§5.3・§5.6・§6・§8 #37・#50・#52。<strong>§6 の復帰まわり 6 行がここで検証される</strong>）：</p>
+<p><strong><code>PushSubscriptionCoordinator</code> — <code>group(&#39;復帰時の再同期&#39;)</code></strong>（<code>resyncIfNeeded()</code>。§5.3・§5.6.3・§6・§8 #37・#50・#52。<strong>§6 の復帰まわり 6 行がここで検証される</strong>）：</p>
 <ul>
 <li><strong>一度も <code>run()</code> を呼んでいない</strong> → <code>resyncIfNeeded()</code> が <code>execute</code> を 1 回呼ぶ（起動時の同期が未開始のまま背景化した場合。§6）</li>
 <li>直近が成功（<code>failed</code> 空）で実行中でない → <code>execute</code> を呼ばない（呼び出し回数が増えない）</li>
@@ -2984,15 +3025,15 @@ class TabReselect extends _$TabReselect {
 <li>直近の実行が<strong>例外で終わった</strong> → <code>execute</code> を 1 回呼ぶ（「未開始」と同じ経路で再実行される。§8 #50）</li>
 <li>例外の後に正常完了する <code>run()</code> を挟む → その後の <code>resyncIfNeeded()</code> は <code>execute</code> を呼ばない（内部フラグが戻る）</li>
 <li><strong>実行中（未完了）に <code>resyncIfNeeded()</code></strong> → その実行の完了を待ち、<code>failed</code> ありで完了したらその場で <code>execute</code> をもう 1 回呼ぶ（次の復帰まで持ち越さない。§8 #37）</li>
-<li><strong>待っている実行が例外で終わった</strong> → <code>resyncIfNeeded()</code> の Future は例外にならず、その場で <code>execute</code> をもう 1 回呼ぶ（内側 try/catch で握る。§5.6 ステップ 1）</li>
+<li><strong>待っている実行が例外で終わった</strong> → <code>resyncIfNeeded()</code> の Future は例外にならず、その場で <code>execute</code> をもう 1 回呼ぶ（内側 try/catch で握る。§5.6.3 手順 1）</li>
 <li><strong>過去に成功した結果がある状態で新しい実行が飛行中</strong> → 古い結果で「不要」と判定せず、飛行中の実行の完了を待ってから判定する（<code>failed</code> ありなら <code>execute</code> が追加で 1 回呼ばれる）</li>
-<li><strong>再実行の実行中に <code>run()</code> で予約が連鎖している</strong> → いちばん新しい予約（3 回目）の完了を待ってから判定する（2 回目の結果で判定して余分な <code>execute</code> を積まない。<code>_pending</code> の定義。§5.6「内部状態」）</li>
+<li><strong>再実行の実行中に <code>run()</code> で予約が連鎖している</strong> → いちばん新しい予約（3 回目）の完了を待ってから判定する（2 回目の結果で判定して余分な <code>execute</code> を積まない。<code>_pending</code> の定義。§5.6.2「内部状態」）</li>
 <li>待っている間に別の <code>run()</code> が新しい実行を始めた → <code>resyncIfNeeded()</code> は何もせず正常に完了する（<code>execute</code> の呼び出し回数が増えない）</li>
-<li><strong>実行中（未完了）に <code>resyncIfNeeded()</code> を 2 回呼び、その実行を <code>failed</code> ありで完了させる</strong> → <code>execute</code> の追加呼び出しは <strong>1 回だけ</strong>（2 本目は手順 2 で <code>_pending != null</code> を見て降りる）。2 本の <code>resyncIfNeeded()</code> はどちらも正常に完了する（短い間隔で背景化 → 復帰を 2 回行った場合。§5.6「重ならない保証」・§6）</li>
+<li><strong>実行中（未完了）に <code>resyncIfNeeded()</code> を 2 回呼び、その実行を <code>failed</code> ありで完了させる</strong> → <code>execute</code> の追加呼び出しは <strong>1 回だけ</strong>（2 本目は手順 2 で <code>_pending != null</code> を見て降りる）。2 本の <code>resyncIfNeeded()</code> はどちらも正常に完了する（短い間隔で背景化 → 復帰を 2 回行った場合。§5.6.3「重ならない保証」・§6）</li>
 <li><code>resyncIfNeeded()</code> が始めた <code>run()</code> が例外で終わった → <strong>同じ例外が <code>resyncIfNeeded()</code> の Future に伝播する</strong>（<code>AppLifecycleSync</code> が <code>logger.w</code> に残せる。§5.3）</li>
 <li>何も起動しなかった場合 → <code>resyncIfNeeded()</code> の Future は正常に完了する（<code>unawaited</code> で呼んでも未処理の非同期エラーにならない）</li>
 </ul>
-<p><strong><code>SyncPushSubscriptionsUseCase</code> — <code>group(&#39;購読の同期&#39;)</code></strong>（§5.6）：</p>
+<p><strong><code>SyncPushSubscriptionsUseCase</code> — <code>group(&#39;購読の同期&#39;)</code></strong>（§5.6.1）：</p>
 <ul>
 <li>設定行が無い → <code>companies.json</code>（実アセット）の 5 団体すべてを配列順に <code>subscribe</code></li>
 <li><code>notification.toho = &#39;0&#39;</code> → <code>toho</code> だけ <code>unsubscribe</code>、他 4 つは <code>subscribe</code></li>
@@ -3002,7 +3043,7 @@ class TabReselect extends _$TabReselect {
 <li>呼び出しのトピック名 → <code>fcmTopic</code>（<code>id</code> と同じ値）</li>
 <li>設定を <code>&#39;1&#39;</code> に戻して再実行 → 再び <code>subscribe</code>（冪等）</li>
 <li><code>shiki</code> の失敗後、<code>FakePushGateway</code> の例外を解除して再実行 → <code>failed</code> が空になり <code>hasFailure == false</code>（復帰時の再実行で回復する。§8 #37）</li>
-<li><code>settings.notificationSettings()</code> が例外を投げる（例外を投げるフェイクの <code>SettingsRepository</code> を渡す）→ <strong>同じ例外がそのまま伝播</strong>し、<code>subscribe</code> / <code>unsubscribe</code> が 1 度も呼ばれない（§5.6「失敗時」）</li>
+<li><code>settings.notificationSettings()</code> が例外を投げる（例外を投げるフェイクの <code>SettingsRepository</code> を渡す）→ <strong>同じ例外がそのまま伝播</strong>し、<code>subscribe</code> / <code>unsubscribe</code> が 1 度も呼ばれない（§5.6.1「失敗時」）</li>
 <li><code>companies.loadAll()</code> が <code>StateError</code> を投げる → 同じく伝播する</li>
 </ul>
 <p><strong><code>RequestNotificationPermissionUseCase</code> — <code>group(&#39;許可の要求&#39;)</code></strong>（§5.7）：</p>
@@ -3194,7 +3235,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>20</td>
-<td>CI は <code>ubuntu-latest</code> で <code>flutter analyze</code> と <code>flutter test</code> だけを実行し、iOS ビルドは行わない。<code>build_runner</code> の生成物（<code>*.g.dart</code>・<code>*.drift.dart</code>）はコミットする</td>
+<td>CI は <code>ubuntu-latest</code> で品質ゲートの 3 コマンド（<code>flutter analyze</code>・<code>dart analyze --fatal-infos</code>・<code>flutter test</code>。§4.8・§10 前文）だけを実行し、iOS ビルドは行わない。<code>build_runner</code> の生成物（<code>*.g.dart</code>・<code>*.drift.dart</code>）はコミットする</td>
 <td>macOS ランナーで iOS ビルドまで行う／CI で <code>build_runner</code> を実行する</td>
 <td>要件 §5「運用コスト 0 円」。macOS ランナーは無料枠の消費が 10 倍で、analyze / test は Linux で完結する。生成物をコミットすれば CI が速く、実装エージェントの手元と CI で同じコードが検査される</td>
 </tr>
@@ -3274,7 +3315,7 @@ class TabReselect extends _$TabReselect {
 <td>33</td>
 <td>同時実行の抑止・全体タイムアウト・通知タップの後追いは application の <code>SyncCoordinator</code>（Provider・Flutter に依存しない）に置き、<code>SyncController</code>（presentation）は結果を <code>SyncStatus</code> に写すだけにする。フォアグラウンド復帰の遷移判定は純粋関数 <code>resolveResumeSync</code> に切り出す</td>
 <td><code>SyncController</code>（Riverpod Notifier）に抑止とタイムアウトを持たせる</td>
-<td>「実行中なら実行中の Future を返す」「<code>feedTimeout + 5 秒</code> で諦める」「後追いは 1 回」は振る舞いの規則であり、Notifier に置くと ProviderContainer を組んだ Widget テスト相当になりテストしない宣言（§7）と矛盾する。application に置けば UseCase と同じ方法（スタブ + <code>FakeAsync</code>）で検証できる。<code>SyncController</code> は配線と写しだけになるためテスト対象外のままでよい（レビュー第 1 周 M-10）。<code>SyncCoordinator</code> の注入口は具象 <code>SyncArticlesUseCase</code> ではなく関数型 <code>SyncExecutor</code>（<code>execute</code> メソッドを渡す）にする。UseCase を <code>final</code> のままにでき、テストのスタブが継承ではなく関数で済む（レビュー第 2 周 M-11）。<strong>共通化の判断（T-21・T-22 の実装後）</strong>：<code>SyncCoordinator</code> と <code>PushSubscriptionCoordinator</code> の直列化の骨格（実行中スロット・予約 1 つ・完了時に予約を開始）は約 25 行が似ているが、片方は「実行中なら実行中の Future を返す（後追いは <code>notificationTap</code> のときだけ）」、もう片方は「実行中なら必ず 1 回再実行する」で予約の意味が異なり、無理に 1 つにすると条件フラグで分岐する抽象になる。<strong>3 つ目の Coordinator が必要になった時点で <code>core/async/SerialRunner&lt;T&gt;</code> に切り出す</strong>（2 つのうちはこのまま重複を許容する）</td>
+<td>「実行中なら実行中の Future を返す」「<code>overallTimeout</code>（<code>feedTimeout + syncOverallTimeoutMargin</code>。現在は 20 秒。§4.3）で諦める」「後追いは 1 回」は振る舞いの規則であり、Notifier に置くと ProviderContainer を組んだ Widget テスト相当になりテストしない宣言（§7）と矛盾する。application に置けば UseCase と同じ方法（スタブ + <code>FakeAsync</code>）で検証できる。<code>SyncController</code> は配線と写しだけになるためテスト対象外のままでよい（レビュー第 1 周 M-10）。<code>SyncCoordinator</code> の注入口は具象 <code>SyncArticlesUseCase</code> ではなく関数型 <code>SyncExecutor</code>（<code>execute</code> メソッドを渡す）にする。UseCase を <code>final</code> のままにでき、テストのスタブが継承ではなく関数で済む（レビュー第 2 周 M-11）。<strong>共通化の判断（T-21・T-22 の実装後）</strong>：<code>SyncCoordinator</code> と <code>PushSubscriptionCoordinator</code> の直列化の骨格（実行中スロット・予約 1 つ・完了時に予約を開始）は約 25 行が似ているが、片方は「実行中なら実行中の Future を返す（後追いは <code>notificationTap</code> のときだけ）」、もう片方は「実行中なら必ず 1 回再実行する」で予約の意味が異なり、無理に 1 つにすると条件フラグで分岐する抽象になる。<strong>3 つ目の Coordinator が必要になった時点で <code>core/async/SerialRunner&lt;T&gt;</code> に切り出す</strong>（2 つのうちはこのまま重複を許容する）</td>
 </tr>
 <tr>
 <td>34</td>
@@ -3322,7 +3363,7 @@ class TabReselect extends _$TabReselect {
 <td>41</td>
 <td><code>SyncPushSubscriptionsUseCase</code> の呼び出しは application の <code>PushSubscriptionCoordinator</code>（実行中なら完了後に 1 回だけ再実行。直近の結果を保持）を唯一の入口とし、<code>AppLifecycleSync</code>（起動・復帰）と D-05 のトグル経路が共有する</td>
 <td>直列化せず UseCase を直接呼ぶ／実行中の呼び出しを捨てる（再実行しない）／<code>SyncCoordinator</code> と同じ「実行中の Future を返す」</td>
-<td>復帰時の再同期（数秒）の最中にトグルを操作すると、復帰側は変更前の設定を読んでいるため後から <code>subscribe(&#39;takarazuka&#39;)</code> を発行して購読が戻り、<code>lastResult</code> も後に完了した方で上書きされる。捨てる案・「実行中の Future を返す」案はトグルの変更が反映されない。「完了後に 1 回だけ再実行」なら再実行が設定を読み直すので<strong>最後の実行が必ず最新の設定を読む</strong>。<strong>予約は「1 回の実行につき 1 つ」<strong>で、再実行の開始時に予約を空ける（§5.6 手順 3）ため、<code>execute()</code> の境界をまたぐ操作 1 回につき後続が 1 回積まれる（直列。回数の上限は設けない）。機内モードで 5 団体を連続操作した場合の最悪は 6 回 × 75 秒（1 団体 15 秒 × 5 団体逐次。§6）≈ 7.5 分の直列再試行になるが、FCM の購読・解除は冪等（#13）で最終状態は正しく、回数を制限すると実行中に変えた設定が落ちるため上限は設けない（§5.6「実行回数の上限」。design-review 第 1 段階・第 2 周 N-4）。開発者の指示により推奨案を採用（2026-09-20。レビュー第 2 周 M-6）。<strong>補足（第 2 段階第 1 周 M-7）</strong>：<code>execute</code> が例外を投げた場合、<code>run()</code> は結果型に写さず</strong>同じ例外で完了させる（再スロー）</strong>。<code>lastResult</code> は変えず、予約があれば完了時と同じく次の <code>execute()</code> を始める。呼び出し側（<code>AppLifecycleSync</code>・D-05 のトグル）が <code>catch</code> して <code>logger.w</code> に残す。採らなかった案「<code>failed</code> を全団体にした結果に写す」は、<code>execute</code> が投げる例外が <code>CompanyRepository.loadAll</code> の <code>StateError</code>（ビルドの不備。§4.5）と <code>SettingsRepository.notificationSettings()</code> の DB 例外（§5.6「失敗時」。T-22 で追加）だけで、どちらも「全団体の購読状態が不明」であり購読の失敗と同じ扱い（次の復帰で再実行）にしても回復しないため、隠さずログに出すほうが不備に気づける。<code>StateError</code> は <code>Exception</code> ではないため、呼び出し側の <code>catch</code> は <code>on Exception</code> ではなく型を絞らない catch（<code>on Object catch</code>。<code>avoid_catches_without_on_clauses</code> 対応）にし、<code>run()</code> の戻り値は<strong>必ず await する</strong>（捨てると例外が未処理の非同期エラーになる）。予約側へ結果を渡す経路も <code>then(complete, onError: completeError)</code> で例外を伝える（§5.6。T-22）。直列化の骨格を <code>SyncCoordinator</code> と共通化しない理由は #33</td>
+<td>復帰時の再同期（数秒）の最中にトグルを操作すると、復帰側は変更前の設定を読んでいるため後から <code>subscribe(&#39;takarazuka&#39;)</code> を発行して購読が戻り、<code>lastResult</code> も後に完了した方で上書きされる。捨てる案・「実行中の Future を返す」案はトグルの変更が反映されない。「完了後に 1 回だけ再実行」なら再実行が設定を読み直すので<strong>最後の実行が必ず最新の設定を読む</strong>。<strong>予約は「1 回の実行につき 1 つ」<strong>で、再実行の開始時に予約を空ける（§5.6.2 の不変条件 I-2）ため、<code>execute()</code> の境界をまたぐ操作 1 回につき後続が 1 回積まれる（直列。回数の上限は設けない）。機内モードで 5 団体を連続操作した場合の最悪は 6 回 × 75 秒（1 団体 15 秒 × 5 団体逐次。§6）≈ 7.5 分の直列再試行になるが、FCM の購読・解除は冪等（#13）で最終状態は正しく、回数を制限すると実行中に変えた設定が落ちるため上限は設けない（§5.6.2「実行回数（上限を設けない理由）」。design-review 第 1 段階・第 2 周 N-4）。開発者の指示により推奨案を採用（2026-09-20。レビュー第 2 周 M-6）。<strong>補足（第 2 段階第 1 周 M-7）</strong>：<code>execute</code> が例外を投げた場合、<code>run()</code> は結果型に写さず</strong>同じ例外で完了させる（再スロー）</strong>。<code>lastResult</code> は変えず、予約があれば完了時と同じく次の <code>execute()</code> を始める。呼び出し側（<code>AppLifecycleSync</code>・D-05 のトグル）が <code>catch</code> して <code>logger.w</code> に残す。採らなかった案「<code>failed</code> を全団体にした結果に写す」は、<code>execute</code> が投げる例外が <code>CompanyRepository.loadAll</code> の <code>StateError</code>（ビルドの不備。§4.5）と <code>SettingsRepository.notificationSettings()</code> の DB 例外（§5.6.1「失敗時」。T-22 で追加）だけで、どちらも「全団体の購読状態が不明」であり購読の失敗と同じ扱い（次の復帰で再実行）にしても回復しないため、隠さずログに出すほうが不備に気づける。<code>StateError</code> は <code>Exception</code> ではないため、呼び出し側の <code>catch</code> は <code>on Exception</code> ではなく型を絞らない catch（<code>on Object catch</code>。<code>avoid_catches_without_on_clauses</code> 対応）にし、<code>run()</code> の戻り値は<strong>必ず await する</strong>（捨てると例外が未処理の非同期エラーになる）。予約側へ結果を渡す経路も <code>then(complete, onError: completeError)</code> で例外を伝える（§5.6.2「予約経路の完了の渡し方」。T-22）。直列化の骨格を <code>SyncCoordinator</code> と共通化しない理由は #33</td>
 </tr>
 <tr>
 <td>42</td>
@@ -3346,7 +3387,7 @@ class TabReselect extends _$TabReselect {
 <td>45</td>
 <td><code>core/di/</code> の Provider 定義を <code>providers.dart</code>（基盤・Repository・<code>PushGateway</code>。T-C）、<code>articles_providers.dart</code>（articles feature の UseCase・Coordinator。T-D）、<code>notifications_providers.dart</code>（notifications feature の UseCase・Coordinator。T-E）の 3 ファイルに分ける（§4.7）</td>
 <td><code>providers.dart</code> 1 ファイルに全 Provider を置き、T-D と T-E が別ブロックを追記する</td>
-<td>T-D と T-E は並行タスク（§10）で、同じ <code>providers.dart</code> を編集すると <code>riverpod_generator</code> の生成物 <code>providers.g.dart</code> が必ず衝突する（ブロックを分けてもファイル単位で衝突する）。feature ごとにファイルを分ければ各タスクは自分のファイルと生成物だけを追加し、マージが機械的になる。具象 import を許可する場所が <code>core/di/</code> 配下であることは変わらず（CLAUDE.md・#43）、feature の追加時に <code>core/di/&lt;feature&gt;_providers.dart</code> を足す規則としても素直（第 2 段階第 1 周 M-6）</td>
+<td>T-D と T-E は別々の worktree で進むタスク（§10。テストヘルパの依存で順序は直列だが、作業は重なりうる）で、同じ <code>providers.dart</code> を編集すると <code>riverpod_generator</code> の生成物 <code>providers.g.dart</code> が必ず衝突する（ブロックを分けてもファイル単位で衝突する）。feature ごとにファイルを分ければ各タスクは自分のファイルと生成物だけを追加し、マージが機械的になる。具象 import を許可する場所が <code>core/di/</code> 配下であることは変わらず（CLAUDE.md・#43）、feature の追加時に <code>core/di/&lt;feature&gt;_providers.dart</code> を足す規則としても素直（第 2 段階第 1 周 M-6）</td>
 </tr>
 <tr>
 <td>46</td>
@@ -3386,7 +3427,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>52</td>
-<td>フォアグラウンド復帰時の購読再同期の判定を <code>PushSubscriptionCoordinator.resyncIfNeeded()</code>（application）に移し、<code>lastResult</code>・<code>lastRunFailed</code>・<code>pending</code> を公開 API から外す。<code>AppLifecycleSync</code> は <code>unawaited(coordinator.resyncIfNeeded())</code> を呼んで例外を記録するだけにする</td>
+<td>フォアグラウンド復帰時の購読再同期の判定を <code>PushSubscriptionCoordinator.resyncIfNeeded()</code>（application）に移し、<code>lastResult</code>・<code>lastRunFailed</code>・<code>pending</code> を公開 API から外す。<code>AppLifecycleSync</code> は「<code>resyncIfNeeded()</code> を await して <code>on Object catch</code> で記録するだけのラッパ（<code>_resyncSubscriptions</code>）」を <code>unawaited</code> で起動するだけにする（§5.3）</td>
 <td><code>AppLifecycleSync</code>（Widget の <code>State</code>）に 3 分岐 + <code>await</code> + <code>mounted</code> 判定を置いたまま、3 つの状態を公開して呼び出し側に組み合わせ判定させる／判定だけを純粋関数 <code>resolveSubscriptionResync(...)</code> に切り出す</td>
 <td>#28 の採否基準「Widget / Provider に埋めるとテスト不能で、誤りが画面の挙動でしか現れない規則は切り出す」に、この判定だけが当てはまっていなかった。§6 の復帰まわり 6 行（未開始・DB 例外・機内モード 5 団体 failed・飛行中の完了待ち・待った実行の例外・予約の連鎖）に対応するテストが 1 つも無く、<code>group(&#39;pending&#39;)</code> が見ていたのは Coordinator の状態だけで「その状態のときに <code>run()</code> を開始する／しない」は誰も検証していなかった。Coordinator のメソッドにすれば §7 で UseCase 同様に（<code>completer_stub.dart</code> で）検証でき、同時に「直近の結末」が <code>lastResult</code> と <code>lastRunFailed</code> の 2 フィールドに分裂している公開面も畳める。純粋関数案は判定をテストできるが 3 つの状態の露出が残る（design-review 第 1 段階・第 2 周 N-2・N-3・N-18。司令塔の判断で architecture 案を採用）</td>
 </tr>
@@ -3444,7 +3485,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>D-05</td>
-<td>通知トグル（S-03/A-01）は <code>SettingsRepository.setNotificationEnabled</code> の後に <code>ref.read(pushSubscriptionCoordinatorProvider).run()</code> を呼ぶ（<code>SyncPushSubscriptionsUseCase</code> を直接呼ばない。差分ではなく全団体を同期。実行中なら完了後に 1 回だけ再実行される。<code>run()</code> は <code>execute</code> の例外を再スローするので <code>catch</code> して <code>logger.w</code> に残す。§5.6「失敗時」。§8 #41）。S-03/ST-03 の判定は <code>pushPermissionStatusProvider</code>（<code>authorized</code> 以外で E-09）。設定アプリから戻ったとき（S-03/A-07）の読み直しは本書の <code>AppLifecycleSync</code> が invalidate する</td>
+<td>通知トグル（S-03/A-01）は <code>SettingsRepository.setNotificationEnabled</code> の後に <code>ref.read(pushSubscriptionCoordinatorProvider).run()</code> を呼ぶ（<code>SyncPushSubscriptionsUseCase</code> を直接呼ばない。差分ではなく全団体を同期。実行中なら完了後に 1 回だけ再実行される。<code>run()</code> は <code>execute</code> の例外を再スローするので <code>catch</code> して <code>logger.w</code> に残す。§5.6.2「失敗時」。§8 #41）。S-03/ST-03 の判定は <code>pushPermissionStatusProvider</code>（<code>authorized</code> 以外で E-09）。設定アプリから戻ったとき（S-03/A-07）の読み直しは本書の <code>AppLifecycleSync</code> が invalidate する</td>
 <td>§5.6、§5.7</td>
 </tr>
 <tr>
@@ -3544,12 +3585,12 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>D-05</td>
-<td><code>TransientNotice</code>（E-25）に渡す <code>context</code> は<strong>配置画面（<code>CupertinoTabView</code> 配下）のもの</strong>にする（ルートの <code>Overlay</code> に挿すと下部タブより上に重なり、タブを切り替えても残る）。<code>message</code> は S-00 の確定文言のみを渡す（例外メッセージ・URL を渡さない）。3 秒以内に連続して呼ばれても帯は 1 枚しか出ない（<code>TransientNotice</code> が最新の 1 枚だけ残す。§5.9）</td>
+<td>E-25 の表示は <strong><code>TransientNotice.show(context, message: …)</code></strong>（§5.9）を呼ぶ。渡す <code>context</code> は<strong>配置画面（<code>CupertinoTabView</code> 配下）のもの</strong>にする（ルートの <code>Overlay</code> に挿すと下部タブより上に重なり、タブを切り替えても残る）。<code>message</code> は S-00 の確定文言のみを渡す（例外メッセージ・URL を渡さない）。3 秒以内に連続して呼ばれても帯は 1 枚しか出ない（<code>TransientNotice</code> が最新の 1 枚だけ残す。§5.9）</td>
 <td>§5.9</td>
 </tr>
 <tr>
-<td>実装（本書の反映後に行う片付け。宛先は次に当該ファイルを触るタスク）</td>
-<td><strong>注記の削除</strong>：(1) <code>features/articles/infrastructure/http_articles_feed.dart</code> の <code>TODO(T-21)</code>（§4.3 に TLS 系 <code>IOException</code> の分類行が入ったため）、(2) <code>core/database/app_database.dart</code> の <code>TODO(T-20)</code>（§4.2 に <code>settings</code> の共通アクセサが入ったため）、(3) <code>features/articles/domain/article.dart</code> と <code>pubspec.yaml</code> の <code>TODO(T-18)</code>（§4.1 に <code>@immutable</code> の方針、§4.8 に <code>meta</code> の依存が入ったため）。いずれも「設計書に規定が無い」ことを記した注記で、本書の反映で解消する。<strong>実装済みコードの移動</strong>：(4) <code>tabControllerProvider</code> を <code>lib/app/root_tabs.dart</code> から <code>lib/app/tab_controller.dart</code> へ切り出す（§5.8・§8 #46。<code>root_tabs.dart</code> は読む側に回る。D-05 側の import も追随）、(5) <code>SettingKeys.feedEtag</code> / <code>feedGeneratedAt</code> / <code>feedUnsupportedSchema</code> を <strong><code>features/articles/infrastructure/feed_state_keys.dart</code></strong> の <code>FeedStateKeys</code> へ移し（<code>domain</code> ではなく <code>infrastructure</code>。§8 #47）、<code>drift_article_repository.dart</code> の <code>settings/domain</code> import を外す（§4.4）、(6) <code>articleCountErrorLog</code> Provider を廃し、記録を <code>AppLifecycleSync.initState</code> の <code>ref.listenManual</code> へ移す（<code>feedStatus</code> の <code>ref.watch(articleCountErrorLogProvider)</code> も削除。§5.3・§5.4・§8 #49）、<strong>(7) <code>ListStatus</code>・<code>FullView</code> を <code>features/articles/presentation/list_status.dart</code> から <code>lib/core/ui/status/list_status.dart</code> へ切り出し（切り出し先の import は <code>package:flutter/foundation.dart</code> だけにし、<code>ListStatus</code> に <code>@immutable</code> を付ける。§4.1・§8 #51）、<code>FeedStatus.syncsOnLaunch</code> と <code>feedStatusProvider</code> の引数を廃す（<code>resolveListStatus</code> はホーム専用。判定表の先頭 2 行と対応するテストを削る。D-05 側の保存画面の呼び出しも追随。§5.4・§8 #51）</strong>、<strong>(8) 復帰時の再同期の判定を <code>AppLifecycleSync._resyncSubscriptionsIfFailed</code> から <code>PushSubscriptionCoordinator.resyncIfNeeded()</code> へ移し、<code>lastResult</code>・<code>lastRunFailed</code>・<code>pending</code>（と <code>PushSubscriptionCoordinator</code> の <code>isRunning</code>。<code>SyncCoordinator</code> の <code>isRunning</code> は <code>@visibleForTesting</code> を付けて残す。§8 #53）を非公開にする。§7 の <code>group(&#39;pending&#39;)</code> を <code>group(&#39;復帰時の再同期&#39;)</code> に差し替える（§5.3・§5.6・§8 #52）</strong>。(4)〜(8) はいずれも振る舞いを変えない移動・整理（(8) だけは「待った実行が例外で終わった経路」と「古い直近結果で判定する経路」の 2 つの修正を含む。§6）で、<code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test</code> が通ることで確認する</td>
+<td>実装（<strong>§10 T-H</strong>。本書の反映後に行う片付けで、1 タスクにまとめて行う）</td>
+<td><strong>注記の削除</strong>：(1) <code>features/articles/infrastructure/http_articles_feed.dart</code> の <code>TODO(T-21)</code>（§4.3 に TLS 系 <code>IOException</code> の分類行が入ったため）、(2) <code>core/database/app_database.dart</code> の <code>TODO(T-20)</code>（§4.2 に <code>settings</code> の共通アクセサが入ったため）、(3) <code>features/articles/domain/article.dart</code> と <code>pubspec.yaml</code> の <code>TODO(T-18)</code>（§4.1 に <code>@immutable</code> の方針、§4.8 に <code>meta</code> の依存が入ったため）。いずれも「設計書に規定が無い」ことを記した注記で、本書の反映で解消する。<strong>実装済みコードの移動</strong>：(4) <code>tabControllerProvider</code> を <code>lib/app/root_tabs.dart</code> から <code>lib/app/tab_controller.dart</code> へ切り出す（§5.8・§8 #46。<code>root_tabs.dart</code> は読む側に回る。D-05 側の import も追随）、(5) <code>SettingKeys.feedEtag</code> / <code>feedGeneratedAt</code> / <code>feedUnsupportedSchema</code> を <strong><code>features/articles/infrastructure/feed_state_keys.dart</code></strong> の <code>FeedStateKeys</code> へ移し（<code>domain</code> ではなく <code>infrastructure</code>。§8 #47）、<code>drift_article_repository.dart</code> の <code>settings/domain</code> import を外す（§4.4）、(6) <code>articleCountErrorLog</code> Provider を廃し、記録を <code>AppLifecycleSync.initState</code> の <code>ref.listenManual</code> へ移す（<code>feedStatus</code> の <code>ref.watch(articleCountErrorLogProvider)</code> も削除。§5.3・§5.4・§8 #49）、<strong>(7) <code>ListStatus</code>・<code>FullView</code> を <code>features/articles/presentation/list_status.dart</code> から <code>lib/core/ui/status/list_status.dart</code> へ切り出し（切り出し先の import は <code>package:flutter/foundation.dart</code> だけにし、<code>ListStatus</code> に <code>@immutable</code> を付ける。§4.1・§8 #51）、<code>FeedStatus.syncsOnLaunch</code> と <code>feedStatusProvider</code> の引数を廃す（<code>resolveListStatus</code> はホーム専用。判定表の先頭 2 行と対応するテストを削る。D-05 側の保存画面の呼び出しも追随。§5.4・§8 #51）</strong>、<strong>(8) 復帰時の再同期の判定を <code>AppLifecycleSync._resyncSubscriptionsIfFailed</code> から <code>PushSubscriptionCoordinator.resyncIfNeeded()</code> へ移し、<code>lastResult</code>・<code>lastRunFailed</code>・<code>pending</code>（と <code>PushSubscriptionCoordinator</code> の <code>isRunning</code>。<code>SyncCoordinator</code> の <code>isRunning</code> は <code>@visibleForTesting</code> を付けて残す。§8 #53）を非公開にする。§7 の <code>group(&#39;pending&#39;)</code> を <code>group(&#39;復帰時の再同期&#39;)</code> に差し替える（§5.3・§5.6・§8 #52）</strong>。(4)〜(8) はいずれも振る舞いを変えない移動・整理（(8) だけは「待った実行が例外で終わった経路」と「古い直近結果で判定する経路」の 2 つの修正を含む。§6）で、品質ゲート（§10 前文の 3 コマンド）が通ることで確認する。<strong>(4)・(7) は D-05 側の import 追随を伴うため、同じタスク（T-H）でまとめて行う</strong></td>
 <td>§4.1、§4.2、§4.3、§4.4、§4.8、§5.3、§5.4、§5.6、§5.8</td>
 </tr>
 <tr>
@@ -3564,7 +3605,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>CLAUDE.md（司令塔。<strong>未反映。開発者判断が要る</strong>）</td>
-<td>「品質ゲート」の app 行は現在 <code>flutter analyze &amp;&amp; flutter test</code> だが、<strong><code>riverpod_lint</code> は <code>analysis_options.yaml</code> の <code>plugins:</code> 方式で有効化しており、<code>flutter analyze</code> は analyzer プラグインを実行しない</strong>（T-17 の 1-3 周で実証。§4.8）。プラグインの指摘を検査するには <code>dart analyze --fatal-infos</code> が要る。app の CI（§4.8）と本書 §10 の各タスクの完了条件は 3 コマンドを前提に書いてあるため、CLAUDE.md の app 行を <code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test</code> に更新するか（verifier の実行コマンドも同じ）を開発者が判断する。T-17 の dev-loop 完了報告でも同じ確認依頼が出ている（タスク外として未変更）。<strong>開発者判断が要る事項なので §9 Q-6 に挙げてある</strong>（本行は所在の記録で、判断は Q-6）</td>
+<td>「品質ゲート」の app 行は現在 <code>flutter analyze &amp;&amp; flutter test</code> だが、<strong><code>riverpod_lint</code> は <code>analysis_options.yaml</code> の <code>plugins:</code> 方式で有効化しており、<code>flutter analyze</code> は analyzer プラグインを実行しない</strong>（T-17 の 1-3 周で実証。§4.8）。プラグインの指摘を検査するには <code>dart analyze --fatal-infos</code> が要る。app の CI（§4.8）と本書 §10（前文で「品質ゲート」を 3 コマンドと定義し、各タスクの完了条件がそれを参照する）は 3 コマンドを前提に書いてあるため、CLAUDE.md の app 行を <code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test</code> に更新するか（verifier の実行コマンドも同じ）を開発者が判断する。T-17 の dev-loop 完了報告でも同じ確認依頼が出ている（タスク外として未変更）。<strong>開発者判断が要る事項なので §9 Q-6 に挙げてある</strong>（本行は所在の記録で、判断は Q-6）</td>
 <td>§4.8、§9 Q-6、§10</td>
 </tr>
 <tr>
@@ -3634,7 +3675,8 @@ class TabReselect extends _$TabReselect {
 </tr>
 </tbody></table>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
-<p>D-01 §10 Task C（app 契約実装）は本書の T-B1・T-D に吸収する。各タスクは pm の目安どおり新規ファイルは 5〜10 を目安（テストを含む。<code>build_runner</code> の生成物と <code>articles.sample.json</code> のコピーは数えない）・UseCase 3 以内で、単独で <code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test</code> を通す（T-A は <code>flutter test</code> の対象が無いため analyze のみ）。目安の<strong>例外は 4 つ</strong>：T-A（<code>flutter create</code> の生成物の整理が主）、T-G（既存ファイルの改修が主）、<strong>T-D（11。うち 3 つはテストヘルパで、UseCase は <code>SyncArticlesUseCase</code> の 1 つだけ）</strong>、<strong>T-F1（14 + 改修 1。純粋関数・Provider・状態表示の型を別ファイルに切り出したためファイル数が増えたが、UseCase は 0）</strong>。T-B1 は <code>feed_state_keys.dart</code> が infrastructure（T-C）へ移ったため 10 で目安内（§8 #47）。将来さらに分けるなら T-F1 を「<code>lib/app/</code> の骨格（起動・下部タブ・ライフサイクル。<code>root_tab.dart</code>・<code>tab_controller.dart</code>・<code>tab_reselect.dart</code> はこちら）」と「状態の型と判定（<code>core/ui/status/list_status.dart</code>・<code>articles/presentation</code> の <code>sync_controller.dart</code>・<code>list_status.dart</code>）」の 2 つに割る（前者の完了条件はシミュレータでの目視、後者はテーブル駆動テストで、検証手段も分かれる）。生成物（<code>*.g.dart</code>・<code>*.drift.dart</code>）は各タスクでコミットする。並行タスクが同じファイル（生成物を含む）を編集しないよう、Provider の定義は feature ごとのファイルに分ける（§4.7。§8 #45）。</p>
+<p><strong>本節での「品質ゲート」は <code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test</code> の 3 コマンドを指す</strong>（<code>riverpod_lint</code> は analyzer プラグインなので <code>flutter analyze</code> だけでは実行されない。§4.8。CLAUDE.md の「品質ゲート」は現在 2 コマンドで、更新するかの判断は §9 Q-6）。<strong>本節のタスク候補 ID（T-A〜T-H）は <code>/pm plan</code> 用の ID で、実タスク（<code>docs/tasks/T-nn.md</code>）とは別系統</strong>（本文中の <code>T-17</code>・<code>T-23</code> のような <code>T-nn</code> は実タスクを指す。対応は <code>docs/tasks/README.md</code> が持つ）。</p>
+<p>D-01 §10 Task C（app 契約実装）は本書の T-B1・T-D に吸収する。各タスクは pm の目安どおり新規ファイルは 5〜10 を目安（テストを含む。<code>build_runner</code> の生成物と <code>articles.sample.json</code> のコピーは数えない）・UseCase 3 以内で、単独で品質ゲートを通す（T-A は <code>flutter test</code> の対象が無いため analyze の 2 コマンドのみ）。目安の<strong>例外は 4 つ</strong>：T-A（<code>flutter create</code> の生成物の整理が主）、T-G（既存ファイルの改修が主）、<strong>T-D（11。うち 3 つはテストヘルパで、UseCase は <code>SyncArticlesUseCase</code> の 1 つだけ）</strong>、<strong>T-F1（14 + 改修 1。純粋関数・Provider・状態表示の型を別ファイルに切り出したためファイル数が増えたが、UseCase は 0）</strong>。T-H は新規ファイルが 0（既存ファイルの改修のみ）なので目安の対象外。T-B1 は <code>feed_state_keys.dart</code> が infrastructure（T-C）へ移ったため 10 で目安内（§8 #47）。将来さらに分けるなら T-F1 を「<code>lib/app/</code> の骨格（起動・下部タブ・ライフサイクル。<code>root_tab.dart</code>・<code>tab_controller.dart</code>・<code>tab_reselect.dart</code> はこちら）」と「状態の型と判定（<code>core/ui/status/list_status.dart</code>・<code>articles/presentation</code> の <code>sync_controller.dart</code>・<code>list_status.dart</code>）」の 2 つに割る（前者の完了条件はシミュレータでの目視、後者はテーブル駆動テストで、検証手段も分かれる）。生成物（<code>*.g.dart</code>・<code>*.drift.dart</code>）は各タスクでコミットする。並行タスクが同じファイル（生成物を含む）を編集しないよう、Provider の定義は feature ごとのファイルに分ける（§4.7。§8 #45）。</p>
 <table>
 <thead>
 <tr>
@@ -3652,7 +3694,7 @@ class TabReselect extends _$TabReselect {
 <td><code>flutter create --platforms ios --org jp.curtaincall app</code>（生成物を整理し <code>uses-material-design: false</code>）、<code>pubspec.yaml</code>（§4.8）、<code>analysis_options.yaml</code>、<code>build.yaml</code>、<code>lib/main.dart</code>、<code>lib/app/app.dart</code>（<code>CupertinoApp</code> に仮のプレースホルダー）、<code>lib/core/logging/app_logger.dart</code>、<code>lib/core/network/feed_config.dart</code>、<code>lib/core/network/user_agent_client.dart</code>、<code>.github/workflows/app-ci.yml</code>。計 10</td>
 <td><code>app/</code>、<code>.github/workflows/</code></td>
 <td>D-01 Task A（<code>app/assets/companies.json</code>）</td>
-<td><code>flutter analyze</code> 警告ゼロ。<code>flutter test</code> は対象無しのため CI の step を <code>if: hashFiles(&#39;app/test/**/*_test.dart&#39;) != &#39;&#39;</code> で条件付きにし、T-B1 で外す</td>
+<td><code>flutter analyze &amp;&amp; dart analyze --fatal-infos</code> が警告ゼロ（テスト対象が無いため <code>flutter test</code> は除く）。<code>flutter test</code> は対象無しのため CI の step を <code>if: hashFiles(&#39;app/test/**/*_test.dart&#39;) != &#39;&#39;</code> で条件付きにし、T-B1 で外す</td>
 </tr>
 <tr>
 <td>T-B1</td>
@@ -3660,7 +3702,7 @@ class TabReselect extends _$TabReselect {
 <td><code>features/articles/domain/article.dart</code>・<code>category.dart</code>・<code>articles_file.dart</code>・<code>article_order.dart</code>・<code>article_sync_repository.dart</code>・<code>article_query_repository.dart</code>・<code>articles_feed.dart</code>・<code>read_display_state.dart</code>、<code>test/features/articles/domain/article_order_test.dart</code>・<code>read_display_state_test.dart</code>。計 10</td>
 <td><code>lib/features/articles/domain/</code>、<code>test/features/articles/domain/</code></td>
 <td>T-A</td>
-<td><code>flutter analyze &amp;&amp; flutter test</code> が通る。<code>compareArticles</code>・<code>resolveReadDisplayState</code> の直接テスト（§7 純粋関数の例外）を含む。CI の <code>flutter test</code> の条件を外す</td>
+<td>品質ゲート通過（§10 前文の 3 コマンド）。<code>compareArticles</code>・<code>resolveReadDisplayState</code> の直接テスト（§7 純粋関数の例外）を含む。CI の <code>flutter test</code> の条件を外す</td>
 </tr>
 <tr>
 <td>T-B2</td>
@@ -3668,7 +3710,7 @@ class TabReselect extends _$TabReselect {
 <td><code>features/companies/domain/company.dart</code>・<code>company_repository.dart</code>、<code>features/settings/domain/settings_repository.dart</code>・<code>browser_choice.dart</code>、<code>features/notifications/domain/push_gateway.dart</code>・<code>notification_tap.dart</code>、<code>features/saved/domain/saved_article_repository.dart</code>、<code>test/features/notifications/domain/notification_tap_test.dart</code>。計 8</td>
 <td><code>lib/features/{companies,settings,notifications,saved}/domain/</code>、<code>test/features/notifications/domain/</code></td>
 <td>T-A</td>
-<td>同上。<code>parseNotificationTap</code> の直接テスト（§7 純粋関数の例外）を含む。T-B1 と並行可（触るディレクトリが互いに素）</td>
+<td>品質ゲート通過（§10 前文の 3 コマンド）。<code>parseNotificationTap</code> の直接テスト（§7 純粋関数の例外）を含む。T-B1 と並行可（触るディレクトリが互いに素）</td>
 </tr>
 <tr>
 <td>T-C</td>
@@ -3676,7 +3718,7 @@ class TabReselect extends _$TabReselect {
 <td><code>core/database/tables.dart</code>・<code>app_database.dart</code>（+ 生成物）、<code>features/articles/infrastructure/feed_state_keys.dart</code>（§4.4。§8 #47）・<code>drift_article_repository.dart</code>（<code>ArticleSyncRepository</code> と <code>ArticleQueryRepository</code> の両方を implements。Provider は 2 本。§8 #42）、<code>features/saved/infrastructure/drift_saved_article_repository.dart</code>、<code>features/settings/infrastructure/drift_settings_repository.dart</code>、<code>features/companies/infrastructure/asset_company_repository.dart</code>、<code>features/notifications/infrastructure/noop_push_gateway.dart</code>、<code>core/di/providers.dart</code>（基盤・Repository・<code>pushGateway</code> の Provider。§4.7。UseCase の Provider は T-D・T-E が別ファイルに置く）、<code>test/helpers/in_memory_database.dart</code>。計 10</td>
 <td><code>lib/core/{database,di}/</code>、<code>lib/features/*/infrastructure/</code>、<code>test/helpers/</code></td>
 <td>T-B1、T-B2</td>
-<td><code>flutter analyze</code> 警告ゼロ。<code>AppDatabase</code> に <code>settings</code> の共通アクセサ 4 つ（<code>upsertSetting</code> / <code>deleteSetting</code> / <code>readSetting</code> / <code>watchSetting</code>）と <code>deleteUnsavedOutOfFeedRows()</code>（§8 #48）、<code>Articles</code> の <code>@DataClassName(&#39;ArticleRow&#39;)</code>・<code>SavedArticles</code> の <code>@DataClassName(&#39;SavedArticleRow&#39;)</code> を含む（§4.2）。<code>AssetCompanyRepository</code> は §4.5 の検証 6 件を行う。テストは T-D・T-E が UseCase 経由で行う</td>
+<td>品質ゲート通過（§10 前文の 3 コマンド。この時点で新規テストは無いが、既存のテストを壊さないことを確認する）。<code>AppDatabase</code> に <code>settings</code> の共通アクセサ 4 つ（<code>upsertSetting</code> / <code>deleteSetting</code> / <code>readSetting</code> / <code>watchSetting</code>）と <code>deleteUnsavedOutOfFeedRows()</code>（§8 #48）、<code>Articles</code> の <code>@DataClassName(&#39;ArticleRow&#39;)</code>・<code>SavedArticles</code> の <code>@DataClassName(&#39;SavedArticleRow&#39;)</code> を含む（§4.2）。<code>AssetCompanyRepository</code> は §4.5 の検証 6 件を行う。テストは T-D・T-E が UseCase 経由で行う</td>
 </tr>
 <tr>
 <td>T-D</td>
@@ -3684,15 +3726,15 @@ class TabReselect extends _$TabReselect {
 <td><code>features/articles/infrastructure/articles_file_codec.dart</code>・<code>http_articles_feed.dart</code>、<code>features/articles/application/sync_result.dart</code>・<code>sync_articles_use_case.dart</code>・<code>sync_coordinator.dart</code>、<code>core/di/articles_providers.dart</code>（§4.7。§8 #45）、<code>test/helpers/mock_feed_client.dart</code>・<code>test_articles.dart</code>・<code>completer_stub.dart</code>、<code>test/features/articles/application/sync_articles_use_case_test.dart</code>・<code>sync_coordinator_test.dart</code>、<code>test/fixtures/articles.sample.json</code>（collector からのコピー。数えない）、<code>pubspec.yaml</code> に <code>collection</code>・<code>fake_async</code>（§4.8）。計 11</td>
 <td><code>lib/features/articles/{application,infrastructure}/</code>、<code>lib/core/di/articles_providers.dart</code>、<code>test/</code></td>
 <td>T-C</td>
-<td><code>flutter analyze &amp;&amp; flutter test</code> が通る。§7 の <code>SyncArticlesUseCase</code> の 7 group と <code>SyncCoordinator</code> の 5 group のケース（後退防止・世代番号・全体タイムアウトの完了通知・dispose を含む）をすべて含む</td>
+<td>品質ゲート通過（§10 前文の 3 コマンド）。§7 の <code>SyncArticlesUseCase</code> の 7 group と <code>SyncCoordinator</code> の 5 group のケース（後退防止・世代番号・全体タイムアウトの完了通知・dispose を含む）をすべて含む</td>
 </tr>
 <tr>
 <td>T-E</td>
 <td>通知の UseCase と Coordinator</td>
 <td><code>features/notifications/application/sync_push_subscriptions_use_case.dart</code>・<code>push_subscription_coordinator.dart</code>・<code>push_subscription_sync_result.dart</code>・<code>request_notification_permission_use_case.dart</code>、<code>features/notifications/presentation/notification_tap_providers.dart</code>、<code>core/di/notifications_providers.dart</code>（§4.7。§8 #45）、<code>test/helpers/fake_push_gateway.dart</code>、<code>test/features/notifications/application/sync_push_subscriptions_use_case_test.dart</code>・<code>push_subscription_coordinator_test.dart</code>・<code>request_notification_permission_use_case_test.dart</code>。計 10</td>
 <td><code>lib/features/notifications/{application,presentation}/</code>、<code>lib/core/di/notifications_providers.dart</code>、<code>test/</code></td>
-<td>T-C</td>
-<td>品質ゲート通過。§7 の <code>SyncPushSubscriptionsUseCase</code>・<code>RequestNotificationPermissionUseCase</code> の各 1 group と <code>PushSubscriptionCoordinator</code> の 3 group（<code>直列化</code>・<code>失敗</code> = 例外の再スロー・<code>復帰時の再同期</code> = <code>resyncIfNeeded()</code> の 13 ケース。§8 #52）のケースをすべて含む。<code>PushSubscriptionCoordinator</code> が公開するのは <code>run()</code> と <code>resyncIfNeeded()</code> だけ（直近結果・例外フラグ・飛行中の Future は非公開。<code>dispose()</code> は持たない。§8 #54）。<strong><code>run()</code> は <code>_current</code> を最初の <code>await</code> より前に設定し、<code>resyncIfNeeded()</code> の手順 2〜3 に <code>await</code> を挟まない</strong>（<code>resyncIfNeeded()</code> が 2 本重なっても <code>execute</code> の追加呼び出しが 1 回に収まることを §7 のケースで検証する。§5.6）。T-D と並行可（触るファイルが互いに素。<code>core/di/</code> は別ファイルと別の生成物）</td>
+<td>T-C、<strong>T-D</strong>（<code>test/helpers/completer_stub.dart</code> を使う。§7）</td>
+<td>品質ゲート通過（§10 前文の 3 コマンド）。§7 の <code>SyncPushSubscriptionsUseCase</code>・<code>RequestNotificationPermissionUseCase</code> の各 1 group と <code>PushSubscriptionCoordinator</code> の 3 group（<code>直列化</code>・<code>失敗</code> = 例外の再スロー・<code>復帰時の再同期</code> = <code>resyncIfNeeded()</code> の 13 ケース。§8 #52）のケースをすべて含む。<code>PushSubscriptionCoordinator</code> が公開するのは <code>run()</code> と <code>resyncIfNeeded()</code> だけ（直近結果・例外フラグ・飛行中の Future は非公開。<code>dispose()</code> は持たない。§8 #54）。<strong><code>run()</code> は <code>_current</code> を最初の <code>await</code> より前に設定し、<code>resyncIfNeeded()</code> の手順 2〜3 に <code>await</code> を挟まない</strong>（<code>resyncIfNeeded()</code> が 2 本重なっても <code>execute</code> の追加呼び出しが 1 回に収まることを §7 のケースで検証する。§5.6.2 の不変条件 I-1・§5.6.3「重ならない保証」）。<strong>T-D と並行しない</strong>：本タスクのテストは T-D が作る <code>test/helpers/completer_stub.dart</code> を使う（自分では作らない。§7）</td>
 </tr>
 <tr>
 <td>T-F1</td>
@@ -3700,7 +3742,7 @@ class TabReselect extends _$TabReselect {
 <td><code>lib/core/di/bootstrap_overrides.dart</code>（§8 #43）、<code>lib/app/bootstrap.dart</code>・<code>root_tabs.dart</code>（Widget のみ。Provider を置かない）・<code>root_tab.dart</code>・<code>tab_controller.dart</code>（<code>tabControllerProvider</code>。§5.8・§8 #46）・<code>tab_reselect.dart</code>・<code>app_lifecycle_sync.dart</code>・<code>resume_sync_policy.dart</code>、<code>lib/app/app.dart</code> 改修、<code>lib/core/ui/status/list_status.dart</code>（<code>ListStatus</code>・<code>FullView</code>。§8 #51）、<code>features/articles/presentation/sync_controller.dart</code>・<code>list_status.dart</code>（+ 生成物）、<code>test/features/articles/presentation/list_status_test.dart</code>、<code>test/app/resume_sync_policy_test.dart</code>・<code>root_tab_test.dart</code>。計 14 + 改修 1</td>
 <td><code>lib/core/di/bootstrap_overrides.dart</code>、<code>lib/app/</code>、<code>lib/core/ui/status/list_status.dart</code>（このファイルだけ）、<code>lib/features/articles/presentation/</code>、<code>test/app/</code>、<code>test/features/articles/presentation/</code></td>
 <td>T-D、T-E</td>
-<td>品質ゲート通過。シミュレータで起動し、3 タブが切り替わり、<strong>タブを切り替えてもスクロール位置が保持される</strong>（再タップ判定が誤爆しない。§5.8）、起動直後に <code>sync(launch)</code> が走ってログに結果が出る。最初のフレームで E-22 が出ない（E-20 → 一覧）。<code>lib/app/</code> に具象の import が無い。<code>core/ui/status/list_status.dart</code> の import は <code>package:flutter/foundation.dart</code>（<code>@immutable</code>）だけで、feature・application・riverpod を import しない（§4.1・§8 #51）。<strong>復帰時の購読再同期は <code>PushSubscriptionCoordinator.resyncIfNeeded()</code> を <code>unawaited</code> で呼んで例外を <code>logger.w</code> に残すだけで、判定（未開始・待ち・failed）を Widget に持たない</strong>（判定のテストは T-E。§5.3・§8 #52）。<code>resolveListStatus</code> の判定表 8 行（ホーム専用）・<code>resolveHasArticles</code>・<code>shouldLogCountError</code>・<code>resolveResumeSync</code>（遷移列）・<code>shouldNotifyReselect</code> の直接テスト（§7）を含む</td>
+<td>品質ゲート通過（§10 前文の 3 コマンド）。シミュレータで起動し、3 タブが切り替わり、<strong>タブを切り替えてもスクロール位置が保持される</strong>（再タップ判定が誤爆しない。§5.8）、起動直後に <code>sync(launch)</code> が走ってログに結果が出る。最初のフレームで E-22 が出ない（E-20 → 一覧）。<code>lib/app/</code> に具象の import が無い。<code>core/ui/status/list_status.dart</code> の import は <code>package:flutter/foundation.dart</code>（<code>@immutable</code>）だけで、feature・application・riverpod を import しない（§4.1・§8 #51）。<strong>復帰時の購読再同期は <code>PushSubscriptionCoordinator.resyncIfNeeded()</code> を await して例外を <code>logger.w</code> に残すラッパを <code>unawaited</code> で起動するだけで、判定（未開始・待ち・failed）を Widget に持たない</strong>（判定のテストは T-E。§5.3・§8 #52）。<code>resolveListStatus</code> の判定表 8 行（ホーム専用）・<code>resolveHasArticles</code>・<code>shouldLogCountError</code>・<code>resolveResumeSync</code>（遷移列）・<code>shouldNotifyReselect</code> の直接テスト（§7）を含む</td>
 </tr>
 <tr>
 <td>T-F2a</td>
@@ -3708,7 +3750,7 @@ class TabReselect extends _$TabReselect {
 <td><code>core/ui/status/centered_status_body.dart</code>・<code>full_loading_view.dart</code>・<code>refreshing_header.dart</code>・<code>empty_view.dart</code>・<code>offline_banner.dart</code>・<code>full_error_view.dart</code>・<code>transient_notice.dart</code>。計 7</td>
 <td><code>lib/core/ui/status/</code>（<code>list_status.dart</code> を除く 7 ファイル）</td>
 <td>T-A</td>
-<td><code>flutter analyze &amp;&amp; flutter test</code> が通る（新規テストは無し。Widget テストは書かない。§7）。<code>core/ui/status</code> が Flutter SDK 以外を import しないこと。T-B1・T-F1・T-F2b と並行可（T-F1 が同じディレクトリに置くのは <code>list_status.dart</code> 1 ファイルだけで、両タスクの新規ファイルは互いに素。生成物も無い）</td>
+<td>品質ゲート通過（§10 前文の 3 コマンド。新規テストは無し。Widget テストは書かない。§7）。<code>core/ui/status</code> が Flutter SDK 以外を import しないこと。<strong><code>TransientNotice</code> は <code>static void show(BuildContext context, {required String message})</code> を公開する</strong>（<code>Overlay</code> への挿入・除去と 3 秒のタイマーを内包し、呼び出し側に <code>OverlayEntry</code>・<code>Timer</code> を持たせない。§5.9）。T-B1・T-F1・T-F2b と並行可（T-F1 が同じディレクトリに置くのは <code>list_status.dart</code> 1 ファイルだけで、両タスクの新規ファイルは互いに素。生成物も無い）</td>
 </tr>
 <tr>
 <td>T-F2b</td>
@@ -3716,7 +3758,15 @@ class TabReselect extends _$TabReselect {
 <td><code>core/ui/article/article_cell.dart</code>・<code>article_cell_model.dart</code>・<code>category_icon.dart</code>・<code>published_date_format.dart</code>、<code>test/core/ui/article/published_date_format_test.dart</code>。計 5</td>
 <td><code>lib/core/ui/article/</code>、<code>test/core/ui/article/</code></td>
 <td>T-B1</td>
-<td><code>flutter analyze &amp;&amp; flutter test</code> が通る。<code>core/ui/article</code> の import が <code>articles/domain</code> と Flutter SDK（<code>cupertino.dart</code> のほか、<code>@immutable</code> のための <code>foundation.dart</code> を含む）だけであること。<code>formatPublishedDate</code> の直接テスト（§7。未来日を含む）を含む。T-F1・T-F2a と並行可（触るディレクトリが互いに素）</td>
+<td>品質ゲート通過（§10 前文の 3 コマンド）。<code>core/ui/article</code> の import が <code>articles/domain</code> と Flutter SDK（<code>cupertino.dart</code> のほか、<code>@immutable</code> のための <code>foundation.dart</code> を含む）だけであること。<code>formatPublishedDate</code> の直接テスト（§7。未来日を含む）を含む。T-F1・T-F2a と並行可（触るディレクトリが互いに素）</td>
+</tr>
+<tr>
+<td>T-H</td>
+<td>反映後の片付け（§8.1「実装（§10 T-H）」の (1)〜(8)）※新規ファイル 0 のため前文の目安の対象外</td>
+<td>新規なし（既存ファイルの改修 8 件）：注記の削除 3 件（(1)〜(3)）と、実装済みコードの移動・整理 5 件（(4) <code>tabControllerProvider</code> の切り出し、(5) <code>FeedStateKeys</code> の移動、(6) <code>articleCountErrorLog</code> の廃止、(7) <code>ListStatus</code>・<code>FullView</code> の <code>core/ui/status</code> への切り出しと <code>syncsOnLaunch</code> の廃止、(8) 復帰時の再同期判定の <code>resyncIfNeeded()</code> への移設）</td>
+<td><code>lib/app/</code>、<code>lib/core/{di,ui/status}/</code>、<code>lib/features/{articles,notifications}/</code>、<code>lib/features/{saved,settings}/presentation/</code>（(4)・(7) の import 追随のみ）、<code>test/</code></td>
+<td>T-F1、T-E</td>
+<td>品質ゲート通過（§10 前文の 3 コマンド）。§8.1 の (1)〜(8) をすべて適用し、<strong>振る舞いが変わらないことを既存の §7 のテストで確認する</strong>（(8) だけは「待った実行が例外で終わった経路」と「古い直近結果で判定する経路」の修正を含むため、§7 <code>group(&#39;復帰時の再同期&#39;)</code> のケースを満たすこと）。<code>grep</code> で <code>TODO(T-18)</code>・<code>TODO(T-20)</code>・<code>TODO(T-21)</code>・<code>articleCountErrorLog</code>・<code>syncsOnLaunch</code>・<code>SettingKeys.feed</code> が残らないこと。D-05 側の import 追随（(4)・(7)）も同じタスクで行い、<code>saved/presentation → articles/presentation</code> の import を残さない（§8 #51）</td>
 </tr>
 <tr>
 <td>T-G</td>
@@ -3724,10 +3774,10 @@ class TabReselect extends _$TabReselect {
 <td><code>features/notifications/infrastructure/fcm_push_gateway.dart</code>、<code>pubspec.yaml</code> に <code>firebase_core</code>・<code>firebase_messaging</code>、<code>core/di/bootstrap_overrides.dart</code> の <code>fcm</code> 分岐（<code>Firebase.initializeApp()</code>）、<code>core/di/providers.dart</code> の <code>pushGateway</code> の <code>fcm</code> 分岐、<code>ios/Runner</code> の Push Notifications / Background Modes（remote-notification）の capability、<code>.gitignore</code> に <code>GoogleService-Info.plist</code>（§8 #27。開発者が手元の <code>app/ios/Runner/</code> に置く）。計 1 + 改修 5</td>
 <td><code>lib/features/notifications/infrastructure/</code>、<code>lib/core/di/</code>、<code>app/ios/</code></td>
 <td>T-F1、要件 §10 フェーズ 5</td>
-<td>品質ゲート通過（<code>none</code> ビルド）。<code>--dart-define=CURTAINCALL_PUSH=fcm</code> の実機ビルドで、collector（D-02）からの通知が届き、タップで <code>companyId</code> が <code>notificationTapStreamProvider</code> に流れる。同じ実機ビルドで S-01/ST-18（初回起動の許可ダイアログ）と S-03/ST-03（許可を拒否したときの案内行）を目視で確認する（§8 #29）。<strong>あわせて §6 の 2 行を実機で確認する</strong>：(a) 機内モードで購読同期を走らせ、<code>subscribe</code> / <code>unsubscribe</code> が 15 秒で <code>TimeoutException</code> になり 1 団体の停止が他団体の同期を止めないこと（ログの <code>failed</code>）、(b) 通知タップで起動した後にホット再起動して <code>takeInitialTap()</code> が 2 回目に null を返し、同じタップを 2 度処理しないこと。新規テストは無し（<code>FcmPushGateway</code> はテストしない方針。<code>FakePushGateway</code> で UseCase を、<code>parseNotificationTap</code> を純粋関数テストで検証済み。§7）</td>
+<td>品質ゲート通過（§10 前文の 3 コマンド。<code>none</code> ビルド）。<code>--dart-define=CURTAINCALL_PUSH=fcm</code> の実機ビルドで、collector（D-02）からの通知が届き、タップで <code>companyId</code> が <code>notificationTapStreamProvider</code> に流れる。同じ実機ビルドで S-01/ST-18（初回起動の許可ダイアログ）と S-03/ST-03（許可を拒否したときの案内行）を目視で確認する（§8 #29）。<strong>あわせて §6 の 2 行を実機で確認する</strong>：(a) 機内モードで購読同期を走らせ、<code>subscribe</code> / <code>unsubscribe</code> が 15 秒で <code>TimeoutException</code> になり 1 団体の停止が他団体の同期を止めないこと（ログの <code>failed</code>）、(b) 通知タップで起動した後にホット再起動して <code>takeInitialTap()</code> が 2 回目に null を返し、同じタップを 2 度処理しないこと。新規テストは無し（<code>FcmPushGateway</code> はテストしない方針。<code>FakePushGateway</code> で UseCase を、<code>parseNotificationTap</code> を純粋関数テストで検証済み。§7）</td>
 </tr>
 </tbody></table>
-<p>D-05 のタスクは T-F1・T-F2a・T-F2b の後に画面ごと（ホーム／保存／設定）に分ける。並行できる組：T-B1 と T-B2（domain の feature が別）、T-D と T-E（application / infrastructure の feature が別。<code>core/di/</code> は <code>articles_providers.dart</code> と <code>notifications_providers.dart</code> で別ファイル・別の生成物。§8 #45）、T-F1 と T-F2a と T-F2b（<code>lib/app/</code> + <code>articles/presentation</code> + <code>core/ui/status/list_status.dart</code>、<code>core/ui/status/</code> の Widget 7 ファイル、<code>core/ui/article/</code> で互いに素。同名ファイルを 2 つのタスクが作らない）。T-F2a は T-A の直後から着手できる。</p>
+<p>D-05 のタスクは T-F1・T-F2a・T-F2b の後に画面ごと（ホーム／保存／設定）に分ける。並行できる組：T-B1 と T-B2（domain の feature が別）、T-F1 と T-F2a と T-F2b（<code>lib/app/</code> + <code>articles/presentation</code> + <code>core/ui/status/list_status.dart</code>、<code>core/ui/status/</code> の Widget 7 ファイル、<code>core/ui/article/</code> で互いに素。同名ファイルを 2 つのタスクが作らない）。T-F2a は T-A の直後から着手できる。<strong>T-D と T-E は並行しない</strong>（T-E のテストが T-D の <code>test/helpers/completer_stub.dart</code> を使うため。§7・§10 T-E）。T-H は T-F1・T-E の完了後に 1 タスクで行う（複数タスクに分けると (4)〜(8) の import 追随が中途半端な状態でコンパイルできなくなる）。</p>
 <h2 id="h-変更履歴">変更履歴<a class="anchor" href="#h-変更履歴">#</a></h2>
 <table>
 <thead>
@@ -3807,6 +3857,10 @@ class TabReselect extends _$TabReselect {
 <tr>
 <td>2026-09-24</td>
 <td>design-review 第 1 段階・追加 1 周（収束後）の低 6 件（Q-1〜Q-6）を修正。<code>resyncIfNeeded()</code> の 2 規則が崩れたときの被害を規則 1（直列に 1 回余分）と規則 2（<code>execute</code> が並走しうる）に書き分け、手順 0 が必須であることを明記（§5.6・§6）、<code>@visibleForTesting</code> の取得元を <code>package:meta</code> に固定（§5.3・§8 #53）、S-02 宛の申し送りを「S-02 が定めるまで現行のまま・先行して変えない」に統一（§8.1）、D-05 宛で残す分岐（<code>AsyncError</code> → <code>empty</code>・<code>AsyncLoading</code> → <code>SizedBox.shrink()</code>・<code>_emptyStatus</code>）を名指し（§8.1）、<code>S-02 §3・§5 ST-01</code> の参照を <code>S-02 §3・§5（前文と「該当なし」の 3 行）</code>に是正（§5.4・§8 #36・§8.1）、件数エラー × 取得成功の限界を S-00 宛 (e) の判断事項として申し送り（§5.4・§8.1）</td>
+</tr>
+<tr>
+<td>2026-09-24</td>
+<td>design-review 第 2 段階・第 1 周の指摘 14 件（R-2〜R-14）を修正。<strong>§5.6 を §5.6.1（UseCase）・§5.6.2（<code>run()</code> の直列化。手順と不変条件 I-1・I-2 を分離）・§5.6.3（<code>resyncIfNeeded()</code> と重ならない保証）に分割</strong>し、他節からの参照を節番号付きに是正（§4.4・§5.3・§6・§7・§8.1。上の 2 行が言う「手順 0」は現在の §5.6.2 の不変条件 I-1、「手順 2〜3」は §5.6.3 の手順 2〜3 を指す）。§10 の完了条件を「品質ゲート通過（前文の 3 コマンド）」に統一して前文で定義し、タスク候補 ID（T-A〜T-H）と実タスク ID（T-nn）が別系統であることを明記、<strong>T-H（§8.1 の片付け (1)〜(8) の受け皿）を追加</strong>、T-E の依存に T-D（<code>test/helpers/completer_stub.dart</code>）を足して T-D×T-E の並行を外した（§7・§8.1・§8 #20）。<code>@immutable</code> の対象を節の列挙からクラスの列挙に変え、<code>FeedApplyResult</code>・<code>StaleFeedDiscarded</code>・<code>PushSubscriptionSyncResult</code>・<code>SyncStatus</code>・<code>SyncEvent</code>・<code>ResumeSyncDecision</code>・<code>FeedStatus</code> のコード片に付け足した（§4.1・§4.4・§5.3・§5.4）。<code>TransientNotice</code> の呼び出し口（<code>static show</code>）を明記（§5.9・§8.1・§10 T-F2a）。§3.1 の図に <code>core/ui/article → articles/domain</code> の辺を足し重複段落を依存表に集約、§5.4 冒頭の書き出し・§5.1／§6 の <code>companies.json</code> 検証の参照（§4.5 の 6 件）・§6／§8 #33 の <code>overallTimeout</code> 表記・<code>formatPublishedDate</code> の未来日の説明を是正。<strong>§9（Q-1〜Q-6）と frontmatter は変更していない</strong>（[R-1]・[R-15] は司令塔の担当）</td>
 </tr>
 </tbody></table>
 

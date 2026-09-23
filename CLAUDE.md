@@ -63,7 +63,8 @@ presentation / entry   →   application (UseCase)   →   domain (Entity, Repos
 - Widget テスト・個別クラスのユニットテストは**書かない**（UseCase テストで振る舞いを担保する）
 - 例外：infrastructure のパーサー（cheerio / rss-parser）は**実サイトの HTML / RSS をフィクスチャとして保存**し、パース結果を検証する。サイト改装（R-2）の検知が目的
 - 例外：外部境界の infrastructure 実装（http ラッパー・ファイル storage・git publish）は、外部 I/O を **fetch のスタブ・一時ディレクトリ・`execFile` のスタブに差し替えて**検証してよい（対象は `FetchHttpClient`・`ArticlesFileStore`・`GitArticlesPublisher`。D-02 §7.3・§8 #30）。`GitArticlesPublisher` は **`execFile` を実物を通さないスタブに差し替え、実 git を一度も起動しない**ことが条件（差し替えを忘れたテストがあると実 git が走るため、既定実装は必ず例外を投げる形にする）
-- 例外：入出力が値だけで I/O・Provider・Widget に触れない**純粋関数**（状態判定・並び順・日時書式・ライフサイクル判定・通知ペイロードの写像。app では `resolveListStatus`・`resolveHasArticles`・`shouldLogCountError`・`resolveReadDisplayState`・`compareArticles`・`formatPublishedDate`・`resolveResumeSync`・`shouldNotifyReselect`・`parseNotificationTap`・`mergeSavedList`・`buildArticleCellModel`）は、関数ごとのテーブル駆動テストを実装ファイルと同じ相対パス（`test/features/<feature>/{domain,presentation}/`・`test/app/`・`test/core/ui/article/`）に置いてよい。対象は設計書 §7 に列挙したものに限る（D-04 §7・§8 #28、D-05 §7）
+- 例外：入出力が値だけで I/O・Provider・Widget に触れない**純粋関数**（状態判定・並び順・日時書式・ライフサイクル判定・通知ペイロードの写像。app では `resolveListStatus`・`resolveHasArticles`・`shouldLogCountError`・`resolveReadDisplayState`・`compareArticles`・`formatPublishedDate`・`resolveResumeSync`・`shouldNotifyReselect`・`parseNotificationTap`・`mergeSavedList`・`buildArticleCellModel`・`resolveAnchorId`）は、関数ごとのテーブル駆動テストを実装ファイルと同じ相対パス（`test/features/<feature>/{domain,presentation}/`・`test/app/`・`test/core/ui/article/`・`test/core/ui/list/`）に置いてよい。対象は設計書 §7 に列挙したものに限る（D-04 §7・§8 #28、D-05 §7）
+- 例外：`test/helpers/` のテストヘルパ自身の**契約テスト**（引数検証の throw と、投入結果の行の状態）。対象は複数の UseCase テストが前提を共有するヘルパに限る（app では `seedArticles`）。ヘルパが壊れると全 UseCase テストが誤った前提で通るため（D-05 §9 Q-1。開発者確認 2026-09-24）
 - ネットワーク呼び出しはテスト内で**必ずモック**。実サイトへアクセスするテストは禁止
 
 ## app/（Flutter）
@@ -86,7 +87,7 @@ lib/
     di/            Provider の組み立て（具象の import を許可する唯一の場所）。
                    providers.dart（基盤・Repository）/ articles_providers.dart / notifications_providers.dart /
                    bootstrap_overrides.dart（DB・アセット・Logger を生成し ProviderScope の overrides を組み立てる）
-    database/      drift の定義・migration
+    database/      drift の定義・migration・2 つ以上の feature の infrastructure が共有する述語・写像（`article_row_mapper.dart`）
     network/       HTTP クライアント
     logging/       logger の生成
     ui/
@@ -106,8 +107,8 @@ lib/
     browser/       記事を開く（url_launcher）・ブラウザ選択
 test/
   features/<feature>/application/   UseCase テスト
-  features/<feature>/{domain,presentation}/, app/, core/ui/article/   純粋関数の直接テスト（例外。テスト方針を参照）
-  helpers/         テストダブル（in-memory DB・MockClient・FakePushGateway・記事ビルダ）
+  features/<feature>/{domain,presentation}/, app/, core/ui/article/, core/ui/list/   純粋関数の直接テスト（例外。テスト方針を参照）
+  helpers/         テストダブル（in-memory DB・MockClient・FakePushGateway・記事ビルダ）。ヘルパ自身の契約テストも同ディレクトリ（例外）
   fixtures/        articles.sample.json
 ```
 
@@ -188,7 +189,7 @@ test/
 すべての変更は以下を通過してからレビュー依頼する。
 
 ```
-app/        flutter analyze && flutter test
+app/        flutter analyze && dart analyze --fatal-infos && flutter test
 collector/  npm run lint && npx tsc --noEmit && npx vitest run
 ```
 

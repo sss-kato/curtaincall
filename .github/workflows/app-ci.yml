@@ -19,6 +19,11 @@ jobs:
       - run: flutter analyze
       - run: dart analyze --fatal-infos # riverpod_lint（analysis_options.yaml の plugins:）用。flutter analyze はプラグインを実行しないため別実行する。通常の lint 失敗は先行の flutter analyze を見る
       - run: flutter test
+      - name: 夏時間のある TZ でも日付書式が壊れないこと（D-04 §9 Q-2）
+        # formatPublishedDate は暦日差を UTC の暦日で計算して DST を避けている（D-04 §5.9）。
+        # CI は UTC で走るためその対策が効いていることを検証できない。対象を 1 ディレクトリに
+        # 絞れば数秒で済む。
+        run: TZ=America/New_York flutter test test/core/ui/article/
       - name: Info.plist に Chrome のクエリスキームがあること（D-05 §4.4）
         run: |
           for scheme in googlechrome googlechromes; do

@@ -1,7 +1,7 @@
 // D-02 追随: §5.3 手順 3 に無い。git の stderr に含まれる認証情報のマスクと切り詰め（純粋関数）
 
 /** ログに含める stderr の上限文字数（コードポイント単位）。長大な出力でログを埋めないため */
-const STDERR_LOG_LIMIT = 500;
+export const STDERR_LOG_LIMIT = 500;
 
 /**
  * origin の URL に埋め込まれた認証情報（https://user:pass@host/...）を伏せ字にする。

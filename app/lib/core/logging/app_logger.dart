@@ -12,3 +12,7 @@ Logger createAppLogger() {
     printer: SimplePrinter(),
   );
 }
+
+/// release ビルドではスタックトレースを出さない（D-04 §4.9）。
+StackTrace? releaseSafeStackTrace(StackTrace? stackTrace) =>
+    kDebugMode ? stackTrace : null;

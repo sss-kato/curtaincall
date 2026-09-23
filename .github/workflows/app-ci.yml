@@ -19,6 +19,14 @@ jobs:
       - run: flutter analyze
       - run: dart analyze --fatal-infos # riverpod_lint（analysis_options.yaml の plugins:）用。flutter analyze はプラグインを実行しないため別実行する。通常の lint 失敗は先行の flutter analyze を見る
       - run: flutter test
+      - name: Info.plist に Chrome のクエリスキームがあること（D-05 §4.4）
+        run: |
+          for scheme in googlechrome googlechromes; do
+            if ! grep -q "<string>$scheme</string>" ios/Runner/Info.plist; then
+              echo "::error file=app/ios/Runner/Info.plist::LSApplicationQueriesSchemes に $scheme がありません。isChromeAvailable() が常に false になります（D-05 §4.4）" >&2
+              exit 1
+            fi
+          done
 
   # iOS のビルドでしか見つからない不具合があるため、main へのマージ時だけ macOS で
   # ビルドする（PR では回さない）。過去に 2 件すり抜けた：

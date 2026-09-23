@@ -16,15 +16,21 @@ import 'package:curtaincall/features/articles/domain/article_sync_repository.dar
 import 'package:curtaincall/features/articles/domain/read_state_repository.dart';
 import 'package:curtaincall/features/articles/infrastructure/drift_article_repository.dart';
 import 'package:curtaincall/features/articles/infrastructure/drift_read_state_repository.dart';
+import 'package:curtaincall/features/browser/domain/article_opener.dart';
+import 'package:curtaincall/features/browser/infrastructure/url_launcher_article_opener.dart';
 import 'package:curtaincall/features/companies/domain/company.dart';
 import 'package:curtaincall/features/companies/domain/company_repository.dart';
 import 'package:curtaincall/features/companies/infrastructure/asset_company_repository.dart';
+import 'package:curtaincall/features/notifications/domain/notification_settings_opener.dart';
 import 'package:curtaincall/features/notifications/domain/push_gateway.dart';
 import 'package:curtaincall/features/notifications/infrastructure/noop_push_gateway.dart';
+import 'package:curtaincall/features/notifications/infrastructure/url_launcher_notification_settings_opener.dart';
 import 'package:curtaincall/features/saved/domain/saved_article_repository.dart';
 import 'package:curtaincall/features/saved/infrastructure/drift_saved_article_repository.dart';
+import 'package:curtaincall/features/settings/domain/app_info.dart';
 import 'package:curtaincall/features/settings/domain/settings_repository.dart';
 import 'package:curtaincall/features/settings/infrastructure/drift_settings_repository.dart';
+import 'package:curtaincall/features/settings/infrastructure/package_info_app_info.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -109,3 +115,17 @@ PushGateway pushGateway(Ref ref) =>
 Map<String, String> companyShortNames(Ref ref) => Map.unmodifiable({
   for (final c in ref.watch(companiesProvider)) c.id: c.shortName,
 });
+
+/// 記事 URL を開く外部境界（D-05 §4.4）。
+@Riverpod(keepAlive: true)
+ArticleOpener articleOpener(Ref ref) =>
+    UrlLauncherArticleOpener(logger: ref.watch(loggerProvider));
+
+/// iOS 設定アプリの本アプリのページを開く外部境界（D-05 §4.4）。
+@Riverpod(keepAlive: true)
+NotificationSettingsOpener notificationSettingsOpener(Ref ref) =>
+    UrlLauncherNotificationSettingsOpener(logger: ref.watch(loggerProvider));
+
+/// アプリのバージョン情報を読む外部境界（D-05 §4.4）。
+@Riverpod(keepAlive: true)
+AppInfo appInfo(Ref ref) => const PackageInfoAppInfo();

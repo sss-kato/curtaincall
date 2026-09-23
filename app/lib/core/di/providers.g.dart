@@ -691,3 +691,149 @@ final class CompanyShortNamesProvider
 }
 
 String _$companyShortNamesHash() => r'815962e2ca9b8fc072d402cc4a2ecb5b7591df4b';
+
+/// 記事 URL を開く外部境界（D-05 §4.4）。
+
+@ProviderFor(articleOpener)
+const articleOpenerProvider = ArticleOpenerProvider._();
+
+/// 記事 URL を開く外部境界（D-05 §4.4）。
+
+final class ArticleOpenerProvider
+    extends $FunctionalProvider<ArticleOpener, ArticleOpener, ArticleOpener>
+    with $Provider<ArticleOpener> {
+  /// 記事 URL を開く外部境界（D-05 §4.4）。
+  const ArticleOpenerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'articleOpenerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$articleOpenerHash();
+
+  @$internal
+  @override
+  $ProviderElement<ArticleOpener> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ArticleOpener create(Ref ref) {
+    return articleOpener(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ArticleOpener value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ArticleOpener>(value),
+    );
+  }
+}
+
+String _$articleOpenerHash() => r'725c23beda247883bc8ffc178bf90911afd903ca';
+
+/// iOS 設定アプリの本アプリのページを開く外部境界（D-05 §4.4）。
+
+@ProviderFor(notificationSettingsOpener)
+const notificationSettingsOpenerProvider =
+    NotificationSettingsOpenerProvider._();
+
+/// iOS 設定アプリの本アプリのページを開く外部境界（D-05 §4.4）。
+
+final class NotificationSettingsOpenerProvider
+    extends
+        $FunctionalProvider<
+          NotificationSettingsOpener,
+          NotificationSettingsOpener,
+          NotificationSettingsOpener
+        >
+    with $Provider<NotificationSettingsOpener> {
+  /// iOS 設定アプリの本アプリのページを開く外部境界（D-05 §4.4）。
+  const NotificationSettingsOpenerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'notificationSettingsOpenerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$notificationSettingsOpenerHash();
+
+  @$internal
+  @override
+  $ProviderElement<NotificationSettingsOpener> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  NotificationSettingsOpener create(Ref ref) {
+    return notificationSettingsOpener(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(NotificationSettingsOpener value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<NotificationSettingsOpener>(value),
+    );
+  }
+}
+
+String _$notificationSettingsOpenerHash() =>
+    r'14f300dce09bb5ed8540c245535b1719816d7007';
+
+/// アプリのバージョン情報を読む外部境界（D-05 §4.4）。
+
+@ProviderFor(appInfo)
+const appInfoProvider = AppInfoProvider._();
+
+/// アプリのバージョン情報を読む外部境界（D-05 §4.4）。
+
+final class AppInfoProvider
+    extends $FunctionalProvider<AppInfo, AppInfo, AppInfo>
+    with $Provider<AppInfo> {
+  /// アプリのバージョン情報を読む外部境界（D-05 §4.4）。
+  const AppInfoProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appInfoProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appInfoHash();
+
+  @$internal
+  @override
+  $ProviderElement<AppInfo> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AppInfo create(Ref ref) {
+    return appInfo(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AppInfo value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AppInfo>(value),
+    );
+  }
+}
+
+String _$appInfoHash() => r'732a95564087ae2e342c2e063e89ae997584d0f0';

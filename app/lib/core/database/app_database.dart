@@ -51,10 +51,11 @@ class AppDatabase extends _$AppDatabase {
 
   /// `settings` テーブルに `key`/`value` を upsert する
   /// （articles/infrastructure・settings/infrastructure の両方が使う共通処理。
-  /// D-04 §4.2 に upsertSetting / deleteSetting / readSetting の追記が
-  /// 未反映のため、ここに暫定で doc を置く）。
-  // TODO(T-20): D-04 §4.2 に upsertSetting / deleteSetting / readSetting
-  // （settings の共通 upsert・削除・読み取り）を追記したらこの注記を消す。
+  /// D-04 §4.2 に upsertSetting / deleteSetting / readSetting / watchSetting
+  /// の追記が未反映のため、ここに暫定で doc を置く）。
+  // TODO(T-20): D-04 §4.2 に upsertSetting / deleteSetting / readSetting /
+  // watchSetting（settings の共通 upsert・削除・読み取り・監視）を
+  // 追記したらこの注記を消す。
   Future<void> upsertSetting(String key, String value) => into(settings)
       .insertOnConflictUpdate(SettingsCompanion.insert(key: key, value: value));
 
@@ -69,6 +70,18 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
+
+  /// `settings` テーブルの `key` の行の `value` を監視する。無ければ `null`。
+  /// `readSetting` の watch 版（`DriftSettingsRepository` の
+  /// `watchBrowserChoice()` / `watchUnreadFilter()` が共有する）。
+  ///
+  /// 値が変わらない再発火（同テーブルへの他キーの書き込み。D-04 §4.3 の
+  /// feed_etag は同期のたびに upsert される）も流れるため、重複を止めたい
+  /// 呼び出し側で `.distinct()` を付けること（このメソッド自体は抑止しない）。
+  Stream<String?> watchSetting(String key) =>
+      (select(settings)..where((t) => t.key.equals(key)))
+          .watchSingleOrNull()
+          .map((row) => row?.value);
 
   /// 配信から外れ（`in_feed = false`）、かつ未保存（`saved_articles` に
   /// 行が無い）記事を削除し、削除件数を返す（`read_states` は外部キーの

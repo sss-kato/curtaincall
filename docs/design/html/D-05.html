@@ -311,7 +311,7 @@ a{color:var(--accent)}
 <tr>
 <td>S-01/ST-03</td>
 <td>状態</td>
-<td>同 <code>refreshing == true</code> → <code>RefreshingHeader</code> を一覧の<strong>先頭の Sliver</strong>（<code>AnchoredListView.headerSliver</code>。<code>leadingSlivers</code> の <code>CupertinoSliverRefreshControl</code> の直後。S-00 §3.3「一覧の先頭。iOS 標準の引っ張り更新の位置」）に置く。出現・消失で表示中の記事がずれないよう <code>AnchoredListView</code> が高さの変化を相殺する（§5.11・§8 #28）。引っ張り中は <code>CupertinoSliverRefreshControl</code> の表示に任せる</td>
+<td>同 <code>refreshing == true</code> → <code>RefreshingHeader</code> を一覧の<strong>先頭の Sliver</strong>（<code>AnchoredListView.headerSliver</code>。標準形では <code>leadingSlivers</code> の <code>CupertinoSliverRefreshControl</code> の直後、アンカー形では <code>slivers</code> の先頭。§5.11。S-00 §3.3「一覧の先頭。iOS 標準の引っ張り更新の位置」）に置く。出現・消失で表示中の記事がずれないよう <code>AnchoredListView</code> が高さの変化を相殺する（§5.11・§8 #28）。引っ張り中は <code>CupertinoSliverRefreshControl</code> の表示に任せる</td>
 <td>§5.1 / §5.6 / §5.11</td>
 </tr>
 <tr>
@@ -712,6 +712,11 @@ a{color:var(--accent)}
 <td>記事を開いて既読にする。ブラウザ設定を読む</td>
 </tr>
 <tr>
+<td><code>browser/infrastructure</code>（<code>UrlLauncherArticleOpener</code>）</td>
+<td><code>settings/domain</code>（<code>BrowserChoice</code>）、<code>browser/domain</code>（<code>ArticleOpener</code>）</td>
+<td><code>open(Uri, BrowserChoice)</code> の実装で <code>BrowserChoice</code> を <code>switch</code> し、<code>LaunchMode</code> と URL スキームを決める（§4.4 の表）。値オブジェクトのみ（infrastructure → 他 feature の domain）</td>
+</tr>
+<tr>
 <td><code>saved/domain</code>（<code>SavedArticle</code>）</td>
 <td><code>articles/domain</code>（<code>ArticleListItem</code>）</td>
 <td>保存一覧のセルも同じ <code>ArticleListItem</code></td>
@@ -771,6 +776,11 @@ a{color:var(--accent)}
 <td>Flutter SDK、<code>articles/domain</code>（<code>ArticleListItem</code>）、D-04 の <code>core/ui/article</code>（<code>ArticleCellModel</code>）</td>
 <td><code>ArticleListItem</code> → <code>ArticleCellModel</code> の純粋関数（§5.12・§7）。§10 T-H3 の受け入れ条件</td>
 </tr>
+<tr>
+<td><code>core/database</code>（<code>ArticleRowMapper</code>）</td>
+<td><code>articles/domain</code>（<code>Article</code>・<code>ArticleListItem</code>）</td>
+<td>drift の行 <code>ArticleRow</code> → domain の写像（<code>toDomain()</code>・<code>toListItem()</code>）。<code>DriftArticleRepository.watchInFeed()</code> と <code>DriftSavedArticleRepository.watchAll()</code> が同じ写像を共有する（infrastructure → domain の向きなので許される）。§3.2・§4.5</td>
+</tr>
 </tbody></table>
 <pre class="mermaid">flowchart TB
   subgraph APP[&quot;lib/app&quot;]
@@ -828,11 +838,16 @@ a{color:var(--accent)}
         settings_providers.dart unreadFilterProvider・toggleUnreadFilterUseCase
         notifications_providers.dart  改修：updateNotificationSettingUseCase・openNotificationSettingsUseCase・handleNotificationTapUseCase と、D-04 の notification_tap_providers.dart への委譲 3 つ（initialNotificationTapForApp・latestNotificationTap・pushPermissionStatusForSettings）を追加（§4.6）
         browser_providers.dart  openArticleUseCase・selectBrowserUseCase・openArticleAction（LoggingOpenArticleAction を組み立てて `.call` を返す。§4.6）
+      database/
+        article_row_mapper.dart           ArticleRow → Article / ArticleListItem の写像（extension。§3.1・§4.5）。
+                                          watchInFeed() と watchAll() が共有する
+        app_database.dart       改修：deleteUnsavedOutOfFeedRows()（applyFeed 手順 5 と共有する述語。§4.5）
       ui/
         article/
           article_cell_model_builder.dart   buildArticleCellModel（純粋関数。§5.12・§7）
         list/
-          anchored_list_view.dart           表示位置を保つ一覧 AnchoredListView と、先頭スクロール要求を受ける AnchoredListController（§5.11）
+          anchored_list_view.dart           表示位置を保つ一覧 AnchoredListView・先頭スクロール要求を受ける
+                                            AnchoredListController・帯の高さ変化を相殺する _ExtentCompensatingSliver（§5.11）
     features/
       articles/
         domain/
@@ -901,7 +916,8 @@ a{color:var(--accent)}
     helpers/
       fake_article_opener.dart              ArticleOpener のフェイク（呼び出し記録・Chrome 有無・open の戻り値）
       fake_notification_settings_opener.dart
-      seed_articles.dart                    in-memory drift に記事・既読・保存を投入するヘルパ（ArticleSyncRepository.applyFeed 経由）
+      seed_articles.dart                    in-memory drift に記事・既読・保存を投入するヘルパ（ArticleSyncRepository.applyFeed 経由。API と契約は §7）
+      collect_stream.dart                   collectStream（Stream の値を集めるヘルパ。§7）
     core/ui/article/
       article_cell_model_builder_test.dart  純粋関数の直接テスト（§7）
     features/
@@ -955,18 +971,22 @@ final class ArticleListItem {
   ArticleListItem copyWith({bool? isRead, bool? hasUpdateBadge, bool? isSaved});
 }</code></pre>
 <pre><code class="language-dart">// lib/features/articles/application/watch_home_articles_use_case.dart
-/// ホームの絞り込み条件（S-01 §7.2・§7.3）
+/// ホームの絞り込み条件（S-01 §7.2・§7.3）。不変。== / hashCode は 2 フィールド
 final class HomeFilter {
   const HomeFilter({required this.companyId, required this.unreadOnly});
   final String? companyId;      // null = 「すべて」（S-01/E-04）
   final bool unreadOnly;        // S-01/ST-11
 }
 
-/// ホーム 1 ページ分の表示対象
+/// ホーム 1 ページ分の表示対象。items は防御的コピー（変更不可リスト）で保持するため const コンストラクタにしない
 final class HomeArticles {
-  const HomeArticles({required this.items, required this.totalInTab});
+  HomeArticles({required List&lt;ArticleListItem&gt; items, required this.totalInTab})
+      : items = List.unmodifiable(items);
   final List&lt;ArticleListItem&gt; items;   // 絞り込み後、compareArticles 順
   final int totalInTab;                // 未読フィルタで絞る前のタブ内件数（S-01/ST-04 と ST-05 の区別に使う）
+  // == / hashCode は手書き（D-04 §8 #24）。items の比較・ハッシュは package:collection の
+  // ListEquality&lt;ArticleListItem&gt; を使う（application は Flutter 非依存に保つため
+  // foundation.listEquals を使わない。D-04 §8 #24 の PushSubscriptionSyncResult と同じ）
 }</code></pre>
 <pre><code class="language-dart">// lib/features/saved/domain/saved_article.dart
 /// 不変。== / hashCode は item・savedAt の 2 フィールド（AnchoredListView の listEquals が使う。§5.11）
@@ -1042,7 +1062,8 @@ abstract interface class SettingsRepository {
   Future&lt;void&gt; setNotificationEnabled(String companyId, {required bool enabled});   // D-04
   /// notification.* の変化を流す（S-03/ST-02 の表示）。値の規則は notificationSettings() と同じ
   Stream&lt;Map&lt;String, bool&gt;&gt; watchNotificationSettings();
-  /// SettingKeys.browser。行無し・未知の値は BrowserChoice.inApp（F-04）
+  /// SettingKeys.browser。行無し・未知の値は BrowserChoice.inApp（F-04）。
+  /// 値 ↔ BrowserChoice の写像は BrowserChoice.fromValue(String?) / BrowserChoice.value（下記）
   Future&lt;BrowserChoice&gt; browserChoice();
   Stream&lt;BrowserChoice&gt; watchBrowserChoice();
   Future&lt;void&gt; setBrowserChoice(BrowserChoice choice);
@@ -1052,11 +1073,18 @@ abstract interface class SettingsRepository {
   Future&lt;void&gt; setUnreadFilter({required bool enabled});   // '1' / '0' を upsert
 }</code></pre>
 <p><code>feed_etag</code>・<code>feed_generated_at</code>・<code>feed_unsupported_schema</code> の get / set は追加しない（D-04 §8.1）。</p>
+<p><code>settings</code> テーブルの <code>value</code>（<code>String?</code>）と <code>BrowserChoice</code> の写像は enum 側の 1 箇所に置き、<code>DriftSettingsRepository</code> は独自の <code>switch</code> を書かない（<code>browserChoice()</code>・<code>watchBrowserChoice()</code>・<code>setBrowserChoice()</code> の 3 箇所で同じ規則を使うため）。D-04 §4.4 の <code>BrowserChoice</code>（<code>lib/features/settings/domain/browser_choice.dart</code>）に本書が足すのは次の 1 メソッドだけで、enum の値（<code>in_app</code> / <code>safari</code> / <code>chrome</code>）は変えない。</p>
+<pre><code class="language-dart">// lib/features/settings/domain/browser_choice.dart（D-04 §4.4 の enum に追加）
+/// settings.value → BrowserChoice。行無し（null）・未知の値は inApp（F-04）
+static BrowserChoice fromValue(String? value) =&gt; BrowserChoice.values
+    .firstWhere((choice) =&gt; choice.value == value, orElse: () =&gt; BrowserChoice.inApp);</code></pre>
+<p>書き込み（<code>setBrowserChoice</code>）は <code>choice.value</code> を upsert する。<code>Category.fromValue</code>（D-04 §4.1。未知 → <code>other</code>）と同じ形。</p>
 <h3 id="sec-4-4">4.4 ポート（外部境界）<a class="anchor" href="#sec-4-4">#</a></h3>
 <pre><code class="language-dart">// lib/features/browser/domain/article_opener.dart
 /// 記事 URL を開く外部境界。実装は url_launcher（§4.7）
 abstract interface class ArticleOpener {
-  /// Chrome が起動できるか（googlechromes:// を canLaunchUrl。S-03/ST-05）
+  /// Chrome が起動できるか（googlechromes:// を canLaunchUrl。S-03/ST-05）。
+  /// 例外は投げず、捕捉して false（Chrome 無し扱い）を返す（PlatformException を含む）
   Future&lt;bool&gt; isChromeAvailable();
   /// [browser] で [url] を開く。true = OS に起動を渡せた。例外は投げず false を返す（PlatformException を含む）
   Future&lt;bool&gt; open(Uri url, BrowserChoice browser);
@@ -1096,7 +1124,7 @@ abstract interface class AppInfo {
 </tr>
 <tr>
 <td><code>isChromeAvailable()</code></td>
-<td><code>canLaunchUrl(Uri.parse(&#39;googlechromes://&#39;))</code>。<code>Info.plist</code> の <code>LSApplicationQueriesSchemes</code> に <code>googlechrome</code>・<code>googlechromes</code> が無いと常に false になる（§4.7）</td>
+<td><code>canLaunchUrl(Uri.parse(&#39;googlechromes://&#39;))</code>。<strong>例外は捕捉して false（Chrome 無し扱い）を返す</strong>（<code>logger.w</code>）。<code>Info.plist</code> の <code>LSApplicationQueriesSchemes</code> に <code>googlechrome</code>・<code>googlechromes</code> が無いと常に false になる（§4.7）</td>
 </tr>
 <tr>
 <td><code>closeInAppBrowser()</code></td>
@@ -1104,7 +1132,7 @@ abstract interface class AppInfo {
 </tr>
 <tr>
 <td>例外</td>
-<td><code>launchUrl</code> が投げた <code>PlatformException</code> 等は捕捉し <code>false</code> を返す（<code>logger.w</code>。URL は出してよい。本文は無い）</td>
+<td><code>launchUrl</code> / <code>canLaunchUrl</code> / <code>closeInAppWebView</code> が投げた <code>PlatformException</code> 等は<strong>3 メソッドとも</strong>捕捉し、<code>open()</code> と <code>isChromeAvailable()</code> は <code>false</code>、<code>closeInAppBrowser()</code> は何もせず返す（<code>logger.w</code>。URL は出してよい。本文は無い）。<code>isChromeAvailable()</code> が例外を投げると <code>chromeAvailableProvider</code>（§4.6）が <code>AsyncError</code> になり、§5.9 の E-13 の判定（<code>.value == false</code>）が成立せず、S-03/ST-05 の非活性表示にならないまま E-13 をタップしても何も起きない（T-27 の dev-loop。2026-09-23 追記）</td>
 </tr>
 </tbody></table>
 <p><code>UrlLauncherNotificationSettingsOpener</code>：<code>launchUrl(Uri.parse(&#39;app-settings:&#39;), mode: LaunchMode.externalApplication)</code>。<code>canLaunchUrl</code> は呼ばない（<code>app-settings:</code> は <code>LSApplicationQueriesSchemes</code> に載せられない）。<code>PackageInfoAppInfo</code>：<code>PackageInfo.fromPlatform()</code> の <code>version</code>・<code>buildNumber</code> を <code>AppVersion</code> に写す。</p>
@@ -1138,7 +1166,7 @@ abstract interface class AppInfo {
 </tr>
 <tr>
 <td><code>DriftSavedArticleRepository.deleteUnsavedOutOfFeed()</code></td>
-<td><code>DELETE FROM articles WHERE in_feed = 0 AND id NOT IN (SELECT article_id FROM saved_articles)</code>（D-04 §5.2 手順 8-5 と同じ述語。<code>read_states</code> は cascade）</td>
+<td><code>DELETE FROM articles WHERE in_feed = 0 AND id NOT IN (SELECT article_id FROM saved_articles)</code>（<code>read_states</code> は cascade）。<strong>述語は <code>AppDatabase.deleteUnsavedOutOfFeedRows()</code> に 1 つだけ置き</strong>、<code>DriftArticleRepository.applyFeed</code> 手順 5（D-04 §5.2 手順 8-5）と共有する（同じ述語を 2 箇所に書かない）。<code>AppDatabase</code> 側は削除件数を返し、本メソッドは捨てる（§8 #31）</td>
 </tr>
 <tr>
 <td><code>DriftSettingsRepository.watch*()</code></td>
@@ -1372,15 +1400,15 @@ Stream&lt;DateTime&gt; minuteClock(Ref ref);</code></pre>
 <h3 id="sec-4-7">4.7 パッケージと iOS 設定<a class="anchor" href="#sec-4-7">#</a></h3>
 <pre><code class="language-yaml"># app/pubspec.yaml（D-04 §4.8 に追加）
 dependencies:
-  url_launcher: ^6.3.0          # F-03 / F-04。アプリ内（SFSafariViewController）・Safari・Chrome・app-settings:
-  package_info_plus: ^8.0.0     # S-03/E-18</code></pre>
+  url_launcher: ^6.3.2          # F-03 / F-04。アプリ内（SFSafariViewController）・Safari・Chrome・app-settings:
+  package_info_plus: ^10.2.1    # S-03/E-18</code></pre>
 <pre><code class="language-xml">&lt;!-- app/ios/Runner/Info.plist に追加（Chrome の canLaunchUrl 用。S-03/ST-05） --&gt;
 &lt;key&gt;LSApplicationQueriesSchemes&lt;/key&gt;
 &lt;array&gt;
   &lt;string&gt;googlechrome&lt;/string&gt;
   &lt;string&gt;googlechromes&lt;/string&gt;
 &lt;/array&gt;</code></pre>
-<p>バージョンは執筆時点の下限で、実装時に <code>flutter pub add</code> が解決した版を採る（D-04 §4.8 と同じ）。</p>
+<p>バージョンは T-27 の <code>flutter pub add</code> が解決した版に更新済み（2026-09-23）。<code>package_info_plus</code> は初版の記載（<code>^8.0.0</code>）からメジャー 2 つ分上がっているが、<strong>使用する API（<code>PackageInfo.fromPlatform()</code> の <code>version</code>・<code>buildNumber</code>）と iOS の最低対応バージョン（16）は変わらない</strong>ため、§4.4 の <code>PackageInfoAppInfo</code> と §5.9 の E-18 に影響しない。以後の更新も <code>flutter pub add</code> が解決した版を採る（D-04 §4.8 と同じ）。</p>
 <h2 id="sec-5">5. 処理フロー（正常系）<a class="anchor" href="#sec-5">#</a></h2>
 <h3 id="sec-5-1">5.1 ホーム画面（S-01）の構成と状態<a class="anchor" href="#sec-5-1">#</a></h3>
 <p><code>HomeScreen</code>（<code>ConsumerStatefulWidget</code>）は <code>companyId</code> を持たない（ページ横断の要素だけを描く）ため、全面表示とオフライン帯の判定には<strong>ページに依らない状態</strong>を使う。<code>build</code> の先頭で</p>
@@ -1417,7 +1445,7 @@ final screenStatus = resolveListStatus(feed, hasVisible: true);          // hasV
 </tr>
 <tr>
 <td>S-01/E-11</td>
-<td><code>PageView.builder</code> の <code>itemBuilder: (_, i) =&gt; HomePage(index: i, companyId: i == 0 ? null : companies[i - 1].id)</code>（<code>companies</code> は <code>companiesProvider</code> の配列。<code>index</code> は「自ページが表示中か」の判定に使う。§5.6）。<code>HomePage</code> は <code>AutomaticKeepAliveClientMixin</code>。6 ページを生かしてスクロール位置を保つ。S-01/A-01「前回そのページを見ていた位置」）。中身は <code>AnchoredListView</code> 1 つ。<code>leadingSlivers: [CupertinoSliverRefreshControl(...)]</code>、<code>headerSliver: status.refreshing &amp;&amp; !_pulling ? const RefreshingHeader() : null</code>（S-00/E-21 は「一覧の先頭。iOS 標準の引っ張り更新の位置」＝スクロール追随。S-00 §3.3・§4）。帯の出現・消失による位置ずれは <code>AnchoredListView</code> が相殺する（§5.11・§8 #28）</td>
+<td><code>PageView.builder</code> の <code>itemBuilder: (_, i) =&gt; HomePage(index: i, companyId: i == 0 ? null : companies[i - 1].id)</code>（<code>companies</code> は <code>companiesProvider</code> の配列。<code>index</code> は「自ページが表示中か」の判定に使う。§5.6）。<code>HomePage</code> は <code>AutomaticKeepAliveClientMixin</code>。6 ページを生かしてスクロール位置を保つ。S-01/A-01「前回そのページを見ていた位置」）。中身は <code>AnchoredListView</code> 1 つ。<code>leadingSlivers: [CupertinoSliverRefreshControl(...)]</code>（アンカー形のときは <code>AnchoredListView</code> 側で出さない。§5.11）、<code>headerSliver: status.refreshing &amp;&amp; !_pulling ? const RefreshingHeader() : null</code>（S-00/E-21 は「一覧の先頭。iOS 標準の引っ張り更新の位置」＝スクロール追随。S-00 §3.3・§4）。帯の出現・消失による位置ずれは <code>AnchoredListView</code> が相殺する（§5.11・§8 #28）</td>
 </tr>
 </tbody></table>
 <p>タブのタップ（A-01）：<code>_animating = true</code> → <code>select(index)</code> → <code>index</code> が現在の隣なら <code>animateToPage</code>。隣でなければ Material <code>TabBarView</code> と同じワープ（アニメーションの間だけ目的ページを現在ページの隣に並べ替えて <code>animateToPage</code> し、完了後に並びを戻して <code>jumpToPage</code>）→ 完了で <code>_animating = false</code>。<code>index == 現在</code> なら A-10（§5.6）。スワイプ（A-02）は <code>onPageChanged</code> から <code>select</code> を呼ぶだけで、listener は <code>PageController.page</code> が既に <code>next</code> なので何もしない。</p>
@@ -1712,8 +1740,10 @@ bool _isHomeVisible() =&gt; ref.read(tabControllerProvider).index == 0 &amp;&amp
     required this.idOf,             // String Function(T item)。要素の安定した id（Article.id）
     required this.itemBuilder,      // Widget Function(BuildContext context, T item)
     required this.controller,       // AnchoredListController（先頭スクロール要求の入口。呼び出し側が持つ）
-    this.leadingSlivers = const [], // List&lt;Widget&gt;。CupertinoSliverRefreshControl だけを想定（高さの変化を相殺しない Sliver）
-    this.headerSliver,              // Widget?。取得中の帯（RefreshingHeader。S-00/E-21）。leadingSlivers の直後に置き、出現・消失（null ↔ 非 null）による高さ変化を相殺する（§8 #28）
+    this.leadingSlivers = const [], // List&lt;Widget&gt;。CupertinoSliverRefreshControl 1 つだけを想定（高さの変化を相殺しない Sliver）。
+                                    // 標準形でのみ出し、アンカー形では描画せずに捨てる（SDK の assert。下記「構成（2 形態）」）
+    this.headerSliver,              // Widget?。取得中の帯（RefreshingHeader。S-00/E-21）。leadingSlivers の直後（アンカー形では slivers の先頭）に置き、
+                                    // 出現・消失（null ↔ 非 null）による高さ変化を相殺する（§8 #28）。両形態で描く
     this.emptyView,                 // Widget?。items が空のとき SliverFillRemaining(hasScrollBody: false) に置く Box Widget（EmptyView）。null なら何も置かない
     super.key,
   });
@@ -1731,29 +1761,38 @@ bool _isHomeVisible() =&gt; ref.read(tabControllerProvider).index == 0 &amp;&amp
 /// 呼び出し側（HomePage・SavedScreen）が initState で生成し dispose で破棄する
 final class AnchoredListController {
   final ScrollController scrollController = ScrollController();   // AnchoredListView が CustomScrollView に渡す
-  _AnchoredListTarget? _target;   // attach() で保持、detach() で null
+  _AnchoredListTarget? _target;   // attach() で保持、detach(state) で null
+  bool _disposed = false;         // dispose() 済み（下記「未アタッチ時の scrollToTop()」）
   /// animated = true：300ms・Curves.easeOut で先頭へ。false：jumpTo。標準形への復帰を含む（下記手順）
   Future&lt;void&gt; scrollToTop({required bool animated});
-  /// State との接続。AnchoredListView の State が initState で attach(this)、dispose で detach() を呼ぶ。
+  /// State との接続。AnchoredListView の State が initState で attach(this)、dispose で detach(this) を呼ぶ。
   /// 引数の型は同ファイル内の private インターフェース _AnchoredListTarget（`void restoreToStandardForm()` と
   /// `set scrollingToTop(bool)` の 2 つだけを持つ。_AnchoredListViewState&lt;T&gt; が implements する。型引数 T に依存しない）。
-  /// 1 つの Controller に同時に 1 つの State だけ
+  /// 1 つの Controller に同時に 1 つの State だけ（下記「attach / detach の規則」）
   void attach(_AnchoredListTarget state);
-  void detach();
-  void dispose();   // scrollController.dispose()
+  void detach(_AnchoredListTarget state);
+  void dispose();   // _disposed = true; _target = null; scrollController.dispose()
 }</code></pre>
 <ul>
-<li><p><strong>未アタッチ時の <code>scrollToTop()</code></strong>：<code>attach()</code> が呼ばれていない・<code>detach()</code> 済み（一覧が未構築。保存画面の初回表示中 <code>SizedBox.shrink()</code> など）、または <code>scrollController.hasClients == false</code> のときは何もしない（要求は捨て、完了済みの <code>Future</code> を返す。生成直後の一覧は offset 0 なので先頭にある）</p>
+<li><p><strong><code>attach</code> / <code>detach</code> の規則</strong>：<code>attach(state)</code> は<strong>常に最後に呼ばれた State を採用する</strong>（既に接続済みでも assert で拒否しない）。<code>detach</code> は<strong>引数で State を受け、<code>identical(_target, state)</code> のときだけ</strong>接続をクリアする。Flutter は新しい Element の <code>initState</code>（<code>attach</code>）を、旧 Element の <code>unmount</code>（<code>dispose</code> → <code>detach</code>）より<strong>先</strong>に走らせるため、引数なしの <code>detach()</code> だと <code>PageView</code> のページ切替や <code>key</code> の変更で、張り替わったばかりの接続を旧 State が消してしまう（T-28 で実測）。1 つの <code>AnchoredListController</code> を 2 つの <code>AnchoredListView</code> で共有しない（後勝ちで <code>scrollToTop()</code> が片方にしか届かない）。<code>AnchoredListView</code> の <code>key</code> を変えて State を作り直す用途では <code>AnchoredListController</code> も作り直す</p>
+</li>
+<li><p><strong>未アタッチ時の <code>scrollToTop()</code></strong>：<code>attach()</code> が呼ばれていない・<code>detach()</code> 済み（一覧が未構築。保存画面の初回表示中 <code>SizedBox.shrink()</code> など）、<strong><code>dispose()</code> 済み</strong>、または <code>scrollController.hasClients == false</code> のときは何もしない（要求は捨て、完了済みの <code>Future</code> を返す。生成直後の一覧は offset 0 なので先頭にある）。<code>dispose()</code> 済みの判定は <code>AnchoredListController</code> 自身の <code>_disposed</code> で行う（SDK の <code>ScrollController.dispose()</code> は <code>hasClients</code> を false にしないため、<code>hasClients</code> だけでは守れない）</p>
 </li>
 <li><p><strong>構成（2 形態）</strong>：</p>
 <ul>
-<li><strong>標準形</strong>（アンカーが <code>items</code> の先頭、または <code>items</code> が空）：<code>CustomScrollView(controller, slivers: [...leadingSlivers, _ExtentCompensatingSliver(headerSliver), SliverList(全要素)])</code>。<code>center</code> は指定しない（= 先頭の Sliver）。<code>CupertinoSliverRefreshControl</code> が前方成長側の先頭にあり、Pull to Refresh が通常どおり成立する。先頭 = <code>position.pixels == 0</code></li>
-<li><strong>アンカー形</strong>（アンカーが先頭以外）：<code>CustomScrollView(controller, center: _centerKey, slivers: [...leadingSlivers, _ExtentCompensatingSliver(headerSliver), SliverList(アンカーより前の要素を逆順), SliverList(key: _centerKey, アンカー以降の要素)])</code>。<code>RenderViewport</code> は <code>center</code> より前に Sliver があると前方成長側の先頭に負の <code>overlap</code>（オーバースクロール）を渡さないため、この形態では <code>CupertinoSliverRefreshControl</code> は発火しない。ユーザーは先頭より下を見ているので引っ張れず、実害は無い。先頭 = <code>position.minScrollExtent</code>（逆成長側の高さぶん<strong>負</strong>）。<code>pixels == 0</code> はアンカー位置であって先頭ではない</li>
-<li>各セルに <code>GlobalKey</code>（id ごと）を付ける</li>
+<li><strong>標準形</strong>（アンカーが <code>items</code> の先頭、または <code>items</code> が空）：<code>CustomScrollView(controller, slivers: [...leadingSlivers, _ExtentCompensatingSliver(key: _headerKey, child: headerSliver), SliverList(全要素) または SliverFillRemaining(emptyView)])</code>。<code>center</code> は指定しない（= 先頭の Sliver）。<code>CupertinoSliverRefreshControl</code> が前方成長側の先頭にあり、Pull to Refresh が通常どおり成立する。先頭 = <code>position.pixels == 0</code></li>
+<li><strong>アンカー形</strong>（アンカーが先頭以外）：<code>CustomScrollView(controller, center: _centerKey, slivers: [_ExtentCompensatingSliver(key: _headerKey, child: headerSliver), SliverList(アンカーより前の要素を逆順), SliverList(key: _centerKey, アンカー以降の要素)])</code>。<strong><code>leadingSlivers</code> は <code>slivers</code> に入れない。</strong> <code>center</code> より前の Sliver は <code>GrowthDirection.reverse</code> でレイアウトされるが、<code>CupertinoSliverRefreshControl</code> の <code>RenderSliver.performLayout</code> は <code>assert(constraints.growthDirection == GrowthDirection.forward)</code> を持つため、逆成長側に置くと <strong>debug ビルドで assert に抵触して落ちる</strong>（「発火しないだけ」では済まない。Flutter 3.47.4 で実測。§8 #21）。この形態ではユーザーは先頭より下を見ており引っ張れないので、出さなくても実害は無い（先頭に戻れば下記「復帰」で標準形になり、そこで引っ張り更新が成立する）。先頭 = <code>position.minScrollExtent</code>（逆成長側の高さぶん<strong>負</strong>）。<code>pixels == 0</code> はアンカー位置であって先頭ではない</li>
+<li><code>leadingSlivers</code> は <code>CupertinoSliverRefreshControl</code> <strong>1 つだけ</strong>を想定する（<code>build</code> で <code>leadingSlivers.length &lt;= 1</code> を assert する）。アンカー形では黙って捨てられるため、高さの変化を相殺する必要がある Sliver は <code>leadingSlivers</code> ではなく <code>headerSliver</code> に渡す</li>
+<li>各セルに <code>GlobalKey</code>（id ごと）を付ける。<code>GlobalObjectKey</code> は <code>identical()</code> で比較するため毎ビルド作り直す文字列では再利用されない。<code>Map&lt;String, GlobalKey&gt;</code> にキャッシュし、同じ id には同じインスタンスを使い回す</li>
+<li><code>_ExtentCompensatingSliver</code> には <strong><code>GlobalKey</code>（<code>_headerKey</code>）を必ず付ける。</strong> 形態の切替で <code>slivers</code> リスト内の位置が変わると Element が作り直され、<code>RenderSliver</code> が保持する「前回のレイアウトの extent」が 0 に戻って、次のレイアウトで帯が「出現した」と誤認され二重に補正される（<code>GlobalKey</code> があれば RenderObject が付け替えで保たれる）。この key は下記「アンカーの更新」手順 3 の経路 2（ヘッダ Sliver の extent から H を求める）でも使う</li>
 <li>内部フラグ <code>_scrollingToTop: bool</code>（<code>scrollToTop()</code> の開始から完了まで true。<strong>State が持ち</strong>、<code>Controller</code> が <code>_AnchoredListTarget.scrollingToTop</code> のセッター経由で書く。読むのは State の <code>didUpdateWidget</code> だけ）</li>
 </ul>
 </li>
-<li><p><strong>先頭に戻ったときの標準形への復帰</strong>（ユーザーのスクロール）：<code>ScrollController</code> の listener で <code>position.pixels &lt;= position.minScrollExtent + 1</code> を検知したら（ドラッグ中でも）、<strong>既に標準形なら何もしない</strong>（復帰処理はアンカー形のときだけ走る。標準形でスクロールのたびに <code>setState</code> しない）。アンカー形なら、アンカーを <code>items</code> の先頭に付け替えて標準形に <code>setState</code> し、同じフレームで <code>position.correctPixels(position.pixels - position.minScrollExtent)</code>（見た目を変えずに <code>pixels</code> を 0 基準へ移す）。以後はオーバースクロールが <code>CupertinoSliverRefreshControl</code> に届き、そのまま引き続ければ Pull to Refresh が発火する（F-10）。標準形へ戻す判定は <code>items</code> が変わらなくても走る</p>
+<li><p><strong>先頭に戻ったときの標準形への復帰</strong>（ユーザーのスクロール）：<code>ScrollController</code> の listener で <code>position.pixels &lt;= position.minScrollExtent + _atTopTolerance</code> を検知したら（ドラッグ中でも）、<strong>既に標準形なら何もしない</strong>（復帰処理はアンカー形のときだけ走る。標準形でスクロールのたびに <code>setState</code> しない）。アンカー形なら、アンカーを <code>items</code> の先頭に付け替えて標準形に <code>setState</code> し、同じフレームで <code>position.correctPixels(position.pixels - position.minScrollExtent)</code>（見た目を変えずに <code>pixels</code> を 0 基準へ移す）。以後はオーバースクロールが <code>CupertinoSliverRefreshControl</code>（標準形なので <code>leadingSlivers</code> が出ている）に届き、そのまま引き続ければ Pull to Refresh が発火する（F-10）。標準形へ戻す判定は <code>items</code> が変わらなくても走る</p>
+<ul>
+<li><code>_atTopTolerance</code> は <code>1</code>（px）の定数。端数ピクセルやラバーバンドの戻りで <code>pixels</code> がちょうど <code>minScrollExtent</code> にならないことがあるため 0 にしない。「先頭を表示中か」の判定（下記「アンカーの更新」手順 1 を含む）はすべてこの 1 つの判定（<code>_isAtTop()</code>）を通す</li>
+<li><strong>標準形へ戻す処理は必ず「<code>_anchorId</code> を先頭に付け替える <code>setState</code> と <code>correctPixels(pixels - minScrollExtent)</code> を対で行う 1 つの手順」（<code>_resetAnchorToFirst()</code>）を通す。</strong> <code>_anchorId</code> だけを書き換えると <code>pixels</code> が「アンカーからの距離」のまま新しい <code>minScrollExtent</code>（標準形では 0）に対して解釈され、表示位置が飛ぶ</li>
+</ul>
 </li>
 <li><p><strong>先頭スクロール要求</strong>（<code>AnchoredListController.scrollToTop(animated:)</code>。S-01/A-03・A-09・A-10・ST-15、S-02/A-04）：</p>
 <ol>
@@ -1763,33 +1802,47 @@ final class AnchoredListController {
 <li><code>_target.scrollingToTop = false</code>。手順 3 を <code>try/finally</code> で包み、<code>finally</code> で必ず戻す（<code>animateTo</code> はユーザーのドラッグで中断されても <code>Future</code> は完了する。中断後は標準形のままなので、そのまま引っ張れば <code>CupertinoSliverRefreshControl</code> が発火する。§6）。<code>finally</code> の時点で <code>detach()</code> 済みなら書かない</li>
 </ol>
 <ul>
-<li><strong>不変条件</strong>：State の <code>_scrollingToTop</code> が true の間、<code>didUpdateWidget</code> はアンカー形に入らない（下記手順 1 の「先頭を表示中」と同じ扱いにし、アンカー = 新 <code>items</code> の先頭、<code>correctPixels</code> は呼ばない）。<code>animateTo</code> の途中で drift の再クエリ結果が届いても、<code>correctPixels</code> がアニメーションと <code>position</code> を奪い合わない。A-03 は <code>animated: false</code> なのでこの窓自体が無く、A-09・A-10・ST-15 は 300ms の窓の間だけこの不変条件に頼る（§8 #27）</li>
+<li><strong>不変条件</strong>：State の <code>_scrollingToTop</code> が true の間、<code>didUpdateWidget</code> はアンカー形に入らない（下記手順 1 の「先頭を表示中」と同じ扱いにし、<code>_resetAnchorToFirst()</code> でアンカー = 新 <code>items</code> の先頭にする。手順 2・3 の位置補正 <code>correctPixels(H - anchorDy)</code> は行わない。手順 2 で標準形に戻った後の <code>_resetAnchorToFirst()</code> は <code>correctPixels(pixels - minScrollExtent)</code> = <code>minScrollExtent == 0</code> で値が変わらない）。<code>animateTo</code> の途中で drift の再クエリ結果が届いても、位置補正がアニメーションと <code>position</code> を奪い合わない。A-03 は <code>animated: false</code> なのでこの窓自体が無く、A-09・A-10・ST-15 は 300ms の窓の間だけこの不変条件に頼る（§8 #27）</li>
 <li><code>scrollToTop()</code> の実行中にもう一度呼ばれたら、進行中の <code>Future</code> を返す（二重の <code>animateTo</code> を張らない）</li>
 </ul>
 </li>
 <li><p><strong>アンカーの更新</strong>（<code>didUpdateWidget</code> で <code>items</code> が変わったとき。<strong><code>listEquals(oldWidget.items, widget.items)</code> が true なら、アンカーの再計算も <code>correctPixels</code> も行わない</strong>。星のタップで別の記事の <code>isSaved</code> が変わった・<code>minuteClockProvider</code> で親が再 build した等、表示位置に関係ない再 build で位置を触らない。<code>ArticleListItem</code>・<code>SavedArticle</code> は値の等価性を持つ。§4.1）：</p>
-<ol>
-<li><strong>先頭を表示中</strong>（<code>position.pixels &lt;= position.minScrollExtent + 1</code>）<strong>または <code>_scrollingToTop</code></strong> なら、アンカー = 新しい <code>items</code> の先頭（標準形）。以後の差し込みは先頭に現れる（S-01 §7.4「先頭を表示中なら差し込まれた記事が先頭に現れる」）</li>
-<li>そうでなければ、現在ビューポートに見えている要素のうち最上部のもの（各 <code>GlobalKey</code> の <code>RenderBox</code> を <code>localToGlobal(Offset.zero, ancestor: viewport)</code> し、<code>dy + height &gt; 0</code> かつ最小の <code>dy</code>）を <code>anchorId</code>、その <code>dy</code> を <code>anchorDy</code> とする。<code>anchorId</code> が新しい <code>items</code> に無ければ、旧 <code>items</code> でその<strong>直後</strong>にあり新 <code>items</code> にも残っている要素を採る（S-01 §7.4「表示中の記事が削除された場合はその直後の記事を同じ位置に」。S-02/ST-04「消えた範囲の直後の記事」）</li>
-<li><code>_centerKey = GlobalKey(anchorId)</code> に更新し（アンカー形）、同じ <code>didUpdateWidget</code> 内で <code>position.correctPixels(-anchorDy)</code>（通知なしで、次のレイアウトでアンカーが <code>anchorDy</code> の位置に来る）</li>
+<ol start="0">
+<li><strong><code>position</code> に触れる前のガード</strong>：<code>scrollController.hasClients</code> かつ <code>position.hasContentDimensions</code> を満たさなければ、アンカーの再計算も形態の変更も <code>correctPixels</code> も<strong>行わず据え置く</strong>（次フレーム以降に委ねる）。<code>State.didUpdateWidget</code> は <code>Scrollable</code> が新しい <code>ScrollController</code> を受け取るより<strong>前</strong>に走るため、controller を差し替えた直後のフレームでは新しい controller が <code>hasClients == false</code> になる。ここで標準形へ落とすと <code>correctPixels</code> を伴わない形態変更になり位置が飛ぶ（T-28 の実測で <code>dy</code> が <code>-20</code> から <code>+280</code> へずれた）。「触れてよい <code>ScrollPosition</code> か」の判定は 1 箇所（<code>_laidOutPosition</code>）に集約し、未確定時のフォールバックは呼び出し元ごとに決める</li>
+<li><strong>先頭を表示中</strong>（<code>_isAtTop()</code>）<strong>または <code>_scrollingToTop</code></strong> なら、<code>_resetAnchorToFirst()</code> でアンカー = 新しい <code>items</code> の先頭（標準形）。以後の差し込みは先頭に現れる（S-01 §7.4「先頭を表示中なら差し込まれた記事が先頭に現れる」）</li>
+<li>そうでなければ、現在ビューポートに見えている要素のうち最上部のもの（各 <code>GlobalKey</code> の <code>RenderBox</code> を <code>localToGlobal(Offset.zero, ancestor: viewport)</code> し、<code>dy + height &gt; 0</code> かつ最小の <code>dy</code>）を <code>anchorId</code>、その <code>dy</code> を <code>anchorDy</code> とする。<code>anchorId</code> が新しい <code>items</code> に無ければ、旧 <code>items</code> でその<strong>直後</strong>にあり新 <code>items</code> にも残っている要素を採る（S-01 §7.4「表示中の記事が削除された場合はその直後の記事を同じ位置に」。S-02/ST-04「消えた範囲の直後の記事」）。<strong>どれも見つからなければ</strong>（表示中だったアンカーが後続ごと消えた等）<code>_resetAnchorToFirst()</code> で標準形へ戻す（<code>_anchorId</code> だけを書き換えない）</li>
+<li>アンカーを <code>anchorId</code> に更新し（<code>setState</code>）、同じ <code>didUpdateWidget</code> 内で <code>position.correctPixels(H - anchorDy)</code>（通知なしで、次のレイアウトでアンカーが <code>anchorDy</code> の位置に来る）。<strong><code>H</code> は「新しいレイアウトでのアンカーの scroll offset」</strong>（不変条件 <code>dy = offset(anchor) - pixels</code>）で、遷移先の形態によって異なる：<ul>
+<li>新レイアウトが<strong>アンカー形</strong>（<code>anchorId</code> が新 <code>items</code> の先頭以外）：<code>H = 0</code>（<code>center</code> がアンカー自身）</li>
+<li>新レイアウトが<strong>標準形</strong>（<code>items</code> が空になった、またはアンカーが新 <code>items</code> の先頭になった）：<code>H</code> = 一覧より上にある extent。次の<strong>優先順</strong>で求める：<ol>
+<li><strong>旧レイアウトも標準形</strong>なら、旧先頭セルの実測から <code>H = position.pixels - position.minScrollExtent + dy(旧先頭セル)</code>。<strong><code>minScrollExtent</code> の正規化を省かない</strong>（標準形では <code>center == null</code> なので <code>minScrollExtent</code> は常に 0 だが、アンカー形から来た経路と式を揃えるために明示的に引く）。旧先頭セルの実測値は <code>leadingSlivers</code> の extent を自動的に含み、引っ張り中でヘッダの extent が変化していてもその時点の実態に合う</li>
+<li><strong>旧レイアウトがアンカー形</strong>、または<strong>セルを実測できない</strong>（旧先頭セルが未マウント・未レイアウト）ときは、ヘッダ Sliver（<code>_ExtentCompensatingSliver</code>。<code>_headerKey</code> から <code>RenderSliver</code> を辿る）の <code>constraints.precedingScrollExtent + geometry.scrollExtent</code>。アンカー形では逆成長側の非表示セルの paint transform が実位置と一致せずセル実測に頼れないためこの経路を使う（<code>RenderSliver.geometry.scrollExtent</code> は成長方向によらず同じ値を返す）。標準形からのフォールバックでは <code>precedingScrollExtent</code> に <code>leadingSlivers</code> の extent が含まれる</li>
+<li>どちらも取れなければ（<code>_headerKey</code> が未構築等）<strong>補正しない</strong>（位置保持を諦める。誤った補正で <code>pixels</code> を負に転落させるより安全）</li>
 </ol>
+</li>
+<li>旧レイアウトの形態（経路 1 か 2 かの分岐）は、<strong><code>setState</code> で <code>_anchorId</code> を書き換える前</strong>に確定させる（形態の判定は現在の <code>_anchorId</code> を見るため、書き換え後に判定すると新レイアウトの形態になる）</li>
+</ul>
+</li>
+<li><strong>処理順</strong>：<code>didUpdateWidget</code> では「<strong>アンカーの更新 → セルの <code>GlobalKey</code> の刈り取り</strong>」の順で行う。逆順だと、位置の実測に使う旧セルの <code>GlobalKey</code> が実測の前に捨てられ、手順 2 の「削除された記事の直後を採る」規則と手順 3 の経路 1 が常に失敗してヘッダ経路（経路 2）に落ちる</li>
+</ol>
+</li>
+<li><p><strong><code>ScrollController</code> の差し替え</strong>：同じ <code>key</code> のまま <code>controller</code> だけを差し替えても、<code>Scrollable._shouldUpdatePosition</code> は <code>ScrollController</code> 同士の差し替えでは false を返し（<code>physics</code> / <code>ScrollBehavior</code> が変わらない限り）、<code>ScrollPosition</code> は<strong>再利用される</strong>（<code>absorb</code> すら経由しない）。<code>pixels</code> の起点は変わらないためアンカー（<code>_anchorId</code>）はそのまま維持し、作り直さない。「新しい controller なので <code>pixels</code> は 0 から」と仮定してはいけない。controller の差し替えと <code>items</code> の変更が同一フレームで起きる経路（ページの再構築）では、上記ガード 0 によりその回の補正を次フレーム以降へ見送る（そのフレームでアンカー記事自体が新 <code>items</code> から消えていた場合は、次に更新できるまで <code>build()</code> の「アンカーが見つからなければ index 0」のフォールバックで描く）。State ごと作り直したいときは <code>key</code> を変え、<code>AnchoredListController</code> も作り直す（上記「<code>attach</code> / <code>detach</code> の規則」）</p>
 </li>
 <li><p><strong>空 → 非空・非空 → 空</strong>：標準形（アンカー無し）。<code>emptyView</code> を <code>SliverFillRemaining(hasScrollBody: false)</code> で包んで置く（引っ張り更新は <code>leadingSlivers</code> に、取得中の帯は <code>headerSliver</code> に残るので S-01 §8 #14 を満たす）</p>
 </li>
 <li><p><strong><code>headerSliver</code>（取得中の帯）と位置保持</strong>（§8 #28）：S-00 §3.3 の配置図は **E-23（<code>OfflineBanner</code>）を「一覧の直上に固定」、E-21（<code>RefreshingHeader</code>）を「一覧の先頭。iOS 標準の引っ張り更新の位置」**と書き分けている。したがって E-21 は一覧と一緒にスクロールする Sliver として <code>AnchoredListView.headerSliver</code> に置き（<code>HomePage</code> が <code>status.refreshing &amp;&amp; !_pulling</code> のとき <code>RefreshingHeader()</code>（D-04 §5.9。それ自体が <code>SliverToBoxAdapter</code> の Sliver）、それ以外は <code>null</code> を渡す。§5.1）、E-23 は一覧の外（<code>HomeScreen</code> の <code>HomeTabBar</code> と <code>PageView</code> の間。§5.1）に置く。位置補正の契機は <code>items</code> の変化だけなので、帯の出現・消失で先頭側の高さが <code>h</code>（帯の高さ）だけ変わると、そのままでは標準形の一覧が <code>h</code> ぶん上下にずれる。これを次のとおり相殺する：</p>
 <ul>
-<li><code>AnchoredListView</code> は <code>headerSliver</code> を常に自前の薄い Sliver <code>_ExtentCompensatingSliver</code>（<code>SingleChildRenderObjectWidget</code> + <code>RenderSliver</code>。子は <code>headerSliver</code> か無し）で包んで <code>slivers</code> に置く。子が無いときの extent は 0。<code>headerSliver</code> の null ↔ 非 null で <code>slivers</code> の個数は変わらない</li>
+<li><code>AnchoredListView</code> は <code>headerSliver</code> を常に自前の薄い Sliver <code>_ExtentCompensatingSliver</code>（<code>SingleChildRenderObjectWidget</code> + <code>RenderProxySliver</code>。子は <code>headerSliver</code> か無し）で包み、<strong><code>GlobalKey</code>（<code>_headerKey</code>）を付けて</strong> <code>slivers</code> に置く（key が無いと形態の切替で「前回のレイアウトの extent」が 0 に戻り二重補正になる。上記「構成（2 形態）」）。子が無いときの extent は 0。<code>headerSliver</code> の null ↔ 非 null で <code>slivers</code> の個数は変わらない</li>
 <li><code>_ExtentCompensatingSliver.performLayout</code> で、子の <code>scrollExtent</code> が前回のレイアウトから <code>delta</code>（出現なら <code>+h</code>、消失なら <code>-h</code>）変わり、かつ <strong>標準形で <code>constraints.scrollOffset &gt; 0</code>（この Sliver の先頭より下を見ている）</strong> なら、<code>geometry = SliverGeometry(scrollOffsetCorrection: delta)</code> を返す。<code>RenderViewport</code> はこれを受けて <code>ScrollPosition.correctBy(delta)</code>（= 通知なしの <code>correctPixels(pixels ± h)</code>）を行い、同じフレームで再レイアウトするため、表示中の記事は同じ画面位置に留まる。<code>h</code> は子のレイアウト結果から得る（消失時は前回のレイアウトで保持した extent）ので、<code>RefreshingHeader</code> の高さを定数として知る必要はない。消失時に帯が一部だけ見えていた（<code>0 &lt; constraints.scrollOffset &lt; h</code>）場合は <code>delta = -constraints.scrollOffset</code>（<code>pixels</code> を負にしない。見えていた部分だけが閉じる）</li>
 <li>標準形で <code>constraints.scrollOffset == 0</code>（先頭を表示中。帯の全体が見える位置）なら補正しない。帯は先頭に現れ、記事はその分だけ下がる（S-00/E-21「一覧の先頭」の見え方そのもの。引っ張り更新の完了に伴う <code>CupertinoSliverRefreshControl</code> の収縮と同じ扱い）</li>
 <li>アンカー形では <code>headerSliver</code> は <code>center</code> より前（逆成長側）に属し、その高さの変化は <code>minScrollExtent</code> を動かすだけで <code>center</code> 基準の <code>pixels</code> とアンカーの画面位置は変わらないため、補正しない（<code>_ExtentCompensatingSliver</code> は <code>constraints.growthDirection == GrowthDirection.reverse</code> なら <code>scrollOffsetCorrection</code> を返さない）</li>
 <li><code>_pulling</code> 中は <code>HomePage</code> が帯を出さないため（§5.1）、<code>CupertinoSliverRefreshControl</code> のドラッグ中に補正が走ることはない。<code>leadingSlivers</code>（<code>CupertinoSliverRefreshControl</code>）自身の高さ変化（ユーザーの引っ張り中と、引っ張り更新の完了に伴う既定の収縮）は Cupertino 標準の見え方なので補正せず、<code>leadingSlivers</code> には高さが自発的に変わる他の Sliver を置かない</li>
-<li>並び（上から）は標準形で <code>leadingSlivers</code> → <code>_ExtentCompensatingSliver(headerSliver)</code> → 全要素、アンカー形で <code>leadingSlivers</code> → <code>_ExtentCompensatingSliver(headerSliver)</code> → アンカーより前の要素 → アンカー以降。どちらの形態でも <code>leadingSlivers</code> が <code>slivers</code> の先頭（最上部）</li>
+<li>並び（上から）は標準形で <code>leadingSlivers</code> → <code>_ExtentCompensatingSliver(headerSliver)</code> → 全要素（空なら <code>emptyView</code>）、アンカー形で <code>_ExtentCompensatingSliver(headerSliver)</code> → アンカーより前の要素（逆順）→ アンカー以降。<strong><code>leadingSlivers</code> は標準形にしか置かない</strong>（アンカー形では SDK の assert に抵触する。上記「構成（2 形態）」・§8 #21）。<code>_ExtentCompensatingSliver</code> はどちらの形態でも <code>slivers</code> の先頭側にあり、<code>GlobalKey</code> で RenderObject を保つため形態が切り替わっても「前回のレイアウトの extent」を失わない</li>
 <li><code>SavedScreen</code> は <code>leadingSlivers</code>・<code>headerSliver</code> のどちらも渡さない（S-02 §8 #1。§5.5）</li>
 </ul>
 </li>
 <li><p><strong>縮退の逃げ道</strong>（§8 #21）：実装時に「先頭に戻ったときの標準形への復帰」で Pull to Refresh が成立しない（<code>correctPixels</code> がドラッグと干渉する等）場合は、位置保持を「表示中のページのみ、差し込み前後で <code>ScrollController</code> のオフセットを保つ（<code>ListView</code> の既定動作）」に縮退し、<code>AnchoredListView</code> を <code>CustomScrollView</code> + 単一 <code>SliverList</code> にする（<code>AnchoredListController.scrollToTop()</code> は残す）。S-01 §7.4「表示中の記事の画面上の位置を保つ」に加え、S-02/ST-04「消えた範囲の直後の記事が同じ位置に」（保存画面の位置保持）も満たせなくなるため、縮退したら §8.1 で <strong>S-01・S-02 の両方</strong>に申し送る</p>
 </li>
-<li><p>テストは書かない（Widget。D-04 §7 と同じ方針）。アンカー選択の規則・2 形態の切替・<code>_scrollingToTop</code> の不変条件・<code>_ExtentCompensatingSliver</code> の補正条件は上記を実装コメントに残す。Pull to Refresh の成立と先頭スクロールは T-M の目視項目（§10）</p>
+<li><p>テストは書かない（Widget。D-04 §7 と同じ方針）。アンカー選択の規則・2 形態の切替・<code>_scrollingToTop</code> の不変条件・<code>_ExtentCompensatingSliver</code> の補正条件は上記を実装コメントに残す。加えて、<strong>依存している Flutter SDK 内部の前提と、それを確認した Flutter のバージョンをファイル冒頭の library doc に列挙する</strong>（自動テストが無いため、Flutter を上げたときの再確認の手掛かりがこれしか無い。列挙する項目は §7）。Pull to Refresh の成立と先頭スクロールは T-M の目視項目（§10）</p>
 </li>
 </ul>
 <h3 id="sec-5-12">5.12 記事セルの組み立て（F-02。S-00/E-10〜E-17）<a class="anchor" href="#sec-5-12">#</a></h3>
@@ -1839,6 +1892,11 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <tr>
 <td><code>Info.plist</code> に <code>LSApplicationQueriesSchemes</code> が無い</td>
 <td><code>isChromeAvailable()</code> が常に false → E-13 は常に選べず、<code>chrome</code> 設定済みなら Safari で開く。T-H2 の完了条件で plist を検査する</td>
+<td>infrastructure</td>
+</tr>
+<tr>
+<td><code>canLaunchUrl</code> が <code>PlatformException</code> 等を投げた</td>
+<td><code>isChromeAvailable()</code> が捕捉して false を返す（§4.4）。<code>chromeAvailableProvider</code> は <code>AsyncError</code> にならず、E-13 は非活性表示（S-03/ST-05）、<code>chrome</code> 設定済みなら Safari で開く。例外を素通しすると E-13 が活性表示のままタップしても何も起きない（T-27 の dev-loop）</td>
 <td>infrastructure</td>
 </tr>
 <tr>
@@ -2118,7 +2176,27 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td>表示中の記事以外の変更で一覧が再 build された（別の記事の星・<code>minuteClockProvider</code>・親の <code>setState</code>）</td>
-<td><code>listEquals</code> が true ならアンカーの再計算も <code>correctPixels</code> も行わず、表示位置が動かない（§5.11）。星の変化は <code>items</code> の該当要素の <code>isSaved</code> が変わるため <code>listEquals</code> が false になるが、要素の増減が無くアンカーは同じ id・同じ <code>dy</code> なので <code>correctPixels(-anchorDy)</code> は見た目を変えない</td>
+<td><code>listEquals</code> が true ならアンカーの再計算も <code>correctPixels</code> も行わず、表示位置が動かない（§5.11）。星の変化は <code>items</code> の該当要素の <code>isSaved</code> が変わるため <code>listEquals</code> が false になるが、要素の増減が無くアンカーは同じ id・同じ <code>dy</code>・同じ形態（<code>H</code> も同じ）なので <code>correctPixels(H - anchorDy)</code> は見た目を変えない</td>
+<td>core/ui</td>
+</tr>
+<tr>
+<td>アンカー形の一覧で <code>items</code> が変わり、アンカーが新 <code>items</code> の先頭になった（標準形へ遷移）</td>
+<td><code>correctPixels(H - anchorDy)</code> の <code>H</code> を「旧先頭セルの実測 → ヘッダ Sliver の <code>precedingScrollExtent + scrollExtent</code> → 補正しない」の優先順で求める。<code>H = 0</code> を使うのはアンカー形へ遷移する場合だけ（§5.11 手順 3）</td>
+<td>core/ui</td>
+</tr>
+<tr>
+<td>表示中だったアンカーが後続ごとすべて消え、新しい基準が見つからない</td>
+<td><code>_resetAnchorToFirst()</code>（<code>setState</code> と <code>correctPixels(pixels - minScrollExtent)</code> を対で行う）で標準形へ戻す。<code>_anchorId</code> だけを書き換えると位置が飛ぶ（§5.11 手順 2）</td>
+<td>core/ui</td>
+</tr>
+<tr>
+<td><code>items</code> の変更と <code>ScrollController</code> の差し替えが同一フレームで起きた（ページの再構築）</td>
+<td><code>hasClients == false</code>（<code>didUpdateWidget</code> は <code>Scrollable</code> が新 controller を受け取る前に走る）なのでアンカーの更新も補正も見送り、次フレーム以降に委ねる。<code>ScrollPosition</code> は差し替えでも再利用されるため <code>pixels</code> の起点は変わらず、アンカーはそのまま有効（§5.11）</td>
+<td>core/ui</td>
+</tr>
+<tr>
+<td>アンカー形（先頭より下を表示中）のまま引っ張った</td>
+<td><code>leadingSlivers</code> を出していないため何も起きない（<code>CupertinoSliverRefreshControl</code> を逆成長側に置くと debug ビルドが <code>GrowthDirection.forward</code> の assert で落ちる）。上端まで戻すと標準形へ復帰し、続けて引くと発火する（§5.11・§8 #21）</td>
 <td>core/ui</td>
 </tr>
 <tr>
@@ -2138,7 +2216,7 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td>先頭へスクロール中（<code>animateTo</code> の 300ms）に <code>items</code> が差し替わった（未読フィルタ切替直後の再クエリ・差分反映）</td>
-<td><code>_scrollingToTop</code> の間は <code>didUpdateWidget</code> がアンカー形に入らず標準形（アンカー = 新 <code>items</code> の先頭）として扱い <code>correctPixels</code> を呼ばない。アニメーションは <code>0</code> = 先頭へそのまま到達する。A-03 は <code>jumpTo</code> なので窓が無い（§5.11・§8 #27）</td>
+<td><code>_scrollingToTop</code> の間は <code>didUpdateWidget</code> がアンカー形に入らず標準形（アンカー = 新 <code>items</code> の先頭）として扱い、位置補正 <code>correctPixels(H - anchorDy)</code> を行わない。アニメーションは <code>0</code> = 先頭へそのまま到達する。A-03 は <code>jumpTo</code> なので窓が無い（§5.11・§8 #27）</td>
 <td>core/ui</td>
 </tr>
 <tr>
@@ -2183,7 +2261,16 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 </tbody></table>
 <h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
-<p>テストの単位は UseCase（CLAUDE.md）。D-04 §7 と同じく drift は <code>NativeDatabase.memory()</code> の実物を使い（本書の SQL、特に <code>markAsRead</code> の存在確認・<code>clearAll</code> のトランザクション・<code>deleteUnsavedOutOfFeed</code> の述語・<code>watchInFeed</code> / <code>watchAll</code> の結合を UseCase 経由で検証する）、外部境界（<code>url_launcher</code>・<code>package_info_plus</code>・FCM）はフェイクに差し替える。記事の投入は <code>test/helpers/seed_articles.dart</code>（<code>DriftArticleRepository.applyFeed</code> の実物に <code>FeedApplyPlan(inserts: ...)</code> を渡す。<code>in_feed = false</code> は <code>inserts</code> 後に空の配信を適用して作る）。Widget・Notifier（<code>HomeTabController</code>・<code>SavedListController</code>・<code>SettingsScreen</code> の状態）・<code>AnchoredListView</code>・Provider の配線はテストしない。ネットワークへは一切アクセスしない。</p>
+<p>テストの単位は UseCase（CLAUDE.md）。D-04 §7 と同じく drift は <code>NativeDatabase.memory()</code> の実物を使い（本書の SQL、特に <code>markAsRead</code> の存在確認・<code>clearAll</code> のトランザクション・<code>deleteUnsavedOutOfFeed</code> の述語・<code>watchInFeed</code> / <code>watchAll</code> の結合を UseCase 経由で検証する）、外部境界（<code>url_launcher</code>・<code>package_info_plus</code>・FCM）はフェイクに差し替える。記事の投入は <code>test/helpers/seed_articles.dart</code>（実物の <code>DriftArticleRepository.applyFeed</code> 経由。API と契約は下記）。投入後に記事を足す・差分を当てるケース（<code>group(&#39;再発火&#39;)</code> 等）は <code>applyFeed</code> を直接呼ぶ（<code>seedArticles</code> は 1 テスト 1 回）。Widget・Notifier（<code>HomeTabController</code>・<code>SavedListController</code>・<code>SettingsScreen</code> の状態）・<code>AnchoredListView</code>・Provider の配線はテストしない。ネットワークへは一切アクセスしない。</p>
+<p><strong><code>AnchoredListView</code> の代わりの担保</strong>（§5.11・§10 T-H3・T-M）：<code>AnchoredListView</code> は Widget のため自動テストを持たない方針を維持する。代わりに、<strong>依存している Flutter SDK 内部の前提と、それを確認した Flutter のバージョンを <code>core/ui/list/anchored_list_view.dart</code> 冒頭の library doc に列挙して残す</strong>（Flutter を上げたときの再確認の手掛かりがこれしか無いため。挙動の確認は T-M の目視項目）。初版（Flutter 3.47.4 stable で実機確認）の列挙は次の 6 項目：</p>
+<ul>
+<li><code>RenderViewport</code> は <code>center</code> の有無で逆成長側の有無が決まる</li>
+<li><code>SliverGeometry.scrollOffsetCorrection</code> は通知なしに <code>pixels</code> をずらせる</li>
+<li><code>ScrollPosition.correctPixels</code> は非通知（<code>notifyListeners</code> を呼ばない）</li>
+<li>逆成長側（<code>GrowthDirection.reverse</code>）の非表示セルは paint transform が実位置と一致しない（セルの実測に頼れない）</li>
+<li><code>CupertinoSliverRefreshControl</code> は <code>GrowthDirection.forward</code> しか許さない（<code>RenderSliver.performLayout</code> の assert）</li>
+<li><code>Scrollable._shouldUpdatePosition</code> は <code>ScrollController</code> 同士の差し替えでは false を返し、<code>ScrollPosition</code> を再利用する</li>
+</ul>
 <p><code>test/helpers/</code>（D-04 §7 に追加）：</p>
 <table>
 <thead>
@@ -2202,9 +2289,29 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td><code>seed_articles.dart</code></td>
-<td>D-04 <code>test/helpers/test_articles.dart</code> のビルダで作った <code>Article</code> を <code>DriftArticleRepository.applyFeed(FeedApplyPlan(inserts: [...]))</code>（実物）で in-memory DB に入れる。<code>in_feed = false</code> は続けて空の配信（<code>inserts</code> 無し）を <code>applyFeed</code> して作る。<code>has_update_badge = true</code> は <code>updatedAt</code> を付けた同じ記事を <code>updates</code> に入れた <strong>2 回目の <code>applyFeed</code></strong> で立てる（D-04 §5.2 の判定表どおり）。既読は <code>DriftReadStateRepository.markAsRead</code>、保存は <code>DriftSavedArticleRepository.save</code> の実物を呼ぶ（テーブルへ直接 INSERT しない）</td>
+<td>D-04 <code>test/helpers/test_articles.dart</code> のビルダで作った <code>Article</code> を実物の Repository 経由で in-memory DB に入れる（テーブルへ直接 INSERT しない）。API と契約は下記</td>
+</tr>
+<tr>
+<td><code>collect_stream.dart</code></td>
+<td><code>List&lt;T&gt; collectStream&lt;T&gt;(Stream&lt;T&gt; stream)</code>。購読を開始し、以後に発火した値がたまっていくリストを返す（<code>pumpEventQueue()</code> の後に参照する）。<code>addTearDown(subscription.cancel)</code> で解約し、<code>onError</code> は <code>fail()</code> にする（Stream のエラーをテストの失敗として検出する）。<code>NativeDatabase.memory()</code> は同一 isolate の同期実行なので、drift の Stream は <code>pumpEventQueue()</code> で必ず届く（実時間に依存しない）。Stream を購読する全テスト（<code>WatchHomeArticlesUseCase</code>・<code>CommitSavedChangesUseCase</code> の再発火の検証など）はこのヘルパを使い、<code>listen</code> を手書きしない</td>
 </tr>
 </tbody></table>
+<p><strong><code>seedArticles</code> の API と契約</strong>（T-H1 で確定。§10）：</p>
+<pre><code class="language-dart">// test/helpers/seed_articles.dart
+Future&lt;void&gt; seedArticles(
+  AppDatabase db, {
+  List&lt;Article&gt; inserts = const [],          // in_feed = true・has_update_badge = false のまま残す記事
+  List&lt;Article&gt; outOfFeed = const [],        // in_feed = false にする記事（savedAtByIds にも同じ id が必要）
+  List&lt;Article&gt; withUpdateBadge = const [],  // has_update_badge = true にする記事（updatedAt 必須）
+  List&lt;String&gt; readIds = const [],           // 既読にする記事 id（read_at はヘルパ内の固定値）
+  Map&lt;String, DateTime&gt; savedAtByIds = const {},   // 保存する記事 id → saved_at
+});</code></pre>
+<ul>
+<li>投入は実物の <code>DriftArticleRepository.applyFeed</code>・<code>DriftReadStateRepository.markAsRead</code>・<code>DriftSavedArticleRepository.save</code> を経由する。<code>outOfFeed</code> は 1 回目の <code>applyFeed</code>（<code>inserts</code>）で入れたあと、その id を外した 2 回目の <code>applyFeed</code> で <code>in_feed = false</code> にする。<code>withUpdateBadge</code> は <code>updatedAt</code> を付けた同じ記事を 2 回目の <code>applyFeed</code> の <code>updates</code> に入れて立てる（D-04 §5.2 の判定表どおり）。両方に現れる id（配信外かつ更新バッジあり）は、<code>refreshes</code> から外した 3 回目の <code>applyFeed</code> で <code>in_feed</code> を false に戻す</li>
+<li>手順は <strong>引数の検証 → 「1 回だけ」ガードの確定 → 投入 → 結果の確認（<code>assert</code> で行数を照合）</strong> の 4 段。引数の検証は DB に触れない純粋な検証なのでガードより<strong>先</strong>に行い、<strong>検証に失敗した呼び出しはガードの回数に数えない</strong>（同じ <code>db</code> で 1 回目をやり直せる）</li>
+<li><strong>1 テスト（1 つの <code>AppDatabase</code>）につき 1 回だけ</strong>呼べる。2 回目は（0 件投入の呼び出しであっても）<code>StateError</code>。2 回目の <code>applyFeed</code> が 1 回目の未保存記事を「配信外」として消すため。判定は <code>articles</code> の行数ではなく <code>Expando&lt;bool&gt;</code> による呼び出し記録で行う（0 件投入の 1 回目も数える）。同じ DB への追加投入は <code>applyFeed</code> を直接使う</li>
+<li>次の場合は <code>ArgumentError</code>（いずれも DB に触れる前に投げる）：<code>inserts</code>・<code>outOfFeed</code>・<code>withUpdateBadge</code>・<code>readIds</code> のいずれかの中で id が重複／<code>inserts</code> の id が <code>outOfFeed</code>・<code>withUpdateBadge</code> と重複／<code>withUpdateBadge</code> の記事に <code>updatedAt</code> が無い／<code>outOfFeed</code> の id が <code>savedAtByIds</code> に無い（未保存の配信外記事は <code>applyFeed</code> 手順 5 で消えるため）／<code>readIds</code> の id が <code>withUpdateBadge</code> と重複（<code>markAsRead</code> がバッジを消して矛盾するため）／<code>savedAtByIds</code>・<code>readIds</code> の id が 3 つのリストのいずれにも無い（FK）／<code>outOfFeed</code> と <code>withUpdateBadge</code> に同じ id が<strong>別内容</strong>で入っている</li>
+</ul>
 <table>
 <thead>
 <tr>
@@ -2551,7 +2658,7 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <td>21</td>
 <td><code>AnchoredListView</code> は「標準形（アンカー = 先頭。<code>center</code> 無し）」と「アンカー形（<code>center</code> 指定）」の 2 形態を持ち、<code>minScrollExtent</code> に達したら標準形へ復帰して <code>CupertinoSliverRefreshControl</code> を前方成長側の先頭に戻す。実装時に成立しなければ「表示中ページのみ <code>ScrollController</code> のオフセット保持」に縮退する（§5.11）</td>
 <td>常にアンカー形で <code>CupertinoSliverRefreshControl</code> を逆成長側に置く（初版）／<code>RefreshIndicator</code> 相当を <code>CustomScrollView</code> の外で自作する</td>
-<td><code>RenderViewport</code> は <code>center</code> より前に Sliver があると前方成長側の先頭に負の <code>overlap</code> を渡さず、逆成長側の Sliver にも渡さないため、初版の構成では Pull to Refresh が発火しない（レビュー第 1 周 M-12）。ユーザーが引っ張れるのは先頭にいるときだけなので、先頭に戻った時点で標準形に戻せば <code>CupertinoSliverRefreshControl</code> の前提（前方成長側の先頭）が成り立つ。自作の引っ張り更新は Cupertino の見た目（S-00/E-21 との整合）を再現する手間が大きい。縮退の逃げ道を先に決めておき、T-M の目視で成立を確認する。縮退した場合は S-01 §7.4 に加え S-02/ST-04 の位置保持（消えた範囲の直後の記事を同じ位置に）も満たせなくなるため、§8.1 で S-01・S-02 の両方に申し送る。開発者の指示により推奨案を採用（2026-09-20）</td>
+<td><code>RenderViewport</code> は <code>center</code> より前に Sliver があると前方成長側の先頭に負の <code>overlap</code> を渡さず、逆成長側の Sliver にも渡さないため、初版の構成では Pull to Refresh が発火しない（レビュー第 1 周 M-12）。さらに T-28 の実装で、<code>CupertinoSliverRefreshControl</code> の <code>RenderSliver.performLayout</code> が <code>assert(constraints.growthDirection == GrowthDirection.forward)</code> を持ち、逆成長側に置くと <strong>debug ビルドが落ちる</strong>ことが実測で分かった（「発火しないだけ・実害無し」では済まない）。そのため<strong>アンカー形では <code>leadingSlivers</code> を <code>slivers</code> に入れない</strong>（§5.11。2026-09-23 追記）。ユーザーが引っ張れるのは先頭にいるときだけなので、先頭に戻った時点で標準形に戻せば <code>CupertinoSliverRefreshControl</code> の前提（前方成長側の先頭）が成り立つ。自作の引っ張り更新は Cupertino の見た目（S-00/E-21 との整合）を再現する手間が大きい。縮退の逃げ道を先に決めておき、T-M の目視で成立を確認する。縮退した場合は S-01 §7.4 に加え S-02/ST-04 の位置保持（消えた範囲の直後の記事を同じ位置に）も満たせなくなるため、§8.1 で S-01・S-02 の両方に申し送る。開発者の指示により推奨案を採用（2026-09-20）</td>
 </tr>
 <tr>
 <td>22</td>
@@ -2591,9 +2698,9 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td>28</td>
-<td><code>RefreshingHeader</code>（S-00/E-21、S-01/ST-03）は一覧の<strong>先頭の Sliver</strong>（<code>AnchoredListView.headerSliver</code>。<code>leadingSlivers</code> の <code>CupertinoSliverRefreshControl</code> の直後）に置き、一覧と一緒にスクロールさせる。出現・消失による先頭側の高さ変化 <code>±h</code> は <code>AnchoredListView</code> が <code>_ExtentCompensatingSliver</code> の <code>scrollOffsetCorrection</code>（= <code>correctPixels(pixels ± h)</code>）で相殺する（標準形で先頭より下を見ているときだけ。§5.11）。<code>OfflineBanner</code>（S-00/E-23、S-01/ST-06）は <code>HomeScreen</code> の <code>HomeTabBar</code> と <code>PageView</code> の間（一覧の外）に置く</td>
+<td><code>RefreshingHeader</code>（S-00/E-21、S-01/ST-03）は一覧の<strong>先頭の Sliver</strong>（<code>AnchoredListView.headerSliver</code>。標準形では <code>leadingSlivers</code> の <code>CupertinoSliverRefreshControl</code> の直後、アンカー形では <code>slivers</code> の先頭。#21）に置き、一覧と一緒にスクロールさせる。出現・消失による先頭側の高さ変化 <code>±h</code> は <code>AnchoredListView</code> が <code>_ExtentCompensatingSliver</code> の <code>scrollOffsetCorrection</code>（= <code>correctPixels(pixels ± h)</code>）で相殺する（標準形で先頭より下を見ているときだけ。§5.11）。<code>OfflineBanner</code>（S-00/E-23、S-01/ST-06）は <code>HomeScreen</code> の <code>HomeTabBar</code> と <code>PageView</code> の間（一覧の外）に置く</td>
 <td>(a) <code>RefreshingHeader</code> も一覧の外（<code>HomePage</code> の <code>Column</code> 上段）に置き Sliver にしない（第 2 周〜第 3 周の案）／(b) 帯を一覧に重ねる（<code>Stack</code>）</td>
-<td>S-00 §3.3 の配置図と §4 は **E-21 を「一覧の先頭。iOS 標準の引っ張り更新の位置」（スクロール追随）、E-23 を「一覧の直上に固定」**と書き分けており、E-21 の置き場は画面定義書の所有（CLAUDE.md「画面定義書が上流」）。(a) は帯の位置を設計書側で変えてしまう（レビュー第 3 周 M-1、consistency）。位置補正の契機が <code>items</code> の変化だけなので、標準形で先頭側の高さが変わると一覧が <code>h</code> ぶんジャンプする問題（第 2 周 M-6）は、帯を包む薄い Sliver がレイアウト時に自身の extent 変化を <code>SliverGeometry.scrollOffsetCorrection</code> で報告することで解消でき、帯の高さをレイアウト前に知る必要も D-04 §5.9 の高さを本書が固定する必要も無い。アンカー形では帯は逆成長側にあるためもともとずれない。(b) は帯が先頭のセルを隠す。E-23 は「固定」なので現状（一覧の外）のまま。開発者確認 2026-09-20：設計を S-00 に合わせ、E-21 を一覧内に戻す</td>
+<td>S-00 §3.3 の配置図と §4 は **E-21 を「一覧の先頭。iOS 標準の引っ張り更新の位置」（スクロール追随）、E-23 を「一覧の直上に固定」**と書き分けており、E-21 の置き場は画面定義書の所有（CLAUDE.md「画面定義書が上流」）。(a) は帯の位置を設計書側で変えてしまう（レビュー第 3 周 M-1、consistency）。位置補正の契機が <code>items</code> の変化だけなので、標準形で先頭側の高さが変わると一覧が <code>h</code> ぶんジャンプする問題（第 2 周 M-6）は、帯を包む薄い Sliver がレイアウト時に自身の extent 変化を <code>SliverGeometry.scrollOffsetCorrection</code> で報告することで解消でき、帯の高さをレイアウト前に知る必要も D-04 §5.9 の高さを本書が固定する必要も無い。この薄い Sliver には <code>GlobalKey</code> が要る（形態の切替で Element が作り直されると「前回のレイアウトの extent」が 0 に戻り二重に補正される。T-28 の実測。2026-09-23 追記）。アンカー形では帯は逆成長側にあるためもともとずれない。(b) は帯が先頭のセルを隠す。E-23 は「固定」なので現状（一覧の外）のまま。開発者確認 2026-09-20：設計を S-00 に合わせ、E-21 を一覧内に戻す</td>
 </tr>
 <tr>
 <td>29</td>
@@ -2625,12 +2732,12 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </thead>
 <tbody><tr>
 <td>D-04（<strong>T-J（保存の UseCase）着手前</strong>に reopen）</td>
-<td>§4.2「保存を解除した記事が <code>in_feed = false</code> なら、その時点で D-05 が削除する」と §8.1 の D-05 宛「保存解除で <code>saved_articles</code> の行を削除した後、その記事が <code>in_feed = false</code> なら <code>articles</code> の行も削除する」を、S-02 §7.3 に合わせ「保存画面での解除は D-05 が画面上で保留し、保存画面を離れた時点で <code>saved_articles</code> の削除と <code>in_feed = false</code> の記事の削除をまとめて行う。ホームでの解除は即時（<code>in_feed = true</code> のため削除対象なし）」に補正する（§8 #5）。T-J の実装者が D-04 の文言を根拠に解除時の削除を書かないよう、着手前に直す</td>
+<td>§4.2「保存を解除した記事が <code>in_feed = false</code> なら、その時点で D-05 が削除する」と §8.1 の D-05 宛「保存解除で <code>saved_articles</code> の行を削除した後、その記事が <code>in_feed = false</code> なら <code>articles</code> の行も削除する」を、S-02 §7.3 に合わせ「保存画面での解除は D-05 が画面上で保留し、保存画面を離れた時点で <code>saved_articles</code> の削除と <code>in_feed = false</code> の記事の削除をまとめて行う。ホームでの解除は即時（<code>in_feed = true</code> のため削除対象なし）」に補正する（§8 #5）。T-J の実装者が D-04 の文言を根拠に解除時の削除を書かないよう、着手前に直す。<strong>2026-09-23 の reopen で D-04 に反映済み</strong></td>
 <td>§5.5</td>
 </tr>
 <tr>
 <td>D-04（次回 reopen 時。任意の整理）</td>
-<td><code>notifications/presentation/notification_tap_providers.dart</code> の 3 Provider は他 feature の presentation（S-03）と <code>lib/app</code> が読む。本書は <code>core/di/notifications_providers.dart</code> の委譲 Provider で回避している（§8 #10）ため必須ではないが、元の Provider を <code>core/di</code> へ移せば委譲が不要になる</td>
+<td><code>notifications/presentation/notification_tap_providers.dart</code> の 3 Provider は他 feature の presentation（S-03）と <code>lib/app</code> が読む。本書は <code>core/di/notifications_providers.dart</code> の委譲 Provider で回避している（§8 #10）ため必須ではないが、元の Provider を <code>core/di</code> へ移せば委譲が不要になる。<strong>2026-09-23 の reopen で D-04 側に反映される見込み（推奨案どおり）。反映されたら本行を「反映済み」にする</strong></td>
 <td>§3.1 / §4.6</td>
 </tr>
 <tr>
@@ -2665,12 +2772,24 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td>CLAUDE.md（司令塔）</td>
-<td>「テスト方針」の純粋関数の例示に <code>mergeSavedList</code>・<code>buildArticleCellModel</code> を、ディレクトリ規約に <code>features/browser/</code>（§8 #8。開発者確認済み 2026-09-20）・<code>core/ui/list/</code> を追記する</td>
+<td>「テスト方針」の純粋関数の例示に <code>mergeSavedList</code>・<code>buildArticleCellModel</code> を、ディレクトリ規約に <code>features/browser/</code>（§8 #8。開発者確認済み 2026-09-20）・<code>core/ui/list/</code> を追記する。<strong>反映済み（2026-09-23 確認。4 項目とも CLAUDE.md に記載されている）</strong></td>
 <td>§7 / §3.2</td>
 </tr>
 </tbody></table>
 <h2 id="sec-9">9. 未決定事項<a class="anchor" href="#sec-9">#</a></h2>
-<p>該当なし。初版の Q-1（<code>features/browser/</code> の新設）は §8 #8 に、レビュー第 1 周後の Q-1（保存画面表示中の終了時の保留の扱い）は §8 #26 に、いずれも開発者確認済み（2026-09-20）として移した。</p>
+<p>初版の Q-1（<code>features/browser/</code> の新設）は §8 #8 に、レビュー第 1 周後の Q-1（保存画面表示中の終了時の保留の扱い）は §8 #26 に、いずれも開発者確認済み（2026-09-20）として移した。2026-09-23 の reopen で次の 1 件を追加する。</p>
+<p><strong>[Q-1] <code>test/helpers/</code> のテストヘルパ自身に契約テストを許すか</strong>（T-26・T-29 の dev-loop で顕在化）</p>
+<ul>
+<li><strong>背景</strong>：§7 に書いた <code>seedArticles</code> の契約（<code>ArgumentError</code> 7 種・<code>StateError</code> 1 種）は<strong>どのテストからも実行されていない</strong>。CLAUDE.md「テスト方針」が個別クラスのユニットテストを禁じており、ヘルパはテストの入口（UseCase）ではないため純粋関数の例外にも当てはまらない。契約を変えたときに壊れても気付けず、誤った前提で投入されたデータが UseCase テストの偽陽性・偽陰性になる</li>
+<li><strong>選択肢</strong>：<ul>
+<li><strong>A. 許す</strong>：CLAUDE.md の「テスト方針」の例外列挙に「<code>test/helpers/</code> の契約テスト（引数検証の throw と、投入結果の行の状態）」を追記し、本書 §7 にもケースを列挙する（<code>test/helpers/seed_articles_test.dart</code> に <code>expect(() =&gt; seedArticles(...), throwsArgumentError)</code> 8 ケース程度）</li>
+<li><strong>B. 許さない（現状維持）</strong>：契約は §7 の記述と実装コメントだけで担保し、変更時は各 throw 経路を手で 1 度ずつ通す（T-26 が実際に採った方法）</li>
+<li><strong>C. ヘルパから検証を落とす</strong>：<code>ArgumentError</code> を投げずに素通しし、誤用は UseCase テストの失敗として現れるのに任せる</li>
+</ul>
+</li>
+<li><strong>推奨</strong>：<strong>A</strong>。理由は、<code>seedArticles</code> が T-I・T-J・T-M 以降のほぼ全 UseCase テストの前提を作る単一障害点であること、検証が 12 経路と多く手動確認が続かないこと、テスト対象が値だけ（DB は in-memory の実物で副作用が閉じている）で純粋関数の例外と同じ性質であること。C は D-04 §5.2 の判定表どおりの状態（<code>in_feed</code>・<code>has_update_badge</code>）を作れているかの確認が消え、誤ったデータで通るテストが生まれるため採らない</li>
+<li><strong>影響範囲</strong>：CLAUDE.md「テスト方針」の 1 行（例外列挙）、本書 §7（ヘルパ表とケースの列挙）、<code>test/helpers/seed_articles_test.dart</code> の新規 1 ファイル。<strong>CLAUDE.md の変更を伴うため開発者の判断が要る</strong>（エージェントの自動採用の対象外）。A を採る場合の実装は既存タスクに載せず、追加タスク 1 つ（<code>test/helpers/</code> のみ）に切る</li>
+</ul>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
 <p>D-04 §10 の T-F1・T-F2a・T-F2b の後に続く。各タスクは新規ファイル 5〜10（テストを含む。生成物は数えない）・UseCase 3 以内で、単独で <code>flutter analyze &amp;&amp; flutter test</code> を通す。並行タスクが同じファイル（生成物を含む）を編集しないよう、<code>core/di/providers.dart</code> は T-H1 → T-H2 の順に直列で編集し、UseCase の Provider は feature 別ファイルに置く（§4.6）。</p>
 <table>
@@ -2687,10 +2806,10 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <tbody><tr>
 <td>T-H1</td>
 <td>articles / saved の domain と drift 実装</td>
-<td><code>articles/domain/article_list_item.dart</code>・<code>read_state_repository.dart</code>、<code>articles/infrastructure/drift_read_state_repository.dart</code>、<code>saved/domain/saved_article.dart</code>、<code>test/helpers/seed_articles.dart</code>。改修：<code>article_query_repository.dart</code>（<code>watchInFeed</code>）、<code>drift_article_repository.dart</code>、<code>saved_article_repository.dart</code>（<code>isSaved</code>・<code>watchAll</code>・<code>deleteUnsavedOutOfFeed</code>）、<code>drift_saved_article_repository.dart</code>、<code>core/di/providers.dart</code>（<code>readStateRepository</code>・<code>companyShortNames</code>）。新規 5 + 改修 5</td>
-<td><code>lib/features/{articles,saved}/{domain,infrastructure}/</code>、<code>lib/core/di/providers.dart</code>、<code>test/helpers/</code></td>
+<td><code>articles/domain/article_list_item.dart</code>・<code>read_state_repository.dart</code>、<code>articles/infrastructure/drift_read_state_repository.dart</code>、<code>saved/domain/saved_article.dart</code>、<code>core/database/article_row_mapper.dart</code>（§3.1・§4.5）、<code>test/helpers/seed_articles.dart</code>（§7 の API と契約）。改修：<code>article_query_repository.dart</code>（<code>watchInFeed</code>）、<code>drift_article_repository.dart</code>、<code>saved_article_repository.dart</code>（<code>isSaved</code>・<code>watchAll</code>・<code>deleteUnsavedOutOfFeed</code>）、<code>drift_saved_article_repository.dart</code>、<code>core/database/app_database.dart</code>（<code>deleteUnsavedOutOfFeedRows()</code>。述語の 1 箇所化。§4.5）、<code>core/di/providers.dart</code>（<code>readStateRepository</code>・<code>companyShortNames</code>）。新規 6 + 改修 6</td>
+<td><code>lib/features/{articles,saved}/{domain,infrastructure}/</code>、<code>lib/core/database/</code>、<code>lib/core/di/providers.dart</code>、<code>test/helpers/</code></td>
 <td>T-D</td>
-<td><code>flutter analyze</code> 警告ゼロ。テストは T-I・T-J が UseCase 経由で行う（D-04 T-C と同じ）</td>
+<td><code>flutter analyze</code> 警告ゼロ。テストは T-I・T-J が UseCase 経由で行う（D-04 T-C と同じ）。<code>deleteUnsavedOutOfFeed</code> の述語が <code>AppDatabase</code> の 1 メソッドだけに書かれていること</td>
 </tr>
 <tr>
 <td>T-H2</td>
@@ -2706,13 +2825,13 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <td><code>articles/presentation/home_screen.dart</code>・<code>saved/presentation/saved_screen.dart</code>・<code>settings/presentation/settings_screen.dart</code>（ナビゲーションバーだけのスタブ）、<code>lib/app/minute_clock.dart</code>、<code>core/ui/list/anchored_list_view.dart</code>（<code>AnchoredListView</code> + <code>AnchoredListController</code> + <code>_ExtentCompensatingSliver</code>。§5.11）。改修：<code>lib/app/root_tabs.dart</code>（3 画面を載せる）。新規 5 + 改修 1</td>
 <td><code>lib/app/</code>、<code>lib/core/ui/list/</code>、<code>lib/features/*/presentation/</code>（各 1 ファイル）</td>
 <td>T-F1、T-F2a、T-F2b</td>
-<td><code>flutter analyze &amp;&amp; flutter test</code>。シミュレータで 3 タブに各画面のタイトルが出る。<code>core/ui/list</code> が Flutter SDK 以外を import しない。T-H1・T-H2 と並行可</td>
+<td><code>flutter analyze &amp;&amp; flutter test</code>。シミュレータで 3 タブに各画面のタイトルが出る。<code>core/ui/list</code> が Flutter SDK 以外を import しない。<strong><code>anchored_list_view.dart</code> 冒頭の library doc に、依存する Flutter SDK 内部の前提（§7 の 6 項目）と確認した Flutter のバージョンが列挙されていること</strong>（自動テストを持たないため。§5.11・§7）。T-H1・T-H2 と並行可</td>
 </tr>
 <tr>
 <td>T-I</td>
 <td>articles の UseCase</td>
-<td><code>articles/application/watch_home_articles_use_case.dart</code>・<code>clear_read_states_use_case.dart</code>、改修：<code>core/di/articles_providers.dart</code>、<code>test/features/articles/application/watch_home_articles_use_case_test.dart</code>・<code>clear_read_states_use_case_test.dart</code>。新規 4 + 改修 1</td>
-<td><code>lib/features/articles/application/</code>、<code>lib/core/di/articles_providers.dart</code>、<code>test/features/articles/</code></td>
+<td><code>articles/application/watch_home_articles_use_case.dart</code>・<code>clear_read_states_use_case.dart</code>、<code>test/helpers/collect_stream.dart</code>（§7）、改修：<code>core/di/articles_providers.dart</code>、<code>test/features/articles/application/watch_home_articles_use_case_test.dart</code>・<code>clear_read_states_use_case_test.dart</code>。新規 5 + 改修 1</td>
+<td><code>lib/features/articles/application/</code>、<code>lib/core/di/articles_providers.dart</code>、<code>test/helpers/</code>、<code>test/features/articles/</code></td>
 <td>T-H1</td>
 <td>品質ゲート通過。§7 の <code>WatchHomeArticlesUseCase</code> 5 group・<code>ClearReadStatesUseCase</code> 1 group のケースをすべて含む</td>
 </tr>
@@ -2746,7 +2865,7 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <td><code>articles/presentation/home_tab_bar.dart</code>・<code>home_page.dart</code>・<code>home_providers.dart</code>、<code>lib/app/notification_tap_handler.dart</code>、<code>core/ui/article/article_cell_model_builder.dart</code>、<code>test/core/ui/article/article_cell_model_builder_test.dart</code>。改修：<code>home_screen.dart</code>、<code>lib/app/app_lifecycle_sync.dart</code>（<code>NotificationTapHandler</code> を子に挟む）、<code>core/ui/status/transient_notice.dart</code>（T-F2a の実装に static <code>show(context, message:)</code> が無い場合のみ追加。§5.6）。新規 6 + 改修 2（+ 条件付き 1）</td>
 <td><code>lib/features/articles/presentation/</code>、<code>lib/app/</code>、<code>lib/core/ui/article/</code>、<code>lib/core/ui/status/</code>（条件付き）、<code>test/core/ui/article/</code></td>
 <td>T-H3、T-I、T-J、T-K、T-L</td>
-<td>品質ゲート通過。シミュレータで目視：タブのタップ・スワイプ・非隣接タップ／先頭で Pull to Refresh／<strong>先頭以外を表示中の状態から上端まで戻して Pull to Refresh が発火すること</strong>（§5.11。成立しなければ §8 #21 の縮退）／未読フィルタ切替で全面ローディングが出ず全ページが先頭に戻ること／<strong>先頭以外を表示中に団体タブ再タップ・下部タブ再タップで先頭（最新の記事）まで戻ること</strong>（§5.11 <code>scrollToTop</code>。§8 #27）／<strong>先頭以外を表示中に取得中の帯（E-21）が出た・消えたとき、表示中の記事の画面上の位置が動かないこと。先頭を表示中なら帯が一覧の先頭に現れ、一覧と一緒にスクロールすること</strong>（§5.11 <code>headerSliver</code>。§8 #28）／記事タップでアプリ内ブラウザ／星の切替／先頭以外を表示中の差し込みで位置が保たれること／通知タップ相当（<code>notificationTapStreamProvider</code> を手動で流す）で団体タブに切り替わること／<strong>アプリを終了した状態から通知タップ相当で起動して（<code>takeInitialTap</code> をスタブで返す）、最初のフレームから団体タブが選ばれ先頭が表示されていること</strong></td>
+<td>品質ゲート通過。シミュレータで目視：タブのタップ・スワイプ・非隣接タップ／先頭で Pull to Refresh／<strong>先頭以外を表示中（アンカー形）のまま引っ張っても更新が始まらず、debug ビルドが落ちないこと</strong>（§5.11「構成（2 形態）」。アンカー形では <code>leadingSlivers</code> を出さない）／<strong>先頭以外を表示中の状態から上端まで戻して Pull to Refresh が発火すること</strong>（§5.11。成立しなければ §8 #21 の縮退）／未読フィルタ切替で全面ローディングが出ず全ページが先頭に戻ること／<strong>先頭以外を表示中に団体タブ再タップ・下部タブ再タップで先頭（最新の記事）まで戻ること</strong>（§5.11 <code>scrollToTop</code>。§8 #27）／<strong>先頭以外を表示中に取得中の帯（E-21）が出た・消えたとき、表示中の記事の画面上の位置が動かないこと。先頭を表示中なら帯が一覧の先頭に現れ、一覧と一緒にスクロールすること</strong>（§5.11 <code>headerSliver</code>。§8 #28）／<strong>帯の出現・消失を繰り返しても補正が二重にかからないこと</strong>（<code>_ExtentCompensatingSliver</code> の <code>GlobalKey</code>。§5.11）／記事タップでアプリ内ブラウザ／星の切替／先頭以外を表示中の差し込みで位置が保たれること／<strong>先頭以外を表示中のまま団体タブを切り替えて戻し（ページの再構築で <code>ScrollController</code> が差し替わる）、その直後に差し込みが起きても表示中の記事の位置が飛ばないこと</strong>（§5.11 のガード 0 と <code>ScrollController</code> の差し替え）／<strong>先頭以外を表示中にアンカーの記事が消えて一覧が 1 件だけ・0 件になっても位置が飛ばないこと</strong>（§5.11 手順 3 の <code>H</code>）／通知タップ相当（<code>notificationTapStreamProvider</code> を手動で流す）で団体タブに切り替わること／<strong>アプリを終了した状態から通知タップ相当で起動して（<code>takeInitialTap</code> をスタブで返す）、最初のフレームから団体タブが選ばれ先頭が表示されていること</strong></td>
 </tr>
 <tr>
 <td>T-N</td>
@@ -2821,6 +2940,14 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <tr>
 <td>2026-09-23</td>
 <td>再開：dev-loop T-26・T-28・T-29 の追随事項 16 件（うち T-28 の 9 件は §5.11 が Flutter SDK の内部仕様に抵触する箇所）を反映するため。D-04 の再開に連動</td>
+</tr>
+<tr>
+<td>2026-09-23</td>
+<td>dev-loop T-26・T-28・T-29 の追随事項 16 件を反映。§5.11 を実装の実測に合わせて修正（アンカー形では <code>leadingSlivers</code> を出さない（SDK の assert で落ちるため）・<code>correctPixels(H - anchorDy)</code> と <code>H</code> の優先順・<code>didUpdateWidget</code> の処理順・<code>position</code> のガード・<code>ScrollController</code> 差し替え時の <code>ScrollPosition</code> 再利用・<code>_ExtentCompensatingSliver</code> の <code>GlobalKey</code>・<code>detach(state)</code>）、§7 に <code>AnchoredListView</code> の library doc 運用・<code>collectStream</code>・<code>seedArticles</code> の API と契約を追記、§3.1・§3.2・§4.5 に <code>ArticleRowMapper</code> と述語の 1 箇所化、§4.1 の <code>HomeArticles</code> を実装（<code>List.unmodifiable</code> + <code>ListEquality</code>）に合わせた。§2.1・§5.1・§6・§8 #21・#28・§10 T-H1・T-H3・T-M を連動して更新。§8.1 の申し送り 3 行に今回の反映状況を追記。§9 に Q-1（<code>test/helpers/</code> の契約テストを許すか。CLAUDE.md の変更を伴う）を追加</td>
+</tr>
+<tr>
+<td>2026-09-23</td>
+<td>dev-loop T-27 の追随事項 4 件を追加で反映（当初 D-04 宛に誤って仕分けられていた分）。§3.1 の依存表に <code>browser/infrastructure</code> → <code>settings/domain</code>（<code>BrowserChoice</code>）の行を追加、§4.3 に <code>BrowserChoice.fromValue(String?)</code>（D-04 §4.4 の enum に追加）を明記、§4.4 の <code>isChromeAvailable()</code> を「例外は捕捉して false（Chrome 無し扱い）」に確定し例外行を 3 メソッドに拡張（§6 に対応する行を追加）、§4.7 のバージョンを <code>url_launcher: ^6.3.2</code> / <code>package_info_plus: ^10.2.1</code> に更新（API と iOS 最低対応バージョンは不変）</td>
 </tr>
 </tbody></table>
 

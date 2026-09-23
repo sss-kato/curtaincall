@@ -519,7 +519,7 @@ a{color:var(--accent)}
 <tr>
 <td>S-03/ST-01</td>
 <td>状態</td>
-<td><code>notificationSettingsProvider</code>・<code>browserChoiceProvider</code>・<code>appVersionProvider</code> の値を同期的に描く（<code>AsyncLoading</code> の間は既定値）</td>
+<td><code>notificationSettingsProvider</code>・<code>browserChoiceProvider</code>・<code>appVersionProvider</code> の値を同期的に描く（<code>AsyncLoading</code> の間も <code>AsyncError</code>（<code>settings</code> の破損）のときも既定値。§5.9「設定値を読み出せないとき」）</td>
 <td>§5.9</td>
 </tr>
 <tr>
@@ -717,7 +717,7 @@ a{color:var(--accent)}
 </tbody></table>
 <h2 id="sec-3">3. 構成<a class="anchor" href="#sec-3">#</a></h2>
 <h3 id="sec-3-1">3.1 層と依存の方向<a class="anchor" href="#sec-3-1">#</a></h3>
-<p>D-04 §3.1 の方向（presentation / app → application → domain、infrastructure → domain）をそのまま守る。本書で増える <strong>feature 間の依存（他 feature の domain の型への依存）は次の表がすべて</strong>で、表に無い組み合わせは import しない。<code>core/di/</code> の Provider の import は feature 間の依存に数えず<strong>常に許す</strong>（D-04 §4.7。表には主要なものを載せているが網羅ではない）。許す形は「他 feature の <strong>domain</strong> の型（値オブジェクト・ポート）」と「<code>core/di</code> の Provider」だけで、他 feature の application・presentation は import しない。<code>articles</code> は引き続き他の feature を import しない（<code>HomeScreen</code>・<code>HomePage</code> は他 feature の型を名指しせず、<code>core/di</code> の Provider を通して <code>Stream&lt;bool&gt;</code>・<code>List&lt;Company&gt;</code> の値と、記事を開く操作 <code>openArticleActionProvider</code>（§4.6。結果型を返さない関数）だけを受け取る。§8 #9）。feature の presentation が他 feature の presentation を import しない規則（CLAUDE.md）を守るため、<strong>複数の feature が使う素の Stream / Future の Provider と、D-04 が <code>notifications/presentation</code> に置いた Provider への委譲は <code>core/di/</code> の feature 別ファイルに置く</strong>（§4.6。§8 #9・#10）。</p>
+<p>D-04 §3.1 の方向（presentation / app → application → domain、infrastructure → domain）をそのまま守る。本書で増える <strong>feature 間の依存（他 feature の domain の型への依存）は次の表がすべて</strong>で、表に無い組み合わせは import しない。<code>core/di/</code> の Provider の import は feature 間の依存に数えず<strong>常に許す</strong>（D-04 §4.7。表には主要なものを載せているが網羅ではない）。同じく <strong><code>lib/app</code> が公開する Provider・型（<code>tabControllerProvider</code>・<code>tabReselectProvider</code>・<code>minuteClockProvider</code>・<code>RootTab</code>）の import も feature 間の依存に数えず常に許す</strong>（<code>lib/app</code> は「両 feature が使い feature に属さない」配線の置き場。§8 #16・D-04 §8 #46。<code>articles/presentation</code> が §5.6・§5.12 で、<code>saved/presentation</code> が §5.5・§5.12 で使う）。許す形は「他 feature の <strong>domain</strong> の型（値オブジェクト・ポート）」と「<code>core/di</code> の Provider」だけで、他 feature の application・presentation は import しない。<code>articles</code> は引き続き他の feature を import しない（<code>HomeScreen</code>・<code>HomePage</code> は他 feature の型を名指しせず、<code>core/di</code> の Provider を通して <code>Stream&lt;bool&gt;</code>・<code>List&lt;Company&gt;</code> の値と、記事を開く操作 <code>openArticleActionProvider</code>（§4.6。結果型を返さない関数）だけを受け取る。§8 #9）。feature の presentation が他 feature の presentation を import しない規則（CLAUDE.md）を守るため、<strong>複数の feature が使う素の Stream / Future の Provider と、D-04 が <code>notifications/presentation</code> に置いた Provider への委譲は <code>core/di/</code> の feature 別ファイルに置く</strong>（§4.6。§8 #9・#10）。</p>
 <table>
 <thead>
 <tr>
@@ -793,7 +793,7 @@ a{color:var(--accent)}
 </tr>
 <tr>
 <td><code>core/ui/list</code>（<code>AnchoredListView</code>・<code>AnchoredListController</code>）</td>
-<td>Flutter SDK のみ（feature の型を import しない。要素は型引数 <code>T</code> の <code>items</code> と <code>idOf</code> で受ける。§5.11）</td>
+<td>Flutter SDK と <code>dart:async</code>（<code>Completer</code>・<code>unawaited</code>）のみ（feature の型を import しない。要素は型引数 <code>T</code> の <code>items</code> と <code>idOf</code> で受ける。§5.11）</td>
 <td>ホームと保存の両方が使う共通部品（D-04 §8 #34 と同じ理由）。§10 T-H3 の受け入れ条件</td>
 </tr>
 <tr>
@@ -1416,13 +1416,16 @@ class HomeScrollToTop extends _$HomeScrollToTop {
 Stream&lt;HomeArticles&gt; homeArticles(Ref ref, {required String? companyId}) {
   final filter = ref.watch(unreadFilterProvider);
   // 値があればそれを使う。値が無くエラーなら既定 OFF（false）で一覧を張る。
-  // （settings を読めない間ずっと _never を返すと、全 6 ページが E-20 で固定され
+  // （settings を読めない間ずっと値を流さない Stream を返し続けると、全 6 ページが E-20 で固定され
   //  再試行も Pull to Refresh も届かず、アプリを再起動するまで何もできなくなる。§6）
   final unreadOnly = filter.valueOrNull ?? (filter.hasError ? false : null);
   if (unreadOnly == null) {
     // 値を流さない Stream（AsyncLoading のまま）。**Provider 本体で 1 つずつ生成する。**
     // 共有フィールド（single-subscription な StreamController を全ページで使い回す）にすると、
-    // 2 つ目以降の購読が同期的に StateError を投げ、起動直後の 5 ページが AsyncError になる
+    // 2 つ目以降の購読が同期的に StateError を投げ、起動直後の 5 ページが AsyncError になる。
+    // **この Stream は値を流さないまま close される**（設定値が届いて Provider が再計算されるとき）ため、
+    // homeArticlesProvider.future を読まない（読むと値が来ないまま done になった扱いで StateError になる）。
+    // 本書の読み手はすべて ref.watch（§5.1）で、.future は使わない
     final controller = StreamController&lt;HomeArticles&gt;();
     ref.onDispose(controller.close);
     return controller.stream;
@@ -1507,7 +1510,7 @@ final screenStatus = resolveListStatus(feed, hasVisible: true);          // hasV
 </tr>
 <tr>
 <td>S-01/E-11</td>
-<td><code>PageView.builder</code> の <code>itemBuilder: (_, i) =&gt; HomePage(index: i, companyId: i == 0 ? null : companies[i - 1].id)</code>（<code>companies</code> は <code>companiesProvider</code> の配列。<code>index</code> は「自ページが表示中か」の判定に使う。§5.6）。<code>HomePage</code> は <code>AutomaticKeepAliveClientMixin</code>。6 ページを生かしてスクロール位置を保つ。S-01/A-01「前回そのページを見ていた位置」）。中身は <code>AnchoredListView</code> 1 つ。<code>leadingSlivers: [CupertinoSliverRefreshControl(...)]</code>（アンカー形のときは <code>AnchoredListView</code> 側で出さない。§5.11）、<code>headerSliver: status.refreshing &amp;&amp; !_pulling ? const RefreshingHeader() : null</code>（S-00/E-21 は「一覧の先頭。iOS 標準の引っ張り更新の位置」＝スクロール追随。S-00 §3.3・§4）。帯の出現・消失による位置ずれは <code>AnchoredListView</code> が相殺する（§5.11・§8 #28）</td>
+<td><code>PageView.builder</code> の <code>itemBuilder: (_, i) =&gt; HomePage(index: i, companyId: i == 0 ? null : companies[i - 1].id)</code>（<code>companies</code> は <code>companiesProvider</code> の配列。<code>index</code> は「自ページが表示中か」の判定に使う。§5.6）。<code>HomePage</code> は <code>AutomaticKeepAliveClientMixin</code>。6 ページを生かしてスクロール位置を保つ。S-01/A-01「前回そのページを見ていた位置」）。中身は <code>AnchoredListView</code> 1 つ。<code>AnchoredListController</code>（<code>_listController</code>）は <strong><code>HomePage</code> の <code>State</code> が <code>initState</code> でページごとに 1 つ</strong>生成し <code>dispose</code> で破棄する（ページ間で共有しない。1 つの Controller を 2 つの <code>AnchoredListView</code> で共有すると後勝ちで <code>scrollToTop()</code> が片方にしか届かない。§5.11「<code>attach</code> / <code>detach</code> の規則」。保存画面は <code>SavedScreen</code> の <code>State</code> が同じように 1 つ持つ。§5.5）。<code>leadingSlivers: [CupertinoSliverRefreshControl(...)]</code>（アンカー形のときは <code>AnchoredListView</code> 側で出さない。§5.11）、<code>headerSliver: status.refreshing &amp;&amp; !_pulling ? const RefreshingHeader() : null</code>（S-00/E-21 は「一覧の先頭。iOS 標準の引っ張り更新の位置」＝スクロール追随。S-00 §3.3・§4）。帯の出現・消失による位置ずれは <code>AnchoredListView</code> が相殺する（§5.11・§8 #28）</td>
 </tr>
 </tbody></table>
 <p>タブのタップ（A-01）：<code>_animating = true</code> → <code>select(index)</code> → <code>index</code> が現在の隣なら <code>animateToPage</code>。隣でなければ Material <code>TabBarView</code> と同じワープ（アニメーションの間だけ目的ページを現在ページの隣に並べ替えて <code>animateToPage</code> し、完了後に並びを戻して <code>jumpToPage</code>）→ 完了で <code>_animating = false</code>。<code>index == 現在</code> なら A-10（§5.6）。スワイプ（A-02）は <code>onPageChanged</code> から <code>select</code> を呼ぶだけで、listener は <code>PageController.page</code> が既に <code>next</code> なので何もしない。</p>
@@ -1833,65 +1836,183 @@ final class AnchoredListController {
   final ScrollController scrollController = ScrollController();   // AnchoredListView が CustomScrollView に渡す
   _AnchoredListTarget? _target;   // attach() で保持、detach(state) で null
   bool _disposed = false;         // dispose() 済み（下記「未アタッチ時の scrollToTop()」）
-  Future&lt;void&gt;? _inFlight;        // 進行中の scrollToTop()。開始時に代入し、finally（手順 4）で null に戻す
-  /// animated = true：300ms・Curves.easeOut で先頭へ。false：jumpTo。標準形への復帰を含む（下記手順）。
-  /// _inFlight が非 null（実行中）ならその Future をそのまま返し、二重に手順 1〜4 を走らせない
-  Future&lt;void&gt; scrollToTop({required bool animated});
+  Completer&lt;void&gt;? _inFlight;     // 進行中の scrollToTop()。非 null ⟺ 実行中（下記「進行中の表し方」）
+
+  /// animated = true：300ms・Curves.easeOut で先頭へ。false：jumpTo。標準形への復帰を含む（下記手順 1〜4）。
+  /// 実行中ならその Future をそのまま返し、二重に手順 1〜4 を走らせない
+  Future&lt;void&gt; scrollToTop({required bool animated}) {
+    if (_disposed || _target == null) return Future&lt;void&gt;.value();   // 未アタッチ・破棄済みは _inFlight を触らない
+    final running = _inFlight;
+    if (running != null) return running.future;                      // 進行中の要求に合流する
+    final completer = Completer&lt;void&gt;();
+    _inFlight = completer;                                           // _run() を呼ぶ「前」に代入する（下記の理由）
+    unawaited(_run(completer, animated: animated).whenComplete(() =&gt; _finish(completer)));   // dart:async
+    return completer.future;
+  }
+
+  /// 手順 1〜4。async メソッドの本体は最初の await まで同期実行されるため、
+  /// 「async メソッドを呼んで戻り値を _inFlight に代入する」形にすると、await が 1 つも無い経路
+  /// （animated: false かつレイアウト確定済み。S-01/A-03 の requestAll()）で finally が代入より先に走り、
+  /// _inFlight が完了済みの Future のまま残留して以後の scrollToTop() がすべて無視される。
+  /// Completer を呼び出し側で先に置くこの形なら、同期完了の経路でも残留しない
+  Future&lt;void&gt; _run(Completer&lt;void&gt; completer, {required bool animated}) async {
+    try {
+      while (identical(_inFlight, completer)) {   // 中断（detach / dispose）・別の要求への交代を検出する
+        final target = _target;
+        if (target == null) return;               // 中断。手順 4 で戻す相手が居ない
+        target.scrollingToTop = true;             // 手順 1
+        target.restoreToStandardForm();           // 手順 2
+        await target.scrollToTopWhenLaidOut(animated: animated);   // 手順 3（待ち合わせは State が持つ）
+        if (identical(_target, target)) return;   // 同じ State のまま完了 → 終わり
+        // await の間に State が張り替わった（PageView のページ再構築）→ 新しい State で手順 1 からやり直す
+      }
+    } finally {
+      if (identical(_inFlight, completer)) _target?.scrollingToTop = false;   // 手順 4
+    }
+  }
+
+  /// 完了・中断の唯一の出口。_inFlight を null に戻して「から」Future を完了させる
+  void _finish(Completer&lt;void&gt; completer) {
+    if (identical(_inFlight, completer)) _inFlight = null;
+    if (!completer.isCompleted) completer.complete();
+  }
+
   /// State との接続。AnchoredListView の State が initState で attach(this)、dispose で detach(this) を呼ぶ。
-  /// 引数の型は同ファイル内の private インターフェース _AnchoredListTarget（`void restoreToStandardForm()` と
-  /// `set scrollingToTop(bool)` の 2 つだけを持つ。_AnchoredListViewState&lt;T&gt; が implements する。型引数 T に依存しない）。
   /// 1 つの Controller に同時に 1 つの State だけ（下記「attach / detach の規則」）
-  void attach(_AnchoredListTarget state);
-  void detach(_AnchoredListTarget state);
-  void dispose();   // _disposed = true; _target = null; scrollController.dispose()
+  void attach(_AnchoredListTarget state) {
+    _target = state;
+    if (_inFlight != null) state.scrollingToTop = true;   // 進行中の要求を新しい State へ引き継ぐ（下記の不変条件）
+  }
+
+  void detach(_AnchoredListTarget state) {
+    if (!identical(_target, state)) return;   // 張り替わった後に届いた旧 State の detach は無視する
+    _target = null;
+    final running = _inFlight;
+    if (running != null) _finish(running);    // 中断。以後の scrollToTop() は新しい要求として手順 1 から走る
+  }
+
+  void dispose() {
+    _disposed = true;
+    _target = null;
+    final running = _inFlight;
+    if (running != null) _finish(running);
+    scrollController.dispose();
+  }
+}
+
+/// Controller → State の一方向の窓口（同ファイル内の private。_AnchoredListViewState&lt;T&gt; が implements する。
+/// 型引数 T に依存しない）
+abstract interface class _AnchoredListTarget {
+  set scrollingToTop(bool value);                  // State の _scrollingToTop を書く（手順 1・4）
+  void restoreToStandardForm();                    // _resetAnchorToFirst() を呼ぶだけ（手順 2）
+  /// 手順 3。レイアウトが確定していればその場で動かし、未確定なら要求を保持して
+  /// 確定した最初のフレームで jumpTo(0) する（回数上限なし。下記「先頭スクロール要求」手順 3）
+  Future&lt;void&gt; scrollToTopWhenLaidOut({required bool animated});
 }</code></pre>
 <ul>
 <li><p><strong><code>attach</code> / <code>detach</code> の規則</strong>：<code>attach(state)</code> は<strong>常に最後に呼ばれた State を採用する</strong>（既に接続済みでも assert で拒否しない）。<code>detach</code> は<strong>引数で State を受け、<code>identical(_target, state)</code> のときだけ</strong>接続をクリアする。Flutter は新しい Element の <code>initState</code>（<code>attach</code>）を、旧 Element の <code>unmount</code>（<code>dispose</code> → <code>detach</code>）より<strong>先</strong>に走らせるため、引数なしの <code>detach()</code> だと <code>PageView</code> のページ切替や <code>key</code> の変更で、張り替わったばかりの接続を旧 State が消してしまう（T-28 で実測）。1 つの <code>AnchoredListController</code> を 2 つの <code>AnchoredListView</code> で共有しない（後勝ちで <code>scrollToTop()</code> が片方にしか届かない）。<code>AnchoredListView</code> の <code>key</code> を変えて State を作り直す用途では <code>AnchoredListController</code> も作り直す</p>
 </li>
-<li><p><strong>未アタッチ時の <code>scrollToTop()</code></strong>：<code>attach()</code> が呼ばれていない・<code>detach()</code> 済み（一覧が未構築。保存画面の初回表示中 <code>SizedBox.shrink()</code> など）、または <strong><code>dispose()</code> 済み</strong>のときは<strong>何もしない</strong>（要求は捨て、完了済みの <code>Future</code> を返す。生成直後の一覧は offset 0 なので先頭にある）。<code>dispose()</code> 済みの判定は <code>AnchoredListController</code> 自身の <code>_disposed</code> で行う（SDK の <code>ScrollController.dispose()</code> は <code>hasClients</code> を false にしないため、<code>hasClients</code> だけでは守れない）。<strong>attach 済みだがレイアウトが未確定</strong>（<code>_laidOutPosition == null</code>。<code>hasClients == false</code> を含む）のときは要求を捨てず、下記「先頭スクロール要求」の手順 2（<code>correctPixels</code> を伴わない形態の付け替え）だけを行い、<strong>手順 3 を次フレームへ持ち越してやり直す</strong>（最大 2 フレーム。同手順 3）</p>
+<li><p><strong>進行中の表し方（<code>_inFlight</code> と <code>_scrollingToTop</code> の同期）</strong>：「<code>scrollToTop()</code> が実行中」という事実は <code>Controller</code> の <code>_inFlight</code>（合流用）と State の <code>_scrollingToTop</code>（<code>didUpdateWidget</code> がアンカー形に入らない不変条件）の 2 つで表れるが、<strong><code>_inFlight != null</code> ⟺ そのとき attach されている State の <code>_scrollingToTop == true</code></strong> を常に保つ。保つ手立ては上記コードの 3 か所だけで、ここ以外で <code>_scrollingToTop</code> を書かない：</p>
+<ul>
+<li><code>attach(state)</code>：<code>_inFlight != null</code> なら新しい State の <code>scrollingToTop</code> を <strong>true に張り直す</strong>（<code>initState</code> の初期値は false のため。<code>animateTo</code> の 300ms の間に <code>PageView</code> のページが作り直されると、進行中なのに新 State の <code>didUpdateWidget</code> がアンカー形に入り <code>correctPixels(H - anchorDy)</code> が <code>animateTo</code> と <code>position</code> を奪い合う。§8 #27）</li>
+<li><code>_run</code> のループ：<code>await</code> の間に State が張り替わったら（<code>identical(_target, target)</code> が false）、<strong>新しい State で手順 1 からやり直す</strong>（旧 State に張った要求を宙吊りにしない）。旧 State の <code>scrollToTopWhenLaidOut()</code> の <code>Future</code> は旧 State の <code>dispose</code> が完了させる（下記「先頭スクロール要求」手順 3）</li>
+<li><code>detach(state)</code> / <code>dispose()</code>：<code>_target</code> を null にすると同時に <code>_finish()</code> で <code>_inFlight</code> も null に戻す（<strong>中断済みの要求を残さない</strong>）。残すと、その後に来た <code>scrollToTop()</code> が「実行中」と誤判定して中断済みの <code>Future</code> に合流し、要求が黙って失われる</li>
+</ul>
+</li>
+<li><p><strong>未アタッチ時の <code>scrollToTop()</code></strong>：<code>attach()</code> が呼ばれていない・<code>detach()</code> 済み（一覧が未構築。保存画面の初回表示中 <code>SizedBox.shrink()</code> など）、または <strong><code>dispose()</code> 済み</strong>のときは<strong>何もしない</strong>（要求は捨て、完了済みの <code>Future</code> を返す。生成直後の一覧は offset 0 なので先頭にある）。<code>dispose()</code> 済みの判定は <code>AnchoredListController</code> 自身の <code>_disposed</code> で行う（SDK の <code>ScrollController.dispose()</code> は <code>hasClients</code> を false にしないため、<code>hasClients</code> だけでは守れない）。<strong>attach 済みだがレイアウトが未確定</strong>（<code>_laidOutPosition == null</code>。<code>hasClients == false</code> を含む）のときは要求を捨てず、下記「先頭スクロール要求」の手順 2（<code>correctPixels</code> を伴わない形態の付け替え）だけを行い、<strong>要求を State に保持して、レイアウトが確定した最初のフレームで <code>jumpTo(0)</code> する</strong>（回数上限は設けない。同手順 3）</p>
 </li>
 <li><p><strong><code>_AnchoredListViewState</code> が持つ状態</strong>（すべて private フィールド。これ以外の状態を持たない）：</p>
 <ul>
-<li><code>String? _anchorId</code>：アンカーの id。<strong>null は「アンカー無し」<strong>で、<code>items</code> が空のとき</strong>だけ</strong>この値になる</li>
-<li><code>int _anchorIndex</code>：<code>_anchorId</code> を決めた時点での <code>items</code> 内の index（<code>_anchorId == null</code> のときは <code>0</code>）。ガード 0 で更新を据え置いた回に <code>_anchorId</code> が新 <code>items</code> から消えていた場合の <code>center</code> の位置決めだけに使う（下記「形態の決め方」）</li>
-<li><code>bool _scrollingToTop</code>：<code>scrollToTop()</code> の開始から完了まで true（<strong>State が持ち</strong>、<code>Controller</code> が <code>_AnchoredListTarget.scrollingToTop</code> のセッター経由で書く。読むのは State の <code>didUpdateWidget</code> だけ）</li>
+<li><code>String? _anchorId</code>：アンカーの id。<strong>null は「アンカー無し」<strong>で、<code>items</code> が空のとき</strong>だけ</strong>この値になる。<strong>逆（<code>items</code> が空なら <code>_anchorId == null</code>）は据え置き中には成り立たない</strong>（下記「形態の決め方」1 がこの向きを見ない理由）</li>
+<li><code>int _anchorIndex</code>：<code>_anchorId</code> を決めた時点での <code>items</code> 内の index（<code>_anchorId == null</code> のときは <code>0</code>）。<strong>直前の形態を保って描くとき</strong>（下記「形態の決め方」2・5）の <code>center</code> の位置決めだけに使う</li>
+<li><code>bool _scrollingToTop</code>：<code>scrollToTop()</code> の開始から完了まで true（<strong>State が持ち</strong>、<code>Controller</code> が <code>_AnchoredListTarget.scrollingToTop</code> のセッター経由で書く。読むのは State の <code>didUpdateWidget</code> と手順 0 の再試行だけ）</li>
+<li><code>bool _lastFormWasAnchored</code>：<strong>直前の <code>build()</code> が実際に採った形態</strong>（アンカー形なら true）。<code>build()</code> の末尾で毎回代入する（<code>setState</code> を使わない素の代入。次の <code>build()</code> の入力にしかならず再 build を起こさない。同じ <code>items</code> で <code>build()</code> をやり直しても同じ値になる）。<strong>据え置き中に「直前の形態を保つ」ための唯一の判定材料</strong>で、<code>_anchorId</code> や <code>_anchorIndex</code> から形態を推測しない（下記「形態の決め方」2・5、「アンカーの更新」手順 3）</li>
 <li><code>bool _pendingItemsChanged</code> と <code>int _pendingFrames</code>：ガード 0 で据え置いた更新の再試行に使う（下記「アンカーの更新」手順 0）</li>
+<li><code>Completer&lt;void&gt;? _pendingScrollToTop</code>：<strong>「次に <code>_laidOutPosition</code> が確定したフレームで <code>jumpTo(0)</code> する」要求の保持</strong>（非 null = 保持中）。立てるのは「先頭スクロール要求」手順 3（レイアウト未確定）と手順 0 の諦めの 2 か所だけ（下記）</li>
+<li><code>bool _frameCallbackScheduled</code>：<code>addPostFrameCallback</code> を同時に 1 本しか張らないための印（下記「フレーム後の処理」）</li>
 <li><code>Map&lt;String, GlobalKey&gt; _cellKeys</code>：セルの <code>GlobalKey</code>（下記）</li>
 <li><code>GlobalKey _headerKey</code>：<code>_ExtentCompensatingSliver</code> に付ける <code>GlobalKey</code>（下記）</li>
-<li><strong>初期値（<code>initState</code>）</strong>：<code>_anchorId = widget.items.isEmpty ? null : widget.idOf(widget.items.first)</code>・<code>_anchorIndex = 0</code>・<code>_scrollingToTop = false</code>・<code>_pendingItemsChanged = false</code>・<code>_pendingFrames = 0</code> を<strong>直接代入する</strong>（<code>_resetAnchorToFirst()</code> は <code>setState</code> を含み <code>initState</code> からは呼べないため、同じ値を代入する形で書く。<code>correctPixels</code> は <code>_laidOutPosition</code> が null なので元から行わない）。<code>String? _anchorId;</code> の null 初期化にしない。初回 build から「<code>_anchorId == null</code> は <code>items</code> が空のときだけ」の不変条件（上記）が成立し、「形態の決め方」1 は <code>items</code> が空のときだけ通る（<code>AnchoredListView</code> は自動テストを持たない（§7）ため、初期状態を実装者の判断に委ねない）</li>
+<li><strong>初期値（<code>initState</code>）</strong>：<code>_anchorId = widget.items.isEmpty ? null : widget.idOf(widget.items.first)</code>・<code>_anchorIndex = 0</code>・<code>_scrollingToTop = false</code>・<code>_lastFormWasAnchored = false</code>・<code>_pendingItemsChanged = false</code>・<code>_pendingFrames = 0</code>・<code>_pendingScrollToTop = null</code>・<code>_frameCallbackScheduled = false</code> を<strong>直接代入する</strong>（<code>_resetAnchorToFirst()</code> は <code>setState</code> を含み <code>initState</code> からは呼べないため、同じ値を代入する形で書く。<code>correctPixels</code> は <code>_laidOutPosition</code> が null なので元から行わない）。<code>String? _anchorId;</code> の null 初期化にしない。初回 build は下記 1 か 3 で必ず標準形になるため <code>_lastFormWasAnchored</code> の初期値は false でよい（<code>AnchoredListView</code> は自動テストを持たない（§7）ため、初期状態を実装者の判断に委ねない）</li>
+<li><strong><code>dispose()</code></strong>：<code>widget.controller.detach(this)</code> → <code>_pendingScrollToTop</code> を <code>complete()</code> して null に戻す（<strong>待っている <code>Controller</code> の手順 3 を宙吊りにしない</strong>）→ <code>super.dispose()</code> の順</li>
 </ul>
 </li>
-<li><p><strong>形態の決め方</strong>（<code>build()</code>。ここに書いた 4 行以外の分岐を作らない）：</p>
+<li><p><strong>形態の決め方</strong>（<code>build()</code>。<strong>上から順に評価し、最初に該当した行で確定する</strong>。ここに書いた 5 行以外の分岐を作らない）：</p>
 <ol>
-<li><code>_anchorId == null</code>（= <code>items</code> が空）→ <strong>標準形</strong></li>
-<li><code>_anchorId</code> が <code>items</code> の<strong>先頭</strong>の id → <strong>標準形</strong></li>
+<li><strong><code>items.isEmpty</code> → 標準形</strong>（<code>emptyView</code> を置く）。<strong><code>_anchorId</code> を見ない。</strong> 据え置き中（ガード 0）は <code>_anchorId</code> が非 null のまま新 <code>items</code> が 0 件になりうるため、この行を <code>_anchorId == null</code> で書くと 2・5 に落ちて <code>_anchorIndex.clamp(0, -1)</code> が <strong><code>ArgumentError</code></strong> になり <code>build()</code> 内の例外で画面が落ちる（<code>num.clamp</code> は <code>upperLimit &lt; lowerLimit</code> で投げる）。また 0 件でアンカー形に落ちると <code>emptyView</code> を置く場所が無く、S-00/E-22（S-01/ST-04・ST-05、S-02/ST-02）が出ない空白画面になる。<strong>この行が「以降の行は <code>items</code> が非空」を保証する</strong></li>
+<li><strong><code>_pendingItemsChanged</code>（ガード 0 で据え置き中）→ 直前の形態を保つ</strong>（下記）。据え置き中は <code>correctPixels</code> を行えないため、<strong>形態も <code>center</code> の基準も動かさない</strong>。<code>_anchorId</code> が新 <code>items</code> の先頭になっていても（上の記事がまとめて消えた場合）2 で止め、<code>correctPixels</code> を伴わない標準形への転落（＝位置が飛ぶ経路）を作らない。補正つきの付け替えは次フレームの再試行に任せる</li>
+<li><code>_anchorId == null</code>、または <code>_anchorId</code> が <code>items</code> の<strong>先頭</strong>の id → <strong>標準形</strong></li>
 <li><code>_anchorId</code> が <code>items</code> の先頭以外にある → <strong>アンカー形</strong>（<code>center</code> = その要素）</li>
-<li><code>_anchorId</code> が <code>items</code> に<strong>無い</strong>（ガード 0 で更新を据え置いた回にだけ起こりうる）→ <strong>直前のレイアウトと同じ形態を保つ</strong>。直前が標準形なら標準形。直前がアンカー形ならアンカー形のまま <code>center</code> を <strong><code>_anchorIndex.clamp(0, items.length - 1)</code></strong> の位置に置く。<strong><code>clamp</code> の上限は <code>items.length - 1</code></strong>（<code>items</code> が空のときは 1 の分岐で標準形になるため、この式は <code>items</code> が非空のときしか評価しない）。上限を <code>items.length</code> にすると <code>center</code> の <code>SliverList</code> が要素 0 個になり、<code>maxScrollExtent == 0</code>・<code>minScrollExtent == -(全高)</code> の下で保持していた正の <code>pixels</code> が範囲外になって <code>goBallistic</code> が<strong>一覧の末尾</strong>へ整定する（「位置保持を放棄する」より悪い見え方になり、次に <code>items</code> が変わるまで解消しない）。<strong>index 0（標準形）へ落とすのは <code>_resetAnchorToFirst()</code>、および手順 0 で再試行を諦めたときだけ</strong>で、<code>build()</code> は <code>correctPixels</code> を伴わない形態変更を起こさない（起こすと §5.11 が「位置が飛ぶ」と明記した経路そのものになる）。据え置いた更新は次フレームで手順 0 が補正つきでやり直す</li>
+<li><code>_anchorId</code> が <code>items</code> に<strong>無い</strong>（2 で拾われなかった場合の保険。通常は据え置き中にしか起こらない）→ <strong>直前の形態を保つ</strong>（下記）</li>
 </ol>
+<ul>
+<li><strong>「直前の形態を保つ」の実体</strong>：<code>_lastFormWasAnchored == false</code> なら標準形。true ならアンカー形のまま <code>center</code> を <strong><code>_anchorIndex.clamp(0, items.length - 1)</code></strong> の位置に置く（1 により <code>items</code> は非空なので上限は 0 以上で、<code>clamp</code> は必ず成立する）。上限を <code>items.length</code> にすると <code>center</code> の <code>SliverList</code> が要素 0 個になり、<code>maxScrollExtent == 0</code>・<code>minScrollExtent == -(全高)</code> の下で保持していた正の <code>pixels</code> が範囲外になって <code>goBallistic</code> が<strong>一覧の末尾</strong>へ整定する</li>
+<li><strong>index 0（標準形）へ落とすのは <code>_resetAnchorToFirst()</code> だけ</strong>で、<code>build()</code> は <code>correctPixels</code> を伴わない形態変更を起こさない（起こすと §5.11 が「位置が飛ぶ」と明記した経路そのものになる）。手順 0 で再試行を諦めるときも <code>_resetAnchorToFirst()</code> を通す（下記）</li>
+<li><code>build()</code> の末尾で <code>_lastFormWasAnchored</code> に<strong>この回に採った形態</strong>（1・2・3 の標準形なら false、4 とアンカー形の 2・5 なら true）を代入する</li>
+</ul>
 </li>
 <li><p><strong>構成（2 形態）</strong>：</p>
 <ul>
-<li><strong>標準形</strong>（上記 1〜2）：<code>CustomScrollView(controller, slivers: [...leadingSlivers, _ExtentCompensatingSliver(key: _headerKey, child: headerSliver), SliverList(全要素) または SliverFillRemaining(emptyView)])</code>。<code>center</code> は指定しない（= 先頭の Sliver）。<code>CupertinoSliverRefreshControl</code> が前方成長側の先頭にあり、Pull to Refresh が通常どおり成立する。先頭 = <code>position.pixels == 0</code></li>
-<li><strong>アンカー形</strong>（上記 3〜4）：<code>CustomScrollView(controller, center: _centerKey, slivers: [_ExtentCompensatingSliver(key: _headerKey, child: headerSliver), SliverList(アンカーより前の要素を逆順), SliverList(key: _centerKey, アンカー以降の要素)])</code>。<strong><code>leadingSlivers</code> は <code>slivers</code> に入れない。</strong> <code>center</code> より前の Sliver は <code>GrowthDirection.reverse</code> でレイアウトされるが、<code>CupertinoSliverRefreshControl</code> の <code>RenderSliver.performLayout</code> は <code>assert(constraints.growthDirection == GrowthDirection.forward)</code> を持つため、逆成長側に置くと <strong>debug ビルドで assert に抵触して落ちる</strong>（「発火しないだけ」では済まない。Flutter 3.47.4 で実測。§8 #21）。この形態ではユーザーは先頭より下を見ており引っ張れないので、出さなくても実害は無い（先頭に戻れば下記「復帰」で標準形になり、そこで引っ張り更新が成立する）。先頭 = <code>position.minScrollExtent</code>（逆成長側の高さぶん<strong>負</strong>）。<code>pixels == 0</code> はアンカー位置であって先頭ではない</li>
+<li><strong>標準形</strong>（上記 1・3、および 2・5 で <code>_lastFormWasAnchored == false</code> のとき）：<code>CustomScrollView(controller, slivers: [...leadingSlivers, _ExtentCompensatingSliver(key: _headerKey, child: headerSliver), SliverList(全要素) または SliverFillRemaining(emptyView)])</code>。<code>center</code> は指定しない（= 先頭の Sliver）。<code>CupertinoSliverRefreshControl</code> が前方成長側の先頭にあり、Pull to Refresh が通常どおり成立する。先頭 = <code>position.pixels == 0</code></li>
+<li><strong>アンカー形</strong>（上記 4、および 2・5 で <code>_lastFormWasAnchored == true</code> のとき）：<code>CustomScrollView(controller, center: _centerKey, slivers: [_ExtentCompensatingSliver(key: _headerKey, child: headerSliver), SliverList(アンカーより前の要素を逆順), SliverList(key: _centerKey, アンカー以降の要素)])</code>。<strong><code>leadingSlivers</code> は <code>slivers</code> に入れない。</strong> <code>center</code> より前の Sliver は <code>GrowthDirection.reverse</code> でレイアウトされるが、<code>CupertinoSliverRefreshControl</code> の <code>RenderSliver.performLayout</code> は <code>assert(constraints.growthDirection == GrowthDirection.forward)</code> を持つため、逆成長側に置くと <strong>debug ビルドで assert に抵触して落ちる</strong>（「発火しないだけ」では済まない。Flutter 3.47.4 で実測。§8 #21）。この形態ではユーザーは先頭より下を見ており引っ張れないので、出さなくても実害は無い（先頭に戻れば下記「復帰」で標準形になり、そこで引っ張り更新が成立する）。先頭 = <code>position.minScrollExtent</code>（逆成長側の高さぶん<strong>負</strong>）。<code>pixels == 0</code> はアンカー位置であって先頭ではない</li>
 <li><code>leadingSlivers</code> は <code>CupertinoSliverRefreshControl</code> <strong>1 つだけ</strong>を想定する（<code>build</code> で <code>leadingSlivers.length &lt;= 1</code> を assert する）。アンカー形では黙って捨てられるため、高さの変化を相殺する必要がある Sliver は <code>leadingSlivers</code> ではなく <code>headerSliver</code> に渡す</li>
 <li>各セルに <code>GlobalKey</code>（id ごと）を付ける。<code>GlobalObjectKey</code> は <code>identical()</code> で比較するため毎ビルド作り直す文字列では再利用されない。<code>Map&lt;String, GlobalKey&gt;</code> にキャッシュし、同じ id には同じインスタンスを使い回す</li>
 <li><code>_ExtentCompensatingSliver</code> には <strong><code>GlobalKey</code>（<code>_headerKey</code>）を必ず付ける。</strong> 形態の切替で <code>slivers</code> リスト内の位置が変わると Element が作り直され、<code>RenderSliver</code> が保持する「前回のレイアウトの extent」が 0 に戻って、次のレイアウトで帯が「出現した」と誤認され二重に補正される（<code>GlobalKey</code> があれば RenderObject が付け替えで保たれる）。この key は下記「アンカーの更新」手順 3 の経路 2（ヘッダ Sliver の extent から H を求める）でも使う</li>
 </ul>
 </li>
-<li><p><strong>共通の手続き 3 つ</strong>（形態を変える処理と先頭判定はすべてこの 3 つを通す）：</p>
+<li><p><strong>共通の手続き 4 つ</strong>（形態を変える処理・先頭判定・フレーム後のやり直しはすべてこの 4 つを通す）：</p>
 <ul>
-<li><strong><code>ScrollPosition? get _laidOutPosition</code></strong>：<code>controller.hasClients</code> かつ <code>controller.position.hasContentDimensions</code> のとき <code>controller.position</code>、そうでなければ <code>null</code>。「触れてよい <code>ScrollPosition</code> か」の判定はこの 1 箇所に集約し、<code>correctPixels</code> / <code>jumpTo</code> / <code>animateTo</code> / <code>pixels</code> の読み取りを行う<strong>すべての経路</strong>（<code>didUpdateWidget</code> 手順 0、<code>restoreToStandardForm()</code>、<code>scrollToTop()</code>、<code>_isAtTop()</code>）がこれを通す。未確定時のフォールバックは呼び出し元ごとに決める（下記）</li>
-<li><strong><code>bool _isAtTop()</code></strong>：<code>_laidOutPosition</code> が <strong>null なら <code>false</code></strong>（位置が読めないときは「先頭を表示中」と見なさない。誤って <code>_resetAnchorToFirst()</code> に落として <code>correctPixels</code> 無しで形態を変えるより安全）。非 null なら <code>position.pixels &lt;= position.minScrollExtent + _atTopTolerance</code>。「先頭を表示中か」の判定はすべてこのメソッドを通す（<code>ScrollController</code> の listener・<code>didUpdateWidget</code> 手順 1・手順 0 の再試行）</li>
-<li><strong><code>void _resetAnchorToFirst()</code></strong>：標準形へ戻す唯一の手順。次の順で行う。<ol>
-<li><strong>書き換える前</strong>に現在の形態（<code>_anchorId</code> から「形態の決め方」で求まる値）を確定する</li>
-<li><code>setState(() { _anchorId = widget.items.isEmpty ? null : widget.idOf(widget.items.first); _anchorIndex = 0; })</code></li>
+<li><p><strong><code>ScrollPosition? get _laidOutPosition</code></strong>：<code>controller.hasClients</code> かつ <code>controller.position.hasContentDimensions</code> のとき <code>controller.position</code>、そうでなければ <code>null</code>。「触れてよい <code>ScrollPosition</code> か」の判定はこの 1 箇所に集約し、<code>correctPixels</code> / <code>jumpTo</code> / <code>animateTo</code> / <code>pixels</code> の読み取りを行う<strong>すべての経路</strong>（<code>didUpdateWidget</code> 手順 0、<code>restoreToStandardForm()</code>、<code>scrollToTopWhenLaidOut()</code>、<code>_onPostFrame()</code>、<code>_isAtTop()</code>）がこれを通す。未確定時のフォールバックは呼び出し元ごとに決める（下記）</p>
+</li>
+<li><p><strong><code>bool _isAtTop()</code></strong>：<code>_laidOutPosition</code> が <strong>null なら <code>false</code></strong>（位置が読めないときは「先頭を表示中」と見なさない。誤って <code>_resetAnchorToFirst()</code> に落として <code>correctPixels</code> 無しで形態を変えるより安全）。非 null なら <code>position.pixels &lt;= position.minScrollExtent + _atTopTolerance</code>。「先頭を表示中か」の判定はすべてこのメソッドを通す（<code>ScrollController</code> の listener・<code>didUpdateWidget</code> 手順 1・手順 0 の再試行）</p>
+</li>
+<li><p><strong><code>void _resetAnchorToFirst()</code></strong>：標準形へ戻す唯一の手順。次の順で行う。</p>
+<ol>
+<li><code>setState(() { _anchorId = widget.items.isEmpty ? null : widget.idOf(widget.items.first); _anchorIndex = 0; _pendingItemsChanged = false; _pendingFrames = 0; })</code></li>
 <li><code>_laidOutPosition</code> が非 null なら <code>position.correctPixels(position.pixels - position.minScrollExtent)</code>（見た目を変えずに <code>pixels</code> を 0 基準へ移す）。null なら <code>correctPixels</code> を行わない</li>
 </ol>
 <ul>
-<li><strong><code>items</code> が空でも同じ手順</strong>で、<code>_anchorId = null</code>（アンカー無しの標準形）にしたうえで手順 3 の <code>correctPixels</code> を同じ式で適用する。<code>items.first</code> を読まない（空リストで <code>StateError</code> を投げて <code>didUpdateWidget</code> 内の例外＝画面が落ちるため）</li>
-<li>手順 1 で<strong>既に標準形</strong>だった場合、<code>minScrollExtent == 0</code> なので手順 3 は値を変えない（無害。分岐を増やさない）</li>
+<li><strong>据え置き（<code>_pendingItemsChanged</code>）もここで解除する。</strong> 標準形へ倒した時点で保持すべき位置が無くなり、据え置いた更新をやり直す意味が無いため。解除しないと「形態の決め方」2 が直前のアンカー形を保ち続け、<code>_anchorId</code> が先頭なのにアンカー形で描かれて <code>jumpTo(0)</code> がアンカー位置に着く</li>
+<li><strong><code>items</code> が空でも同じ手順</strong>で、<code>_anchorId = null</code>（アンカー無しの標準形）にしたうえで手順 2 の <code>correctPixels</code> を同じ式で適用する。<code>items.first</code> を読まない（空リストで <code>StateError</code> を投げて <code>didUpdateWidget</code> 内の例外＝画面が落ちるため）</li>
+<li>呼ばれた時点で<strong>既に標準形</strong>だった場合、<code>minScrollExtent == 0</code> なので手順 2 は値を変えない（無害。形態による分岐を作らない）</li>
 <li><code>_anchorId</code> だけを書き換えてはいけない。<code>pixels</code> が「アンカーからの距離」のまま新しい <code>minScrollExtent</code>（標準形では 0）に対して解釈され、表示位置が飛ぶ</li>
 </ul>
+</li>
+<li><p><strong>フレーム後の処理（<code>_scheduleFrameCallback()</code> / <code>_onPostFrame()</code>）</strong>：<code>addPostFrameCallback</code> を張るのはこの 1 か所だけで、<strong>据え置きの再試行（手順 0）と保持した先頭スクロール（手順 3）の両方を 1 本のコールバックで処理する</strong>（待ち合わせのループを 2 か所に書かない）。回数の上限は<strong>据え置きの再試行にだけ</strong>掛かる（ファイル private 定数 <code>static const int _maxPendingFrames = 2;</code>。根拠「controller の差し替えは 1 フレームで解消する」（T-28 の実測）はこの定数の宣言に 1 度だけ書く）。</p>
+<pre><code class="language-dart">void _scheduleFrameCallback() {
+  if (_frameCallbackScheduled) return;               // 同時に 1 本だけ（多重に張らない）
+  _frameCallbackScheduled = true;
+  WidgetsBinding.instance.addPostFrameCallback((_) =&gt; _onPostFrame());
+}
+
+void _onPostFrame() {
+  _frameCallbackScheduled = false;
+  if (!mounted) return;
+  if (_pendingItemsChanged) {
+    final position = _laidOutPosition;
+    if (position != null) {
+      _retryDeferredItemsChange();                   // 手順 1〜4 をそのフレームの実測でやり直す（手順 0）
+    } else if (_pendingFrames &gt;= _maxPendingFrames) {
+      _resetAnchorToFirst();                         // 諦め（位置保持を放棄。据え置きもここで解ける）
+      _requestScrollToTopOnLayout();                 // 着地点を先頭に倒す（手順 0 の「諦め」）
+    } else {
+      _pendingFrames++;
+    }
+  }
+  if (_pendingScrollToTop != null &amp;&amp; _laidOutPosition != null) {
+    _resetAnchorToFirst();                           // 標準形を保証してから（0 = 先頭）
+    widget.controller.scrollController.jumpTo(0);    // animated は無視して常に jumpTo
+    final pending = _pendingScrollToTop!;            // 直前の null 判定で非 null が確定している
+    _pendingScrollToTop = null;
+    pending.complete();
+  }
+  if (_pendingItemsChanged || _pendingScrollToTop != null) _scheduleFrameCallback();
+}
+
+void _requestScrollToTopOnLayout() {
+  _pendingScrollToTop ??= Completer&lt;void&gt;();
+  _scheduleFrameCallback();
+}</code></pre>
+<p><code>addPostFrameCallback</code> は自分ではフレームを要求しない（次にフレームが作られたときに 1 度だけ走る）ため、確定しないまま待ち続けても再描画が空回りせず、張り直しも 1 フレームに 1 本に収まる</p>
 </li>
 </ul>
 </li>
@@ -1901,32 +2022,34 @@ final class AnchoredListController {
 <li>標準形へ戻す処理は必ず上記 <code>_resetAnchorToFirst()</code> を通す（<code>_anchorId</code> だけを書き換えない）</li>
 </ul>
 </li>
-<li><p><strong>先頭スクロール要求</strong>（<code>AnchoredListController.scrollToTop(animated:)</code>。S-01/A-03・A-09・A-10・ST-15、S-02/A-04）：</p>
+<li><p><strong>先頭スクロール要求</strong>（<code>AnchoredListController.scrollToTop(animated:)</code>。S-01/A-03・A-09・A-10・ST-15、S-02/A-04。実装の形は上記コードの <code>_run</code>）：</p>
 <ol>
 <li><code>_target.scrollingToTop = true</code>（<code>Controller</code> が attach 済みの <code>_AnchoredListTarget</code> 経由で State の <code>_scrollingToTop</code> を立てる）</li>
-<li><code>_target.restoreToStandardForm()</code>：<strong><code>_resetAnchorToFirst()</code> を呼ぶだけ</strong>（標準形なら <code>_anchorId</code> が既に先頭なので実質何も変わらない）。<code>_laidOutPosition</code> が null（レイアウト未確定。<code>PageView</code> の非表示ページが <code>requestAll()</code> を受けた直後など）のときは <code>_resetAnchorToFirst()</code> の手順 3 が飛ぶため、<strong>形態の付け替えだけを行い <code>correctPixels</code> は行わない</strong>。標準形になったことで次のレイアウトでは <code>minScrollExtent == 0</code>・<code>0</code> が先頭になるが、<strong><code>pixels</code> は付け替え前の値のまま残る</strong>（先頭には着かない）ので、手順 3 のやり直しで <code>0</code> へ動かす</li>
-<li><code>_laidOutPosition</code> が非 null で <code>animated</code> なら <code>await scrollController.animateTo(0, duration: 300ms, curve: Curves.easeOut)</code>、非 null で <code>animated == false</code> なら <code>scrollController.jumpTo(0)</code>。<ul>
-<li><strong><code>_laidOutPosition</code> が null（レイアウト未確定）なら要求を捨てず、<code>WidgetsBinding.instance.addPostFrameCallback</code> で次フレームに手順 2 からやり直す</strong>（<code>_scrollingToTop</code> は立てたまま。<code>scrollToTop()</code> の <code>Future</code> はやり直しが終わるまで完了しない）。<strong>手順 0 と同じく最大 2 フレームで諦める</strong>（同じ根拠：controller の差し替えは 1 フレームで解消することを T-28 で実測）。やり直しの途中で <code>detach()</code> / <code>dispose()</code> された場合は中断して手順 4 へ進む</li>
+<li><code>_target.restoreToStandardForm()</code>：<strong><code>_resetAnchorToFirst()</code> を呼ぶだけ</strong>（標準形なら <code>_anchorId</code> が既に先頭なので実質何も変わらない）。<code>_laidOutPosition</code> が null（レイアウト未確定。<code>PageView</code> の非表示ページが <code>requestAll()</code> を受けた直後など）のときは <code>_resetAnchorToFirst()</code> の手順 2 が飛ぶため、<strong>形態の付け替えだけを行い <code>correctPixels</code> は行わない</strong>。標準形になったことで次のレイアウトでは <code>minScrollExtent == 0</code>・<code>0</code> が先頭になるが、<strong><code>pixels</code> は付け替え前の値のまま残る</strong>（先頭には着かない）ので、手順 3 が <code>0</code> へ動かす</li>
+<li><code>_target.scrollToTopWhenLaidOut(animated:)</code>（State 側。上記インターフェース）：<ul>
+<li><code>_laidOutPosition</code> が非 null で <code>animated</code> なら <code>return scrollController.animateTo(0, duration: 300ms, curve: Curves.easeOut)</code>、非 null で <code>animated == false</code> なら <code>scrollController.jumpTo(0)</code> して完了済みの <code>Future</code> を返す</li>
+<li><strong><code>_laidOutPosition</code> が null（レイアウト未確定）なら要求を捨てず、<code>_requestScrollToTopOnLayout()</code> で <code>_pendingScrollToTop</code> に保持して <code>Future</code> を返す</strong>（<code>_scrollingToTop</code> は立てたまま。<code>scrollToTop()</code> の <code>Future</code> は保持が消化されるまで完了しない）。消化は上記「フレーム後の処理」が行い、<strong>確定した最初のフレームで <code>_resetAnchorToFirst()</code> → <code>jumpTo(0)</code></strong>（<code>animated</code> は無視して常に <code>jumpTo</code>。旧レイアウトの実測を要さないため待つだけでよい）。<strong>回数の上限は設けない</strong>（据え置きの再試行（手順 0）の上限 2 フレームは、<code>correctPixels</code> に旧レイアウトの実測が要るという位置保持側の制約であって、先頭へ動かすだけの <code>jumpTo(0)</code> には掛からない）。諦めて途中の位置を残すと、S-01/A-03（§8 #5「スクロール位置は先頭に戻す」）と §8 #25 が <code>requestAll()</code> で排除したはずの「タブ切替で絞り込み後の一覧の途中が見える」状態が残るため、要求を保持し続ける方を採る</li>
 <li><strong>「未確定でも次のレイアウトで先頭に着く」とは考えない。</strong> <code>applyContentDimensions</code> が <code>pixels</code> を動かすのは<strong>範囲外のときだけ</strong>で、<code>pixels</code> が <code>[0, maxScrollExtent]</code> の範囲内（例：<code>pixels = 1200</code>、コンテンツ高 20000px）ならそのまま残る。手順 2 で標準形にしただけでは先頭に戻らない</li>
-<li>2 フレーム待っても未確定で諦めた場合、そのページは標準形のまま <code>pixels</code> が元の値で残る（先頭に戻らない）。次に先頭スクロール要求を受けるか、ユーザーが手で戻すまで途中の位置が続く（§6）</li>
+<li>保持したまま State が <code>dispose</code> された場合は <code>dispose()</code> が <code>_pendingScrollToTop</code> を完了させ、<code>Controller</code> 側は <code>detach()</code> で <code>_inFlight</code> を中断する（上記「進行中の表し方」）</li>
 </ul>
 </li>
-<li><code>_target.scrollingToTop = false</code>。手順 2〜3（やり直しを含む）を <code>try/finally</code> で包み、<code>finally</code> で必ず戻し、<code>_inFlight = null</code> にする（<code>animateTo</code> はユーザーのドラッグで中断されても <code>Future</code> は完了する。中断後は標準形のままなので、そのまま引っ張れば <code>CupertinoSliverRefreshControl</code> が発火する。§6）。<code>finally</code> の時点で <code>detach()</code> 済みなら <code>scrollingToTop</code> は書かない（<code>_inFlight</code> は必ず戻す）</li>
+<li><code>_target.scrollingToTop = false</code>。手順 1〜3 を <code>try/finally</code> で包み、<code>finally</code> で必ず戻す（<code>animateTo</code> はユーザーのドラッグで中断されても <code>Future</code> は完了する。中断後は標準形のままなので、そのまま引っ張れば <code>CupertinoSliverRefreshControl</code> が発火する。§6）。<code>finally</code> の時点で attach 先が別の State に張り替わっている・<code>detach()</code> 済みなら書かない（<code>identical(_target, target)</code> で判定。上記コード）</li>
 </ol>
 <ul>
 <li><strong>不変条件</strong>：State の <code>_scrollingToTop</code> が true の間、<code>didUpdateWidget</code> はアンカー形に入らない（下記手順 1 の「先頭を表示中」と同じ扱いにし、<code>_resetAnchorToFirst()</code> でアンカー = 新 <code>items</code> の先頭にする。手順 2・3 の位置補正 <code>correctPixels(H - anchorDy)</code> は行わない。手順 2 で標準形に戻った後の <code>_resetAnchorToFirst()</code> は <code>correctPixels(pixels - minScrollExtent)</code> = <code>minScrollExtent == 0</code> で値が変わらない）。<code>animateTo</code> の途中で drift の再クエリ結果が届いても、位置補正がアニメーションと <code>position</code> を奪い合わない。A-03 は <code>animated: false</code> なのでこの窓自体が無く、A-09・A-10・ST-15 は 300ms の窓の間だけこの不変条件に頼る（§8 #27）</li>
-<li><code>scrollToTop()</code> の実行中にもう一度呼ばれたら、<strong><code>AnchoredListController._inFlight</code>（上記の宣言）に保持した進行中の <code>Future</code> をそのまま返す</strong>（二重の <code>animateTo</code>・二重のやり直しコールバックを張らない）。<code>_inFlight</code> は手順 1 の前に代入し、手順 4 の <code>finally</code> で null に戻す。State 側は「上記のフィールド以外の状態を持たない」ため、この保持先は <code>Controller</code> に置く（<code>animated</code> の値が前回と違っても、進行中の要求に合流する。先頭へ戻るという結果は同じ）</li>
+<li><code>scrollToTop()</code> の実行中にもう一度呼ばれたら、<strong><code>AnchoredListController._inFlight</code> に保持した進行中の <code>Completer</code> の <code>Future</code> をそのまま返す</strong>（二重の <code>animateTo</code>・二重の保持を作らない）。State 側は「上記のフィールド以外の状態を持たない」ため、合流の判定先は <code>Controller</code> に置く（<code>animated</code> の値が前回と違っても、進行中の要求に合流する。先頭へ戻るという結果は同じ）。<strong><code>_inFlight</code> は <code>Completer</code> で表し、<code>_run()</code> を呼ぶ前に代入して、完了・中断の出口（<code>_finish()</code>）で「null に戻してから <code>complete()</code>」する。</strong> <code>async</code> メソッドの戻り値を後から代入する形にすると、<code>await</code> が 1 つも無い経路（<code>animated: false</code> かつレイアウト確定済み。A-03 の <code>requestAll()</code>）で <code>finally</code> が代入より先に走り、<code>_inFlight</code> が完了済みのまま残留して<strong>以後そのページが二度と先頭に戻らない</strong>（上記コードのコメント）</li>
 </ul>
 </li>
 <li><p><strong>アンカーの更新</strong>（<code>didUpdateWidget</code> で <code>items</code> が変わったとき。<strong><code>listEquals(oldWidget.items, widget.items)</code> が true なら、アンカーの再計算も <code>correctPixels</code> も行わない</strong>。星のタップで別の記事の <code>isSaved</code> が変わった・<code>minuteClockProvider</code> で親が再 build した等、表示位置に関係ない再 build で位置を触らない。<code>ArticleListItem</code>・<code>SavedArticle</code> は値の等価性を持つ。§4.1）：</p>
 <ol start="0">
 <li><p><strong><code>position</code> に触れる前のガード</strong>：<strong><code>_laidOutPosition == null</code></strong>（<code>hasClients == false</code>、または <code>hasContentDimensions == false</code>）なら、アンカーの再計算も形態の変更も <code>correctPixels</code> も<strong>行わず据え置く</strong>。<code>State.didUpdateWidget</code> は <code>Scrollable</code> が新しい <code>ScrollController</code> を受け取るより<strong>前</strong>に走るため、controller を差し替えた直後のフレームでは新しい controller が <code>hasClients == false</code> になる。ここで標準形へ落とすと <code>correctPixels</code> を伴わない形態変更になり位置が飛ぶ（T-28 の実測で <code>dy</code> が <code>-20</code> から <code>+280</code> へずれた）。</p>
 <ul>
-<li><strong>据え置きの再試行</strong>：<code>_pendingItemsChanged = true</code>・<code>_pendingFrames = 0</code> にし、<code>WidgetsBinding.instance.addPostFrameCallback</code> を 1 回張る。コールバックでは <code>mounted</code> を確認し、<code>_laidOutPosition</code> が非 null なら<strong>手順 1〜4 をそのフレームの実測でやり直す</strong>（<code>_pendingItemsChanged = false</code>）。まだ null なら <code>_pendingFrames++</code> して同じコールバックをもう一度張る</li>
+<li><strong>据え置きの記録</strong>：<code>_pendingItemsChanged</code> が <strong>false のときだけ <code>_pendingFrames = 0</code></strong> にしてから <code>_pendingItemsChanged = true</code> にし、<code>_scheduleFrameCallback()</code> を呼ぶ（上記「フレーム後の処理」。コールバックは同時に 1 本）。<strong>据え置き中にもう一度据え置くときはカウンタをリセットしない。</strong> リセットすると、<code>items</code> が短時間に続けて変わる経路（drift が <code>articles</code> / <code>read_states</code> / <code>saved_articles</code> の 3 テーブル更新で続けて再発火する）で <code>_pendingFrames</code> が 2 に達さず、下記の「諦め」が走らないまま待ち続ける</li>
+<li><strong>再試行</strong>：<code>_onPostFrame()</code> の据え置きの段（上記コード）が、<code>_laidOutPosition</code> が非 null のとき <code>_retryDeferredItemsChange()</code> で<strong>手順 1〜4 をそのフレームの実測でやり直す</strong>（同メソッドの最後に <code>_pendingItemsChanged = false</code>）。まだ null なら <code>_pendingFrames++</code> して同じコールバックを張り直す</li>
 <li><strong>不変条件は <code>didUpdateWidget</code> 本体と再試行のコールバックの両方に掛かる。</strong> やり直しの先頭では手順 1 と同じく「<strong><code>_isAtTop()</code> または <code>_scrollingToTop</code></strong> なら <code>_resetAnchorToFirst()</code>（そこで終わり）」を評価する。<code>_scrollingToTop</code> を落とすと、据え置いたフレームの直後に <code>scrollToTop(animated: true)</code> が始まった場合（S-01/A-09 の下部タブ再タップ）に、アニメーション途中で <code>_isAtTop()</code> が false のままアンカー形に入って <code>correctPixels(H - anchorDy)</code> を実行し、§8 #27 が「<code>position</code> を奪い合う」として排除した状態に戻る</li>
 <li><strong>やり直しでは <code>oldWidget.items</code> を使わず、<code>resolveAnchorId</code> も呼ばない。</strong> そのフレームでビューポートに見えている要素から手順 2 と同じ実測（最上部の要素 = <code>visibleId</code>・その <code>dy</code> = <code>anchorDy</code>）を行い、<strong><code>visibleId</code> は必ず現在の <code>widget.items</code> にある</strong>（描かれている要素だから）ので、<code>_anchorId = visibleId</code>・<code>_anchorIndex = widget.items.indexWhere((e) =&gt; idOf(e) == visibleId)</code> に直接更新して手順 3・4 を行う（据え置きの間に見た目がずれた分は戻さない。以後ずれないようにすることが目的）。実測できる要素が 1 つも無ければ <code>_resetAnchorToFirst()</code></li>
-<li><strong><code>_pendingFrames</code> が 2 に達したら諦める</strong>（<code>_pendingItemsChanged = false</code>。controller の差し替えは 1 フレームで解消することを T-28 で実測しており、2 フレーム待っても確定しないページは画面に出ていない）。<strong>諦める時点で <code>setState</code> して <code>_anchorId = widget.items.isEmpty ? null : idOf(widget.items.first)</code>・<code>_anchorIndex = 0</code>（標準形）に揃える</strong>（<code>_laidOutPosition</code> が null なので <code>correctPixels</code> は行えず、<strong>位置保持は放棄する</strong>）。揃えずに「形態の決め方」4 の据え置き状態を残すと、以後 <code>didUpdateWidget</code> が走らないまま <code>items</code> が縮んだときに <code>center</code> が一覧の末尾付近になり（<code>clamp</code> の上限。上記「形態の決め方」4）、そのページへスワイプしたユーザーに末尾が見える。諦めるのは画面に出ていないページに限られるため、形態を標準形に倒すほうが被害が小さい（§6）</li>
-<li>据え置き中に <code>didUpdateWidget</code> がもう一度走った場合は、通常どおり手順 0 から評価する（<code>_laidOutPosition</code> が非 null になっていればその場で手順 1〜4 を行い、<code>_pendingItemsChanged = false</code> にして張り済みのコールバックを無効化する）</li>
+<li><strong><code>_pendingFrames</code> が <code>_maxPendingFrames</code>（2）に達したら諦める</strong>（controller の差し替えは 1 フレームで解消することを T-28 で実測しており、2 フレーム待っても確定しないページは画面に出ていない）。諦める処理は <strong><code>_resetAnchorToFirst()</code></strong>（標準形へ揃える。<code>_laidOutPosition</code> が null なので <code>correctPixels</code> は行われず<strong>位置保持は放棄する</strong>。据え置きもここで解ける）→ <strong><code>_requestScrollToTopOnLayout()</code></strong>（次に確定したレイアウトで <code>jumpTo(0)</code>）の 2 つだけ。揃えずに「形態の決め方」2・5 の据え置き状態を残すと、以後 <code>didUpdateWidget</code> が走らないまま <code>items</code> が縮んだときに <code>center</code> が一覧の末尾付近になり、そのページへスワイプしたユーザーに末尾が見える。さらに、標準形へ揃えただけでは <code>pixels</code> がアンカー基準の値のまま <code>minScrollExtent == 0</code> で解釈され、<code>items</code> が大きく縮んでいると <code>applyContentDimensions</code> が<strong>末尾</strong>に収めてしまう（同じ見え方に戻る）ため、<strong>着地点を先頭に倒す</strong>（<code>jumpTo(0)</code> は旧レイアウトの実測を要さないので確定さえすれば実行できる。「先頭スクロール要求」手順 3 と同じ仕組み）。諦めるのは画面に出ていないページに限られる（§6）</li>
+<li>据え置き中に <code>didUpdateWidget</code> がもう一度走った場合は、通常どおり手順 0 から評価する（<code>_laidOutPosition</code> が非 null になっていればその場で手順 1〜4 を行い、<code>_pendingItemsChanged = false</code> にする。張り済みのコールバックは冒頭で <code>_pendingItemsChanged</code> が false なら据え置きの段を飛ばすため、多重に張られても害が無い）</li>
 </ul>
 </li>
 <li><p><strong>先頭を表示中</strong>（<code>_isAtTop()</code>）<strong>または <code>_scrollingToTop</code></strong> なら、<code>_resetAnchorToFirst()</code> でアンカー = 新しい <code>items</code> の先頭（標準形）。以後の差し込みは先頭に現れる（S-01 §7.4「先頭を表示中なら差し込まれた記事が先頭に現れる」）</p>
@@ -1963,7 +2086,7 @@ final anchorId = resolveAnchorId(
 <li>どちらも取れなければ（<code>_headerKey</code> が未構築等）<strong>補正しない</strong>（位置保持を諦める。誤った補正で <code>pixels</code> を負に転落させるより安全）</li>
 </ol>
 </li>
-<li>旧レイアウトの形態（経路 1 か 2 かの分岐）は、<strong><code>setState</code> で <code>_anchorId</code> を書き換える前</strong>に確定させる（形態の判定は現在の <code>_anchorId</code> を見るため、書き換え後に判定すると新レイアウトの形態になる）</li>
+<li>旧レイアウトの形態（経路 1 か 2 かの分岐）は <strong><code>_lastFormWasAnchored</code></strong>（直前の <code>build()</code> が実際に採った形態）で判定する。<code>_anchorId</code> から「形態の決め方」を再評価して導出しない（据え置きから復帰したフレームでは <code>_anchorId</code> と実際に描かれている形態が一致せず、経路の選択が決まらない）。<code>_lastFormWasAnchored</code> は <code>build()</code> でしか書かないため、<code>setState</code> で <code>_anchorId</code> を書き換えた後に読んでも旧レイアウトの値のままである（次の <code>build()</code> まで更新されない）</li>
 <li><strong>新 <code>items</code> が空になる場合は手順 3 に来ない</strong>（手順 2 の <code>resolveAnchorId</code> が null を返して <code>_resetAnchorToFirst()</code> に落ちる）。空の一覧では <code>emptyView</code> の <code>SliverFillRemaining</code> に対して <code>applyContentDimensions</code> が <code>pixels</code> を範囲に収めるため、追加の補正は不要</li>
 </ul>
 </li>
@@ -1971,7 +2094,7 @@ final anchorId = resolveAnchorId(
 </li>
 </ol>
 </li>
-<li><p><strong><code>ScrollController</code> の差し替え</strong>：同じ <code>key</code> のまま <code>controller</code> だけを差し替えても、<code>Scrollable._shouldUpdatePosition</code> は <code>ScrollController</code> 同士の差し替えでは false を返し（<code>physics</code> / <code>ScrollBehavior</code> が変わらない限り）、<code>ScrollPosition</code> は<strong>再利用される</strong>（<code>absorb</code> すら経由しない）。<code>pixels</code> の起点は変わらないためアンカー（<code>_anchorId</code>）はそのまま維持し、作り直さない。「新しい controller なので <code>pixels</code> は 0 から」と仮定してはいけない。controller の差し替えと <code>items</code> の変更が同一フレームで起きる経路（ページの再構築）では、上記ガード 0 によりその回の補正を見送り、<strong><code>addPostFrameCallback</code> で次フレームにやり直す</strong>（手順 0 の「据え置きの再試行」）。そのフレームでアンカー記事自体が新 <code>items</code> から消えていた場合も、<code>build()</code> は「形態の決め方」4 により<strong>形態を変えずに</strong>描き（<code>center</code> は <code>_anchorIndex.clamp(0, items.length - 1)</code>）、次フレームのやり直しで補正つきに揃える。State ごと作り直したいときは <code>key</code> を変え、<code>AnchoredListController</code> も作り直す（上記「<code>attach</code> / <code>detach</code> の規則」）</p>
+<li><p><strong><code>ScrollController</code> の差し替え</strong>：同じ <code>key</code> のまま <code>controller</code> だけを差し替えても、<code>Scrollable._shouldUpdatePosition</code> は <code>ScrollController</code> 同士の差し替えでは false を返し（<code>physics</code> / <code>ScrollBehavior</code> が変わらない限り）、<code>ScrollPosition</code> は<strong>再利用される</strong>（<code>absorb</code> すら経由しない）。<code>pixels</code> の起点は変わらないためアンカー（<code>_anchorId</code>）はそのまま維持し、作り直さない。「新しい controller なので <code>pixels</code> は 0 から」と仮定してはいけない。controller の差し替えと <code>items</code> の変更が同一フレームで起きる経路（ページの再構築）では、上記ガード 0 によりその回の補正を見送り、<strong><code>addPostFrameCallback</code> で次フレームにやり直す</strong>（手順 0 の「据え置きの再試行」）。据え置いたフレームの <code>build()</code> は「形態の決め方」2 により<strong>形態を変えずに</strong>描き（アンカー形なら <code>center</code> は <code>_anchorIndex.clamp(0, items.length - 1)</code>。ただし新 <code>items</code> が 0 件なら 1 で標準形 + <code>emptyView</code>）、次フレームのやり直しで補正つきに揃える。State ごと作り直したいときは <code>key</code> を変え、<code>AnchoredListController</code> も作り直す（上記「<code>attach</code> / <code>detach</code> の規則」）</p>
 </li>
 <li><p><strong>空 → 非空・非空 → 空</strong>：どちらも標準形。空になったときは <code>_resetAnchorToFirst()</code> が <code>_anchorId = null</code>（アンカー無し）にし、<code>emptyView</code> を <code>SliverFillRemaining(hasScrollBody: false)</code> で包んで置く（引っ張り更新は <code>leadingSlivers</code> に、取得中の帯は <code>headerSliver</code> に残るので S-01 §8 #14 を満たす）</p>
 </li>
@@ -1989,7 +2112,7 @@ final anchorId = resolveAnchorId(
 </li>
 <li><p><strong>縮退の逃げ道</strong>（§8 #21）：実装時に「先頭に戻ったときの標準形への復帰」で Pull to Refresh が成立しない（<code>correctPixels</code> がドラッグと干渉する等）場合は、位置保持を「表示中のページのみ、差し込み前後で <code>ScrollController</code> のオフセットを保つ（<code>ListView</code> の既定動作）」に縮退し、<code>AnchoredListView</code> を <code>CustomScrollView</code> + 単一 <code>SliverList</code> にする（<code>AnchoredListController.scrollToTop()</code> は残す）。S-01 §7.4「表示中の記事の画面上の位置を保つ」に加え、S-02/ST-04「消えた範囲の直後の記事が同じ位置に」（保存画面の位置保持）も満たせなくなるため、縮退したら §8.1 で <strong>S-01・S-02 の両方</strong>に申し送る</p>
 </li>
-<li><p><code>AnchoredListView</code> 自体のテストは書かない（Widget。D-04 §7 と同じ方針）。ただし<strong>アンカーの付け替え規則は <code>resolveAnchorId</code>（<code>core/ui/list/anchor_resolution.dart</code>）に純粋関数として切り出し、テーブル駆動の直接テストを持つ</strong>（§7・§8 #33）。<code>_AnchoredListViewState</code> はこれを呼ぶだけにし、走査規則を State 側に書かない。2 形態の切替・<code>_scrollingToTop</code> の不変条件・<code>_ExtentCompensatingSliver</code> の補正条件（保持値の更新時点を含む）は上記を実装コメントに残す。加えて、<strong>依存している Flutter SDK 内部の前提と、それを確認した Flutter のバージョンをファイル冒頭の library doc に列挙する</strong>（自動テストが無いため、Flutter を上げたときの再確認の手掛かりがこれしか無い。列挙する項目は §7）。Pull to Refresh の成立と先頭スクロールは T-M の目視項目（§10）</p>
+<li><p><code>AnchoredListView</code> 自体のテストは書かない（Widget。D-04 §7 と同じ方針）。ただし<strong>アンカーの付け替え規則は <code>resolveAnchorId</code>（<code>core/ui/list/anchor_resolution.dart</code>）に純粋関数として切り出し、テーブル駆動の直接テストを持つ</strong>（§7・§8 #33）。<code>_AnchoredListViewState</code> はこれを呼ぶだけにし、走査規則を State 側に書かない。2 形態の切替・<code>_scrollingToTop</code> の不変条件・<code>_ExtentCompensatingSliver</code> の補正条件（保持値の更新時点を含む）は上記を実装コメントに残す。とくに次の 4 つは、<strong>書き換えると自動テストも品質ゲートも検出できないまま壊れる</strong>ため、理由をコードのすぐ横に残す：(a) <code>_inFlight</code> を <code>Completer</code> で表し <code>_run()</code> を呼ぶ前に代入すること（<code>async</code> の本体は最初の <code>await</code> まで同期実行されるため）、(b) 「形態の決め方」1 が <code>items.isEmpty</code> を見ること（<code>num.clamp</code> は <code>upperLimit &lt; lowerLimit</code> で <code>ArgumentError</code>）、(c) 据え置き中（<code>_pendingItemsChanged</code>）は <code>_lastFormWasAnchored</code> の形態を保つこと、(d) <code>_pendingScrollToTop</code> には回数上限を設けないこと。加えて、<strong>依存している Flutter SDK 内部の前提と、それを確認した Flutter のバージョンをファイル冒頭の library doc に列挙する</strong>（自動テストが無いため、Flutter を上げたときの再確認の手掛かりがこれしか無い。列挙する項目は §7）。Pull to Refresh の成立と先頭スクロールは T-M の目視項目（§10）</p>
 </li>
 </ul>
 <h3 id="sec-5-12">5.12 記事セルの組み立て（F-02。S-00/E-10〜E-17）<a class="anchor" href="#sec-5-12">#</a></h3>
@@ -2373,17 +2496,32 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td><code>items</code> の変更と <code>ScrollController</code> の差し替えが同一フレームで起きた（ページの再構築）</td>
-<td><code>_laidOutPosition == null</code>（<code>didUpdateWidget</code> は <code>Scrollable</code> が新 controller を受け取る前に走るので <code>hasClients == false</code>）なのでアンカーの更新も補正も見送り、<strong><code>addPostFrameCallback</code> で次フレームにやり直す</strong>（やり直しでは <code>resolveAnchorId</code> を呼ばず、実測した <code>visibleId</code> を直接アンカーにする。最大 2 フレーム待ち、確定しなければ<strong>標準形に揃えて</strong>位置保持を諦める。§5.11 手順 0）。<code>ScrollPosition</code> は差し替えでも再利用されるため <code>pixels</code> の起点は変わらず、アンカーはそのまま有効</td>
+<td><code>_laidOutPosition == null</code>（<code>didUpdateWidget</code> は <code>Scrollable</code> が新 controller を受け取る前に走るので <code>hasClients == false</code>）なのでアンカーの更新も補正も見送り、<strong><code>addPostFrameCallback</code> で次フレームにやり直す</strong>（やり直しでは <code>resolveAnchorId</code> を呼ばず、実測した <code>visibleId</code> を直接アンカーにする。最大 <code>_maxPendingFrames</code>（2）フレーム待ち、確定しなければ<strong>標準形に揃えて先頭へ倒す</strong>。§5.11 手順 0）。<code>ScrollPosition</code> は差し替えでも再利用されるため <code>pixels</code> の起点は変わらず、アンカーはそのまま有効</td>
 <td>core/ui</td>
 </tr>
 <tr>
 <td>据え置いたフレームでアンカー記事自体が新 <code>items</code> から消えていた</td>
-<td><code>build()</code> は「形態の決め方」4 により<strong>形態を変えずに</strong>描く（アンカー形なら <code>center</code> を <code>_anchorIndex.clamp(0, items.length - 1)</code> に置く。上限が <code>items.length</code> だと <code>center</code> が要素 0 個になり <code>goBallistic</code> で一覧の末尾へ飛ぶ）。<code>correctPixels</code> を伴わない形態変更（index 0 = 標準形への転落）を起こさない。次フレームのやり直しで、そのときビューポートに見えている記事を基準にアンカーを選び直して補正する（§5.11 手順 0・「形態の決め方」）</td>
+<td><code>build()</code> は「形態の決め方」2（据え置き中は直前の形態を保つ）により<strong>形態を変えずに</strong>描く（アンカー形なら <code>center</code> を <code>_anchorIndex.clamp(0, items.length - 1)</code> に置く。上限が <code>items.length</code> だと <code>center</code> が要素 0 個になり <code>goBallistic</code> で一覧の末尾へ飛ぶ）。<code>correctPixels</code> を伴わない形態変更（index 0 = 標準形への転落）を起こさない。次フレームのやり直しで、そのときビューポートに見えている記事を基準にアンカーを選び直して補正する（§5.11 手順 0・「形態の決め方」）</td>
+<td>core/ui</td>
+</tr>
+<tr>
+<td>据え置いたフレームで新 <code>items</code> が 0 件になった（未読フィルタ ON で最後の未読を開いて戻った・保存の全件解除が確定した回と同じフレーム）</td>
+<td>「形態の決め方」<strong>1</strong>（<code>items.isEmpty</code> を <code>_anchorId</code> より先に見る）で<strong>標準形 + <code>emptyView</code></strong> になる。据え置き中は <code>_anchorId</code> が非 null のまま残るため、1 を <code>_anchorId == null</code> で書くと <code>_anchorIndex.clamp(0, -1)</code> が <code>ArgumentError</code> を投げて <code>build()</code> ごと落ち、落ちなくても <code>emptyView</code> の置き場が無く空白画面になる。位置保持は次フレームのやり直しに任せる（§5.11「形態の決め方」）</td>
+<td>core/ui</td>
+</tr>
+<tr>
+<td>据え置いたフレームでアンカーが新 <code>items</code> の先頭になった（アンカーより上の記事がまとめて消えた）</td>
+<td>「形態の決め方」<strong>2</strong> で止まり、<strong>形態を変えずに</strong>描く（3 の標準形に落とさない）。据え置き中は <code>correctPixels</code> を行えないため、補正なしでアンカー形→標準形に切り替わると <code>pixels</code> の基準（負の <code>minScrollExtent</code>）が変わって位置が飛ぶ。次フレームのやり直しで補正つきに揃える（§5.11「形態の決め方」）</td>
+<td>core/ui</td>
+</tr>
+<tr>
+<td>据え置きが 2 フレーム続けて起きた（drift が <code>articles</code> / <code>read_states</code> / <code>saved_articles</code> の更新で短時間に再発火）</td>
+<td>2 回目以降は <strong><code>_pendingFrames</code> をリセットしない</strong>ので上限（2）が伸びず、諦めの処理が必ず走る。コールバックは <code>_frameCallbackScheduled</code> で同時に 1 本に保ち、冒頭で <code>_pendingItemsChanged</code> が false なら据え置きの段を飛ばす（§5.11 手順 0・「フレーム後の処理」）</td>
 <td>core/ui</td>
 </tr>
 <tr>
 <td>据え置きの再試行を 2 フレーム待っても <code>_laidOutPosition</code> が確定しなかった</td>
-<td>位置保持を放棄し、<strong>標準形（<code>_anchorId = items.first</code> か、空なら null・<code>_anchorIndex = 0</code>）に揃える</strong>（<code>correctPixels</code> は行えない）。据え置きのアンカーを残すと、以後 <code>items</code> が縮んだときに <code>center</code> が末尾付近になり、そのページへスワイプしたときに一覧の末尾が見える（§5.11 手順 0）</td>
+<td>位置保持を放棄して <strong><code>_resetAnchorToFirst()</code> で標準形に揃え</strong>（<code>correctPixels</code> は行えない）、続けて <strong><code>_pendingScrollToTop</code> を立てて次に確定したレイアウトで <code>jumpTo(0)</code></strong> する。据え置きのアンカーを残すと <code>items</code> が縮んだときに <code>center</code> が末尾付近になり、標準形へ揃えただけでも <code>pixels</code> がアンカー基準のまま残って <code>applyContentDimensions</code> が末尾に収めうるため、<strong>着地点を先頭に倒す</strong>（§5.11 手順 0）</td>
 <td>core/ui</td>
 </tr>
 <tr>
@@ -2393,7 +2531,22 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td>レイアウトが未確定のページが先頭スクロール要求を受けた（<code>requestAll()</code> と <code>ScrollController</code> の差し替えが同一フレーム。S-01/A-03）</td>
-<td>要求を捨てず、<code>addPostFrameCallback</code> で<strong>最大 2 フレーム</strong>やり直す（<code>_scrollingToTop</code> は立てたまま）。<code>applyContentDimensions</code> は <code>pixels</code> が範囲内なら動かさないため、「次のレイアウトで先頭に着く」とは考えない。2 フレームで確定しなければ諦め、そのページは標準形のまま途中の位置が残る（§5.11「先頭スクロール要求」手順 3）</td>
+<td>要求を捨てず <strong><code>_pendingScrollToTop</code> に保持し、確定した最初のフレームで <code>_resetAnchorToFirst()</code> → <code>jumpTo(0)</code></strong>（<code>animated</code> は無視）。<code>applyContentDimensions</code> は <code>pixels</code> が範囲内なら動かさないため、「次のレイアウトで先頭に着く」とは考えない。<strong>回数の上限は設けない</strong>（<code>jumpTo(0)</code> は旧レイアウトの実測を要さない。諦めると S-01/A-03・§8 #5 の「先頭に戻す」と §8 #25 が排除した見え方に反する）。State の <code>dispose</code> で保持は完了させ、<code>Controller</code> は <code>detach()</code> で <code>_inFlight</code> を中断する（§5.11「先頭スクロール要求」手順 3・「進行中の表し方」）</td>
+<td>core/ui</td>
+</tr>
+<tr>
+<td><code>animated: false</code> の先頭スクロール（A-03 の <code>requestAll()</code>）の直後に <code>animated: true</code> の要求が来た（下部タブ再タップ）</td>
+<td><strong>新しい要求として手順 1 から走る。</strong> <code>_inFlight</code> は <code>Completer</code> で表し <code>_run()</code> を呼ぶ前に代入して出口で「null に戻してから <code>complete()</code>」するため、<code>await</code> が 1 つも無い同期完了の経路でも残留しない（<code>async</code> メソッドの戻り値を後から代入する形にすると <code>finally</code> が代入より先に走って残留し、以後そのページが二度と先頭に戻らない。§5.11「先頭スクロール要求」）</td>
+<td>core/ui</td>
+</tr>
+<tr>
+<td>先頭スクロールの進行中（<code>animateTo</code> の 300ms）に <code>PageView</code> のページが作り直された（State の再生成）</td>
+<td><code>attach(newState)</code> が <code>_inFlight != null</code> を見て新しい State の <code>_scrollingToTop</code> を <strong>true に張り直し</strong>、<code>_run</code> のループが<strong>新しい State で手順 1 からやり直す</strong>。旧 State の待ちは旧 State の <code>dispose</code> が完了させる。張り直さないと、進行中なのに新 State の <code>didUpdateWidget</code> がアンカー形に入り <code>correctPixels(H - anchorDy)</code> が <code>animateTo</code> と <code>position</code> を奪い合う（§5.11「進行中の表し方」・§8 #27）</td>
+<td>core/ui</td>
+</tr>
+<tr>
+<td>先頭スクロールの進行中に一覧が破棄された（<code>detach()</code> / <code>dispose()</code>。再アタッチなし）</td>
+<td><code>_target</code> を null にすると同時に <code>_inFlight</code> も null に戻して要求を中断する。以後の <code>scrollToTop()</code> は中断済みの <code>Future</code> に合流せず、新しい要求として手順 1 から走る（§5.11「進行中の表し方」）</td>
 <td>core/ui</td>
 </tr>
 <tr>
@@ -2464,7 +2617,7 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tbody></table>
 <h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
 <p>テストの単位は UseCase（CLAUDE.md）。D-04 §7 と同じく drift は <code>NativeDatabase.memory()</code> の実物を使い（本書の SQL、特に <code>markAsRead</code> の存在確認・<code>clearAll</code> のトランザクション・<code>deleteUnsavedOutOfFeed</code> の述語・<code>watchInFeed</code> / <code>watchAll</code> の結合を UseCase 経由で検証する）、外部境界（<code>url_launcher</code>・<code>package_info_plus</code>・FCM）はフェイクに差し替える。記事の投入は <code>test/helpers/seed_articles.dart</code>（実物の <code>DriftArticleRepository.applyFeed</code> 経由。API と契約は下記）。投入後に記事を足す・差分を当てるケース（<code>group(&#39;再発火&#39;)</code> 等）は <code>applyFeed</code> を直接呼ぶ（<code>seedArticles</code> は 1 テスト 1 回）。Widget・Notifier（<code>HomeTabController</code>・<code>SavedListController</code>・<code>SettingsScreen</code> の状態）・<code>AnchoredListView</code>・Provider の配線はテストしない。ネットワークへは一切アクセスしない。</p>
-<p><strong><code>AnchoredListView</code> の代わりの担保</strong>（§5.11・§10 T-H3・T-M）：<code>AnchoredListView</code>（Widget）自体は自動テストを持たない方針を維持する。<strong>アンカーの付け替え規則だけは純粋関数 <code>resolveAnchorId</code> に切り出して直接テストする</strong>（下記「純粋関数の直接テスト」。§8 #33）。残るレイアウト補正（<code>H</code> の優先順・<code>_ExtentCompensatingSliver</code>・2 形態の切替）は、<strong>依存している Flutter SDK 内部の前提と、それを確認した Flutter のバージョンを <code>core/ui/list/anchored_list_view.dart</code> 冒頭の library doc に列挙して残す</strong>ことで担保する（Flutter を上げたときの再確認の手掛かりがこれしか無いため。挙動の確認は T-M の目視項目）。初版（Flutter 3.47.4 stable で実機確認）の列挙は次の 7 項目：</p>
+<p><strong><code>AnchoredListView</code> の代わりの担保</strong>（§5.11・§10 T-H3・T-M）：<code>AnchoredListView</code>（Widget）自体は自動テストを持たない方針を維持する。<strong>アンカーの付け替え規則だけは純粋関数 <code>resolveAnchorId</code> に切り出して直接テストする</strong>（下記「純粋関数の直接テスト」。§8 #33）。残るレイアウト補正（<code>H</code> の優先順・<code>_ExtentCompensatingSliver</code>・2 形態の切替）は、<strong>依存している Flutter SDK 内部の前提と、それを確認した Flutter のバージョンを <code>core/ui/list/anchored_list_view.dart</code> 冒頭の library doc に列挙して残す</strong>ことで担保する（Flutter を上げたときの再確認の手掛かりがこれしか無いため。挙動の確認は T-M の目視項目）。初版（Flutter 3.47.4 stable で実機確認）の列挙は次の 8 項目：</p>
 <ul>
 <li><code>RenderViewport</code> は <code>center</code> の有無で逆成長側の有無が決まる</li>
 <li><code>SliverGeometry.scrollOffsetCorrection</code> は通知なしに <code>pixels</code> をずらせる</li>
@@ -2473,6 +2626,7 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <li><code>CupertinoSliverRefreshControl</code> は <code>GrowthDirection.forward</code> しか許さない（<code>RenderSliver.performLayout</code> の assert）</li>
 <li><code>Scrollable._shouldUpdatePosition</code> は <code>ScrollController</code> 同士の差し替えでは false を返し、<code>ScrollPosition</code> を再利用する</li>
 <li><code>SliverGeometry.scrollOffsetCorrection</code> を返すと <code>RenderViewport</code> は <code>offset.correctBy</code> の後に<strong>同一フレームで再レイアウト</strong>し、補正を繰り返すと <code>_maxLayoutCycles</code>（10）で <code>FlutterError</code> になる（補正を返す直前に保持している extent を更新する理由。§5.11）</li>
+<li><code>SchedulerBinding.addPostFrameCallback</code> は<strong>自分ではフレームを要求しない</strong>（次に作られるフレームの後に 1 度だけ走る）。レイアウトの確定を待つ再試行（据え置きの再試行・保持した先頭スクロール）を毎フレーム張り直しても、描画が空回りしない（§5.11「フレーム後の処理」）</li>
 </ul>
 <p><code>test/helpers/</code>（D-04 §7 に追加）：</p>
 <table>
@@ -2985,7 +3139,7 @@ Future&lt;void&gt; seedArticles(
 </tr>
 <tr>
 <td>S-03（次回 reopen 時）</td>
-<td>通知設定・ブラウザ設定を読み出せないとき（<code>settings</code> の破損で <code>watchNotificationSettings()</code> / <code>watchBrowserChoice()</code> が <code>AsyncError</code>）の表示が §5 に無い。本書は<strong>既定値（全団体 ON・<code>inApp</code>）で描き、画面には出さず <code>logger.w</code> だけを残す</strong>（S-03/ST-01「即座に表示」を優先。§5.9・§6）。実際の設定値と食い違う画面が出るため、ST-01 に但し書きを入れるか別の状態を足すかを判断する。S-03 が定めるまで本書側は変えない</td>
+<td>通知設定・ブラウザ設定を読み出せないとき（<code>settings</code> の破損で <code>watchNotificationSettings()</code> / <code>watchBrowserChoice()</code> が <code>AsyncError</code>）の表示が §5 に無い。本書は<strong>既定値（全団体 ON・<code>inApp</code>）で描き、画面には出さず <code>logger.w</code> だけを残す</strong>（S-03/ST-01「即座に表示」を優先。§5.9・§6）。実際の設定値と食い違う画面が出るうえ、<strong>この間は A-01（通知トグル）・A-03（ブラウザ選択）の操作結果が画面に出ない</strong>（書き込み自体は成功しうるが、表示は <code>AsyncError</code> の間ずっと既定値のままなので、A-01 の「タップした瞬間に切り替わる」・A-03 の「チェックマークが移る」という期待結果を満たさない）。ST-01 に但し書きを入れるか別の状態を足すかを判断する。S-03 が定めるまで本書側は変えない</td>
 <td>§5.9 / §6</td>
 </tr>
 <tr>
@@ -3073,7 +3227,7 @@ Future&lt;void&gt; seedArticles(
 <td><code>articles/presentation/home_screen.dart</code>・<code>saved/presentation/saved_screen.dart</code>・<code>settings/presentation/settings_screen.dart</code>（ナビゲーションバーだけのスタブ）、<code>lib/app/minute_clock.dart</code>、<code>core/ui/list/anchored_list_view.dart</code>（<code>AnchoredListView</code> + <code>AnchoredListController</code> + <code>_ExtentCompensatingSliver</code>。§5.11）、<code>core/ui/list/anchor_resolution.dart</code>（<code>resolveAnchorId</code>。§8 #33）、<code>test/core/ui/list/anchor_resolution_test.dart</code>。改修：<code>lib/app/root_tabs.dart</code>（3 画面を載せる）。新規 7 + 改修 1</td>
 <td><code>lib/app/</code>、<code>lib/core/ui/list/</code>、<code>lib/features/*/presentation/</code>（各 1 ファイル）、<code>test/core/ui/list/</code></td>
 <td>T-F1、T-F2a、T-F2b</td>
-<td><code>flutter analyze &amp;&amp; flutter test</code>。シミュレータで 3 タブに各画面のタイトルが出る。<code>core/ui/list</code> が Flutter SDK 以外を import しない。<strong><code>anchored_list_view.dart</code> 冒頭の library doc に、依存する Flutter SDK 内部の前提（§7 の 7 項目）と確認した Flutter のバージョンが列挙されていること</strong>（自動テストを持たないため。§5.11・§7）。<code>resolveAnchorId</code> の直接テスト（§7 の 7 ケース）が通り、<strong>走査規則が <code>_AnchoredListViewState</code> 側に重複して書かれていないこと</strong>。T-H1・T-H2 と並行可</td>
+<td><code>flutter analyze &amp;&amp; flutter test</code>。シミュレータで 3 タブに各画面のタイトルが出る。<code>core/ui/list</code> が Flutter SDK と <code>dart:async</code> 以外を import しない（§3.1）。<strong><code>anchored_list_view.dart</code> 冒頭の library doc に、依存する Flutter SDK 内部の前提（§7 の 8 項目）と確認した Flutter のバージョンが列挙されていること</strong>（自動テストを持たないため。§5.11・§7）。<code>resolveAnchorId</code> の直接テスト（§7 の 7 ケース）が通り、<strong>走査規則が <code>_AnchoredListViewState</code> 側に重複して書かれていないこと</strong>。T-H1・T-H2 と並行可</td>
 </tr>
 <tr>
 <td>T-I</td>
@@ -3113,7 +3267,7 @@ Future&lt;void&gt; seedArticles(
 <td><code>articles/presentation/home_tab_bar.dart</code>・<code>home_page.dart</code>・<code>home_providers.dart</code>、<code>lib/app/notification_tap_handler.dart</code>、<code>core/ui/article/article_cell_model_builder.dart</code>、<code>test/core/ui/article/article_cell_model_builder_test.dart</code>。改修：<code>home_screen.dart</code>、<code>lib/app/app_lifecycle_sync.dart</code>（<code>NotificationTapHandler</code> を子に挟む）。<strong><code>core/ui/status/transient_notice.dart</code> は触らない</strong>（<code>static void show(BuildContext context, {required String message})</code> は D-04 §5.9 が持ち T-F2a が実装済み。§5.6）。新規 6 + 改修 2</td>
 <td><code>lib/features/articles/presentation/</code>、<code>lib/app/</code>、<code>lib/core/ui/article/</code>、<code>test/core/ui/article/</code></td>
 <td>T-H3、T-I、T-J、T-K、T-L</td>
-<td>品質ゲート通過。シミュレータで目視：タブのタップ・スワイプ・非隣接タップ／先頭で Pull to Refresh／<strong>先頭以外を表示中（アンカー形）のまま引っ張っても更新が始まらず、debug ビルドが落ちないこと</strong>（§5.11「構成（2 形態）」。アンカー形では <code>leadingSlivers</code> を出さない）／<strong>先頭以外を表示中の状態から上端まで戻して Pull to Refresh が発火すること</strong>（§5.11。成立しなければ §8 #21 の縮退）／未読フィルタ切替で全面ローディングが出ず全ページが先頭に戻ること／<strong>先頭以外を表示中に団体タブ再タップ・下部タブ再タップで先頭（最新の記事）まで戻ること</strong>（§5.11 <code>scrollToTop</code>。§8 #27）／<strong>先頭以外を表示中に取得中の帯（E-21）が出た・消えたとき、表示中の記事の画面上の位置が動かないこと。先頭を表示中なら帯が一覧の先頭に現れ、一覧と一緒にスクロールすること</strong>（§5.11 <code>headerSliver</code>。§8 #28）／<strong>帯の出現・消失を繰り返しても補正が二重にかからず、debug ビルドで <code>RenderViewport exceeded its maximum number of layout cycles</code> が出ないこと</strong>（<code>_ExtentCompensatingSliver</code> の <code>GlobalKey</code> と保持 extent の更新時点。§5.11・§8 #28）／記事タップでアプリ内ブラウザ／星の切替／先頭以外を表示中の差し込みで位置が保たれること／**先頭以外を表示中のまま団体タブを切り替えて戻し（ページの再構築で <code>ScrollController</code> が差し替わる）、その直後に差し込みが起きても表示中の記事の位置が飛ばないこと。<strong>さらにそのまま操作せず放置しても位置が飛んだままにならないこと</strong>（§5.11 のガード 0 と据え置きの再試行・<code>ScrollController</code> の差し替え）／<strong>先頭以外を表示中にアンカーの記事が消えて一覧が 1 件だけ・0 件になっても位置が飛ばず落ちないこと</strong>（§5.11 手順 2 の <code>resolveAnchorId</code> が null を返す経路と <code>_resetAnchorToFirst()</code> の空 <code>items</code> の扱い）／<strong>未読フィルタ ON で先頭以外を表示中に連続する 2 件以上を開いて戻っても、先頭へジャンプせず直後の記事が同じ位置に来ること</strong>（§5.11 手順 2 の後方走査）／通知タップ相当（<code>notificationTapStreamProvider</code> を手動で流す）で団体タブに切り替わること／<strong>アプリを終了した状態から通知タップ相当で起動して（<code>takeInitialTap</code> をスタブで返す）、最初のフレームから団体タブが選ばれ先頭が表示されていること</strong></td>
+<td>品質ゲート通過。シミュレータで目視：タブのタップ・スワイプ・非隣接タップ／先頭で Pull to Refresh／<strong>先頭以外を表示中（アンカー形）のまま引っ張っても更新が始まらず、debug ビルドが落ちないこと</strong>（§5.11「構成（2 形態）」。アンカー形では <code>leadingSlivers</code> を出さない）／<strong>先頭以外を表示中の状態から上端まで戻して Pull to Refresh が発火すること</strong>（§5.11。成立しなければ §8 #21 の縮退）／未読フィルタ切替で全面ローディングが出ず全ページが先頭に戻ること（<strong>切替の直後にまだ開いていない団体タブへスワイプしても先頭が出ていること</strong>。レイアウト未確定のページの保持した先頭スクロール。§5.11 手順 3）／<strong>未読フィルタを切り替えた後（<code>animated: false</code> の先頭スクロールを受けた後）に、そのページで下部タブ再タップ・団体タブ再タップが効いて先頭へ戻ること</strong>（<code>_inFlight</code> の残留が無いこと。§5.11「先頭スクロール要求」）／<strong>先頭以外を表示中に団体タブ再タップ・下部タブ再タップで先頭（最新の記事）まで戻ること</strong>（§5.11 <code>scrollToTop</code>。§8 #27）／<strong>先頭以外を表示中に取得中の帯（E-21）が出た・消えたとき、表示中の記事の画面上の位置が動かないこと。先頭を表示中なら帯が一覧の先頭に現れ、一覧と一緒にスクロールすること</strong>（§5.11 <code>headerSliver</code>。§8 #28）／<strong>帯の出現・消失を繰り返しても補正が二重にかからず、debug ビルドで <code>RenderViewport exceeded its maximum number of layout cycles</code> が出ないこと</strong>（<code>_ExtentCompensatingSliver</code> の <code>GlobalKey</code> と保持 extent の更新時点。§5.11・§8 #28）／記事タップでアプリ内ブラウザ／星の切替／先頭以外を表示中の差し込みで位置が保たれること／**先頭以外を表示中のまま団体タブを切り替えて戻し（ページの再構築で <code>ScrollController</code> が差し替わる）、その直後に差し込みが起きても表示中の記事の位置が飛ばないこと。<strong>さらにそのまま操作せず放置しても位置が飛んだままにならないこと</strong>（§5.11 のガード 0 と据え置きの再試行・<code>ScrollController</code> の差し替え）／<strong>先頭以外を表示中にアンカーの記事が消えて一覧が 1 件だけ・0 件になっても位置が飛ばず落ちないこと</strong>（§5.11 手順 2 の <code>resolveAnchorId</code> が null を返す経路と <code>_resetAnchorToFirst()</code> の空 <code>items</code> の扱い）／<strong>未読フィルタ ON で先頭以外を表示中に連続する 2 件以上を開いて戻っても、先頭へジャンプせず直後の記事が同じ位置に来ること</strong>（§5.11 手順 2 の後方走査）／通知タップ相当（<code>notificationTapStreamProvider</code> を手動で流す）で団体タブに切り替わること／<strong>アプリを終了した状態から通知タップ相当で起動して（<code>takeInitialTap</code> をスタブで返す）、最初のフレームから団体タブが選ばれ先頭が表示されていること</strong></td>
 </tr>
 <tr>
 <td>T-N</td>
@@ -3205,6 +3359,10 @@ Future&lt;void&gt; seedArticles(
 <tr>
 <td>2026-09-24</td>
 <td>design-review 第 1 段階・第 2 周の指摘 16 件（M-1〜M-16。高 1・中 10・低 5）を修正。<strong>S-00/E-25 の判定を <code>resolveListStatus(...).errorNotice</code> に</strong>（取得済みの記事が 0 件のときは出さない。S-00/ST-14 と ST-15 の排他。§2.1・§2.2 #2・§5.6・§6）。<strong>§5.11 の前周の改訂が残した穴を塞いだ</strong>：<code>_anchorId</code> の <code>initState</code> 初期値／据え置き再試行にも <code>_scrollingToTop</code> の不変条件を掛ける／再試行では <code>resolveAnchorId</code> を呼ばず実測した <code>visibleId</code> を直接アンカーにする／諦め時に標準形へ揃える／「形態の決め方」4 の <code>clamp</code> 上限を <code>items.length - 1</code> に／レイアウト未確定時の <code>scrollToTop()</code> を最大 2 フレームのやり直しに（<code>applyContentDimensions</code> は範囲内の <code>pixels</code> を動かさないため）／<code>AnchoredListController._inFlight</code> と <code>_isAtTop()</code> の未確定時の戻り値／<code>resolveAnchorId</code> の宣言を手順 2 に明記。ほかに <code>_pulling</code> を <code>setState</code> で書く（§5.6）、値を流さない Stream を Provider 本体で生成する（§4.6）、設定画面の <code>AsyncError</code> を既定値 + <code>logger.w</code> に（§5.9・§6）、S-02/A-04 の配線を §5.5 に、§3.1 依存表に <code>saved/infrastructure</code> の行、§3.2 の <code>app_database.dart</code> を「改修しない」に、§7 に cascade 削除の再発火ケース。§8.1 に D-04・S-01・S-03 宛を追加し CLAUDE.md 宛を 3 件に（<code>test/core/ui/list/</code>）。§6 に 6 行追加</td>
+</tr>
+<tr>
+<td>2026-09-24</td>
+<td>design-review 第 1 段階・第 3 周の指摘 16 件（N-1〜N-16。高 2・中 2・低 12）を修正。<strong>前周の改訂が実装可能性を欠いていた 2 件を実装の形（コード片）まで書き切った</strong>：<code>AnchoredListController._inFlight</code> を <code>Completer</code> にして <code>_run()</code> の呼び出し前に代入・出口で「null に戻してから <code>complete()</code>」（<code>async</code> の本体は最初の <code>await</code> まで同期実行されるため、<code>animated: false</code> の経路で <code>finally</code> が代入より先に走って残留していた。§5.11・§6）、「形態の決め方」1 を <code>items.isEmpty</code> に直して据え置き中の <code>clamp(0, -1)</code>（<code>ArgumentError</code>）と <code>emptyView</code> の消失を塞いだ（§5.11・§6）。あわせて §5.11 を一貫させた：<strong>据え置き中は <code>_lastFormWasAnchored</code> の形態を保つ</strong>を最優先の規則にし（形態の決め方を 5 行に。手順 3 の旧レイアウト判定もこのフィールドへ）、<code>_pendingScrollToTop</code>（回数上限なしで保持し確定したフレームで <code>jumpTo(0)</code>）に「レイアウト未確定の先頭スクロール」と「据え置きを諦めたページの着地」を集約、<code>addPostFrameCallback</code> を <code>_scheduleFrameCallback()</code> / <code>_onPostFrame()</code> の 1 本に統合して <code>_maxPendingFrames</code>（2）を 1 箇所に、据え置きの再入で <code>_pendingFrames</code> をリセットしない、<code>_resetAnchorToFirst()</code> が据え置きも解除、<code>attach</code> / <code>detach</code> / <code>_run</code> で <code>_inFlight</code> と <code>_scrollingToTop</code> の同期を明記。§3.1 の前文に <code>lib/app</code> の Provider の import を明記、§4.6 の <code>_never</code> の残存コメントと <code>.future</code> を読まない前提、§2.1 S-03/ST-01 の <code>AsyncError</code>、§5.1 に <code>HomePage</code> の <code>_listController</code> の生成・破棄、§8.1 の S-03 宛に A-01・A-03 の操作結果が出ない点。§6 に 6 行追加・4 行改訂、§7 の library doc に 1 項目追加（<code>addPostFrameCallback</code> はフレームを要求しない）、§10 T-M に目視 2 項目</td>
 </tr>
 </tbody></table>
 

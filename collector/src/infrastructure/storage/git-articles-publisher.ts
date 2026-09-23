@@ -1,5 +1,5 @@
 // 参照する § は特記なき限り docs/design/D-02.md（§5.3 手順 3）
-import { execFile as execFileCallback, type ExecFileException } from "node:child_process";
+import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 import {
   PublishFailedError,
@@ -18,20 +18,37 @@ const GIT_AUTHOR_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
 /** execFile に渡すタイムアウト（ミリ秒）。D-02 追随: §5.3 に無い。push のハング対策 */
 const GIT_TIMEOUT_MS = 60_000;
 
+/** git diff --quiet が「差分あり」で返す終了コード */
+const GIT_DIFF_EXIT_CODE_CHANGED = 1;
+
+/** execFile の reject 値から取り出した code / signal。型定義に無い null は含まない */
+interface GitExitInfo {
+  readonly code: string | number | undefined;
+  readonly signal: string | undefined;
+}
+
 /**
- * promisify(execFile) が非 0 終了で reject する値は Node の型定義上 `ExecFileException`
- * （`node:child_process` が公開する。code・stderr を持つ）。`instanceof Error` に加えて
- * `code`・`signal` の型を `in` + `typeof` で絞り込み、構造的に矛盾する値（同名プロパティを持つ
- * 無関係のエラー）を誤って `ExecFileException` と判定しないようにする。
+ * promisify(execFile) が非 0 終了で reject する値（Node の型定義上は `ExecFileException`。
+ * code・stderr を持つ）から code / signal を取り出す。
+ * `code`・`signal` の型を `in` + `typeof` で確認し、それぞれ独立に正規化する。一方が想定外の型
+ * （同名プロパティを持つ無関係のエラーなど）でも、もう一方が有効な値なら活かす。
+ *
+ * 型定義（`ExecFileException.code?: string | number`・`signal?: NodeJS.Signals`）には無いが、
+ * Node は実行時、子プロセスがシグナルなしで終了したとき `signal` に `undefined` ではなく `null` を
+ * 入れる（`code` も同様に `null` になりうる）。ここで `null` を `undefined` に正規化し、
+ * 呼び出し側（GitCommandError）には `null` を一切見せない。
  */
-function isExecFileError(error: unknown): error is ExecFileException {
-  if (!(error instanceof Error)) return false;
-  const code = "code" in error ? error.code : undefined;
-  const signal = "signal" in error ? error.signal : undefined;
-  return (
-    (code === undefined || typeof code === "string" || typeof code === "number") &&
-    (signal === undefined || typeof signal === "string")
-  );
+function readExecFileExit(error: Error): GitExitInfo {
+  const rawCode = "code" in error ? error.code : undefined;
+  const rawSignal = "signal" in error ? error.signal : undefined;
+  const code = typeof rawCode === "string" || typeof rawCode === "number" ? rawCode : undefined;
+  const signal = typeof rawSignal === "string" ? rawSignal : undefined;
+  return { code, signal };
+}
+
+/** GitExitInfo の code / signal を診断ログ用の表示文字列にする（値が無ければ "undefined"） */
+function formatExitValue(value: string | number | undefined): string {
+  return value !== undefined ? String(value) : "undefined";
 }
 
 /**
@@ -43,14 +60,13 @@ function isExecFileError(error: unknown): error is ExecFileException {
 class GitCommandError extends Error {
   override readonly name = "GitCommandError";
   readonly code: string | number | undefined;
-  readonly signal: NodeJS.Signals | undefined;
+  readonly signal: string | undefined;
 
   constructor(source: Error) {
-    const code = isExecFileError(source) ? (source.code ?? undefined) : undefined;
-    const signal = isExecFileError(source) ? (source.signal ?? undefined) : undefined;
+    const { code, signal } = readExecFileExit(source);
     const suffix =
       code !== undefined || signal !== undefined
-        ? ` (code=${code !== undefined ? String(code) : "undefined"}, signal=${signal ?? "undefined"})`
+        ? ` (code=${formatExitValue(code)}, signal=${formatExitValue(signal)})`
         : "";
     super(`${sanitizeGitOutput(source.message)}${suffix}`);
     this.code = code;
@@ -61,8 +77,7 @@ class GitCommandError extends Error {
 /**
  * ArticlesPublisher の git 実装（§5.3 手順 3）。data/articles.json の add / commit / push を
  * `execFile("git", args, { cwd: repoRoot })` で行う（シェルを介さず、引数は固定文字列と note のみ。
- * コミットメッセージに外部入力を含めない）。単体テストは対象外（D-02 §7 冒頭。git を実行するコードは
- * テストで呼ばない）。main.ts のみが具象として生成する。
+ * コミットメッセージに外部入力を含めない）。main.ts のみが具象として生成する。
  */
 export class GitArticlesPublisher implements ArticlesPublisher {
   constructor(
@@ -109,7 +124,8 @@ export class GitArticlesPublisher implements ArticlesPublisher {
       await this.git(["diff", "--cached", "--quiet", "--", ARTICLES_JSON_RELATIVE_PATH]);
       return false;
     } catch (error) {
-      if (error instanceof GitCommandError && error.code === 1) return true;
+      if (error instanceof GitCommandError && error.code === GIT_DIFF_EXIT_CODE_CHANGED)
+        return true;
       throw error;
     }
   }

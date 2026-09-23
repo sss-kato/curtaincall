@@ -3,7 +3,9 @@ library;
 
 import 'package:curtaincall/app/root_tab.dart';
 import 'package:curtaincall/app/tab_reselect.dart';
-import 'package:curtaincall/features/articles/presentation/list_status.dart';
+import 'package:curtaincall/features/articles/presentation/home_screen.dart';
+import 'package:curtaincall/features/saved/presentation/saved_screen.dart';
+import 'package:curtaincall/features/settings/presentation/settings_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -45,10 +47,10 @@ Raw<CupertinoTabController> tabController(Ref ref) {
 /// S-00/A-01）。各タブの本体は `CupertinoTabView`（タブごとに Navigator
 /// を持ち、切り替えても状態・スクロール位置が保持される）。
 ///
-/// T-28 への申し送り：通知タップでホームへ切り替える
-/// `CupertinoTabController.index = 0`（S-01/ST-15）は**ビルドフェーズ外**
-/// から代入すること。ビルド中に代入すると `_onControllerChanged` の
-/// `setState` が「setState called during build」で落ちる。
+/// 通知タップでホームへ切り替える `CupertinoTabController.index = 0`
+/// （S-01/ST-15）は**ビルドフェーズ外**から代入すること。ビルド中に代入
+/// すると `_onControllerChanged` の `setState` が「setState called during
+/// build」で落ちる。
 class RootTabs extends ConsumerStatefulWidget {
   /// [RootTabs] を作る。
   const RootTabs({super.key});
@@ -123,61 +125,15 @@ class _RootTabsState extends ConsumerState<RootTabs> {
       ),
       tabBuilder: (context, index) => switch (RootTab.values[index]) {
         RootTab.home => CupertinoTabView(
-          builder: (context) => const _HomePlaceholder(),
+          builder: (context) => const HomeScreen(),
         ),
         RootTab.saved => CupertinoTabView(
-          builder: (context) => const _SavedPlaceholder(),
+          builder: (context) => const SavedScreen(),
         ),
         RootTab.settings => CupertinoTabView(
-          builder: (context) => const _SettingsPlaceholder(),
+          builder: (context) => const SettingsScreen(),
         ),
       },
     );
   }
-}
-
-// 以下は D-05（T-28 以降）が本物の画面に置き換えるまでの骨格。
-// 「骨格のスタブ画面」の規定がこれ以上無いため、独自に最小の Widget で
-// 代替する（T-23 の依頼メモに従い、判断の根拠として報告に補足する）。
-
-// TODO(T-28): S-00 の E-20〜E-24（core/ui/status）に置き換え、
-// list_status.dart への import ごと削除する。
-/// ホームのスタブ：`SyncController` の `SyncStatus` を `resolveListStatus`
-/// に通した結果を最小の Widget で表示する（T-23 の依頼メモ）。
-class _HomePlaceholder extends ConsumerWidget {
-  const _HomePlaceholder();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final feed = ref.watch(feedStatusProvider(syncsOnLaunch: true));
-    final status = resolveListStatus(feed, hasVisible: true);
-    return CupertinoPageScaffold(
-      child: Center(
-        child: switch (status.full) {
-          FullView.loading => const CupertinoActivityIndicator(),
-          // T-28 までの確認用。FullView の名前をそのまま出す。
-          FullView.content ||
-          FullView.empty ||
-          FullView.error ||
-          FullView.offline => Text(status.full.name),
-        },
-      ),
-    );
-  }
-}
-
-class _SavedPlaceholder extends StatelessWidget {
-  const _SavedPlaceholder();
-
-  @override
-  Widget build(BuildContext context) =>
-      const CupertinoPageScaffold(child: Center(child: Text('保存')));
-}
-
-class _SettingsPlaceholder extends StatelessWidget {
-  const _SettingsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) =>
-      const CupertinoPageScaffold(child: Center(child: Text('設定')));
 }

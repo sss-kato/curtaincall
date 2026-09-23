@@ -10,6 +10,9 @@ environment:
 dependencies:
   # PushSubscriptionSyncResult の == / hashCode（リストの値比較）に使う。
   collection: ^1.19.0
+  # CupertinoIcons のフォント本体。クラスは Flutter SDK にあるため
+  # analyze は通るが、このパッケージが無いとアイコンが欠損グリフで描画される。
+  cupertino_icons: ^1.0.8
   drift: ^2.20.0
   drift_flutter: ^0.2.0
   flutter:

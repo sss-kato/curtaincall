@@ -32,3 +32,6 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# Xcode がローカルに作る SPM の状態。CocoaPods 統合のため使っていない。
+**/xcshareddata/swiftpm/

@@ -45,7 +45,7 @@ a{color:var(--accent)}
 <a class="home" href="index.html">CurtainCall 設計書</a>
 <a href="index.html">目次</a><a href="D-01.html">D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</a><a href="D-02.html">D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</a><a href="D-03.html">D-03 Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応）</a><a href="D-04.html" style="color:var(--accent)">D-04 app 基盤設計（feature 構成・drift スキーマ・Riverpod / DI・HTTP・FCM 購読・100 件保持・通知許可）</a><a href="D-05.html">D-05 app 機能設計（UseCase 一覧・画面遷移・S-00〜S-03 の対応表・既読 / 保存 / フィルタ / ブラウザ選択）</a>
 <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
-<a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 層と依存の方向</a><a class="d3" href="#sec-3-2">3.2 ファイル配置</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Article と ArticlesFile（<code>features/articles/domain/</code>）</a><a class="d3" href="#sec-4-2">4.2 drift スキーマ（<code>lib/core/database/</code>）</a><a class="d3" href="#sec-4-3">4.3 配信の取得（<code>features/articles/domain/articles_feed.dart</code>・<code>core/network/</code>）</a><a class="d3" href="#sec-4-4">4.4 Repository インターフェースと UseCase の入出力型</a><a class="d3" href="#sec-4-5">4.5 Company（<code>features/companies/</code>）</a><a class="d3" href="#sec-4-6">4.6 PushGateway と NotificationTap（<code>features/notifications/domain/</code>）</a><a class="d3" href="#sec-4-7">4.7 Riverpod / DI（<code>lib/core/di/</code>）</a><a class="d3" href="#sec-4-8">4.8 プロジェクト設定と CI</a><a class="d3" href="#sec-4-9">4.9 ログ</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 起動（<code>bootstrap</code> → <code>runApp</code>）</a><a class="d3" href="#sec-5-2">5.2 SyncArticlesUseCase（配信の取得と端末 DB への反映）</a><a class="d3" href="#sec-5-3">5.3 取得の契機：<code>SyncCoordinator</code>（application）・<code>SyncController</code>（presentation）・<code>AppLifecycleSync</code>（app）</a><a class="d3" href="#sec-5-4">5.4 共通状態表示の判定（<code>features/articles/presentation/list_status.dart</code>）</a><a class="d3" href="#sec-5-5">5.5 記事セルの既読・更新バッジの判定（<code>features/articles/domain/read_display_state.dart</code>）</a><a class="d3" href="#sec-5-6">5.6 SyncPushSubscriptionsUseCase（購読の同期）</a><a class="d3" href="#sec-5-7">5.7 RequestNotificationPermissionUseCase と通知タップの受け取り</a><a class="d3" href="#sec-5-8">5.8 下部タブバー（<code>lib/app/root_tabs.dart</code>）</a><a class="d3" href="#sec-5-9">5.9 共通 Widget と外観</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
+<a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 層と依存の方向</a><a class="d3" href="#sec-3-2">3.2 ファイル配置</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Article と ArticlesFile（<code>features/articles/domain/</code>）</a><a class="d3" href="#sec-4-2">4.2 drift スキーマ（<code>lib/core/database/</code>）</a><a class="d3" href="#sec-4-3">4.3 配信の取得（<code>features/articles/domain/articles_feed.dart</code>・<code>core/network/</code>）</a><a class="d3" href="#sec-4-4">4.4 Repository インターフェースと UseCase の入出力型</a><a class="d3" href="#sec-4-5">4.5 Company（<code>features/companies/</code>）</a><a class="d3" href="#sec-4-6">4.6 PushGateway と NotificationTap（<code>features/notifications/domain/</code>）</a><a class="d3" href="#sec-4-7">4.7 Riverpod / DI（<code>lib/core/di/</code>）</a><a class="d3" href="#sec-4-8">4.8 プロジェクト設定と CI</a><a class="d3" href="#sec-4-9">4.9 ログ</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 起動（<code>bootstrap</code> → <code>runApp</code>）</a><a class="d3" href="#sec-5-2">5.2 SyncArticlesUseCase（配信の取得と端末 DB への反映）</a><a class="d3" href="#sec-5-3">5.3 取得の契機：<code>SyncCoordinator</code>（application）・<code>SyncController</code>（presentation）・<code>AppLifecycleSync</code>（app）</a><a class="d3" href="#sec-5-4">5.4 共通状態表示の判定（<code>features/articles/presentation/list_status.dart</code>）</a><a class="d3" href="#sec-5-5">5.5 記事セルの既読・更新バッジの判定（<code>features/articles/domain/read_display_state.dart</code>）</a><a class="d3" href="#sec-5-6">5.6 SyncPushSubscriptionsUseCase（購読の同期）</a><a class="d3" href="#sec-5-7">5.7 RequestNotificationPermissionUseCase と通知タップの受け取り</a><a class="d3" href="#sec-5-8">5.8 下部タブバー（<code>lib/app/root_tabs.dart</code>・<code>tab_controller.dart</code>・<code>tab_reselect.dart</code>・<code>root_tab.dart</code>）</a><a class="d3" href="#sec-5-9">5.9 共通 Widget と外観</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
 </nav>
 <main>
 <header><h1>D-04 app 基盤設計（feature 構成・drift スキーマ・Riverpod / DI・HTTP・FCM 購読・100 件保持・通知許可）</h1><div class="meta"><b>status</b><span><span class="badge draft">draft</span></span><b>scope</b><span>app</span><b>features</b><span>F-02, F-05, F-06, F-07, F-08, F-09, F-10, F-11</span><b>risks</b><span>R-6</span><b>depends_on</b><span>D-01</span><b>screens</b><span>S-00, S-01, S-02, S-03</span><b>review_rounds</b><span>8</span></div></header>
@@ -261,8 +261,8 @@ a{color:var(--accent)}
 <tr>
 <td>S-00/A-12</td>
 <td>操作</td>
-<td><code>FullErrorView.onRetry</code> コールバック → D-05 が <code>SyncController.sync(SyncTrigger.retry)</code> を呼ぶ</td>
-<td>§5.3 / §5.9</td>
+<td><code>FullErrorView.onRetry</code> コールバック → D-05 が <code>ref.invalidate(articleCountProvider)</code>（記事件数 Stream の再購読。ST-14 から抜ける唯一の経路。§5.4）を行ってから <code>SyncController.sync(SyncTrigger.retry)</code> を呼ぶ</td>
+<td>§5.3 / §5.4 / §5.9</td>
 </tr>
 <tr>
 <td>S-00/ST-01</td>
@@ -423,6 +423,11 @@ a{color:var(--accent)}
 <td>§4.2</td>
 </tr>
 <tr>
+<td>S-02/A-02・ST-04（保存解除の保留と確定時点）</td>
+<td><code>SavedArticleRepository.save</code> / <code>remove</code> と <code>articles</code> の削除規則。確定契機（下部タブが保存から離れた時点）と、保存画面を表示したまま終了した場合の扱いは §4.2</td>
+<td>§4.2 / §8.1</td>
+</tr>
+<tr>
 <td>S-03/A-01・ST-02（通知トグル。既定 ON。S-03 §8 #11）</td>
 <td><code>SettingsRepository.setNotificationEnabled</code>・<code>PushSubscriptionCoordinator.run()</code>（<code>SyncPushSubscriptionsUseCase</code> を直列化した入口。§8 #41）</td>
 <td>§4.4 / §5.6</td>
@@ -508,6 +513,8 @@ a{color:var(--accent)}
 <td>保存済み記事の保護は SQL の副問合せで行う（§5.2 手順 8）ため、<code>articles</code> は <code>saved/domain</code> を import しない</td>
 </tr>
 </tbody></table>
+<p><code>articles/infrastructure</code> が <code>settings</code> の <code>feed_*</code> キーのために <code>settings/domain</code> を import することはしない。同期状態のキーは <code>articles/domain/feed_state_keys.dart</code>（<code>FeedStateKeys</code>）に置き、<code>settings</code> テーブルへの読み書きは <code>AppDatabase</code>（<code>core/database</code>）の共通アクセサ経由で行う（§4.2・§4.4。§8 #47）。</p>
+<p><strong>feature の presentation が参照してよい <code>lib/app/</code> の共有 Provider</strong>（<code>tabReselectProvider</code>・<code>tabControllerProvider</code>・D-05 の <code>minuteClockProvider</code>）は、<strong>feature の presentation を import しないファイル</strong>に置く（<code>tab_reselect.dart</code>・<code>tab_controller.dart</code>）。3 画面の presentation を import する Widget ファイル（<code>root_tabs.dart</code>）に Provider を置くと、それを読む feature の presentation が他 feature の presentation を推移的に取り込み、CLAUDE.md の禁止事項に反する（§5.8。§8 #46）。</p>
 <h3 id="sec-3-2">3.2 ファイル配置<a class="anchor" href="#sec-3-2">#</a></h3>
 <pre><code>app/
   pubspec.yaml                  §4.8。assets に assets/companies.json を登録（D-01 §8 #28）
@@ -520,10 +527,11 @@ a{color:var(--accent)}
     app/
       bootstrap.dart            core/di/bootstrap_overrides.dart の buildOverrides() を await して runApp（具象を import しない。§5.1）
       app.dart                  CupertinoApp（ST-30。§5.9）
-      root_tabs.dart            S-00/E-01〜E-04。A-01・A-02・ST-20。tabControllerProvider（CupertinoTabController を Raw&lt;T&gt; で公開。§5.8）
+      root_tabs.dart            S-00/E-01〜E-04。A-01・A-02・ST-20（Widget のみ。Provider を置かない。§5.8）
       root_tab.dart             RootTab（タブの列挙）・shouldNotifyReselect（再タップ判定の純粋関数）。**import ゼロ**（§5.8）
+      tab_controller.dart       tabControllerProvider（CupertinoTabController を Raw&lt;T&gt; で公開）。import は cupertino.dart と riverpod のみ（§5.8。§8 #46）
       tab_reselect.dart         tabReselectProvider（A-02 の通知）
-      app_lifecycle_sync.dart   起動時・フォアグラウンド復帰の取得、通知許可、購読同期の起動点（§5.3・§5.7）
+      app_lifecycle_sync.dart   起動時・フォアグラウンド復帰の取得、通知許可、購読同期の起動点、記事件数エラーの記録（§5.3・§5.4・§5.7）
       resume_sync_policy.dart   resolveResumeSync・ResumeSyncDecision（ライフサイクル遷移の純粋関数。§5.3）
     core/
       di/
@@ -558,7 +566,8 @@ a{color:var(--accent)}
         domain/
           article.dart              Article（§4.1）
           category.dart             Category enum と fromValue（未知 → other）
-          articles_file.dart        ArticlesFile（schemaVersion・generatedAt・articles）・定数・isImplausibleGeneratedAt（純粋関数。§4.1）
+          articles_file.dart        ArticlesFile（generatedAt・articles）・定数（articlesSchemaVersion・supportedArticlesSchemaVersions・maxArticlesPerCompany・feedGeneratedAtFutureTolerance）・isImplausibleGeneratedAt（純粋関数。§4.1）
+          feed_state_keys.dart      FeedStateKeys（feed_etag・feed_generated_at・feed_unsupported_schema。§4.4。§8 #47）
           article_order.dart        compareArticles（D-01 §4.5 の移植）
           article_sync_repository.dart   ArticleSyncRepository・FeedApplyPlan・FeedApplyResult（同期用。§4.4。§8 #42）
           article_query_repository.dart  ArticleQueryRepository（閲覧用 Stream。D-05 が watchInFeed 等を追加）
@@ -574,7 +583,7 @@ a{color:var(--accent)}
           drift_article_repository.dart ArticleSyncRepository と ArticleQueryRepository の両方を implements する 1 つの具象（applyFeed は 1 トランザクション）
         presentation/
           sync_controller.dart          SyncController（Notifier）・SyncStatus（§5.3）
-          list_status.dart              ListStatus・FullView・resolveListStatus（§5.4）
+          list_status.dart              ListStatus・FullView・FeedStatus・resolveListStatus・resolveHasArticles・shouldLogCountError、feedStatus / articleCount の 2 Provider（§5.4）
       companies/
         domain/
           company.dart              Company（§4.5）
@@ -635,8 +644,10 @@ a{color:var(--accent)}
 <h2 id="sec-4">4. データ<a class="anchor" href="#sec-4">#</a></h2>
 <h3 id="sec-4-1">4.1 Article と ArticlesFile（<code>features/articles/domain/</code>）<a class="anchor" href="#sec-4-1">#</a></h3>
 <p>D-01 §4.1 と同じ名前のフィールドを持つ。日時は <code>DateTime.parse</code> でオフセット付きとして解釈し（結果は <code>isUtc == true</code>）、表示時に <code>toLocal()</code> する（S-00 §7.3）。<code>category</code> は配信の文字列をそのまま保持し、表示時に <code>Category.fromValue</code> で 7 値に写す（未知の値は <code>other</code>。S-00 §7.2）。<code>id</code>・<code>contentHash</code>・<code>companyId</code> は不透明な文字列として扱い、再計算・検証しない（D-01 §3.1）。本文に相当するフィールドは持たない（要件 §7）。</p>
+<p><strong>domain の不変クラス（値オブジェクト）には <code>@immutable</code>（<code>package:meta</code>。§4.8）を付ける</strong>（§4.1・§4.3・§4.4・§4.5・§4.6・§4.7 で定義するもの。可変フィールドの混入を analyzer が検出する。<code>ignore_for_file</code> で lint を黙らせない。T-18 の追随事項）。<code>sealed</code> 階層は基底クラスに 1 つ付ければ派生にも効く。<code>core/ui/</code> 側の Widget・モデル（<code>ArticleCellModel</code> など）は <code>package:meta</code> ではなく <code>package:flutter/foundation.dart</code> の <code>@immutable</code> を使う（<code>core/ui/article</code> の import を <code>articles/domain</code> と Flutter SDK に限るため。§10 T-F2b）。</p>
 <pre><code class="language-dart">// lib/features/articles/domain/article.dart
 /// 記事（D-01 §4.1）。不変。== と hashCode は全フィールドで手書きする（freezed は使わない。§8 #24）
+@immutable
 final class Article {
   const Article({
     required this.id,
@@ -698,6 +709,7 @@ const Duration feedGeneratedAtFutureTolerance = Duration(hours: 24);
 bool isImplausibleGeneratedAt(DateTime generatedAt, DateTime now) =&gt;
     generatedAt.isAfter(now.toUtc().add(feedGeneratedAtFutureTolerance));
 
+@immutable
 final class ArticlesFile {
   const ArticlesFile({required this.generatedAt, required this.articles});
   final DateTime generatedAt;                 // UTC
@@ -718,6 +730,9 @@ int compareArticles(Article a, Article b) {
 <pre><code class="language-dart">// lib/core/database/tables.dart
 import 'package:drift/drift.dart';
 
+/// drift の既定の行クラス名は `Article` で、domain の `Article`（§4.1）と衝突するため
+/// `ArticleRow` に固定する（`SavedArticleRow` と同じ理由。`schemaVersion` は変わらない）
+@DataClassName('ArticleRow')
 class Articles extends Table {
   TextColumn get id =&gt; text().withLength(min: 16, max: 16)();          // D-01 §8 #25。主キー
   TextColumn get companyId =&gt; text()();
@@ -773,6 +788,8 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration =&gt; MigrationStrategy(
+        // インデックスは `onCreate` の `createIndex` で作る。次に schemaVersion を上げるときに
+        // テーブル定義側の `@TableIndex` へ移す（drift が onCreate と migration の双方を生成する。T-20 の追随事項）
         onCreate: (m) async {
           await m.createAll();
           await m.createIndex(Index('idx_articles_company', 'CREATE INDEX idx_articles_company ON articles (company_id)'));
@@ -789,13 +806,22 @@ class AppDatabase extends _$AppDatabase {
 
   // settings テーブルの共通アクセサ。articles/infrastructure（feed_etag 等）と
   // settings/infrastructure（notification.* ほか）が同じ 1 行 key-value の読み書きを持つため、
-  // SQL を AppDatabase に 1 つだけ置く（Repository ごとに書かない）
+  // SQL を AppDatabase に 1 つだけ置く（Repository ごとに書かない）。
+  // 置くのは「キーを引数に取る汎用のプリミティブ」だけで、キーごとの写像（notification.* の
+  // Map 化、BrowserChoice への変換）は各 Repository 実装に置く（下記「AppDatabase に置く SQL」）
   Future&lt;void&gt; upsertSetting(String key, String value);
   Future&lt;void&gt; deleteSetting(String key);
   Future&lt;String?&gt; readSetting(String key);          // 行が無ければ null
   /// `readSetting` の watch 版。**値が変わらない再発火も流れる**（下記「settings の監視」）ため、
   /// 重複を止めたい呼び出し側が `.distinct()` を付ける（このメソッドは抑止しない）
   Stream&lt;String?&gt; watchSetting(String key);
+
+  /// 配信から外れた未保存の記事を削除する（§5.2 手順 8-5）。
+  /// `DELETE FROM articles WHERE in_feed = 0 AND id NOT IN (SELECT article_id FROM saved_articles)`。
+  /// `customUpdate` の `updates` は `{articles, read_states}`（cascade で read_states も消えるため、
+  /// 両テーブルの select ストリームを無効化する必要がある。T-20 の追随事項）。戻り値は削除件数。
+  /// articles/infrastructure（`applyFeed`）と saved/infrastructure（保存解除の確定。D-05 §4.5）が共有する
+  Future&lt;int&gt; deleteUnsavedOutOfFeedRows();
 }</code></pre>
 <table>
 <thead>
@@ -810,7 +836,11 @@ class AppDatabase extends _$AppDatabase {
 </tr>
 <tr>
 <td><code>articles</code> の行の寿命</td>
-<td>配信に含まれる間は <code>in_feed = true</code>。配信から外れたら、保存済みなら <code>in_feed = false</code> で残し、未保存なら削除する（§5.2 手順 8）。保存を解除した記事が <code>in_feed = false</code> なら <code>articles</code> の行も削除するが、<strong>削除を確定する時点は画面で異なる</strong>（S-02 §7.3「解除したとき」・§5 ST-04。§8.1）：<strong>保存画面での解除は D-05 が画面上で保留し（セルは枠線の星で残り再タップで戻せる）、保存画面を離れた時点で <code>saved_articles</code> の削除と <code>in_feed = false</code> の記事の削除をまとめて行う</strong>。<strong>ホームでの解除は即時</strong>（ホームに出る記事は <code>in_feed = true</code> なので <code>articles</code> の削除対象にならない）。<code>in_feed = false</code> の行はユーザーが保存を解除するまで残り、<strong>件数の上限は設けない</strong>（F-06「保存記事は自動削除の対象外」。1 件ずつの明示操作でしか増えないため実用上は数千件が上限で、<code>findAll()</code>（§5.2 手順 6）の読み込みは数十ミリ秒で収まる）</td>
+<td>配信に含まれる間は <code>in_feed = true</code>。配信から外れたら、保存済みなら <code>in_feed = false</code> で残し、未保存なら削除する（§5.2 手順 8）。保存を解除した記事が <code>in_feed = false</code> なら <code>articles</code> の行も削除するが、<strong>削除を確定する時点は画面で異なる</strong>（S-02 §7.3「解除したとき」・§5 ST-04。§8.1）：<strong>保存画面での解除は D-05 が画面上で保留し（セルは枠線の星で残り再タップで戻せる）、確定は下記の 1 契機だけで行う</strong>。<strong>ホームでの解除は即時</strong>（ホームに出る記事は <code>in_feed = true</code> なので <code>articles</code> の削除対象にならない）。<code>in_feed = false</code> の行はユーザーが保存を解除するまで残り、<strong>件数の上限は設けない</strong>（F-06「保存記事は自動削除の対象外」。1 件ずつの明示操作でしか増えないため実用上は数千件が上限で、<code>findAll()</code>（§5.2 手順 6）の読み込みは数十ミリ秒で収まる）</td>
+</tr>
+<tr>
+<td>保留中の解除の<strong>確定契機</strong>（S-02/ST-04）</td>
+<td>確定するのは<strong>下部タブが保存から離れた時点</strong>（S-00/A-01）の 1 つだけ。そのとき <code>saved_articles</code> の削除と、<code>in_feed = false</code> になった記事の <code>articles</code> からの削除をまとめて行う。次の 3 つでは<strong>確定しない</strong>：(1) 記事を開いて戻る（S-02/A-01 → S-02/A-03。アプリ内ブラウザへの遷移。S-02 §5 ST-04「A-03 で記事から戻っただけでは消えない」・§8 #9）、(2) Safari / Chrome への離脱と復帰（S-02 §6 A-01。外部アプリが開き本画面はバックグラウンドに残る）、(3) <code>paused</code> / <code>hidden</code>（背景化）。<strong>保存画面を表示したままアプリが終了した場合、保留中の解除と再保存の <code>saved_at</code> 更新は DB に書かれていないため失われ、次回起動時はその記事が保存済み（塗りつぶしの星）のまま出る</strong>（取り消し側に倒す。D-05 §8 #26。開発者確認済み 2026-09-20。<code>paused</code> で確定する案・解除時点で削除して表示だけ保留する案を採らない理由も同所）。S-02 §5 ST-04 の「アプリを再起動したときに消える」は、他の下部タブへ移ってから終了した場合（確定済み）に成り立つ。S-02 側の補足は <code>reopen:S-02</code>（T-34 の着手前提）で行う（D-05 §8.1）</td>
 </tr>
 <tr>
 <td><code>read_states</code></td>
@@ -818,11 +848,15 @@ class AppDatabase extends _$AppDatabase {
 </tr>
 <tr>
 <td><code>saved_articles</code></td>
-<td>行がある = 保存済み（S-00/ST-04）。<code>saved_at</code> は保存操作の時刻（端末時計、UTC）。再保存は行を作り直し <code>saved_at</code> を更新する（S-02 §7.1）</td>
+<td>行がある = 保存済み（S-00/ST-04）。<code>saved_at</code> は保存操作の時刻（端末時計、UTC）。再保存は行を作り直し <code>saved_at</code> を更新する（S-02 §7.1）。<strong>保留中（S-02/ST-04）の再タップも「保留の取り消し」ではなく再保存として扱い</strong>、<code>SavedArticleRepository.save(articleId, savedAt: 現在時刻)</code> で <code>saved_at</code> を再タップ時刻に更新する（行は残っているが値を書き換える）。そうしないと下部タブを切り替えて戻ったときにセルが先頭に移らない（S-02 §7.1「ST-04 の間に解除→再タップした場合も…下部タブを切り替えて戻ったときに先頭に移る」。§8.1 の D-05 宛）</td>
+</tr>
+<tr>
+<td><code>AppDatabase</code> に置く SQL</td>
+<td><strong>2 つ以上の feature の infrastructure が共有する述語・アクセサに限る。</strong> 現在は settings の 4 アクセサ（<code>upsertSetting</code> / <code>deleteSetting</code> / <code>readSetting</code> / <code>watchSetting</code>。<code>articles</code> の <code>feed_*</code> と <code>settings</code> の <code>notification.*</code> ほかが同じ key-value の読み書きを持つ）と <code>deleteUnsavedOutOfFeedRows()</code>（<code>articles/infrastructure</code> の <code>applyFeed</code>（§5.2 手順 8-5）と <code>saved/infrastructure</code> の保存解除の確定（D-05 §4.5）が同じ述語を使う）の 5 つ。<strong>1 つの feature でしか使わない SQL は各 Repository 実装に置く</strong>（<code>AppDatabase</code> を全 SQL の置き場にしない）。§8 #48</td>
 </tr>
 <tr>
 <td><code>settings</code></td>
-<td>キー・値ともテキスト。キーの一覧は §4.4 <code>SettingKeys</code>。既定値は行が無いときに読み手が補う（テーブルに既定行を作らない）。読み書きは <code>AppDatabase</code> の <code>upsertSetting</code> / <code>deleteSetting</code> / <code>readSetting</code> / <code>watchSetting</code> を通す</td>
+<td>キー・値ともテキスト。キーの一覧は §4.4 <code>SettingKeys</code> と <code>FeedStateKeys</code>。既定値は行が無いときに読み手が補う（テーブルに既定行を作らない）。読み書きは <code>AppDatabase</code> の <code>upsertSetting</code> / <code>deleteSetting</code> / <code>readSetting</code> / <code>watchSetting</code> を通す</td>
 </tr>
 <tr>
 <td><code>settings</code> の監視</td>
@@ -862,6 +896,7 @@ abstract interface class ArticlesFeed {
 /// 取得・解析の失敗理由（domain。application の SyncFailureReason はこれに storage を足した写像。§8 #35）
 enum FeedFailureReason { httpStatus, timeout, malformed, unsupportedSchema }
 
+@immutable
 sealed class FeedFetchResult {
   const FeedFetchResult();
 }
@@ -877,18 +912,28 @@ final class FeedFetched extends FeedFetchResult {
 }
 
 /// ネットワーク不通（S-00/ST-13・ST-16）
+@immutable
 final class FeedOfflineException implements Exception {
   const FeedOfflineException(this.cause);
   final Object cause;
+
+  /// ログ（§4.9）で原因が分かるようにする。既定の toString は型名だけを返す
+  @override
+  String toString() =&gt; 'FeedOfflineException(cause: $cause)';
 }
 
 /// ネットワークはあるが取得・解析に失敗（S-00/ST-14・ST-15）
+@immutable
 final class FeedErrorException implements Exception {
   const FeedErrorException(this.reason, {this.cause, this.schemaVersion});
   final FeedFailureReason reason;
   final Object? cause;
   final int? schemaVersion;   // reason == unsupportedSchema のとき、配信の schemaVersion（§5.2 手順 0 の記録用）
+
+  @override
+  String toString() =&gt; 'FeedErrorException(reason: $reason, schemaVersion: $schemaVersion, cause: $cause)';
 }</code></pre>
+<p><strong><code>cause</code> に外部由来の本文を渡さない規約</strong>（T-18 の追随事項）：<code>toString</code> は <code>cause</code> をそのまま埋め込むため、<code>cause</code> に渡してよいのは<strong>捕捉した例外オブジェクトだけ</strong>（<code>SocketException</code>・<code>ClientException</code>・<code>FormatException</code> 等）で、<code>articles.json</code> の本文・記事の見出し・応答ボディの断片を渡さない（要件 §7「記事本文を保持しない」とログの規約 §4.9 に反する）。<code>FormatException</code> は既定の <code>toString</code> に入力の一部（既定 78 文字）を含めるため、<code>ArticlesFileCodec</code> は <code>jsonDecode</code> の <code>FormatException</code> を<strong>そのまま <code>cause</code> にせず</strong>、<code>FeedErrorException(FeedFailureReason.malformed)</code> を <code>cause</code> 無しで投げる。</p>
 <p><code>HttpArticlesFeed</code>（infrastructure）の規則：</p>
 <table>
 <thead>
@@ -964,6 +1009,7 @@ final class FeedErrorException implements Exception {
 <p>各インターフェースは本書の UseCase が必要とするメソッドだけを持つ（CLAUDE.md I）。記事の Repository は<strong>同期用</strong>（<code>ArticleSyncRepository</code>。<code>SyncArticlesUseCase</code> だけが使う）と<strong>閲覧用</strong>（<code>ArticleQueryRepository</code>。presentation が Stream を watch する。D-05 が <code>watchInFeed()</code> 等を追加する）に分け、drift の具象 <code>DriftArticleRepository</code> 1 つが両方を implements する（Provider は 2 本。§4.7。§8 #42）。D-05 が追加する閲覧・更新用のメソッドは <code>ArticleQueryRepository</code>・<code>ReadStateRepository</code>・<code>SavedArticleRepository</code> に置き、<code>ArticleSyncRepository</code> には足さない（§8.1）。</p>
 <pre><code class="language-dart">// lib/features/articles/domain/article_sync_repository.dart
 /// SyncArticlesUseCase が組み立てる反映計画（§5.2）。applyFeed が 1 トランザクションで適用する
+@immutable
 final class FeedApplyPlan {
   const FeedApplyPlan({
     required this.inserts,
@@ -1018,13 +1064,25 @@ abstract interface class SavedArticleRepository {
   Future&lt;void&gt; remove(String articleId);
   // 閲覧用（watchAll 等）は D-05 が追加する
 }</code></pre>
+<p><code>settings</code> テーブルのキーは 2 か所に分けて持つ。<strong>同期状態のキー（<code>feed_*</code>）は <code>articles/domain</code></strong> に置き、<strong>ユーザー設定のキーは <code>settings/domain</code></strong> に置く（§8 #47）。どちらも値の読み書きは <code>AppDatabase</code> の共通アクセサ（§4.2）を通る。</p>
+<pre><code class="language-dart">// lib/features/articles/domain/feed_state_keys.dart
+/// 配信の同期状態を settings テーブルに持つためのキー。
+/// **ArticleSyncRepository の実装（DriftArticleRepository）だけが読み書きする。**
+/// 記事の反映と同じトランザクションで書く規則（§8 #15・#32・#38）を守るため、
+/// SettingsRepository には get / set を追加しない（§8.1 の D-05 宛）。
+/// settings feature の契約ではないので SettingKeys には置かない（§3.1・§8 #47）
+abstract final class FeedStateKeys {
+  static const String feedEtag = 'feed_etag';                     // §4.3
+  static const String feedGeneratedAt = 'feed_generated_at';      // §5.2 手順 4。前回 applyFeed した配信の generatedAt（ISO8601 UTC）。§8 #38
+  static const String feedUnsupportedSchema = 'feed_unsupported_schema'; // §5.2 手順 0。§8 #32
+}</code></pre>
 <pre><code class="language-dart">// lib/features/settings/domain/settings_repository.dart
-/// settings テーブルのキー。値はすべてテキスト
+/// settings テーブルのユーザー設定キー。値はすべてテキスト
 abstract final class SettingKeys {
-  static const String feedEtag = 'feed_etag';                     // §4.3。ArticleSyncRepository の実装のみが読み書きする。SettingsRepository には get / set を追加しない（§8.1）
-  static const String feedGeneratedAt = 'feed_generated_at';      // §5.2 手順 4。前回 applyFeed した配信の generatedAt（ISO8601 UTC）。同上（ArticleSyncRepository の実装のみ。§8 #38）
-  static const String feedUnsupportedSchema = 'feed_unsupported_schema'; // §5.2 手順 0。同上（ArticleSyncRepository の実装のみ）
-  static String notification(String companyId) =&gt; 'notification.$companyId'; // '1' / '0'。行無し = ON（要件 §7.2）
+  /// 団体別の通知 ON / OFF キーの接頭辞。書き手・読み手（LIKE の前方一致と companyId の切り出し）は
+  /// この定数だけを使い、'notification.' を文字列リテラルで散らさない
+  static const String notificationPrefix = 'notification.';
+  static String notification(String companyId) =&gt; '$notificationPrefix$companyId'; // '1' / '0'。行無し = ON（要件 §7.2）
   static const String browser = 'browser';                        // BrowserChoice.value。行無し = inApp（F-04）
   static const String unreadFilter = 'unread_filter';             // '1' / '0'。行無し = OFF（S-01 §8 #19）
 }
@@ -1035,11 +1093,23 @@ abstract interface class SettingsRepository {
   Future&lt;void&gt; setNotificationEnabled(String companyId, {required bool enabled});
   // browser / unreadFilter の get・set・watch は D-05 が追加する
 }</code></pre>
+<p><code>DriftSettingsRepository.notificationSettings()</code> の写像規則（T-20 の追随事項）：</p>
+<ol>
+<li><code>key LIKE &#39;notification.%&#39;</code> で行を引く（<code>SettingKeys.notificationPrefix</code> + <code>&#39;%&#39;</code>）</li>
+<li>取り出した行を <strong><code>key.startsWith(SettingKeys.notificationPrefix)</code> で再度フィルタする</strong>（SQLite の <code>LIKE</code> では <code>_</code> が 1 文字ワイルドカードなので、<code>notification_</code> で始まる別のキーが将来入ると誤って拾う）</li>
+<li>接頭辞を除いた残りが<strong>空文字の行は除外する</strong>（<code>&#39;notification.&#39;</code> ちょうどのキー。<code>companyId</code> にならない）</li>
+<li>値は <code>&#39;1&#39;</code> を true、それ以外（<code>&#39;0&#39;</code>・想定外の値）を false に写す</li>
+</ol>
 <pre><code class="language-dart">// lib/features/settings/domain/browser_choice.dart
 enum BrowserChoice {
   inApp('in_app'), safari('safari'), chrome('chrome');
   const BrowserChoice(this.value);
   final String value;
+
+  /// settings の行の値から写す。**行が無い（null）・未知の値はどちらも inApp**（F-04 の既定）。
+  /// 規則を domain に 1 つだけ置き、Repository 実装と D-05 の presentation で重複させない（D-05 §4.3）
+  static BrowserChoice fromValue(String? raw) =&gt;
+      BrowserChoice.values.firstWhere((c) =&gt; c.value == raw, orElse: () =&gt; BrowserChoice.inApp);
 }</code></pre>
 <pre><code class="language-dart">// lib/features/articles/application/sync_result.dart
 /// 取得の契機（要件 §6.1、S-01 ST-03・ST-15、S-00/A-12）
@@ -1049,6 +1119,7 @@ enum SyncTrigger { launch, foreground, pullToRefresh, retry, notificationTap }
 /// FeedErrorException.reason → 同名の値に写す（§5.2 手順 2）
 enum SyncFailureReason { httpStatus, timeout, malformed, unsupportedSchema, storage }
 
+@immutable
 sealed class SyncResult {
   const SyncResult();
 }
@@ -1117,12 +1188,14 @@ final class PushSubscriptionSyncResult {
 <h3 id="sec-4-5">4.5 Company（<code>features/companies/</code>）<a class="anchor" href="#sec-4-5">#</a></h3>
 <p>同梱アセット <code>assets/companies.json</code>（D-01 §4.3 と同一内容）を読む。app が使うのは <code>id</code>・<code>name</code>・<code>shortName</code>・<code>fcmTopic</code> の 4 つで、<code>sources</code> は読まない（未知のフィールドと同じく無視。D-01 §3.1）。</p>
 <pre><code class="language-dart">// lib/features/companies/domain/company.dart
+@immutable
 final class Company {
   const Company({required this.id, required this.name, required this.shortName, required this.fcmTopic});
   final String id;
   final String name;        // 正式名
   final String shortName;   // S-00 §7.1 の表示名
   final String fcmTopic;    // D-01 §4.8 のトピック名
+  // == / hashCode は 4 フィールドで定義（§8 #24）
 }
 
 // lib/features/companies/domain/company_repository.dart
@@ -1130,10 +1203,51 @@ abstract interface class CompanyRepository {
   /// 配列順のまま返す（表示順。D-01 §4.3）。schemaVersion != 1 は StateError
   Future&lt;List&lt;Company&gt;&gt; loadAll();
 }</code></pre>
-<p><code>AssetCompanyRepository.loadAll()</code> は <code>rootBundle.loadString(&#39;assets/companies.json&#39;)</code> → <code>jsonDecode</code> → <code>schemaVersion == 1</code> を確認 → <code>companies[]</code> を <code>Company</code> に写す。<code>id</code> の重複は <code>StateError</code>。起動時（§5.1）に 1 度だけ呼び、結果を <code>companiesProvider</code> の override で全画面に配る。実行時に配信 URL から取得しない（D-01 §8 #28）。</p>
+<p><code>AssetCompanyRepository.loadAll()</code> は <code>rootBundle.loadString(&#39;assets/companies.json&#39;)</code> → <code>jsonDecode</code> → 下記を検証 → <code>companies[]</code> を <code>Company</code> に写す。起動時（§5.1）に 1 度だけ呼び、結果を <code>companiesProvider</code> の override で全画面に配る。実行時に配信 URL から取得しない（D-01 §8 #28）。</p>
+<p>検証規則（すべて違反は <code>StateError</code>。同梱アセットはビルドの成果物なので黙って縮退させない。§5.1・§6）：</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>対象</th>
+<th>規則</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>ファイル</td>
+<td>トップレベルが object で <code>schemaVersion == 1</code>（D-01 §4.3）、<code>companies</code> が配列</td>
+</tr>
+<tr>
+<td>2</td>
+<td>各要素</td>
+<td><code>id</code>・<code>name</code>・<code>shortName</code>・<code>fcmTopic</code> が存在し <code>String</code>（欠落・型不一致は <code>StateError</code>）</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>id</code></td>
+<td><code>^[a-z][a-z0-9_]{1,31}$</code>（D-01 §4.3 の書式。2〜32 文字）</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>fcmTopic</code></td>
+<td>FCM のトピック名の書式 <code>^[a-zA-Z0-9-_.~%]+$</code> かつ <strong>64 文字以内</strong>（Firebase の制約。超えると実行時に購読が失敗する）</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>id</code> の重複</td>
+<td>不可</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>fcmTopic</code> の重複</td>
+<td>不可（2 団体が同じトピックを購読すると F-08 の団体別 ON / OFF が成立しない）</td>
+</tr>
+</tbody></table>
 <h3 id="sec-4-6">4.6 PushGateway と NotificationTap（<code>features/notifications/domain/</code>）<a class="anchor" href="#sec-4-6">#</a></h3>
 <pre><code class="language-dart">// lib/features/notifications/domain/notification_tap.dart
 /// 通知タップで受け取る情報。D-01 §4.8 の data.companyId だけを読む（count・notification 本文は使わない）
+@immutable
 final class NotificationTap {
   const NotificationTap({required this.companyId});
   final String? companyId;   // 無い・文字列でない → null（D-05 は「すべて」で開く。S-01 §8 #15）
@@ -1321,10 +1435,11 @@ RequestNotificationPermissionUseCase requestNotificationPermissionUseCase(Ref re
 <pre><code class="language-yaml"># app/pubspec.yaml（抜粋）
 name: curtaincall
 environment:
-  sdk: ^3.5.0
-  flutter: &quot;&gt;=3.24.0&quot;
+  sdk: ^3.13.0                   # riverpod_lint を analysis_options の plugins: で有効化するのに必要な analyzer 版
+  flutter: &quot;&gt;=3.47.0&quot;            # 同上
 dependencies:
   flutter: { sdk: flutter }
+  flutter_localizations: { sdk: flutter }   # CupertinoApp の GlobalCupertinoLocalizations（§5.9）
   flutter_riverpod: ^3.0.0
   riverpod_annotation: ^3.0.0
   drift: ^2.20.0
@@ -1332,6 +1447,7 @@ dependencies:
   http: ^1.2.0
   logger: ^2.4.0
   collection: ^1.18.0            # ListEquality / MapEquality（§4.2・§4.4・§8 #24）
+  meta: ^1.18.0                  # @immutable（domain の値オブジェクト。§4.1）
 dev_dependencies:
   flutter_test: { sdk: flutter }
   very_good_analysis: ^6.0.0
@@ -1339,13 +1455,18 @@ dev_dependencies:
   fake_async: ^1.3.0             # SyncCoordinator の全体タイムアウトのテスト（§7）
   riverpod_generator: ^3.0.0
   drift_dev: ^2.20.0
-  custom_lint: ^0.7.0
-  riverpod_lint: ^3.0.0
+  # custom_lint / riverpod_lint は dev_dependencies に置かない（下記 analysis_options.yaml）
 flutter:
   uses-material-design: false
   assets:
     - assets/companies.json          # D-01 §8 #28</code></pre>
-<p>バージョンは執筆時点の下限で、実装時に <code>flutter pub add</code> が解決した最新の互換版を採る。フェーズ 5（T-G）で <code>firebase_core</code>・<code>firebase_messaging</code> を追加する。D-05 が <code>url_launcher</code>・<code>package_info_plus</code> 等を追加する。</p>
+<p>バージョンは下限で、実装時に <code>flutter pub add</code> が解決した最新の互換版を採る（<code>sdk</code> / <code>flutter</code> の 2 つは下限に意味があるので下げない）。フェーズ 5（T-G）で <code>firebase_core</code>・<code>firebase_messaging</code> を追加する。D-05 が <code>url_launcher</code>・<code>package_info_plus</code> 等を追加する。</p>
+<p><strong>Lint プラグイン</strong>（T-17 の追随事項）：<code>riverpod_lint</code> は <code>custom_lint</code> 経由ではなく <code>analysis_options.yaml</code> の <code>plugins:</code> で有効化する（<code>custom_lint</code> は dev_dependencies から外す）。版は<strong>完全一致で固定</strong>する（<code>plugins:</code> は版域を解決しないため）。</p>
+<pre><code class="language-yaml"># app/analysis_options.yaml（抜粋）
+include: package:very_good_analysis/analysis_options.yaml
+plugins:
+  riverpod_lint: 3.1.9           # 完全一致で固定する</code></pre>
+<p><strong><code>flutter analyze</code> は analyzer プラグインを実行しない</strong>（T-17 の 1-3 周で実証）。<code>riverpod_lint</code> の指摘を検出するには <code>dart analyze</code> が要るため、CI・品質ゲートの両方で <code>flutter analyze</code> と <code>dart analyze --fatal-infos</code> を続けて実行する。</p>
 <pre><code class="language-yaml"># app/build.yaml
 targets:
   $default:
@@ -1368,15 +1489,20 @@ jobs:
     runs-on: ubuntu-latest        # analyze / test に iOS ビルドは不要。macOS ランナーを使わない
     defaults: { run: { working-directory: app } }
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with: { channel: stable, cache: true }
+      # サードパーティ Action は SHA で固定する（タグは付け替えられる。D-02 §5.6 と同じ方針）
+      - uses: actions/checkout@{40 桁の commit SHA}          # v4
+      - uses: subosito/flutter-action@{40 桁の commit SHA}   # v2
+        with:
+          channel: stable
+          flutter-version: &quot;3.47.4&quot;   # 版を明示して CI と手元をそろえる（範囲指定にしない）
+          cache: true
       - run: flutter pub get
       - run: flutter analyze
+      - run: dart analyze --fatal-infos   # riverpod_lint（analyzer プラグイン）は flutter analyze では実行されない
       - run: flutter test</code></pre>
 <p><code>app/assets/companies.json</code> の同梱コピーの同期検証は collector 側の契約テスト（D-01 §7.1）が担い、<code>collector-ci.yml</code> のパスフィルタに含まれる（D-02 §5.6）。本ワークフローは重ねて検証しない。</p>
 <h3 id="sec-4-9">4.9 ログ<a class="anchor" href="#sec-4-9">#</a></h3>
-<p><code>logger</code> パッケージ（CLAUDE.md。<code>print</code> 禁止）。<code>buildOverrides()</code>（<code>core/di/bootstrap_overrides.dart</code>。§5.1）が 1 つ生成して <code>loggerProvider</code> に override する。レベルは debug ビルドで <code>Level.debug</code>、release で <code>Level.warning</code>。domain・application は <code>Logger</code> を import しない（UseCase は結果型で失敗を返す）。ログを出すのは infrastructure（<code>HttpArticlesFeed</code>・<code>DriftArticleRepository</code>・<code>NoopPushGateway</code>・<code>FcmPushGateway</code>）と presentation（<code>SyncController</code>・<code>articleCountErrorLog</code>（記事件数 Stream のエラーを 1 障害につき 1 回記録する副作用専用の Provider。§5.4）・<code>AppLifecycleSync</code>）。記事本文・通知本文・サムネイルの内容はログに出さない（URL・id・件数・例外の型とメッセージのみ）。presentation は <code>Logger</code> を生成時（<code>ConsumerState</code> は <code>initState</code>、Notifier は <code>build()</code>）に 1 度だけ <code>ref.read(loggerProvider)</code> して保持する（<code>Logger</code> は keepAlive の基盤オブジェクトなので、保持した参照を <code>await</code> 後に使ってよい。§5.3）。</p>
+<p><code>logger</code> パッケージ（CLAUDE.md。<code>print</code> 禁止）。<code>buildOverrides()</code>（<code>core/di/bootstrap_overrides.dart</code>。§5.1）が 1 つ生成して <code>loggerProvider</code> に override する。レベルは debug ビルドで <code>Level.debug</code>、release で <code>Level.warning</code>。domain・application は <code>Logger</code> を import しない（UseCase は結果型で失敗を返す）。ログを出すのは infrastructure（<code>HttpArticlesFeed</code>・<code>DriftArticleRepository</code>・<code>NoopPushGateway</code>・<code>FcmPushGateway</code>）と presentation / app（<code>SyncController</code>・<code>AppLifecycleSync</code>（ライフサイクル起点の失敗に加え、記事件数 Stream のエラーを 1 障害につき 1 回記録する。§5.4））。<strong>値を使わない「副作用専用の Provider」は置かない</strong>（依存が暗黙になり、読む側から副作用の存在が見えないため。副作用と順序は <code>AppLifecycleSync</code> に集約する。§8 #49）。記事本文・通知本文・サムネイルの内容はログに出さない（URL・id・件数・例外の型とメッセージのみ）。presentation は <code>Logger</code> を生成時（<code>ConsumerState</code> は <code>initState</code>、Notifier は <code>build()</code>）に 1 度だけ <code>ref.read(loggerProvider)</code> して保持する（<code>Logger</code> は keepAlive の基盤オブジェクトなので、保持した参照を <code>await</code> 後に使ってよい。§5.3）。</p>
 <h2 id="sec-5">5. 処理フロー（正常系）<a class="anchor" href="#sec-5">#</a></h2>
 <h3 id="sec-5-1">5.1 起動（<code>bootstrap</code> → <code>runApp</code>）<a class="anchor" href="#sec-5-1">#</a></h3>
 <ul>
@@ -1461,13 +1587,13 @@ jobs:
 </tbody></table>
 <p>「更新」の判定は <code>updatedAt</code> の値の変化だけで行い、<code>contentHash</code> は比較しない（D-01 §8 #5）。D-01 §5.2 の表の「両方有りで値が異なる」は、本書では「配信が端末より新しい」に厳密化する（値が異なるが古い場合は「変化なし」。§8 #30、§8.1 の D-01 宛）。<code>refreshes</code> では <code>fetchedAt</code>・<code>updatedAt</code> を端末の値のまま保つ（D-01 §5.2）。<code>updates</code> では全列を配信値にする（collector は更新時に <code>fetchedAt</code> を引き継ぐため通常は端末の値と一致する。§8 #6）</p>
 </li>
-<li><p><code>plan = FeedApplyPlan(inserts: inserts, updates: updates, refreshes: refreshes, etag: fetched.etag, generatedAt: isImplausibleGeneratedAt(file.generatedAt, clock) ? null : file.generatedAt)</code>（手順 4 (a)。<code>clock</code> は手順 4 で読んだ値を使い回す）を組み立て、<strong><code>isCancelled()</code> を確認してから</strong>（true なら <code>SyncFailed(timeout)</code> を返して破棄。§8 #39）<code>articles.applyFeed(plan)</code> に渡す。<code>DriftArticleRepository.applyFeed</code> は次を <strong>1 トランザクション</strong>で行う：</p>
+<li><p><code>plan = FeedApplyPlan(inserts: inserts, updates: updates, refreshes: refreshes, etag: fetched.etag, generatedAt: isImplausibleGeneratedAt(file.generatedAt, clock) ? null : file.generatedAt)</code>（手順 4 (a)。<code>clock</code> は手順 4 で読んだ値を使い回す）を組み立て、<strong><code>isCancelled()</code> を確認してから</strong>（true なら <code>SyncFailed(timeout)</code> を返して破棄。§8 #39）<code>articles.applyFeed(plan)</code> に渡す。<strong><code>isCancelled()</code> の確認から <code>transaction()</code> の開始までに <code>await</code> を挟まない</strong>（drift は同じ DB へのトランザクションを呼び出し順に直列化するので、先に <code>transaction()</code> を呼んだ側が先にコミットする。間に <code>await</code> 境界を入れると、諦めた古い実行が新しい実行より後にコミットしうる。§5.3「タイムアウト後の遅れた完了」の前提）。<code>DriftArticleRepository.applyFeed</code> は次を <strong>1 トランザクション</strong>で行う：</p>
 <ol>
 <li><code>UPDATE articles SET in_feed = 0</code>（全行。配信に含まれる記事は 2〜4 で <code>true</code> に戻る）</li>
 <li><code>inserts</code> を insert（<code>in_feed = true</code>、<code>has_update_badge = false</code>）</li>
 <li><code>updates</code> を全列 update（<code>in_feed = true</code>、<code>has_update_badge = true</code>）し、<code>read_states</code> の該当行を削除（S-00 §7.5「未読に戻る」）</li>
 <li><code>refreshes</code> を <code>title</code>・<code>url</code>・<code>thumbnail</code>・<code>publishedAt</code>・<code>category</code>・<code>contentHash</code>・<code>in_feed = true</code> だけ update（<code>fetchedAt</code>・<code>updatedAt</code>・<code>has_update_badge</code> は触らない）</li>
-<li><code>DELETE FROM articles WHERE in_feed = 0 AND id NOT IN (SELECT article_id FROM saved_articles)</code>（保存済みは <code>in_feed = false</code> のまま残す。要件 §5・F-06。<code>read_states</code> は外部キーの cascade で消える）。削除件数を <code>FeedApplyResult.deleted</code> に返す</li>
+<li><code>AppDatabase.deleteUnsavedOutOfFeedRows()</code>（§4.2）を呼ぶ。述語は <code>in_feed = 0 AND id NOT IN (SELECT article_id FROM saved_articles)</code> で、保存済みは <code>in_feed = false</code> のまま残す（要件 §5・F-06。<code>read_states</code> は外部キーの cascade で消える）。<strong>述語をここに書き直さない</strong>（同じ述語を D-05 §4.5 の保存解除の確定も使うため、<code>AppDatabase</code> に 1 つだけ置く。§4.2「<code>AppDatabase</code> に置く SQL」・§8 #48）。<code>customUpdate</code> の <code>updates</code> は <strong><code>{articles, read_states}</code></strong>（cascade で消える <code>read_states</code> を watch している画面も更新させる。落とすと保存画面の既読表示が古いまま残る）。戻り値の削除件数を <code>FeedApplyResult.deleted</code> に返す</li>
 <li><code>settings</code> の <code>feed_etag</code> を <code>plan.etag</code> で upsert（null なら行を削除）、<code>feed_generated_at</code> を <code>plan.generatedAt</code>（ISO8601 UTC）で upsert（手順 4 の後退防止の基準。§8 #38。<strong>null なら行を変えない</strong> = 前回の妥当な値を保持する。<code>feed_etag</code> の null（行を削除）とは規則が異なる）。<code>feed_unsupported_schema</code> の行を削除する（対応するスキーマを受け取れたので抑止を解く）
 insert / update は <code>batch</code> でまとめる（最大 500 件 + 保存済み分。SQLite の変数上限は 1 文あたりに掛かるため、<code>batch</code> の行単位の文では問題にならない）。id の集合を <code>IN (...)</code> で渡す文は書かない</li>
 </ol>
@@ -1584,7 +1710,7 @@ final class SyncCoordinator {
 <li><strong>出力</strong>：<code>SyncResult</code></li>
 <li><strong>失敗時</strong>：例外を投げない（<code>onTimeout</code> / <code>catchError</code> で結果型に写す）</li>
 <li><strong>全体タイムアウト時の通知</strong>：<code>events</code> には <code>SyncCompleted(trigger, SyncFailed(timeout))</code> が 1 回流れる（<code>SyncController</code> の <code>inProgress</code> が false に戻り、E-21 が消える）。実行 1 回につき <code>SyncStarted</code> / <code>SyncCompleted</code> が 1 回ずつという <code>events</code> の契約はタイムアウト時も保たれる</li>
-<li><strong>タイムアウト後の遅れた完了</strong>：<code>execute</code> が <code>applyFeed</code> の直前で <code>isCancelled()</code> を見て破棄するため DB は変わらない。<code>SyncFailed(timeout)</code> を返す前に <code>isCancelled()</code> を通過していた（<code>applyFeed</code> の実行中にタイムアウトした）場合は <code>applyFeed</code> は完了するが、その結果は <code>.timeout</code> が既に <code>SyncFailed(timeout)</code> で完了させた Future には届かず、<code>events</code> にも流れない（新しい取得より前にコミットされるため、後から新版を上書きすることはない）</li>
+<li><strong>タイムアウト後の遅れた完了</strong>：<code>execute</code> が <code>applyFeed</code> の直前で <code>isCancelled()</code> を見て破棄するため DB は変わらない。<code>SyncFailed(timeout)</code> を返す前に <code>isCancelled()</code> を通過していた（<code>applyFeed</code> の実行中にタイムアウトした）場合は <code>applyFeed</code> は完了するが、その結果は <code>.timeout</code> が既に <code>SyncFailed(timeout)</code> で完了させた Future には届かず、<code>events</code> にも流れない。<strong>この古い <code>applyFeed</code> が新しい取得の <code>applyFeed</code> より先にコミットされること</strong>は、(1) drift が同じ DB へのトランザクションを呼び出し順に直列化すること、(2) §5.2 手順 8 が「<code>isCancelled()</code> の確認から <code>transaction()</code> の開始まで <code>await</code> を挟まない」ことの 2 つで保証する。どちらかが崩れると旧版が新版を上書きし、新着記事の削除と <code>feed_etag</code> の巻き戻りが起きる（§8 #39 が防ごうとした事象）</li>
 </ul>
 <pre><code class="language-dart">// lib/features/articles/presentation/sync_controller.dart
 final class SyncStatus {
@@ -1703,6 +1829,14 @@ void initState() {
   super.initState();
   _logger = ref.read(loggerProvider);         // State 生成時に 1 度だけ読んで保持する（§4.9）
   WidgetsBinding.instance.addObserver(this);
+  // 記事件数 Stream の購読失敗を 1 障害につき 1 回だけ記録する（§5.4）。
+  // ここに置く理由：(1) build 内の ref.listen と違い rebuild で張り直されないため
+  // fireImmediately の重複発火が起きない（T-23 の実測で 1 障害あたり 31 行）、
+  // (2) どのタブを開いているかに関わらず記録される、(3) 副作用と順序を 1 クラスに閉じる（§8 #49）
+  ref.listenManual(articleCountProvider, (previous, next) {
+    if (!shouldLogCountError(previous, next)) return;
+    _logger.w('記事件数の購読に失敗', error: next.error, stackTrace: next.stackTrace);
+  }, fireImmediately: true);
   WidgetsBinding.instance.addPostFrameCallback((_) =&gt; _onLaunch());   // 最初のフレーム後
 }
 
@@ -1742,11 +1876,22 @@ Future&lt;void&gt; _resyncSubscriptionsIfFailed() async {
   // PushSubscriptionCoordinator は keepAlive の application オブジェクトなので、解決済みの参照を await 後に使うのは安全
   final coordinator = ref.read(pushSubscriptionCoordinatorProvider);
   try {
+    // 一度も実行されていない（lastResult も pending も null、lastRunFailed も false）
+    // = 起動時の同期が未開始のまま背景化した（_onLaunch が許可ダイアログを await 中に背景化したケース）。
+    // 何もしないとそのセッションで F-08 が一度も実行されないため、ここで開始する（§6）
+    if (coordinator.lastResult == null &amp;&amp; coordinator.pending == null &amp;&amp; !coordinator.lastRunFailed) {
+      await coordinator.run();
+      return;
+    }
     // lastResult == null（起動時の同期がまだ完了していない）なら、その完了（pending）を待ってから判定する。
-    // 実行中に終わった失敗を次の復帰まで持ち越さない（§8 #37）。pending も null（起動時の同期が未開始）なら何もしない
+    // 実行中に終わった失敗を次の復帰まで持ち越さない（§8 #37）
     final last = coordinator.lastResult ?? await coordinator.pending;
     if (!mounted) return;                 // 待つ間に State が破棄された（アプリ終了）。何もしない
-    if (last?.hasFailure ?? false) await coordinator.run();   // _syncSubscriptions() を経由しない（ref を再度読まない）
+    // 1 団体単位の failed（軽い失敗）だけでなく、直近の実行が例外で終わっている場合（lastRunFailed。
+    // CompanyRepository / SettingsRepository の失敗 = 全団体の購読状態が不明）も再実行する（§5.6・§8 #50）
+    if ((last?.hasFailure ?? false) || coordinator.lastRunFailed) {
+      await coordinator.run();            // _syncSubscriptions() を経由しない（ref を再度読まない）
+    }
   } on Object catch (e, s) {
     // pending / run() は execute の例外（CompanyRepository.loadAll の StateError）で完了する（§5.6「失敗時」）。
     // Error（StateError）も捕捉するため Exception ではなく Object で受ける（avoid_catches_without_on_clauses 対応）。記録するだけ
@@ -1809,7 +1954,6 @@ FeedStatus feedStatus(Ref ref, {required bool syncsOnLaunch}) {
     // 保存画面まで rebuild されるのと、記事件数エラーのログ重複を同時に防ぐ
     return const FeedStatus(hasArticles: null, inProgress: false, lastResult: null, syncsOnLaunch: false);
   }
-  ref.watch(articleCountErrorLogProvider);   // 値は使わない。ここが articleCountErrorLog の唯一の起動点
   final count = ref.watch(articleCountProvider);
   final sync = ref.watch(syncControllerProvider);
   return FeedStatus(
@@ -1821,19 +1965,9 @@ FeedStatus feedStatus(Ref ref, {required bool syncsOnLaunch}) {
 }
 
 @Riverpod(keepAlive: true)
-Stream&lt;int&gt; articleCount(Ref ref) =&gt; ref.watch(articleQueryRepositoryProvider).watchCount();
-
-/// 記事件数の購読失敗を 1 障害につき 1 回だけ記録する副作用専用の Provider（§4.9）。
-/// **何も watch しない**ことが要点：provider の build 内の ref.listen は rebuild のたびに張り直され、
-/// fireImmediately が毎回 previous == null で発火するため、feedStatus に直接置くと
-/// 取得の開始・完了のたびに同じ障害が何度も記録される（T-23 の実測で 1 障害あたり 31 行）
-@Riverpod(keepAlive: true)
-void articleCountErrorLog(Ref ref) {
-  ref.listen(articleCountProvider, (previous, next) {
-    if (!shouldLogCountError(previous, next)) return;
-    ref.read(loggerProvider).w('記事件数の購読に失敗', error: next.error, stackTrace: next.stackTrace);
-  }, fireImmediately: true);
-}</code></pre>
+Stream&lt;int&gt; articleCount(Ref ref) =&gt; ref.watch(articleQueryRepositoryProvider).watchCount();</code></pre>
+<p>購読失敗のログは Provider ではなく <code>AppLifecycleSync.initState</code> の <code>ref.listenManual(articleCountProvider, ...)</code> が <code>shouldLogCountError</code> を使って行う（§5.3 の擬似コード・§4.9）。Provider の <code>build</code> 内で <code>ref.listen</code> を張ると rebuild のたびに張り直され、<code>fireImmediately</code> が毎回 <code>previous == null</code> で発火して同じ障害が何度も記録される（T-23 の実測で 1 障害あたり 31 行）。<code>listenManual</code> は <code>initState</code> の 1 回きりなのでこれが起きない（§8 #49）。</p>
+<p><strong>ST-14 からの復帰</strong>：<code>articleCountProvider</code> が<strong>値を 1 度も得ないままエラーで終了</strong>した場合（DB の一時ロック・migration の一過性失敗）、Riverpod 3 の自動リトライが尽きた後は <code>AsyncError</code> で固定され、<code>resolveHasArticles</code> が <code>false</code> を返して <code>FullView.error</code>（ST-14）が続く。<strong>この状態から抜ける経路は Provider の再購読だけ</strong>なので、E-24 の再試行（S-00/A-12）は <code>sync(SyncTrigger.retry)</code> を呼ぶ前に <strong><code>ref.invalidate(articleCountProvider)</code></strong> を行う（D-05 が <code>FullErrorView.onRetry</code> に組み込む。§8.1）。再購読しても失敗するなら ST-14 のままで、ユーザーは再試行を繰り返せる。これが無いと、DB が正常に戻ってもアプリを再起動するまで ST-14 が一覧を覆い続ける（要件 §5「オフライン時：取得済みの記事は閲覧可能」に反する）。</p>
 <p><strong>Riverpod 3 の自動リトライ</strong>（T-23 の実測）：<code>ProviderContainer</code> の既定 <code>retry</code>（<code>maxRetries = 10</code>、指数バックオフ上限 6.4 秒）により、<code>Stream</code> がエラーを出しても状態は直ちに <code>AsyncError</code> にならず、リトライが尽きるまでの約 50 秒は <code>AsyncLoading(hasError: true, ...)</code> として現れる。<code>AsyncData</code> / <code>AsyncError</code> だけを見る <code>switch</code> は <code>_ =&gt; null</code>（未確定）に落ちるため、記事があるのに全面ローディングが一覧を覆い、DB の open 失敗も ST-14（§6）にならない。写像は必ず <code>hasValue</code> / <code>hasError</code> で行う。</p>
 <p>判定表（上から順に最初に一致した行を採る）。<strong>先頭の 2 行は <code>syncsOnLaunch == false</code>（S-02）専用</strong>で、取得の状態（<code>hasArticles</code> の未確定・<code>inProgress</code>・<code>lastResult</code>）を一切見ない（S-02 §3「E-21・E-23・E-24・E-25 は本画面に出ない」・§5「本画面で発生するのは ST-12 だけ」・§5 ST-01「E-20・E-21 は出さない」）。残りの 8 行は <code>syncsOnLaunch == true</code>（S-01）のときだけ評価する：</p>
 <table>
@@ -2076,6 +2210,12 @@ ReadDisplayState resolveReadDisplayState({required bool isRead, required bool ha
   /// 直近に完了した実行の結果。まだ 1 度も完了していなければ null。起動をまたいで保持しない
   PushSubscriptionSyncResult? get lastResult;
 
+  /// 直近に完了した実行が**例外で終わった**か（`CompanyRepository.loadAll` の StateError、
+  /// `SettingsRepository` の DB 例外。§5.6「失敗時」）。execute が正常に完了するたびに false に戻す。
+  /// 例外は「全団体の購読状態が不明」という重い失敗で、lastResult に痕跡が残らない（lastResult は変えない）ため、
+  /// AppLifecycleSync が復帰時の再実行を判断できるようにこのフラグで持つ（§5.3。§8 #50）
+  bool get lastRunFailed;
+
   /// 実行中（予約があればその再実行まで含む）の最後の Future。実行中でなければ null。
   /// AppLifecycleSync が「起動時の同期がまだ完了していない」ときに完了を待つために使う（§5.3。§8 #37）
   Future&lt;PushSubscriptionSyncResult&gt;? get pending;
@@ -2085,11 +2225,12 @@ ReadDisplayState resolveReadDisplayState({required bool isRead, required bool ha
 <ul>
 <li><strong>ステップ</strong>（<code>run</code>）：<ol>
 <li>実行中の Future があれば、<code>_rerun</code>（<code>Completer</code> 1 つまで）を作って（あれば既存を）その Future を返す。<strong>3 回目以降の呼び出しは同じ <code>_rerun</code> の Future を返す</strong>（予約は増えない）</li>
-<li>実行中でなければ <code>execute()</code> を始め、完了時に <code>lastResult</code> を更新し、<code>_rerun</code> があれば同じ同期処理の中で次の <code>execute()</code> を始めて <code>_rerun</code> を完了させる（スロットを空けない）。無ければ実行中を空にする</li>
+<li>実行中でなければ <code>execute()</code> を始め、完了時に <code>lastResult</code> を更新（例外で終わった場合は <code>lastResult</code> を変えず <code>lastRunFailed = true</code>。正常完了なら <code>lastRunFailed = false</code>）し、<code>_rerun</code> があれば同じ同期処理の中で次の <code>execute()</code> を始めて <code>_rerun</code> を完了させる（スロットを空けない）。無ければ実行中を空にする</li>
+<li><strong>再実行を開始する時点で <code>_rerun</code> を null に戻す。</strong> <code>final c = _rerun; _rerun = null; _start().then(c.complete, onError: c.completeError);</code> と書く（<code>SyncCoordinator</code> の §5.3 手順 5 と同じ形）。<strong>戻さないと、再実行の最中に呼ばれた <code>run()</code> が「既に設定を読み終えた再実行」の Future を受け取るだけになり、その間に変えた設定が FCM に反映されないまま成功として完了する</strong>（復帰時の再同期中に宝塚を OFF → 再実行が開始 → その最中に四季を OFF、というときに四季の変更が落ちる）。null に戻せば 3 回目の <code>run()</code> は新しい予約を作り、再実行の完了後にもう 1 回 <code>execute()</code> が走る（§8 #41 の「実行中に変えた設定が必ず反映される」が再実行中にも成り立つ）</li>
 </ol>
 </li>
 <li><strong>予約経路の完了の渡し方</strong>：再実行の結果を予約側に渡すときは <code>_start().then(reserved.complete, onError: reserved.completeError)</code> と書く（<code>then(reserved.complete)</code> だけだと、再実行が例外で終わったときに <code>_rerun</code> の Future が<strong>永久に完了せず</strong>、それを await している <code>AppLifecycleSync</code> と D-05 のトグルが宙に浮く。同時に未処理の非同期エラーにもなる）</li>
-<li><strong>失敗時</strong>：<code>execute()</code> が例外を投げた場合は、その実行を待つ <code>run()</code> の Future（と <code>pending</code>）を<strong>同じ例外で完了させる</strong>（再スロー。<code>PushSubscriptionSyncResult</code> に写さない）。<code>lastResult</code> は変えない。後処理は完了時と同じ（<code>_rerun</code> があれば次の <code>execute()</code> を始めて <code>_rerun</code> をその結果で完了させ、無ければ実行中を空にする）ため、例外の後も <code>run()</code> は再び <code>execute()</code> を呼べる。呼び出し側は <code>AppLifecycleSync</code>（§5.3 の擬似コード）と D-05 のトグル経路（§8.1）で、<strong>どちらも <code>run()</code> の戻り値を必ず await し</strong>、<code>on Object catch</code> で捕捉して <code>logger.w</code> に残す（await せずに捨てると例外が未処理の非同期エラーになる。<code>execute</code> が投げるのは <code>CompanyRepository.loadAll</code> の <code>StateError</code> と <code>SettingsRepository</code> の DB 例外。§5.6「失敗時」・§8 #41）</li>
+<li><strong>失敗時</strong>：<code>execute()</code> が例外を投げた場合は、その実行を待つ <code>run()</code> の Future（と <code>pending</code>）を<strong>同じ例外で完了させる</strong>（再スロー。<code>PushSubscriptionSyncResult</code> に写さない）。<code>lastResult</code> は変えず、<strong><code>lastRunFailed</code> を true にする</strong>（次のフォアグラウンド復帰で <code>AppLifecycleSync</code> が再実行できるようにする。§5.3・§8 #50）。<code>execute()</code> が正常に完了したときは <code>lastRunFailed</code> を false に戻す。後処理は完了時と同じ（<code>_rerun</code> があれば次の <code>execute()</code> を始めて <code>_rerun</code> をその結果で完了させ、無ければ実行中を空にする）ため、例外の後も <code>run()</code> は再び <code>execute()</code> を呼べる。呼び出し側は <code>AppLifecycleSync</code>（§5.3 の擬似コード）と D-05 のトグル経路（§8.1）で、<strong>どちらも <code>run()</code> の戻り値を必ず await し</strong>、<code>on Object catch</code> で捕捉して <code>logger.w</code> に残す（await せずに捨てると例外が未処理の非同期エラーになる。<code>execute</code> が投げるのは <code>CompanyRepository.loadAll</code> の <code>StateError</code> と <code>SettingsRepository</code> の DB 例外。§5.6「失敗時」・§8 #41）</li>
 <li><strong>同時実行の例</strong>：機内モード起動で 5 団体 <code>failed</code> → 復帰時に再同期が走る（数秒）→ その最中に設定で宝塚を OFF → D-05 が <code>run()</code> を呼ぶ → 復帰側の完了後に 1 回だけ再実行され、宝塚は <code>unsubscribe</code> される。<code>lastResult</code> は再実行の結果になる（§6）</li>
 </ul>
 <h3 id="sec-5-7">5.7 RequestNotificationPermissionUseCase と通知タップの受け取り<a class="anchor" href="#sec-5-7">#</a></h3>
@@ -2106,8 +2247,21 @@ ReadDisplayState resolveReadDisplayState({required bool isRead, required bool ha
 <li><strong>失敗時</strong>：<code>PushGateway</code> の例外はそのまま投げる。<code>AppLifecycleSync</code> は捕捉して <code>logger.w</code> に残し、購読同期（§5.6）には進む（未許可でもトピック購読はできる。S-03 §8 #6）</li>
 </ul>
 <p>通知タップは <code>PushGateway.takeInitialTap()</code>（アプリ未起動からの起動）と <code>PushGateway.taps</code>（起動中）を、<code>features/notifications/presentation/notification_tap_providers.dart</code> の 2 つの Provider で公開する。D-05 のホームがこれを <code>ref.listen</code> し、S-01/ST-15（タブ選択・先頭スクロール・<code>sync(notificationTap)</code>）を行う。<code>companyId</code> が団体定義に無い・null のときの扱い（「すべて」）も D-05（S-01 §8 #15）。</p>
-<pre><code class="language-dart">@Riverpod(keepAlive: true)
-Future&lt;NotificationTap?&gt; initialNotificationTap(Ref ref) =&gt; ref.watch(pushGatewayProvider).takeInitialTap();
+<pre><code class="language-dart">/// 通知タップで起動したときのタップ情報。**takeInitialTap() は 1 度きりの消費（副作用）**なので、
+/// Riverpod 3 の既定の自動リトライを切る（retry: (_, __) =&gt; null）。切らないと、1 回目が
+/// PlatformException で失敗したときに 2 回目が契約どおり null を返し、AsyncData(null) に落ち着いて
+/// 「通知タップ無し」に化ける（ログも残らない）。例外は捕捉して logger.w に残し、null を返す（§6）
+@Riverpod(keepAlive: true, retry: _noRetry)
+Future&lt;NotificationTap?&gt; initialNotificationTap(Ref ref) async {
+  try {
+    return await ref.watch(pushGatewayProvider).takeInitialTap();
+  } on Object catch (e, s) {
+    ref.read(loggerProvider).w('通知タップ情報の取得に失敗', error: e, stackTrace: s);
+    return null;   // D-05 は「通知タップ無し」として扱う（S-01/ST-15 を起動しない）
+  }
+}
+
+Duration? _noRetry(int retryCount, Object error) =&gt; null;
 
 @Riverpod(keepAlive: true)
 Stream&lt;NotificationTap&gt; notificationTapStream(Ref ref) =&gt; ref.watch(pushGatewayProvider).taps;
@@ -2115,19 +2269,20 @@ Stream&lt;NotificationTap&gt; notificationTapStream(Ref ref) =&gt; ref.watch(pus
 /// S-03/ST-03 の判定入力。フォアグラウンド復帰時に AppLifecycleSync が invalidate する（§5.3）
 @Riverpod(keepAlive: true)
 Future&lt;PushPermissionStatus&gt; pushPermissionStatus(Ref ref) =&gt; ref.watch(pushGatewayProvider).permissionStatus();</code></pre>
-<h3 id="sec-5-8">5.8 下部タブバー（<code>lib/app/root_tabs.dart</code>）<a class="anchor" href="#sec-5-8">#</a></h3>
+<h3 id="sec-5-8">5.8 下部タブバー（<code>lib/app/root_tabs.dart</code>・<code>tab_controller.dart</code>・<code>tab_reselect.dart</code>・<code>root_tab.dart</code>）<a class="anchor" href="#sec-5-8">#</a></h3>
 <ul>
 <li><code>CupertinoTabScaffold</code> + <code>CupertinoTabBar</code>（S-00/E-01〜E-04。アイコンは <code>CupertinoIcons.house_fill</code> / <code>star_fill</code> / <code>gear_alt_fill</code>、ラベルは S-00 §4.1）。各タブの本体は <code>CupertinoTabView</code>（タブごとに Navigator を持ち、切り替えても状態・スクロール位置が保持される。S-00/A-01）</li>
 <li><code>currentIndex</code> は <code>CupertinoTabController</code> で持ち、初期値 0（ホーム。S-00/ST-20）</li>
 <li>タブの種類は <code>lib/app/root_tab.dart</code> の <code>enum RootTab { home, saved, settings }</code>（宣言順が index）で表し、<code>CupertinoTabBar.items</code> と <code>tabBuilder</code> はこの列挙から導出する（index の数値をコードに散らさない）。設定タブは再タップ通知の対象外（<code>RootTab.notifiesReselect</code> が false。S-00 §8 #8）。<code>root_tab.dart</code> は <code>root_tabs.dart</code>（Widget）と <code>tab_reselect.dart</code>（Provider）の双方が参照するため<strong>import ゼロ</strong>にする（両者が互いを import すると <code>articles/presentation → app/tab_reselect → app/root_tabs → articles/presentation</code> の循環になる）</li>
 <li>再タップ（S-00/A-02）の判定は純粋関数 <code>shouldNotifyReselect({required RootTab selected, required RootTab tapped})</code>（<code>selected == tapped &amp;&amp; tapped.notifiesReselect</code>）で行い、true なら <code>ref.read(tabReselectProvider.notifier).notify(index)</code></li>
 <li><strong><code>selected</code>（タップ前に選択されていたタブ）は <code>build</code> の時点で捕捉してコールバックに閉じ込める。</strong> <code>CupertinoTabScaffold</code> は <code>tabBar.onTap</code> を呼ぶ<strong>前</strong>に <code>controller.index</code> を書き換える（Flutter SDK <code>cupertino/tab_scaffold.dart</code>）ため、コールバックの中で <code>controller.index</code> と比較すると<strong>常に一致し、タブを切り替えただけで再タップ通知が飛ぶ</strong>（各画面が先頭までスクロールしてしまい、S-00/A-01 のスクロール位置保持が壊れる）。<code>controller.index</code> のプログラム的な変更（S-01/ST-15）を次回の判定に反映させるため、<code>RootTabs</code> は <code>initState</code> で <code>controller.addListener</code> して再ビルドし、<code>dispose</code> では <code>removeListener</code> だけを行う（<code>dispose</code> は <code>tabControllerProvider</code> の <code>onDispose</code> が持つ）</li>
-<li>通知タップでホームへ切り替える操作（S-01/ST-15）は D-05 が <code>CupertinoTabController.index = 0</code> で行えるよう、コントローラを <code>tabControllerProvider</code>（<code>keepAlive</code>。<code>lib/app/root_tabs.dart</code> に置く。§3.2）で公開する。<strong>戻り値の型は <code>Raw&lt;CupertinoTabController&gt;</code></strong> にする（<code>CupertinoTabController</code> は <code>ChangeNotifier</code> で、そのまま返すと riverpod_lint の <code>unsupported_provider_value</code>（可変オブジェクトを Provider の値にしている）に当たる。<code>Raw&lt;T&gt;</code> は「意図した戻り値」であることを伝える標識）</li>
+<li>通知タップでホームへ切り替える操作（S-01/ST-15）は D-05 が <code>CupertinoTabController.index = RootTab.home.index</code> で行えるよう、コントローラを <code>tabControllerProvider</code>（<code>keepAlive</code>）で公開する。<strong>置き場は <code>lib/app/tab_controller.dart</code></strong>（import は <code>flutter/cupertino.dart</code> と riverpod だけ。<code>ref.onDispose(controller.dispose)</code> も同ファイル）で、<strong><code>root_tabs.dart</code> には置かない</strong>。<code>root_tabs.dart</code> は 3 画面の presentation を import する Widget ファイルなので、そこに Provider を置くと、それを読む feature の presentation（D-05 の <code>HomePage</code>・<code>SavedListController</code>）が <code>root_tabs.dart</code> 経由で他 feature の presentation を推移的に取り込み、CLAUDE.md の禁止事項に反する（<code>root_tab.dart</code> を import ゼロで切り出したのと同じ理由。§3.1・§8 #46）。<code>root_tabs.dart</code> は <code>tabControllerProvider</code> を <code>ref.watch</code> / <code>ref.read</code> する側に回る。<strong>戻り値の型は <code>Raw&lt;CupertinoTabController&gt;</code></strong> にする（<code>CupertinoTabController</code> は <code>ChangeNotifier</code> で、そのまま返すと riverpod_lint の <code>unsupported_provider_value</code>（可変オブジェクトを Provider の値にしている）に当たる。<code>Raw&lt;T&gt;</code> は「意図した戻り値」であることを伝える標識）</li>
 <li><strong><code>CupertinoTabController.index</code> への代入はビルドフェーズ外から行う</strong>（D-05 への制約）。ビルド中に代入すると <code>CupertinoTabScaffold</code> の listener が <code>setState</code> を呼び「setState() called during build」になる。通知タップの処理は <code>ref.listenManual</code> のコールバック（ビルド外）から行う</li>
 </ul>
 <pre><code class="language-dart">// lib/app/tab_reselect.dart
 /// 選択中の下部タブを再タップした回数（タブ index ごと）。各画面は自分の index の値の変化を ref.listen して先頭までスクロールする。
-/// キーは通知対象（RootTab.notifiesReselect）のタブの index だけを持つ
+/// キーは通知対象（RootTab.notifiesReselect）のタブの index だけを持つ。
+/// 読み書きとも `RootTab.home.index` / `RootTab.saved.index` を使い、index の数値（0 / 1）を書かない
 @Riverpod(keepAlive: true)
 class TabReselect extends _$TabReselect {
   @override
@@ -2210,7 +2365,7 @@ class TabReselect extends _$TabReselect {
 <td><code>TransientNotice</code></td>
 <td>同</td>
 <td><code>String message</code>、<code>Duration(seconds: 3)</code></td>
-<td>E-25。<code>Overlay</code> に挿入し 3 秒で自動除去。<strong>同時に 1 枚だけ</strong>：直前の通知が残っていれば除去してから挿入する（現在表示中の <code>OverlayEntry</code> を static に 1 つだけ保持する。3 秒以内に取得が連続して失敗しても帯が積み重ならない）。<strong>渡す <code>context</code> は配置画面（<code>CupertinoTabView</code> 配下）のもの</strong>にする（ルートの <code>Overlay</code> に挿すと下部タブより上に重なり、タブを切り替えても残る）。<code>message</code> は呼び出し側が渡す<strong>固定文言のみ</strong>（S-00 の確定文言。例外メッセージ・URL など外部由来の文字列を渡さない）。表示の可否（配置画面表示中か）は呼び出し側（D-05）</td>
+<td>E-25。<code>Overlay</code> に挿入し 3 秒で自動除去。<strong>同時に 1 枚だけ</strong>：保持するのは <code>(OverlayEntry, Timer)</code> の<strong>組</strong>を static に 1 つだけで、新しい 1 枚を挿す前に<strong>直前の <code>Timer</code> を <code>cancel()</code> してから</strong> <code>entry.remove()</code> を呼ぶ。除去タイマーの発火時は、<strong>自分が保持中の entry と同一のときだけ</strong> <code>remove()</code> する（<code>identical</code> で確認し、違えば何もしない）。<code>Timer</code> を取り消さないと、3 秒以内に E-25 が 2 回要求されたとき（取得失敗 → 0.5 秒後に再試行 → 1.5 秒後にも失敗）に 1 枚目のタイマーが 2 枚目を除去して表示が 1.5 秒に縮むか、除去済みの entry に <code>remove()</code> を呼んで assert / 例外になる。Widget テストを書かない方針（§7）のため実装時に気づく機会が無く、規則をここで固定する。<strong>渡す <code>context</code> は配置画面（<code>CupertinoTabView</code> 配下）のもの</strong>にする（ルートの <code>Overlay</code> に挿すと下部タブより上に重なり、タブを切り替えても残る）。<code>message</code> は呼び出し側が渡す<strong>固定文言のみ</strong>（S-00 の確定文言。例外メッセージ・URL など外部由来の文字列を渡さない）。表示の可否（配置画面表示中か）は呼び出し側（D-05）</td>
 </tr>
 </tbody></table>
 <p><strong><code>ArticleCell</code> の実現</strong>（S-00/E-10〜E-17。§8 #34）：</p>
@@ -2219,11 +2374,11 @@ class TabReselect extends _$TabReselect {
 <li><strong>配置</strong>：S-00 §3.2 のとおり。1 行目は <code>Row</code> で E-11（<code>Flexible</code> + <code>TextOverflow.ellipsis</code>）→ E-12（<code>CategoryIcon</code>）→ E-16（<code>readState == updated</code> のときだけ）</li>
 <li><strong>E-13</strong>：<code>maxLines: 3</code>・<code>ellipsis</code>。空文字なら S-00 §7.7 の代替文言</li>
 <li><strong>E-14</strong>：<code>formatPublishedDate(article.publishedAt, now)</code>（<code>toLocal()</code> は関数の内部で行う）</li>
-<li><strong>E-15</strong>：Widget の入れ子は <strong><code>SizedBox(width: 表示幅)</code> → <code>AspectRatio(aspectRatio: 1)</code> → <code>ClipRRect</code> → <code>Image.network</code></strong> の順にする。<code>AspectRatio</code> を外側に置くと、<code>ListView</code>（縦方向に無限の制約）の中で幅の制約が決まらずレイアウトが破綻する。<code>Image.network(thumbnail, fit: BoxFit.cover, cacheWidth: (表示幅 × MediaQuery.devicePixelRatioOf(context)).round())</code>。<code>cacheWidth</code> でデコード後のサイズを表示サイズに揃え、大きな OGP 画像 100 件で <code>ImageCache</code> が溢れないようにする（表示幅は S-00 §3.2 の E-15 の幅）。<code>loadingBuilder</code> / <code>errorBuilder</code> と <code>thumbnail == null</code> でプレースホルダー（ST-05・ST-06）。<strong><code>Uri.tryParse(thumbnail)?.scheme</code> が <code>http</code> / <code>https</code> 以外のときもプレースホルダーにする</strong>（検証の責務は <code>ArticlesFileCodec</code>（§4.3）にあり、ここは多層防御。<code>Image.network</code> に <code>data:</code> や <code>file:</code> を渡さない）。画像はメモリ内キャッシュ（<code>ImageCache</code>）だけで、ディスクに書くパッケージ（<code>cached_network_image</code> 等）は使わない（CLAUDE.md。§8 #16）</li>
+<li><strong>E-15</strong>：Widget の入れ子は <strong><code>SizedBox(width: 表示幅)</code> → <code>AspectRatio(aspectRatio: 1)</code> → <code>ClipRRect</code> → <code>Image.network</code></strong> の順にする。<code>AspectRatio</code> を外側に置くと、<code>ListView</code>（縦方向に無限の制約）の中で幅の制約が決まらずレイアウトが破綻する。<code>Image.network(thumbnail, fit: BoxFit.cover, cacheWidth: (表示幅 × MediaQuery.devicePixelRatioOf(context)).round())</code>。<code>cacheWidth</code> でデコード後のサイズを表示サイズに揃え、大きな OGP 画像 100 件で <code>ImageCache</code> が溢れないようにする。<strong>表示幅は S-00 §3.2 の E-15 の幅</strong>だが、S-00 は現時点で「正方形（縦横 1:1）」としか定めておらず 1 辺の寸法を持たないため、<strong>S-00 が寸法を定めるまでは実装値 84pt を暫定とする</strong>（寸法は「何が見えるか」なので画面定義書の所管。§8.1 の S-00 宛 (d)）。§9 Q-1（<code>cacheWidth</code> の倍率）もこの 84pt を前提にしている。<code>loadingBuilder</code> / <code>errorBuilder</code> と <code>thumbnail == null</code> でプレースホルダー（ST-05・ST-06）。<strong><code>Uri.tryParse(thumbnail)?.scheme</code> が <code>http</code> / <code>https</code> 以外のときもプレースホルダーにする</strong>（検証の責務は <code>ArticlesFileCodec</code>（§4.3）にあり、ここは多層防御。<code>Image.network</code> に <code>data:</code> や <code>file:</code> を渡さない）。画像はメモリ内キャッシュ（<code>ImageCache</code>）だけで、ディスクに書くパッケージ（<code>cached_network_image</code> 等）は使わない（CLAUDE.md。§8 #16）</li>
 <li><strong>既読（ST-02）の見た目</strong>：S-00 §7.4 のとおり（色・太さ・不透明度を本書で再定義しない）。サムネイルの減光は <code>Image.network</code> の <code>opacity</code>（<code>AlwaysStoppedAnimation</code>）で行う（<code>Opacity</code> Widget で包むと別レイヤに合成され、一覧のスクロールで毎フレームの負荷になる）</li>
 <li><strong>E-17</strong>：<code>CupertinoButton</code>（<code>star</code> / <code>star_fill</code>）で <code>onToggleSaved</code>。セル本体は <code>GestureDetector</code> で <code>onTap</code>（E-17 のタップはセルへ伝播させない。S-00/A-11）</li>
 </ul>
-<p>色はすべて <code>CupertinoColors</code> の動的色（<code>label</code>・<code>secondaryLabel</code>・<code>systemBackground</code>・<code>separator</code>・<code>activeBlue</code>・<code>systemGrey5</code>）を使い、明暗ごとの個別指定を持たない（S-00 §7.8）。文字サイズは <code>CupertinoTheme.of(context).textTheme</code> の既定（Dynamic Type 追従）。</p>
+<p>色は S-00 §7.8 のシステム色に対応する <code>CupertinoColors</code> の<strong>動的色だけ</strong>を使い、明暗ごとの個別指定を持たない（現在使うのは <code>label</code>・<code>secondaryLabel</code>・<code>systemBackground</code>・<code>secondarySystemBackground</code>・<code>separator</code>・<code>activeBlue</code>・<code>systemGrey5</code>。このうち E-23（オフラインの帯）の <code>secondarySystemBackground</code> は<strong>暫定</strong>で、色名の確定は S-00 §7.8 の所管。§9 Q-3・§8.1 の S-00 宛 (c)）。文字サイズは <code>CupertinoTheme.of(context).textTheme</code> の既定（Dynamic Type 追従）。</p>
 <h2 id="sec-6">6. 異常系・境界<a class="anchor" href="#sec-6">#</a></h2>
 <table>
 <thead>
@@ -2270,7 +2425,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td><code>feed_etag</code> があるのに <code>articles</code> が 0 件</td>
-<td>起きない：<code>feed_etag</code> は記事の反映と同じトランザクションでしか書かれない。万一（手動で DB を消した等）は 304 が返り続けるが、<code>articles</code> が 0 件のときは <code>feedEtag()</code> が null を返す実装にして防ぐ（<code>SELECT</code> で <code>articles</code> の件数が 0 なら null）。<code>feedGeneratedAt()</code> も同じ規則（0 件なら null。旧版判定で受信を拒み続けない）</td>
+<td><strong><code>articles: []</code> の正常な配信でも起きる</strong>（collector が一時的に 0 件を配信し、端末に保存済み記事も無いとき。<code>feed_etag</code> は反映と同じトランザクションで書かれるため整合はしている）。手動で DB を消した場合も同じ状態になる。いずれも <code>feedEtag()</code> が null を返す実装（<code>SELECT</code> で <code>articles</code> の件数が 0 なら null）で 304 の膠着を防ぐ。<code>feedGeneratedAt()</code> も同じ規則。<strong>その結果</strong>、記事が 0 件の間は毎回全文取得になり、後退防止（§5.2 手順 4）も効かない。記事が 0 件で失うものが無いため許容する（記事が 1 件でも入れば通常の運用に戻る）</td>
 <td>infrastructure（<code>DriftArticleRepository</code>）</td>
 </tr>
 <tr>
@@ -2435,8 +2590,28 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>記事を取得済みの端末で <code>watchCount()</code> が一過性の I/O エラーで終了した（<code>database is locked</code> 等）</td>
-<td><strong>直前の件数を使う</strong>（<code>hasValue: true</code> を優先）。全面表示で一覧を覆わない。障害は <code>articleCountErrorLog</code> が 1 回だけ <code>logger.w</code> に残す（§4.9・§5.4）</td>
-<td>presentation</td>
+<td><strong>直前の件数を使う</strong>（<code>hasValue: true</code> を優先）。全面表示で一覧を覆わない。障害は <code>AppLifecycleSync</code> の <code>listenManual</code> が 1 回だけ <code>logger.w</code> に残す（§4.9・§5.3・§5.4）</td>
+<td>app（<code>AppLifecycleSync</code>）/ presentation</td>
+</tr>
+<tr>
+<td>記事件数 Stream が<strong>値を 1 度も得る前に</strong>エラーで終了し、自動リトライ（約 50 秒）も尽きた（起動時の DB ロック・migration の一過性失敗）</td>
+<td><code>resolveHasArticles</code> が false → ST-14。E-24 の再試行（S-00/A-12）で <strong><code>ref.invalidate(articleCountProvider)</code> → <code>sync(retry)</code></strong> の順に行い、Stream を再購読する。DB が正常に戻っていれば件数が届いて一覧に戻る。再購読しても失敗するなら ST-14 のまま（何度でも再試行できる）。<strong>invalidate が無いとアプリを再起動するまで ST-14 から抜けられない</strong>（§5.4。§8.1 の D-05 宛）</td>
+<td>presentation / D-05</td>
+</tr>
+<tr>
+<td>3 秒以内に E-25（ST-15）が 2 回要求された（取得失敗 → 0.5 秒後に再試行 → 1.5 秒後にも失敗）</td>
+<td>直前の帯<strong>とそのタイマー</strong>を破棄し、新しい帯を 3 秒表示する（帯は常に 1 枚で、2 枚目が 1.5 秒で消えたり除去済み entry への <code>remove()</code> で落ちたりしない。§5.9）</td>
+<td>presentation（<code>TransientNotice</code>）</td>
+</tr>
+<tr>
+<td>起動時の購読同期が<strong>未開始</strong>のまま背景化して復帰した（<code>_onLaunch</code> が許可ダイアログを await 中に背景へ送られた）</td>
+<td>復帰時の手順 3 が <code>lastResult</code>・<code>pending</code>・<code>lastRunFailed</code> のいずれも空であることを見て <code>run()</code> を<strong>開始する</strong>（「何もしない」ではない）。開始しないとそのセッションで F-08 が一度も実行されない。<code>_onLaunch</code> の手順 3 と重なっても <code>PushSubscriptionCoordinator</code> が直列化する（§5.3・§8 #50）</td>
+<td>app（<code>AppLifecycleSync</code>）</td>
+</tr>
+<tr>
+<td>通知タップで起動したが <code>takeInitialTap()</code> が <code>PlatformException</code> を投げた</td>
+<td><code>initialNotificationTapProvider</code> は自動リトライを切っており（<code>retry: (_, __) =&gt; null</code>）、例外を捕捉して <code>logger.w</code> に残してから null を返す。D-05 は「通知タップ無し」として扱う。<strong>リトライを切らないと、2 回目の呼び出しが契約どおり null を返して失敗が「タップ無し」に化け、ログも残らない</strong>（<code>takeInitialTap</code> は 1 度きりの消費。§4.6・§5.7）</td>
+<td>presentation（<code>notification_tap_providers.dart</code>）</td>
 </tr>
 <tr>
 <td><code>companies.json</code> が読めない・<code>schemaVersion != 1</code>・<code>id</code> 重複</td>
@@ -2444,8 +2619,8 @@ class TabReselect extends _$TabReselect {
 <td>app（<code>core/di</code> の <code>buildOverrides()</code>。§8 #43）</td>
 </tr>
 <tr>
-<td>購読同期の <code>settings.notificationSettings()</code> が DB 例外で失敗した</td>
-<td>例外をそのまま伝播し、<code>PushSubscriptionCoordinator.run()</code> の呼び出し側（<code>AppLifecycleSync</code>・D-05 のトグル）が <code>on Object catch</code> で捕捉して <code>logger.w</code> に残す。<code>lastResult</code> は変えない（<code>failed</code> が空の成功として記録しない。§5.6「失敗時」）</td>
+<td>購読同期の <code>settings.notificationSettings()</code> が DB 例外で失敗した（起動時。一過性の <code>database is locked</code> 等）</td>
+<td>例外をそのまま伝播し、<code>PushSubscriptionCoordinator.run()</code> の呼び出し側（<code>AppLifecycleSync</code>・D-05 のトグル）が <code>on Object catch</code> で捕捉して <code>logger.w</code> に残す。<code>lastResult</code> は変えない（<code>failed</code> が空の成功として記録しない）。<strong><code>lastRunFailed = true</code> になるため、次のフォアグラウンド復帰で再実行される</strong>（§5.3・§5.6「失敗時」・§8 #50）。これが無いと、1 団体単位の軽い失敗（<code>failed</code>）は復帰で再試行されるのに、全団体の購読状態が不明になる重い失敗だけが再試行されないという逆転が起きる</td>
 <td>application / app</td>
 </tr>
 <tr>
@@ -2570,7 +2745,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 </tbody></table>
 <h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
-<p>テストの単位は UseCase（CLAUDE.md）。Widget テスト・個別クラスのユニットテストは書かない（例外は本節末尾の純粋関数 9 つだけ。§8 #28）。<code>SyncCoordinator</code>・<code>PushSubscriptionCoordinator</code>（application）は UseCase を包む application のクラスなので UseCase と同じ扱いでテストする（コンストラクタの <code>execute</code> に <code>Completer</code> で完了を制御するスタブ関数を渡す。具象 UseCase を継承しない。§8 #33）。差し替えるのは外部 I/O（HTTP・FCM・アセット）で、drift は <code>NativeDatabase.memory()</code> の<strong>実物</strong>を使う（<code>DriftArticleRepository</code> の SQL、特に保存済み記事の保護とトランザクションを UseCase 経由で検証するため）。HTTP は <code>package:http</code> の <code>MockClient</code> で <code>HttpArticlesFeed</code> を実物のまま通し、<code>ArticlesFileCodec</code> の検証（D-01 §7.3「読み取り（D-04）」）も UseCase から到達させる。ネットワークへは一切アクセスしない。<code>Firebase</code>・<code>FcmPushGateway</code>・<code>bootstrap</code>・<code>buildOverrides</code>・<code>SyncController</code>・Widget はテストしない。</p>
+<p>テストの単位は UseCase（CLAUDE.md）。Widget テスト・個別クラスのユニットテストは書かない（例外は本節末尾の純粋関数 9 つだけ。§8 #28）。<code>SyncCoordinator</code>・<code>PushSubscriptionCoordinator</code>（application）は UseCase を包む application のクラスなので UseCase と同じ扱いでテストする（コンストラクタの <code>execute</code> に <code>Completer</code> で完了を制御するスタブ関数を渡す。具象 UseCase を継承しない。§8 #33）。差し替えるのは外部 I/O（HTTP・FCM・アセット）で、drift は <code>NativeDatabase.memory()</code> の<strong>実物</strong>を使う（<code>DriftArticleRepository</code> の SQL、特に保存済み記事の保護とトランザクションを UseCase 経由で検証するため）。HTTP は <code>package:http</code> の <code>MockClient</code> で <code>HttpArticlesFeed</code> を実物のまま通し、<code>ArticlesFileCodec</code> の検証（D-01 §7.3「読み取り（D-04）」）も UseCase から到達させる。<strong><code>MockClient</code> はそのまま渡さず <code>UserAgentClient(mock, userAgent: appUserAgent)</code> で包んでから <code>HttpArticlesFeed</code> に渡す</strong>：UA の付与は <code>HttpArticlesFeed</code> ではなく注入されたクライアント（本番は <code>httpClientProvider</code>）の責務なので（§4.3・§4.7）、包まないと <code>User-Agent</code> のケースが成立しない。ネットワークへは一切アクセスしない。<code>Firebase</code>・<code>FcmPushGateway</code>・<code>bootstrap</code>・<code>buildOverrides</code>・<code>SyncController</code>・Widget はテストしない。<strong><code>FcmPushGateway</code> をテストしない代わりに、§6 の「<code>subscribe</code> / <code>unsubscribe</code> が応答を返さない（<code>.timeout()</code> で <code>failed</code> に積む）」と「<code>takeInitialTap</code> を 2 回呼んだ（2 回目は null）」の 2 点は §10 T-G の実機確認で担保する</strong>（T-G の完了条件に目視項目として入れる）。</p>
 <p><code>test/helpers/</code>：</p>
 <table>
 <thead>
@@ -2585,7 +2760,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td><code>mock_feed_client.dart</code></td>
-<td>応答（ステータス・ヘッダ・本文）または投げる例外を指定して <code>MockClient</code>（<code>MockFeedClient</code>）を返す。受け取ったリクエストヘッダ（<code>If-None-Match</code>・<code>User-Agent</code>）と呼び出し回数を記録する。<strong>本文は <code>http.Response.bytes(utf8.encode(body), status)</code> で作る</strong>（<code>http.Response(String, int)</code> は既定の文字コードが Latin-1 で、日本語の見出しが化けたまま通ってしまい <code>title</code> の比較が無意味になる）。<code>feedResponse({schemaVersion, generatedAt, articles})</code> で契約どおりの JSON 本文を組み立てる</td>
+<td>応答（ステータス・ヘッダ・本文）または投げる例外を指定して <code>MockClient</code>（<code>MockFeedClient</code>）を返す。受け取ったリクエストヘッダ（<code>If-None-Match</code>・<code>User-Agent</code>）と呼び出し回数を記録する。<strong><code>HttpArticlesFeed</code> に渡すクライアントを組み立てるヘルパも同じファイルに置き、<code>UserAgentClient(mock, userAgent: appUserAgent)</code> で包んだものを返す</strong>（本番と同じ層で UA が付く。§4.3・§4.7）。<strong>本文は <code>http.Response.bytes(utf8.encode(body), status)</code> で作る</strong>（<code>http.Response(String, int)</code> は既定の文字コードが Latin-1 で、日本語の見出しが化けたまま通ってしまい <code>title</code> の比較が無意味になる）。<code>feedResponse({schemaVersion, generatedAt, articles})</code> で契約どおりの JSON 本文を組み立てる</td>
 </tr>
 <tr>
 <td><code>fake_push_gateway.dart</code></td>
@@ -2654,7 +2829,7 @@ class TabReselect extends _$TabReselect {
 <li>初回（<code>feed_etag</code> 無し）→ <code>If-None-Match</code> を送らない</li>
 <li>200 の <code>ETag</code> → <code>feed_etag</code> に保存される</li>
 <li><code>ETag</code> 無しの 200 → <code>feed_etag</code> の行が消える</li>
-<li>リクエストヘッダ → <code>User-Agent</code> が <code>appUserAgent</code></li>
+<li>リクエストヘッダ → <code>User-Agent</code> が <code>appUserAgent</code>（付与するのは <code>UserAgentClient</code>。<code>HttpArticlesFeed</code> は付けない。§4.3）</li>
 <li><code>notificationTap</code> → <code>feed_etag</code> があっても <code>If-None-Match</code> を送らない。他の 4 契機では送る（<code>forceReload</code>。§8 #31）</li>
 <li><code>feed_etag</code> の行があるが <code>articles</code> が 0 件 → <code>If-None-Match</code> を送らない（<code>MockClient</code> のヘッダ記録で確認。§6 の防御規則）</li>
 </ul>
@@ -2762,6 +2937,8 @@ class TabReselect extends _$TabReselect {
 <li>スタブが 2 回目の呼び出しで別の結果を返す → それが <code>lastResult</code> になる（再実行が設定を読み直す）</li>
 <li>再実行の予約中 → <code>isRunning</code> は再実行の完了まで true</li>
 <li>実行中に <code>run()</code> を 3 回以上呼ぶ → 予約は増えず（<code>execute</code> は計 2 回）、2 回目以降の呼び出しはすべて<strong>同じ Future</strong>（<code>identical</code>）を返す</li>
+<li><strong>再実行（2 回目）の実行中に <code>run()</code> を呼ぶ</strong> → <code>execute</code> が計 3 回呼ばれ、3 回目は 2 回目の完了後に始まる（再実行を開始する時点で <code>_rerun</code> を null に戻す。§5.6 手順 3）</li>
+<li>再実行（2 回目）の実行中の <code>run()</code> が返す Future → 1 回目・2 回目のいずれとも<strong>異なる</strong>（<code>identical</code> でない）。3 回目の結果で完了する（実行中に変えた設定が落ちない。§8 #41）</li>
 </ul>
 <p><strong><code>PushSubscriptionCoordinator</code> — <code>group(&#39;失敗&#39;)</code></strong>（§5.6「失敗時」。§8 #41）：</p>
 <ul>
@@ -2770,6 +2947,7 @@ class TabReselect extends _$TabReselect {
 <li>実行中に <code>run()</code> で予約し、最初の <code>execute</code> が例外を投げる → 最初の <code>run()</code> は例外で完了し、予約の <code>execute</code> は開始され、予約の Future はその結果で完了する</li>
 <li>実行中に <code>run()</code> で予約し、<strong>予約側の再実行が例外を投げる</strong> → 予約の Future が<strong>同じ例外で完了する</strong>（<code>completeError</code> 経路。ここを <code>then(complete)</code> だけで書くと Future が永久に完了しない）</li>
 <li><code>execute</code> が同期的に throw する（<code>async</code> を付け忘れた実装に相当） → <code>run()</code> の Future が同じ例外で完了し、実行中が空いて次の <code>run()</code> が <code>execute</code> を呼べる</li>
+<li><code>execute</code> が例外を投げる → <code>lastRunFailed == true</code>。その後 <code>execute</code> が正常に完了する <code>run()</code> → <code>lastRunFailed == false</code> に戻る（§5.6・§8 #50）</li>
 </ul>
 <p><strong><code>PushSubscriptionCoordinator</code> — <code>group(&#39;pending&#39;)</code></strong>（§8 #37）：</p>
 <ul>
@@ -2778,6 +2956,8 @@ class TabReselect extends _$TabReselect {
 <li>再実行が予約されている → <code>pending</code> は再実行の結果で完了する Future</li>
 <li>完了後 → <code>pending == null</code></li>
 <li><code>lastResult == null</code> の実行中に <code>pending</code> を await → 最初の実行の結果（<code>failed</code> あり）が得られる（<code>AppLifecycleSync</code> の復帰時判定の根拠）</li>
+<li><strong>一度も <code>run()</code> を呼んでいない</strong> → <code>lastResult == null</code> かつ <code>pending == null</code> かつ <code>lastRunFailed == false</code>（<code>AppLifecycleSync</code> が「起動時の同期が未開始」と判定して <code>run()</code> を開始する条件。§5.3・§6）</li>
+<li>例外で完了した後 → <code>pending == null</code>・<code>lastResult == null</code>・<code>lastRunFailed == true</code>（「未開始」と区別できる。§8 #50）</li>
 </ul>
 <p><strong><code>SyncPushSubscriptionsUseCase</code> — <code>group(&#39;購読の同期&#39;)</code></strong>（§5.6）：</p>
 <ul>
@@ -3135,6 +3315,36 @@ class TabReselect extends _$TabReselect {
 <td><code>providers.dart</code> 1 ファイルに全 Provider を置き、T-D と T-E が別ブロックを追記する</td>
 <td>T-D と T-E は並行タスク（§10）で、同じ <code>providers.dart</code> を編集すると <code>riverpod_generator</code> の生成物 <code>providers.g.dart</code> が必ず衝突する（ブロックを分けてもファイル単位で衝突する）。feature ごとにファイルを分ければ各タスクは自分のファイルと生成物だけを追加し、マージが機械的になる。具象 import を許可する場所が <code>core/di/</code> 配下であることは変わらず（CLAUDE.md・#43）、feature の追加時に <code>core/di/&lt;feature&gt;_providers.dart</code> を足す規則としても素直（第 2 段階第 1 周 M-6）</td>
 </tr>
+<tr>
+<td>46</td>
+<td><code>tabControllerProvider</code> を <code>lib/app/tab_controller.dart</code>（import は <code>flutter/cupertino.dart</code> と riverpod のみ）に切り出し、<code>root_tabs.dart</code> には Provider を置かない。feature の presentation が参照してよい <code>lib/app/</code> の共有 Provider は、feature の presentation を import しないファイルに置く（§3.1・§5.8）</td>
+<td><code>root_tabs.dart</code>（3 画面の presentation を import する Widget ファイル）に <code>tabControllerProvider</code> を置いたままにする</td>
+<td>CLAUDE.md「feature の <code>presentation</code> から他の feature の <code>presentation</code> を import することを禁止」。D-05 の <code>HomePage</code>・<code>SavedListController</code> が <code>ref.read(tabControllerProvider)</code> を行うため、Provider が <code>root_tabs.dart</code> にあると <code>saved/presentation</code> が <code>root_tabs.dart</code> 経由で <code>articles</code> / <code>settings</code> の presentation を推移的に取り込む。これは §5.8 が <code>root_tab.dart</code> を import ゼロで切り出して排除した循環（<code>articles/presentation → app/tab_reselect → app/root_tabs → articles/presentation</code>）と同じ形で、同じ規則を Provider にも適用する。D-05 §8 #10 が通知 Provider に対して <code>core/di</code> の委譲 Provider で同じ問題を避けており、ここだけ例外にする理由が無い（design-review 第 1 段階・第 1 周 M-7）</td>
+</tr>
+<tr>
+<td>47</td>
+<td><code>feed_etag</code>・<code>feed_generated_at</code>・<code>feed_unsupported_schema</code> の 3 キーは <code>features/articles/domain/feed_state_keys.dart</code>（<code>FeedStateKeys</code>）に置き、<code>SettingKeys</code>（settings/domain）からは外す。<code>settings</code> feature が持つのは <code>notification.*</code> / <code>browser</code> / <code>unread_filter</code> だけ</td>
+<td>§3.1 の依存表に <code>articles/infrastructure → settings/domain</code>（<code>SettingKeys.feed*</code> の定数のみ）の行を追加して現状を追認する</td>
+<td>§3.1 は「feature 間の依存は次の方向だけを許す」と排他的に宣言しており、追認は恒久的な例外を作る。これらのキーは settings feature の契約ではなく articles の同期状態で、§4.4 自身が「<code>ArticleSyncRepository</code> の実装のみが読み書きする。<code>SettingsRepository</code> には get / set を追加しない」と定めている。<code>settings</code> テーブルへのアクセスは <code>AppDatabase</code>（core/database）の共通アクセサ経由なので、移しても settings feature を経由する必要はない（依存が 1 本減る）。移動は定数の置き場を変えるだけで振る舞いは変わらない（design-review 第 1 段階・第 1 周 M-8。司令塔の判断で (a) を採用）</td>
+</tr>
+<tr>
+<td>48</td>
+<td><code>AppDatabase</code> に置く SQL は「2 つ以上の feature の infrastructure が共有する述語・アクセサ」に限る（現在は settings の 4 アクセサと <code>deleteUnsavedOutOfFeedRows()</code> の 5 つ）。feature 固有の SQL は各 Repository 実装に置く（§4.2）</td>
+<td>基準を置かず個別の事情で都度 <code>AppDatabase</code> に足す／逆に共有せず各 Repository に述語をコピーする</td>
+<td>CLAUDE.md「共通処理は domain / application の抽象に寄せ、infrastructure 間でコピーしない」。基準が無いと <code>AppDatabase</code> が全 SQL の置き場になり、feature の境界が DB クラスで溶ける。逆に共有しないと、配信から外れた未保存記事を消す述語が <code>applyFeed</code>（§5.2 手順 8-5）と保存解除の確定（D-05 §4.5）の 2 か所に書かれ、片方だけ直す事故が起きる。2 つ以上の feature が使うかどうかは機械的に判定でき、境界の議論が要らない（design-review 第 1 段階・第 1 周 M-16）</td>
+</tr>
+<tr>
+<td>49</td>
+<td>記事件数 Stream のエラー記録は <code>AppLifecycleSync.initState</code> の <code>ref.listenManual(articleCountProvider, ...)</code> で行い、副作用専用の <code>articleCountErrorLog</code> Provider は置かない（§4.9・§5.3・§5.4）</td>
+<td>値を使わない <code>void</code> Provider を <code>feedStatus</code> が <code>ref.watch</code> して起動する</td>
+<td>(1) <code>ref.watch(void provider)</code> で副作用を起動する形は依存が暗黙で、<code>feedStatus</code> を読む側から副作用の存在が見えない。「Provider を副作用の起動に使う」前例を 1 つ作ると、以後の feature が同じ形を真似る。(2) 起動点が <code>syncsOnLaunch == true</code>（ホーム）だけなので、保存・設定タブしか開いていない間の DB 障害が記録されない。<code>AppLifecycleSync</code> は本書が「順序に依存する規則・副作用をすべて閉じる」と定めた場所（§5.3）で、<code>listenManual</code> は <code>initState</code> の 1 回きりなので Provider の <code>build</code> 内 <code>ref.listen</code> のような重複発火も起きない。<code>shouldLogCountError</code>（純粋関数）はそのまま残るため §7 のテストは変わらない（design-review 第 1 段階・第 1 周 M-17）</td>
+</tr>
+<tr>
+<td>50</td>
+<td><code>PushSubscriptionCoordinator</code> は「直近の実行が例外で終わったか」を <code>lastRunFailed</code> で保持し、<code>AppLifecycleSync</code> は復帰時に「<code>failed</code> が 1 件以上」<strong>または</strong>「<code>lastRunFailed</code>」で再実行する。あわせて、<code>lastResult</code>・<code>pending</code>・<code>lastRunFailed</code> がすべて空（一度も実行されていない）なら復帰時に <code>run()</code> を<strong>開始する</strong>（§5.3・§5.6）</td>
+<td>例外で終わった実行は再試行しない（#41 のとおり <code>StateError</code> = 回復しない不備とみなす）／未開始なら復帰時も何もしない</td>
+<td>#41 の根拠は <code>CompanyRepository.loadAll</code> の <code>StateError</code>（ビルドの不備＝回復しない）を前提にしていたが、T-22 で <code>SettingsRepository</code> の DB 例外（<code>database is locked</code> 等の一過性の障害）が同じ経路に加わった。1 団体単位の <code>failed</code>（軽い失敗）は復帰で再試行されるのに、全団体の購読状態が不明になる重い失敗だけ再試行されないのは逆転で、F-08 が当該セッション中ずっと未同期になる。<code>StateError</code> の場合は再実行しても同じ例外で終わるだけ（ログが 1 行増える）で害が無い。未開始のケース（<code>_onLaunch</code> が許可ダイアログを await 中に背景化）も同じく F-08 が丸ごと未実行になるため、復帰時に開始する（<code>PushSubscriptionCoordinator</code> が直列化するので <code>_onLaunch</code> の手順 3 と重ならない）（design-review 第 1 段階・第 1 周 M-10・M-12）</td>
+</tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
 <table>
@@ -3152,8 +3362,13 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>D-05</td>
-<td>S-00 §5.2 の判定は <code>resolveListStatus(ref.watch(feedStatusProvider), hasVisible: ...)</code> を使い、画面側で再実装しない。<code>hasVisible</code> は団体タブ・未読フィルタ・保存の有無で絞った後の件数 &gt; 0。E-25（ST-15）は <code>syncControllerProvider</code> の <code>sequence</code> の変化を <code>ref.listen</code> し、<code>lastResult is SyncFailed</code> かつホームが表示中（<code>tabControllerProvider.index == 0</code> かつ <code>ModalRoute.isCurrent</code>）のときだけ <code>TransientNotice</code> を 3 秒出す。表示中でなければ捨てる（S-00 §8 #25）</td>
-<td>§5.4</td>
+<td>S-00 §5.2 の判定は <code>resolveListStatus(ref.watch(feedStatusProvider), hasVisible: ...)</code> を使い、画面側で再実装しない。<code>hasVisible</code> は団体タブ・未読フィルタ・保存の有無で絞った後の件数 &gt; 0。E-25（ST-15）は <code>syncControllerProvider</code> の <code>sequence</code> の変化を <code>ref.listen</code> し、<code>lastResult is SyncFailed</code> かつホームが表示中（<code>tabControllerProvider.index == RootTab.home.index</code> かつ <code>ModalRoute.isCurrent</code>）のときだけ <code>TransientNotice</code> を 3 秒出す。表示中でなければ捨てる（S-00 §8 #25）。<strong>index の数値リテラル（<code>0</code>）を書かない</strong>（§5.8「index の数値をコードに散らさない」）</td>
+<td>§5.4、§5.8</td>
+</tr>
+<tr>
+<td>D-05</td>
+<td><strong><code>FullErrorView.onRetry</code>（S-00/A-12）は <code>sync(SyncTrigger.retry)</code> を呼ぶ前に <code>ref.invalidate(articleCountProvider)</code> を行う</strong>（D-05 が一覧の Stream Provider を持つならそれも invalidate する）。記事件数 Stream が値を得る前にエラーで終了すると <code>resolveHasArticles</code> が false を返して ST-14 が固定され、<code>sync(retry)</code> だけでは Stream が再購読されないため、DB が正常に戻ってもアプリを再起動するまで一覧に戻れない（§5.4・§6）</td>
+<td>§5.4、§6</td>
 </tr>
 <tr>
 <td>D-05</td>
@@ -3167,8 +3382,8 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>D-05</td>
-<td>保存解除（S-00/A-11）の確定は<strong>画面によって時点が異なる</strong>（S-02 §7.3「解除したとき」・§5 ST-04・§8 #9）。<strong>保存画面での解除は画面上で保留する</strong>：セルは枠線の星のまま一覧に残り（再タップで保存に戻せる）、<code>saved_articles</code> の削除と、<code>in_feed = false</code> になった記事の <code>articles</code> からの削除は、<strong>保存画面を離れた時点でまとめて行う</strong>。<strong>ホームでの解除は即時</strong>（ホームに出るのは <code>in_feed = true</code> の記事だけなので <code>articles</code> の削除対象にならない）。<code>in_feed = true</code> の記事は保存を解除しても <code>articles</code> に残す。<code>SavedArticleRepository</code> に閲覧用（<code>watchAll()</code> = <code>saved_at</code> 降順 → <code>id</code> 昇順）を追加する</td>
-<td>§4.2、S-02 §7.1・§7.3</td>
+<td>保存解除（S-00/A-11）の確定は<strong>画面によって時点が異なる</strong>（S-02 §7.3「解除したとき」・§5 ST-04・§8 #9）。<strong>保存画面での解除は画面上で保留する</strong>：セルは枠線の星のまま一覧に残り（再タップで保存に戻せる）、<code>saved_articles</code> の削除と、<code>in_feed = false</code> になった記事の <code>articles</code> からの削除は、<strong>下部タブが保存から離れた時点（S-00/A-01）でまとめて行う</strong>。確定契機はこの 1 つだけで、<strong>記事を開いて戻る（S-02/A-01 → A-03）・外部ブラウザへの離脱と復帰・<code>paused</code> / <code>hidden</code> では確定しない</strong>（S-02 §5 ST-04「A-03 で記事から戻っただけでは消えない」・§8 #9。誤タップの取り消し手段を失わないため）。<strong>保存画面を表示したままアプリが終了した場合、保留中の解除と再保存の <code>saved_at</code> 更新は失われ、次回起動時はその記事が保存済みのまま出る</strong>（取り消し側に倒す。D-05 §8 #26。開発者確認済み 2026-09-20）。<strong>ST-04 の間の再タップは「保留の取り消し」ではなく <code>SavedArticleRepository.save(articleId, savedAt: 現在時刻)</code> として扱い、<code>saved_at</code> を再タップ時刻に更新する</strong>（保留方式では行が残っているため、取り消しとして実装すると <code>saved_at</code> が元の値のままで、戻ったときにセルが先頭に移らない。S-02 §7.1）。<strong>ホームでの解除は即時</strong>（ホームに出るのは <code>in_feed = true</code> の記事だけなので <code>articles</code> の削除対象にならない）。<code>in_feed = true</code> の記事は保存を解除しても <code>articles</code> に残す。<code>SavedArticleRepository</code> に閲覧用（<code>watchAll()</code> = <code>saved_at</code> 降順 → <code>id</code> 昇順）を追加する。確定時の削除述語は <code>AppDatabase.deleteUnsavedOutOfFeedRows()</code> を共有する（§4.2・§8 #48）</td>
+<td>§4.2、S-02 §5 ST-04・§7.1・§7.3、D-05 §8 #26</td>
 </tr>
 <tr>
 <td>D-05</td>
@@ -3192,7 +3407,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>D-05</td>
-<td><code>SettingsRepository</code> に <code>browser</code> / <code>unreadFilter</code> の get・set・watch を追加する。キーと既定値は <code>SettingKeys</code>（§4.4）。未読フィルタは S-01 §8 #19 のとおり永続化する。<strong><code>feed_etag</code>・<code>feed_generated_at</code>・<code>feed_unsupported_schema</code> は <code>ArticleSyncRepository</code> の実装だけが読み書きし、<code>SettingsRepository</code> に get / set を追加しない</strong>（記事の反映と同じトランザクションで書く規則を守るため。§8 #15・#32・#38）</td>
+<td><code>SettingsRepository</code> に <code>browser</code> / <code>unreadFilter</code> の get・set・watch を追加する。キーと既定値は <code>SettingKeys</code>（§4.4）で、<code>browser</code> の写像は <code>BrowserChoice.fromValue</code>（行無し・未知は <code>inApp</code>）を使う。未読フィルタは S-01 §8 #19 のとおり永続化する。<strong><code>feed_etag</code>・<code>feed_generated_at</code>・<code>feed_unsupported_schema</code> は <code>articles/domain</code> の <code>FeedStateKeys</code> にあり、<code>ArticleSyncRepository</code> の実装だけが読み書きする。<code>SettingsRepository</code> に get / set を追加しない</strong>（記事の反映と同じトランザクションで書く規則を守るため。§8 #15・#32・#38・#47）</td>
 <td>§4.4</td>
 </tr>
 <tr>
@@ -3227,13 +3442,18 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>S-00（次回 reopen 時）</td>
-<td>§5.1 ST-03 の発生条件と §7.5 の表示条件を「<code>SyncArticlesUseCase</code> が更新を検知した後に記事を開いていない」趣旨に補正する。新着は <code>updatedAt</code> があってもバッジを付けない（§8 #11、開発者確認 2026-09-19）。あわせて、対応外の <code>schemaVersion</code> を検知したとき（§8 #32）に ST-15 の 3 秒表示だけではアプリ更新の必要が伝わらないため、E-24 / E-25 に「アプリの更新が必要です」相当の変種（文言は S-00 が決める）を追加するか判断する（開発者決定 2026-09-20：現状は既存文言のまま。追加は次回 reopen 時の申し送り）。同じ論点として、抑止中（<code>SyncFailed.suppressed == true</code>。通信していない）に起動・復帰のたびに ST-15 を出すか、出さないかを §5.2 / §8 に定める（§8 #44）。あわせて次の 2 点を §7 に補記するか判断する：(a) <code>publishedAt</code> が端末の今日より後になる場合（サイト側の日付誤り）の E-14 の書式を §7.3 に追加するか（本書は書式を決めず、§7.3 の 4 行を機械的に当てはめる。§5.9）、(b) 取得できない／不正な URL（<code>http</code> / <code>https</code> 以外）のサムネイルは ST-05 と同じプレースホルダーになる旨を §7.6 に補記するか（本書の規則は §4.3 のまま）。<strong>(c) §7.8 の「システム背景色」のうち E-23（オフラインの帯）の色名を確定するか</strong>（T-24 の実装は <code>CupertinoColors.secondarySystemBackground</code>。色は「何が見えるか」なので画面定義書の所管。§9 Q-3）</td>
+<td>§5.1 ST-03 の発生条件と §7.5 の表示条件を「<code>SyncArticlesUseCase</code> が更新を検知した後に記事を開いていない」趣旨に補正する。新着は <code>updatedAt</code> があってもバッジを付けない（§8 #11、開発者確認 2026-09-19）。あわせて、対応外の <code>schemaVersion</code> を検知したとき（§8 #32）に ST-15 の 3 秒表示だけではアプリ更新の必要が伝わらないため、E-24 / E-25 に「アプリの更新が必要です」相当の変種（文言は S-00 が決める）を追加するか判断する（開発者決定 2026-09-20：現状は既存文言のまま。追加は次回 reopen 時の申し送り）。同じ論点として、抑止中（<code>SyncFailed.suppressed == true</code>。通信していない）に起動・復帰のたびに ST-15 を出すか、出さないかを §5.2 / §8 に定める（§8 #44）。あわせて次の 2 点を §7 に補記するか判断する：(a) <code>publishedAt</code> が端末の今日より後になる場合（サイト側の日付誤り）の E-14 の書式を §7.3 に追加するか（本書は書式を決めず、§7.3 の 4 行を機械的に当てはめる。§5.9）、(b) 取得できない／不正な URL（<code>http</code> / <code>https</code> 以外）のサムネイルは ST-05 と同じプレースホルダーになる旨を §7.6 に補記するか（本書の規則は §4.3 のまま）。<strong>(c) §7.8 の「システム背景色」のうち E-23（オフラインの帯）の色名を確定するか</strong>（T-24 の実装は <code>CupertinoColors.secondarySystemBackground</code>。色は「何が見えるか」なので画面定義書の所管。§9 Q-3）。<strong>(d) 寸法・区切り線の 2 点</strong>：§3.2 / §7.6 の E-15（サムネイル）は「正方形（縦横 1:1）」としか定めておらず<strong>1 辺の寸法が無い</strong>ため、本書の <code>cacheWidth</code>（表示幅 × dpr。§5.9）と §9 Q-1 の判断根拠が承認済み文書のどこにも無い。実装値の <strong>84pt</strong> を §3.2 / §7.6 に明記するか判断する（本書は S-00 が定めるまで 84pt を暫定とする）。あわせて §3.2 の「1px の区切り線」を「iOS 標準のリスト区切り（0.5pt）」に直すか判断する（T-25 の追随事項）</td>
 <td>§5.5、§5.9、§6、§4.3</td>
 </tr>
 <tr>
 <td>S-01（次回 reopen 時）</td>
 <td>ST-15 の「取得が成功した時点で対象記事が現れる」の例外を明記するか判断する：通知タップ直後の取得で Pages の CDN が前回反映分より古い版を 200 で返した場合、本書は後退防止（§5.2 手順 4。§8 #38）でその本文を破棄するため、取得は成功（<code>SyncSucceeded</code>）でも対象記事は次の取得（Pull to Refresh・復帰・起動）まで一覧に現れない（旧版が「変化なし」で対象記事を含まない場合と画面上は同じ。S-01 §5 ST-15。動線は §8 #20）。本書の破棄規則（§5.2 の後退防止）は変えない。S-01 の ST-15 に例外を明記するかは reopen 時の判断に委ねる（開発者確認 2026-09-20）</td>
 <td>§5.2、§6</td>
+</tr>
+<tr>
+<td>S-01（次回 reopen 時。<strong>§9 Q-5 の開発者判断待ち</strong>）</td>
+<td>S-01 §8 #23 は「バックグラウンドからフォアグラウンドに復帰したとき、<strong>そのたびに</strong>裏で取得を実行する（ST-03）」と定めるが、本書は<strong>対応外の <code>schemaVersion</code> を記録している間、<code>launch</code> / <code>foreground</code> では通信せず <code>SyncFailed(suppressed: true)</code> を返す</strong>（§5.2 手順 0・§8 #32・#44。毎回 200 KB を取り直さないため）。この間は起動時・復帰時に ST-03（更新中・E-21）が発生せず、#23 の「そのたびに」が成り立たない例外が生じる（<code>pullToRefresh</code> / <code>retry</code> / <code>notificationTap</code> は従来どおり取得する）。既存の申し送りは「抑止中に ST-15 を出すか」（表示の可否。S-00 宛）だけで、<strong>取得自体を行わない例外が画面定義書側に伝わっていない</strong>。S-01 §5 ST-01・ST-03 または §8 #23 に例外を明記するかは画面定義書の変更を伴うため §9 Q-5 で開発者判断に回す。本書の抑止規則（§8 #32）は変えない</td>
+<td>§5.2、§6、§8 #32・#44</td>
 </tr>
 <tr>
 <td>D-01（次回 reopen 時）</td>
@@ -3267,8 +3487,8 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>実装（本書の反映後に行う片付け。宛先は次に当該ファイルを触るタスク）</td>
-<td>本書 §4.3 に TLS 系 <code>IOException</code> の分類行が入ったので <code>features/articles/infrastructure/http_articles_feed.dart</code> の <code>TODO(T-21)</code> を削除する。本書 §4.2 に <code>settings</code> の共通アクセサ 4 つが入ったので <code>core/database/app_database.dart</code> の <code>TODO(T-20)</code> を削除する（どちらも「設計書に規定が無い」ことを記した注記で、本書の反映で解消する）</td>
-<td>§4.2、§4.3</td>
+<td><strong>注記の削除</strong>：(1) <code>features/articles/infrastructure/http_articles_feed.dart</code> の <code>TODO(T-21)</code>（§4.3 に TLS 系 <code>IOException</code> の分類行が入ったため）、(2) <code>core/database/app_database.dart</code> の <code>TODO(T-20)</code>（§4.2 に <code>settings</code> の共通アクセサが入ったため）、(3) <code>features/articles/domain/article.dart</code> と <code>pubspec.yaml</code> の <code>TODO(T-18)</code>（§4.1 に <code>@immutable</code> の方針、§4.8 に <code>meta</code> の依存が入ったため）。いずれも「設計書に規定が無い」ことを記した注記で、本書の反映で解消する。<strong>実装済みコードの移動</strong>：(4) <code>tabControllerProvider</code> を <code>lib/app/root_tabs.dart</code> から <code>lib/app/tab_controller.dart</code> へ切り出す（§5.8・§8 #46。<code>root_tabs.dart</code> は読む側に回る。D-05 側の import も追随）、(5) <code>SettingKeys.feedEtag</code> / <code>feedGeneratedAt</code> / <code>feedUnsupportedSchema</code> を <code>features/articles/domain/feed_state_keys.dart</code> の <code>FeedStateKeys</code> へ移し、<code>drift_article_repository.dart</code> の <code>settings/domain</code> import を外す（§4.4・§8 #47）、(6) <code>articleCountErrorLog</code> Provider を廃し、記録を <code>AppLifecycleSync.initState</code> の <code>ref.listenManual</code> へ移す（<code>feedStatus</code> の <code>ref.watch(articleCountErrorLogProvider)</code> も削除。§5.3・§5.4・§8 #49）。(4)〜(6) はいずれも振る舞いを変えない移動で、<code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test</code> が通ることで確認する</td>
+<td>§4.1、§4.2、§4.3、§4.4、§4.8、§5.3、§5.4、§5.8</td>
 </tr>
 <tr>
 <td>CLAUDE.md（司令塔。<strong>反映済み</strong>。§8 #26）</td>
@@ -3281,13 +3501,18 @@ class TabReselect extends _$TabReselect {
 <td>§7</td>
 </tr>
 <tr>
+<td>CLAUDE.md（司令塔。<strong>未反映。開発者判断が要る</strong>）</td>
+<td>「品質ゲート」の app 行は現在 <code>flutter analyze &amp;&amp; flutter test</code> だが、<strong><code>riverpod_lint</code> は <code>analysis_options.yaml</code> の <code>plugins:</code> 方式で有効化しており、<code>flutter analyze</code> は analyzer プラグインを実行しない</strong>（T-17 の 1-3 周で実証。§4.8）。プラグインの指摘を検査するには <code>dart analyze --fatal-infos</code> が要る。app の CI（§4.8）と本書 §10 の各タスクの完了条件は 3 コマンドを前提に書いてあるため、CLAUDE.md の app 行を <code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test</code> に更新するか（verifier の実行コマンドも同じ）を開発者が判断する。T-17 の dev-loop 完了報告でも同じ確認依頼が出ている（タスク外として未変更）</td>
+<td>§4.8、§10</td>
+</tr>
+<tr>
 <td>既知のリスク（本書内に閉じる。担当は本書）</td>
 <td>下部タブの再タップ判定（S-00/A-02）は「<code>CupertinoTabScaffold</code> が <code>onTap</code> を呼ぶ<strong>前</strong>に <code>controller.index</code> を書き換える」という <strong>Flutter SDK の実装詳細</strong>に依存している（§5.8）。純粋関数 <code>shouldNotifyReselect</code> のテストで覆えるのは判定の規則だけで、<strong>ビルド時点の選択タブを正しく捕捉できているか</strong>は覆えない。SDK の更新でこの順序が変わると、タブを切り替えただけで先頭スクロールが飛ぶ（S-00/A-01 のスクロール位置保持が壊れる）。Flutter の版を上げたときは、シミュレータで「タブを切り替えてもスクロール位置が保持されること」を目視で確認する（§10 T-F1 の完了条件）</td>
 <td>§5.8、§7</td>
 </tr>
 </tbody></table>
 <h2 id="sec-9">9. 未決定事項<a class="anchor" href="#sec-9">#</a></h2>
-<p>初稿の Q-1〜Q-6 は開発者の回答（2026-09-19）を受けて §8 #24〜#29 に移した。以下の 4 件は dev-loop（T-21〜T-27）で実装・実測の結果として浮上したもので、要件書・規約・画面定義書のいずれからも導けないため開発者の判断を仰ぐ。</p>
+<p>初稿の Q-1〜Q-6 は開発者の回答（2026-09-19）を受けて §8 #24〜#29 に移した。以下の 5 件（Q-1〜Q-4 は dev-loop（T-21〜T-27）で実装・実測の結果として、Q-5 は design-review 第 1 段階・第 1 周の指摘として浮上したもの）は、要件書・規約・画面定義書のいずれからも導けないため開発者の判断を仰ぐ。</p>
 <table>
 <thead>
 <tr>
@@ -3326,9 +3551,16 @@ class TabReselect extends _$TabReselect {
 <td><strong>(A) 現状維持</strong>。(B) は規約上の利点が無い（委譲でも「feature の presentation を他 feature の presentation が import しない」は満たされている）のに対し、コストは実装済みファイルの移動・生成物の作り直し・<code>lib/app/app_lifecycle_sync.dart</code> の import 変更に加え、<strong>D-05（別の設計書）の §3.1・§4.6・§5.7・§5.9・§8 #10・§10 の連動修正</strong>が必要で、本書だけでは整合を取れない。移すなら D-05 の reopen と 1 タスクを立てる判断が要る</td>
 <td>本書 §3.2・§4.7・§5.7・§10 T-E、D-05 §3.1・§4.6・§8 #10、<code>app/lib/features/notifications/presentation/</code>・<code>app/lib/core/di/</code></td>
 </tr>
+<tr>
+<td>Q-5</td>
+<td><strong>対応外 <code>schemaVersion</code> の抑止中は起動・復帰で取得しないことを S-01 に明記するか</strong>（§5.2 手順 0・§8 #32・§8.1 の S-01 宛）。S-01 §8 #23 は「バックグラウンドから復帰したとき、<strong>そのたびに</strong>裏で取得を実行する（ST-03）」と定めるが、本書は対応外スキーマを記録している間 <code>launch</code> / <code>foreground</code> で通信せず <code>SyncFailed(suppressed: true)</code> を返すため、この間は ST-03 が発生しない。画面定義書の変更を伴うため本書では決めない</td>
+<td>(A) S-01 §8 #23 に例外を 1 行足す（「対応外の配信を検知している間は起動・復帰では取得せず、Pull to Refresh・再試行・通知タップでのみ取得する」）<br>(B) S-01 §5 ST-01・ST-03 の発生条件側に例外を書く<br>(C) S-01 を変えず、本書 §8.1 の申し送りに留める（画面定義書と設計書が食い違ったままになる）<br>(D) 抑止をやめて毎回取得する（§8 #32 を覆す）</td>
+<td><strong>(A)</strong>。#23 は「取得の契機」を定めた行なので、例外もそこに置くのが読み手にとって 1 か所で済む。(B) は ST-01 と ST-03 の 2 か所に同じ例外を書くことになる。(C) は画面定義書が上流という原則に反し、実装者が #23 を根拠に抑止を外しうる。(D) は起動・復帰のたびに 200 KB を取り直す問題（§8 #32 の根拠）が戻る</td>
+<td>S-01 §5 ST-01・ST-03 または §8 #23（<code>reopen:S-01</code> が要る）。本書は §5.2 手順 0・§8 #32 を変えない。S-01 を直す場合は本書 §8.1 の S-01 宛の行を「反映済み」に改める</td>
+</tr>
 </tbody></table>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
-<p>D-01 §10 Task C（app 契約実装）は本書の T-B1・T-D に吸収する。各タスクは pm の目安どおり新規ファイルは 5〜10 を目安（テストを含む。<code>build_runner</code> の生成物と <code>articles.sample.json</code> のコピーは数えない。T-A と、既存ファイルの改修が主の T-G は対象外）・UseCase 3 以内で、単独で <code>flutter analyze &amp;&amp; flutter test</code> を通す（T-A は <code>flutter test</code> の対象が無いため <code>flutter analyze</code> のみ）。生成物（<code>*.g.dart</code>・<code>*.drift.dart</code>）は各タスクでコミットする。並行タスクが同じファイル（生成物を含む）を編集しないよう、Provider の定義は feature ごとのファイルに分ける（§4.7。§8 #45）。</p>
+<p>D-01 §10 Task C（app 契約実装）は本書の T-B1・T-D に吸収する。各タスクは pm の目安どおり新規ファイルは 5〜10 を目安（テストを含む。<code>build_runner</code> の生成物と <code>articles.sample.json</code> のコピーは数えない）・UseCase 3 以内で、単独で <code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test</code> を通す（T-A は <code>flutter test</code> の対象が無いため analyze のみ）。目安の<strong>例外は 4 つ</strong>：T-A（<code>flutter create</code> の生成物の整理が主）、T-G（既存ファイルの改修が主）、<strong>T-D（11。うち 3 つはテストヘルパで、UseCase は 1 つ）</strong>、<strong>T-F1（12 + 改修 1。純粋関数を別ファイルに切り出したためファイル数が増えたが、UseCase は 0）</strong>。将来さらに分けるなら T-F1 を「<code>lib/app/</code> の骨格（起動・下部タブ・ライフサイクル）」と「<code>articles/presentation</code> の状態判定（<code>sync_controller.dart</code>・<code>list_status.dart</code>）」の 2 つに割る（<code>lib/app/</code> の完了条件はシミュレータでの目視、後者はテーブル駆動テストで、検証手段も分かれる）。生成物（<code>*.g.dart</code>・<code>*.drift.dart</code>）は各タスクでコミットする。並行タスクが同じファイル（生成物を含む）を編集しないよう、Provider の定義は feature ごとのファイルに分ける（§4.7。§8 #45）。</p>
 <table>
 <thead>
 <tr>
@@ -3351,7 +3583,7 @@ class TabReselect extends _$TabReselect {
 <tr>
 <td>T-B1</td>
 <td>articles の domain</td>
-<td><code>features/articles/domain/article.dart</code>・<code>category.dart</code>・<code>articles_file.dart</code>・<code>article_order.dart</code>・<code>article_sync_repository.dart</code>・<code>article_query_repository.dart</code>・<code>articles_feed.dart</code>・<code>read_display_state.dart</code>、<code>test/features/articles/domain/article_order_test.dart</code>・<code>read_display_state_test.dart</code>。計 10</td>
+<td><code>features/articles/domain/article.dart</code>・<code>category.dart</code>・<code>articles_file.dart</code>・<code>feed_state_keys.dart</code>（§8 #47）・<code>article_order.dart</code>・<code>article_sync_repository.dart</code>・<code>article_query_repository.dart</code>・<code>articles_feed.dart</code>・<code>read_display_state.dart</code>、<code>test/features/articles/domain/article_order_test.dart</code>・<code>read_display_state_test.dart</code>。計 11</td>
 <td><code>lib/features/articles/domain/</code>、<code>test/features/articles/domain/</code></td>
 <td>T-A</td>
 <td><code>flutter analyze &amp;&amp; flutter test</code> が通る。<code>compareArticles</code>・<code>resolveReadDisplayState</code> の直接テスト（§7 純粋関数の例外）を含む。CI の <code>flutter test</code> の条件を外す</td>
@@ -3370,7 +3602,7 @@ class TabReselect extends _$TabReselect {
 <td><code>core/database/tables.dart</code>・<code>app_database.dart</code>（+ 生成物）、<code>features/articles/infrastructure/drift_article_repository.dart</code>（<code>ArticleSyncRepository</code> と <code>ArticleQueryRepository</code> の両方を implements。Provider は 2 本。§8 #42）、<code>features/saved/infrastructure/drift_saved_article_repository.dart</code>、<code>features/settings/infrastructure/drift_settings_repository.dart</code>、<code>features/companies/infrastructure/asset_company_repository.dart</code>、<code>features/notifications/infrastructure/noop_push_gateway.dart</code>、<code>core/di/providers.dart</code>（基盤・Repository・<code>pushGateway</code> の Provider。§4.7。UseCase の Provider は T-D・T-E が別ファイルに置く）、<code>test/helpers/in_memory_database.dart</code>。計 9</td>
 <td><code>lib/core/{database,di}/</code>、<code>lib/features/*/infrastructure/</code>、<code>test/helpers/</code></td>
 <td>T-B1、T-B2</td>
-<td><code>flutter analyze</code> 警告ゼロ。<code>AppDatabase</code> に <code>settings</code> の共通アクセサ 4 つ（<code>upsertSetting</code> / <code>deleteSetting</code> / <code>readSetting</code> / <code>watchSetting</code>）と <code>SavedArticles</code> の <code>@DataClassName(&#39;SavedArticleRow&#39;)</code> を含む（§4.2）。テストは T-D・T-E が UseCase 経由で行う</td>
+<td><code>flutter analyze</code> 警告ゼロ。<code>AppDatabase</code> に <code>settings</code> の共通アクセサ 4 つ（<code>upsertSetting</code> / <code>deleteSetting</code> / <code>readSetting</code> / <code>watchSetting</code>）と <code>deleteUnsavedOutOfFeedRows()</code>（§8 #48）、<code>Articles</code> の <code>@DataClassName(&#39;ArticleRow&#39;)</code>・<code>SavedArticles</code> の <code>@DataClassName(&#39;SavedArticleRow&#39;)</code> を含む（§4.2）。<code>AssetCompanyRepository</code> は §4.5 の検証 6 件を行う。テストは T-D・T-E が UseCase 経由で行う</td>
 </tr>
 <tr>
 <td>T-D</td>
@@ -3390,8 +3622,8 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>T-F1</td>
-<td>アプリの骨格（起動・下部タブ・取得の契機・状態判定）</td>
-<td><code>lib/core/di/bootstrap_overrides.dart</code>（§8 #43）、<code>lib/app/bootstrap.dart</code>・<code>root_tabs.dart</code>（<code>tabControllerProvider</code> を含む。§5.8）・<code>root_tab.dart</code>・<code>tab_reselect.dart</code>・<code>app_lifecycle_sync.dart</code>・<code>resume_sync_policy.dart</code>、<code>lib/app/app.dart</code> 改修、<code>features/articles/presentation/sync_controller.dart</code>・<code>list_status.dart</code>（+ 生成物）、<code>test/features/articles/presentation/list_status_test.dart</code>、<code>test/app/resume_sync_policy_test.dart</code>・<code>root_tab_test.dart</code>。計 12 + 改修 1</td>
+<td>アプリの骨格（起動・下部タブ・取得の契機・状態判定）※ファイル数は前文の例外</td>
+<td><code>lib/core/di/bootstrap_overrides.dart</code>（§8 #43）、<code>lib/app/bootstrap.dart</code>・<code>root_tabs.dart</code>（Widget のみ。Provider を置かない）・<code>root_tab.dart</code>・<code>tab_controller.dart</code>（<code>tabControllerProvider</code>。§5.8・§8 #46）・<code>tab_reselect.dart</code>・<code>app_lifecycle_sync.dart</code>・<code>resume_sync_policy.dart</code>、<code>lib/app/app.dart</code> 改修、<code>features/articles/presentation/sync_controller.dart</code>・<code>list_status.dart</code>（+ 生成物）、<code>test/features/articles/presentation/list_status_test.dart</code>、<code>test/app/resume_sync_policy_test.dart</code>・<code>root_tab_test.dart</code>。計 13 + 改修 1</td>
 <td><code>lib/core/di/bootstrap_overrides.dart</code>、<code>lib/app/</code>、<code>lib/features/articles/presentation/</code>、<code>test/app/</code>、<code>test/features/articles/presentation/</code></td>
 <td>T-D、T-E</td>
 <td>品質ゲート通過。シミュレータで起動し、3 タブが切り替わり、<strong>タブを切り替えてもスクロール位置が保持される</strong>（再タップ判定が誤爆しない。§5.8）、起動直後に <code>sync(launch)</code> が走ってログに結果が出る。最初のフレームで E-22 が出ない（E-20 → 一覧）。<code>lib/app/</code> に具象の import が無い。<code>resolveListStatus</code> の判定表 10 行（<code>syncsOnLaunch = false</code> の 4 ケースを含む）・<code>resolveHasArticles</code>・<code>shouldLogCountError</code>・<code>resolveResumeSync</code>（遷移列）・<code>shouldNotifyReselect</code> の直接テスト（§7）を含む</td>
@@ -3418,7 +3650,7 @@ class TabReselect extends _$TabReselect {
 <td><code>features/notifications/infrastructure/fcm_push_gateway.dart</code>、<code>pubspec.yaml</code> に <code>firebase_core</code>・<code>firebase_messaging</code>、<code>core/di/bootstrap_overrides.dart</code> の <code>fcm</code> 分岐（<code>Firebase.initializeApp()</code>）、<code>core/di/providers.dart</code> の <code>pushGateway</code> の <code>fcm</code> 分岐、<code>ios/Runner</code> の Push Notifications / Background Modes（remote-notification）の capability、<code>.gitignore</code> に <code>GoogleService-Info.plist</code>（§8 #27。開発者が手元の <code>app/ios/Runner/</code> に置く）。計 1 + 改修 5</td>
 <td><code>lib/features/notifications/infrastructure/</code>、<code>lib/core/di/</code>、<code>app/ios/</code></td>
 <td>T-F1、要件 §10 フェーズ 5</td>
-<td>品質ゲート通過（<code>none</code> ビルド）。<code>--dart-define=CURTAINCALL_PUSH=fcm</code> の実機ビルドで、collector（D-02）からの通知が届き、タップで <code>companyId</code> が <code>notificationTapStreamProvider</code> に流れる。同じ実機ビルドで S-01/ST-18（初回起動の許可ダイアログ）と S-03/ST-03（許可を拒否したときの案内行）を目視で確認する（§8 #29）。新規テストは無し（<code>FakePushGateway</code> で UseCase を、<code>parseNotificationTap</code> を純粋関数テストで検証済み）</td>
+<td>品質ゲート通過（<code>none</code> ビルド）。<code>--dart-define=CURTAINCALL_PUSH=fcm</code> の実機ビルドで、collector（D-02）からの通知が届き、タップで <code>companyId</code> が <code>notificationTapStreamProvider</code> に流れる。同じ実機ビルドで S-01/ST-18（初回起動の許可ダイアログ）と S-03/ST-03（許可を拒否したときの案内行）を目視で確認する（§8 #29）。<strong>あわせて §6 の 2 行を実機で確認する</strong>：(a) 機内モードで購読同期を走らせ、<code>subscribe</code> / <code>unsubscribe</code> が 15 秒で <code>TimeoutException</code> になり 1 団体の停止が他団体の同期を止めないこと（ログの <code>failed</code>）、(b) 通知タップで起動した後にホット再起動して <code>takeInitialTap()</code> が 2 回目に null を返し、同じタップを 2 度処理しないこと。新規テストは無し（<code>FcmPushGateway</code> はテストしない方針。<code>FakePushGateway</code> で UseCase を、<code>parseNotificationTap</code> を純粋関数テストで検証済み。§7）</td>
 </tr>
 </tbody></table>
 <p>D-05 のタスクは T-F1・T-F2a・T-F2b の後に画面ごと（ホーム／保存／設定）に分ける。並行できる組：T-B1 と T-B2（domain の feature が別）、T-D と T-E（application / infrastructure の feature が別。<code>core/di/</code> は <code>articles_providers.dart</code> と <code>notifications_providers.dart</code> で別ファイル・別の生成物。§8 #45）、T-F1 と T-F2a と T-F2b（<code>lib/app/</code> + <code>articles/presentation</code>、<code>core/ui/status/</code>、<code>core/ui/article/</code> で互いに素）。T-F2a は T-A の直後から着手できる。</p>
@@ -3485,6 +3717,10 @@ class TabReselect extends _$TabReselect {
 <tr>
 <td>2026-09-23</td>
 <td>訂正：§8.1 の CLAUDE.md 宛 2 行と §8 #26・#28・§7 の記述を「反映済み」に改めた（CLAUDE.md のディレクトリ規約と純粋関数の列挙は T-23・T-29 の時点で更新済みで、純粋関数は <code>resolveResumeSync</code> を含む 11 件。「更新が要る」は事実誤認だった）</td>
+</tr>
+<tr>
+<td>2026-09-23</td>
+<td>design-review 第 1 段階・第 1 周の指摘 26 件（M-1〜M-26）を修正。S-02/ST-04 の確定契機を 1 つに限定し保留の喪失規則を明記（§2.1・§4.2・§8.1）、<code>tabControllerProvider</code> を <code>lib/app/tab_controller.dart</code> へ、<code>feed_*</code> キーを <code>articles/domain/feed_state_keys.dart</code> へ、<code>articleCountErrorLog</code> を <code>AppLifecycleSync</code> の <code>listenManual</code> へ移動（§3.1・§3.2・§4.4・§4.9・§5.3・§5.4・§5.8）、ST-14 からの復帰（<code>invalidate</code>）・<code>PushSubscriptionCoordinator</code> の <code>lastRunFailed</code> と未開始時の起動・<code>_rerun</code> の null 戻し・<code>TransientNotice</code> の Timer 取り消し・<code>initialNotificationTap</code> のリトライ停止を追加（§5.4・§5.6・§5.7・§5.9・§6・§7）。T-17〜T-20 の追随事項 18 件（<code>@immutable</code> / <code>meta</code>、<code>plugins:</code> 方式の lint と CI、<code>@DataClassName(&#39;ArticleRow&#39;)</code>、<code>deleteUnsavedOutOfFeedRows</code>、<code>SettingKeys.notificationPrefix</code>、<code>BrowserChoice.fromValue</code>、<code>AssetCompanyRepository</code> の検証 6 件ほか）を §4.1〜§4.8 に反映。§8 に #46〜#50 を追加、§9 に Q-5 を追加</td>
 </tr>
 </tbody></table>
 

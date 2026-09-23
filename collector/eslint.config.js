@@ -10,6 +10,12 @@ const applicationMessage =
   "application は domain のインターフェースにのみ依存する。Node 組み込み・外部ライブラリ・infrastructure / main.ts への直接依存は禁止（CLAUDE.md）";
 const sourcesMessage =
   "sources/ 配下のファイル同士の import・infrastructure 内の他ディレクトリへの直接依存・ネットワークの直接呼び出しは禁止。infrastructure/http 経由で取得する（CLAUDE.md）";
+const firebaseAdminMessage =
+  "firebase-admin は src/infrastructure/fcm/ 配下でのみ import する（トークンを保持しない設計を 1 か所に閉じる。CLAUDE.md）";
+// firebase-admin 本体・サブパス（"firebase-admin/messaging" 等）をまとめて禁止する group。
+// group は gitignore 方式で照合するため "firebase-admin" 1 つでサブパスにも一致し、
+// "firebase-admin/**" の併記は不要（冗長）。
+const firebaseAdminForbiddenGroup = ["firebase-admin"];
 
 // domain / application の両方で許可する外部ライブラリ（D-01 の決定：domain の Article スキーマに zod）。
 const layerAllowedLibraries = ["zod"];
@@ -45,6 +51,21 @@ const layerImportRule = (message, forbiddenLayerGlobs) => [
 
 // D-02 §3.2 の infrastructure サブディレクトリ。追加したらここに追記する。
 const infrastructureSiblings = ["sources", "http", "storage", "fcm", "logging", "clock", "hash"];
+
+// firebase-admin の import を禁止するファイル（infrastructure/fcm 以外の全体。sources/** は
+// 下の sources ブロックの patterns に firebaseAdminForbiddenGroup を直接足して禁止しているため
+// ここには含めない）。test/** も対象にし、テストコードが誤って firebase-admin を直接 import する
+// （モック化せず実装を呼ぶ）ことを防ぐ。
+const firebaseAdminForbiddenFiles = [
+  ...infrastructureSiblings
+    .filter((dir) => dir !== "fcm" && dir !== "sources")
+    .map((dir) => `src/infrastructure/${dir}/**`),
+  "src/main.ts",
+  "test/**",
+];
+// fcm 実装のテスト（test/infrastructure/fcm/**）を将来追加する場合は、そこでのみ
+// firebase-admin の直接 import を許可する（src/infrastructure/fcm/ と同じ例外）。
+const firebaseAdminAllowedTestFiles = ["test/infrastructure/fcm/**"];
 
 // sources/ からの import で禁止する glob。区分ごとに CLAUDE.md の禁止事項に対応する。
 // "../*/**" 1 つに集約できないか検証したが、../../domain/** など infrastructure の外側まで
@@ -126,6 +147,10 @@ export default defineConfig(
               group: sourcesForbiddenGlobs,
               message: sourcesMessage,
             },
+            {
+              group: firebaseAdminForbiddenGroup,
+              message: firebaseAdminMessage,
+            },
           ],
         },
       ],
@@ -146,6 +171,27 @@ export default defineConfig(
           object: "globalThis",
           property: "fetch",
           message: sourcesMessage,
+        },
+      ],
+    },
+  },
+  {
+    // firebase-admin は infrastructure/fcm/ に閉じる（トークンを保持しない・FCM 実装を 1 か所に
+    // 集約する。CLAUDE.md）。infrastructure の他ディレクトリと main.ts からの直接 import を禁止する
+    // （domain / application は layerImportRule の bareSpecifierRegex が既に全ての外部ライブラリを
+    // 禁止しているため対象外。sources/ は上の sources ブロックの patterns で直接禁止している）。
+    files: firebaseAdminForbiddenFiles,
+    ignores: firebaseAdminAllowedTestFiles,
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: firebaseAdminForbiddenGroup,
+              message: firebaseAdminMessage,
+            },
+          ],
         },
       ],
     },

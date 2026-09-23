@@ -31,6 +31,11 @@ import {
   FetchHttpClient,
 } from "./infrastructure/http/fetch-http-client.js";
 import { ConsoleLogger } from "./infrastructure/logging/console-logger.js";
+import { createHoriproSource } from "./infrastructure/sources/horipro.js";
+import { createShikiSource } from "./infrastructure/sources/shiki.js";
+import { createShinkansenSource } from "./infrastructure/sources/shinkansen.js";
+import { createTakarazukaSource } from "./infrastructure/sources/takarazuka.js";
+import { createTohoSource } from "./infrastructure/sources/toho.js";
 import { ArticlesFileStore } from "./infrastructure/storage/articles-file-store.js";
 import { CompaniesFileStore } from "./infrastructure/storage/companies-file-store.js";
 import { GitArticlesPublisher } from "./infrastructure/storage/git-articles-publisher.js";
@@ -57,10 +62,19 @@ type SourceFactory = (company: Company, deps: SourceDeps, options: SourceOptions
 /**
  * companyId → Source 生成関数の表（§5.5 手順 6）。表にある id は SourceBinding.createSource が
  * 生成関数を持ち、表に無い id は undefined（未実装として collect-articles が failures に数える）。
- * D-02 追随: 5 団体ぶんの配線は T-16（D-03 §10 Task L）が行う。団体の追加はこの表への 1 行と
- * companies.json への 1 要素だけで済む（CLAUDE.md 開放閉鎖）。
+ * 5 団体の配線は D-03 §10 Task L で完了。団体の追加手順は collector/README.md
+ * 「団体の追加手順」を正とする（この表への追記だけで既存コードを変えずに済む設計。
+ * CLAUDE.md 開放閉鎖）。
+ * 並び順は data/companies.json の配列順に合わせる（差分を読みやすくするため。
+ * 順序自体に意味はない）。
  */
-const SOURCE_FACTORIES: Readonly<Record<string, SourceFactory>> = {};
+const SOURCE_FACTORIES: Readonly<Record<string, SourceFactory>> = {
+  takarazuka: createTakarazukaSource,
+  shiki: createShikiSource,
+  horipro: createHoriproSource,
+  toho: createTohoSource,
+  shinkansen: createShinkansenSource,
+};
 
 /** companies（companies.json の配列順）と SOURCE_FACTORIES から SourceBinding[] を組む（§5.5 手順 6） */
 function buildSourceBindings(
@@ -68,7 +82,11 @@ function buildSourceBindings(
   deps: SourceDeps,
 ): readonly SourceBinding[] {
   return companies.map((company) => {
-    const factory = SOURCE_FACTORIES[company.id];
+    // Object.hasOwn で自プロパティのみを見る（"constructor" 等の prototype チェーンのキーが
+    // company.id と一致しても誤って生成関数として扱わないため）
+    const factory = Object.hasOwn(SOURCE_FACTORIES, company.id)
+      ? SOURCE_FACTORIES[company.id]
+      : undefined;
     return {
       company,
       createSource:

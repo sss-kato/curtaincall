@@ -13,7 +13,9 @@ import 'package:curtaincall/core/network/feed_config.dart';
 import 'package:curtaincall/core/network/user_agent_client.dart';
 import 'package:curtaincall/features/articles/domain/article_query_repository.dart';
 import 'package:curtaincall/features/articles/domain/article_sync_repository.dart';
+import 'package:curtaincall/features/articles/domain/read_state_repository.dart';
 import 'package:curtaincall/features/articles/infrastructure/drift_article_repository.dart';
+import 'package:curtaincall/features/articles/infrastructure/drift_read_state_repository.dart';
 import 'package:curtaincall/features/companies/domain/company.dart';
 import 'package:curtaincall/features/companies/domain/company_repository.dart';
 import 'package:curtaincall/features/companies/infrastructure/asset_company_repository.dart';
@@ -74,6 +76,11 @@ ArticleSyncRepository articleSyncRepository(Ref ref) =>
 ArticleQueryRepository articleQueryRepository(Ref ref) =>
     ref.watch(_driftArticleRepositoryProvider);
 
+/// 既読の Repository。
+@Riverpod(keepAlive: true)
+ReadStateRepository readStateRepository(Ref ref) =>
+    DriftReadStateRepository(ref.watch(appDatabaseProvider));
+
 /// 保存（あとで読む）の Repository。
 @Riverpod(keepAlive: true)
 SavedArticleRepository savedArticleRepository(Ref ref) =>
@@ -94,3 +101,11 @@ CompanyRepository companyRepository(Ref ref) => AssetCompanyRepository();
 @Riverpod(keepAlive: true)
 PushGateway pushGateway(Ref ref) =>
     NoopPushGateway(logger: ref.watch(loggerProvider));
+
+/// companyId → shortName（S-00 §7.1）。`companiesProvider` から 1 度だけ作る。
+/// id の重複は `AssetCompanyRepository`（T-20）が検証済みのためここでは
+/// 検証しない。
+@Riverpod(keepAlive: true)
+Map<String, String> companyShortNames(Ref ref) => Map.unmodifiable({
+  for (final c in ref.watch(companiesProvider)) c.id: c.shortName,
+});

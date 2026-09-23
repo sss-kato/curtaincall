@@ -69,4 +69,21 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
+
+  /// 配信から外れ（`in_feed = false`）、かつ未保存（`saved_articles` に
+  /// 行が無い）記事を削除し、削除件数を返す（`read_states` は外部キーの
+  /// cascade で消える）。`DriftArticleRepository.applyFeed` 手順 5 と
+  /// `DriftSavedArticleRepository.deleteUnsavedOutOfFeed` が同じ述語を
+  /// 使うため、ここに 1 つだけ置く（D-05 §4.5）。
+  Future<int> deleteUnsavedOutOfFeedRows() {
+    final subquery = selectOnly(savedArticles)
+      ..addColumns([savedArticles.articleId]);
+    // read_states は FK の cascade で消える。drift は生成コードの
+    // streamUpdateRules で articles の delete を read_states・
+    // saved_articles の delete へ伝播するため、ここで notifyUpdates を
+    // 呼ぶ必要はない（D-05 §4.5）。
+    return (delete(
+      articles,
+    )..where((t) => t.inFeed.equals(false) & t.id.isNotInQuery(subquery))).go();
+  }
 }

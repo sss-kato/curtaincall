@@ -19,3 +19,32 @@ jobs:
       - run: flutter analyze
       - run: dart analyze --fatal-infos # riverpod_lint（analysis_options.yaml の plugins:）用。flutter analyze はプラグインを実行しないため別実行する。通常の lint 失敗は先行の flutter analyze を見る
       - run: flutter test
+
+  # iOS のビルドでしか見つからない不具合があるため、main へのマージ時だけ macOS で
+  # ビルドする（PR では回さない）。過去に 2 件すり抜けた：
+  #   1. cupertino_icons が pubspec.yaml に無くアイコンが全滅していた（PR #33）
+  #      → CupertinoIcons クラスは Flutter SDK にあるので analyze は通る
+  #   2. ios/Flutter/*.xcconfig に CocoaPods の include が無くビルドが失敗していた（PR #33）
+  ios-build:
+    if: github.event_name == 'push'
+    runs-on: macos-latest # iOS のビルドには macOS ランナーが要る。public リポジトリなので課金されない
+    defaults: { run: { working-directory: app } }
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with: { channel: stable, flutter-version: "3.47.4", cache: true }
+      - run: flutter pub get
+      - run: flutter build ios --simulator --debug
+      # ビルドが通るだけではフォントの同梱漏れを検知できない（上記 1 の再発防止）。
+      # lib/ が CupertinoIcons を使っているなら、成果物にフォント本体があることを確かめる。
+      - name: アイコンのフォントが同梱されているか
+        run: |
+          assets=build/ios/iphonesimulator/Runner.app/Frameworks/App.framework/flutter_assets
+          if grep -rq "CupertinoIcons\." lib/; then
+            if ! test -f "$assets/packages/cupertino_icons/assets/CupertinoIcons.ttf"; then
+              echo "::error::lib/ が CupertinoIcons を使っているのに、成果物にフォントがありません。pubspec.yaml の cupertino_icons を確認してください" >&2
+              echo "FontManifest.json: $(cat "$assets/FontManifest.json")" >&2
+              exit 1
+            fi
+          fi
+          echo "FontManifest.json: $(cat "$assets/FontManifest.json")"

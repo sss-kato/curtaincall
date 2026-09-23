@@ -1,5 +1,6 @@
 import 'package:curtaincall/features/companies/infrastructure/asset_company_repository.dart';
 import 'package:curtaincall/features/notifications/application/sync_push_subscriptions_use_case.dart';
+import 'package:curtaincall/features/settings/domain/browser_choice.dart';
 import 'package:curtaincall/features/settings/domain/settings_repository.dart';
 import 'package:curtaincall/features/settings/infrastructure/drift_settings_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +42,30 @@ class _ThrowingSettingsRepository implements SettingsRepository {
     String companyId, {
     required bool enabled,
   }) => throw UnimplementedError();
+
+  @override
+  Stream<Map<String, bool>> watchNotificationSettings() =>
+      throw UnimplementedError();
+
+  @override
+  Future<BrowserChoice> browserChoice() => throw UnimplementedError();
+
+  @override
+  Stream<BrowserChoice> watchBrowserChoice() => throw UnimplementedError();
+
+  @override
+  Future<void> setBrowserChoice(BrowserChoice choice) =>
+      throw UnimplementedError();
+
+  @override
+  Future<bool> unreadFilter() => throw UnimplementedError();
+
+  @override
+  Stream<bool> watchUnreadFilter() => throw UnimplementedError();
+
+  @override
+  Future<void> setUnreadFilter({required bool enabled}) =>
+      throw UnimplementedError();
 }
 
 void main() {

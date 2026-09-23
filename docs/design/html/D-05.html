@@ -799,7 +799,7 @@ a{color:var(--accent)}
 <tr>
 <td><code>core/ui/list/anchor_resolution.dart</code>（<code>resolveAnchorId</code>）</td>
 <td><strong>import 無し</strong>（Dart core のみ。入出力は <code>List&lt;String&gt;</code>・<code>String</code>・<code>String?</code> だけ。宣言は §5.11.4 手順 2）</td>
-<td>アンカーの付け替え規則の純粋関数（§5.11.4 手順 2・§7・§8 #33）。§10 T-H3 の受け入れ条件</td>
+<td>アンカーの付け替え規則の純粋関数（§5.11.4 手順 2・§7・§8 #33）。§10 T-Q の受け入れ条件</td>
 </tr>
 <tr>
 <td><code>core/ui/article/article_cell_model_builder.dart</code>（<code>buildArticleCellModel</code>）</td>
@@ -1502,7 +1502,7 @@ final screenStatus = resolveListStatus(feed, hasVisible: true);          // hasV
 </tr>
 <tr>
 <td>S-01/E-10</td>
-<td><code>PageView.builder(controller: _pageController, physics: BouncingScrollPhysics)</code>。<code>_pageController</code> は <code>HomeScreen</code> の <code>initState</code> で <strong>1 度だけ</strong> <code>PageController(initialPage: ref.read(homeTabControllerProvider))</code> として生成し、<code>dispose</code> で破棄する（<code>build</code> 内で生成すると再 build のたびにページが初期値へ戻る）。<code>initialPage</code> を Provider から取るのは、未起動から通知タップで起動したとき（S-01/ST-15）に <code>HomeScreen</code> の初回 build より前に <code>selectCompany()</code> が済んでいる場合があるため（通常の起動では 0。§5.7）。ページ数 = 1 + companies。<code>onPageChanged</code> → <code>homeTabControllerProvider.notifier.select(i)</code>（A-02）。<code>homeTabControllerProvider</code> の変化を <code>ref.listen</code> し、<strong><code>_animating == false</code> かつ <code>_pageController.page?.round() != next</code></strong>（= タブのタップ・スワイプ以外の変化 = 通知由来の <code>selectCompany</code>）なら <code>jumpToPage(next)</code>（§5.7・§8 #13）</td>
+<td><code>PageView.builder(controller: _pageController, physics: BouncingScrollPhysics)</code>。<code>_pageController</code> は <code>HomeScreen</code> の <code>initState</code> で <strong>1 度だけ</strong> <code>PageController(initialPage: ref.read(homeTabControllerProvider))</code> として生成し、<code>dispose</code> で破棄する（<code>build</code> 内で生成すると再 build のたびにページが初期値へ戻る）。<code>initialPage</code> を Provider から取るのは、未起動から通知タップで起動したとき（S-01/ST-15）に <code>HomeScreen</code> の初回 build より前に <code>selectCompany()</code> が済んでいる場合があるため（通常の起動では 0。§5.7）。ページ数 = 1 + companies。<code>onPageChanged</code> → <code>homeTabControllerProvider.notifier.select(i)</code>（A-02）。<code>homeTabControllerProvider</code> の変化を <code>ref.listen</code> し、<strong><code>_animating == false</code> かつ <code>_pageController.page?.round() != next</code></strong>（= タブのタップ・スワイプ以外の変化 = 通知由来の <code>selectCompany</code>）なら <code>jumpToPage(next)</code>（§5.7・§8 #13）。<code>_animating</code> は <code>HomeScreen</code> の <code>State</code> のフィールド（<code>bool _animating = false;</code>）で、<code>build</code> の出力に影響しない（listener の条件にしか使わない）ため <strong><code>setState</code> を使わない素の代入</strong>で書く（<code>animateToPage</code> の前に true、完了で false。下記「タブのタップ（A-01）」）</td>
 </tr>
 <tr>
 <td>全面表示</td>
@@ -1840,7 +1840,7 @@ bool _isHomeVisible() =&gt;
 <td>縮退の逃げ道・実装コメント・テスト</td>
 </tr>
 </tbody></table>
-<h4 id="sec-5-11-1">5.11.1 目的と 2 形態（<code>AnchoredListView</code> の宣言・形態の決め方・構成）<a class="anchor" href="#sec-5-11-1">#</a></h4>
+<h4 id="sec-5-11-1">5.11.1 目的と 2 形態<a class="anchor" href="#sec-5-11-1">#</a></h4>
 <pre><code class="language-dart">final class AnchoredListView&lt;T&gt; extends StatefulWidget {
   const AnchoredListView({
     required this.items,            // List&lt;T&gt;。表示順に並んだ要素
@@ -2085,7 +2085,7 @@ void _requestScrollToTopOnLayout() {
 </ul>
 </li>
 </ul>
-<h4 id="sec-5-11-4">5.11.4 アンカーの更新（<code>didUpdateWidget</code>）<a class="anchor" href="#sec-5-11-4">#</a></h4>
+<h4 id="sec-5-11-4">5.11.4 アンカーの更新<a class="anchor" href="#sec-5-11-4">#</a></h4>
 <ul>
 <li><strong>アンカーの更新</strong>（<code>didUpdateWidget</code> で <code>items</code> が変わったとき。<strong><code>listEquals(oldWidget.items, widget.items)</code> が true なら、アンカーの再計算も <code>correctPixels</code> も行わない</strong>。星のタップで別の記事の <code>isSaved</code> が変わった・<code>minuteClockProvider</code> で親が再 build した等、表示位置に関係ない再 build で位置を触らない。<code>ArticleListItem</code>・<code>SavedArticle</code> は値の等価性を持つ。§4.1）：<ol start="0">
 <li><p><strong><code>position</code> に触れる前のガード</strong>：<strong><code>_laidOutPosition == null</code></strong>（<code>hasClients == false</code>、または <code>hasContentDimensions == false</code>）なら、アンカーの再計算も形態の変更も <code>correctPixels</code> も<strong>行わず据え置く</strong>。<code>State.didUpdateWidget</code> は <code>Scrollable</code> が新しい <code>ScrollController</code> を受け取るより<strong>前</strong>に走るため、controller を差し替えた直後のフレームでは新しい controller が <code>hasClients == false</code> になる。ここで標準形へ落とすと <code>correctPixels</code> を伴わない形態変更になり位置が飛ぶ（T-28 の実測で <code>dy</code> が <code>-20</code> から <code>+280</code> へずれた）。</p>
@@ -2115,7 +2115,7 @@ final anchorId = resolveAnchorId(
   newIds: widget.items.map(widget.idOf).toList(),
   currentAnchorId: visibleId,
 );</code></pre>
-<p>規則は次のとおり（<strong>走査規則は <code>_AnchoredListViewState</code> 側に書かない</strong>。§10 T-H3 の完了条件）：</p>
+<p>規則は次のとおり（<strong>走査規則は <code>_AnchoredListViewState</code> 側に書かない</strong>。§10 T-Q の完了条件）：</p>
 <ul>
 <li><code>currentAnchorId</code> が <code>newIds</code> にあればそれを返す</li>
 <li>無ければ <strong><code>oldIds</code> の <code>currentAnchorId</code> より後方へ順に走査</strong>し、<code>newIds</code> にも残っている<strong>最初</strong>の id を返す（「直後の 1 件」だけを見ない。2 件以上まとめて消えた場合に先頭へジャンプしてしまうため。S-01 §7.4「表示中の記事が削除された場合はその直後の記事を同じ位置に」。S-02/ST-04「消えた範囲の直後の記事」）</li>
@@ -2142,7 +2142,7 @@ final anchorId = resolveAnchorId(
 </li>
 <li><strong><code>ScrollController</code> の差し替え</strong>（ここでの <code>controller</code> は <code>AnchoredListView</code> が <code>CustomScrollView</code> に渡す <strong><code>AnchoredListController.scrollController</code>（<code>ScrollController</code>）<strong>を指す。<code>AnchoredListView.controller</code>（<code>AnchoredListController</code>）そのものではない）：<strong>発生経路は 1 つで、<code>PageView</code> が <code>HomePage</code> の <code>State</code> ごと作り直したとき</strong>（<code>AnchoredListController</code> は <code>HomePage</code> の <code>State</code> が <code>initState</code> で 1 つ生成し <code>dispose</code> で破棄する（§5.1）ため、<code>State</code> が作り直されると <code>AnchoredListController</code> と、それが内部に持つ <code>scrollController</code> も新しくなる）<strong>に、<code>AnchoredListView</code> の Element が再利用されて <code>didUpdateWidget</code> が新しい <code>controller</code> で走る場合</strong>を指す。このとき、同じ <code>key</code> のまま <code>controller</code> だけを差し替えても、<code>Scrollable._shouldUpdatePosition</code> は <code>ScrollController</code> 同士の差し替えでは false を返し（<code>physics</code> / <code>ScrollBehavior</code> が変わらない限り）、<code>ScrollPosition</code> は</strong>再利用される</strong>（<code>absorb</code> すら経由しない）。<code>pixels</code> の起点は変わらないためアンカー（<code>_anchorId</code>）はそのまま維持し、作り直さない。「新しい controller なので <code>pixels</code> は 0 から」と仮定してはいけない。controller の差し替えと <code>items</code> の変更が同一フレームで起きる経路（ページの再構築）では、上記ガード 0 によりその回の補正を見送り、<strong><code>addPostFrameCallback</code> で次フレームにやり直す</strong>（手順 0 の「据え置きの再試行」）。据え置いたフレームの <code>build()</code> は §5.11.1「形態の決め方」2 により<strong>形態を変えずに</strong>描き（アンカー形なら <code>center</code> は <strong><code>_anchorId</code> の新しい <code>items</code> での index</strong>。アンカーが新しい <code>items</code> に無いときだけ <code>_anchorIndex.clamp(0, items.length - 1)</code>。ただし新 <code>items</code> が 0 件なら 1 で標準形 + <code>emptyView</code>）、次フレームのやり直しで補正つきに揃える。State ごと作り直したいときは <code>key</code> を変え、<code>AnchoredListController</code> も作り直す（§5.11.2「<code>attach</code> / <code>detach</code> の規則」）</li>
 </ul>
-<h4 id="sec-5-11-5">5.11.5 取得中の帯の高さ補正（<code>_ExtentCompensatingSliver</code>）<a class="anchor" href="#sec-5-11-5">#</a></h4>
+<h4 id="sec-5-11-5">5.11.5 取得中の帯の高さ補正<a class="anchor" href="#sec-5-11-5">#</a></h4>
 <ul>
 <li><strong><code>headerSliver</code>（取得中の帯）と位置保持</strong>（§8 #28）：S-00 §3.3 の配置図は **E-23（<code>OfflineBanner</code>）を「一覧の直上に固定」、E-21（<code>RefreshingHeader</code>）を「一覧の先頭。iOS 標準の引っ張り更新の位置」**と書き分けている。したがって E-21 は一覧と一緒にスクロールする Sliver として <code>AnchoredListView.headerSliver</code> に置き（<code>HomePage</code> が <code>status.refreshing &amp;&amp; !_pulling</code> のとき <code>RefreshingHeader()</code>（D-04 §5.9。それ自体が <code>SliverToBoxAdapter</code> の Sliver）、それ以外は <code>null</code> を渡す。§5.1）、E-23 は一覧の外（<code>HomeScreen</code> の <code>HomeTabBar</code> と <code>PageView</code> の間。§5.1）に置く。位置補正の契機は <code>items</code> の変化だけなので、帯の出現・消失で先頭側の高さが <code>h</code>（帯の高さ）だけ変わると、そのままでは標準形の一覧が <code>h</code> ぶん上下にずれる。これを次のとおり相殺する：<ul>
 <li><code>AnchoredListView</code> は <code>headerSliver</code> を常に自前の薄い Sliver <code>_ExtentCompensatingSliver</code>（<code>SingleChildRenderObjectWidget</code> + <code>RenderProxySliver</code>。子は <code>headerSliver</code> か無し）で包み、<strong><code>GlobalKey</code>（<code>_headerKey</code>）を付けて</strong> <code>slivers</code> に置く（key が無いと形態の切替で「前回のレイアウトの extent」が 0 に戻り二重補正になる。§5.11.1「構成（2 形態）」）。子が無いときの extent は 0。<code>headerSliver</code> の null ↔ 非 null で <code>slivers</code> の個数は変わらない</li>
@@ -2507,7 +2507,7 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td>一覧の差し込み時に表示中の先頭記事が消えた</td>
-<td><code>AnchoredListView</code> 手順 2 が直後の記事をアンカーにする</td>
+<td><code>AnchoredListView</code> の <strong>§5.11.4 手順 2</strong>（<code>resolveAnchorId</code>）が直後の記事をアンカーにする</td>
 <td>core/ui</td>
 </tr>
 <tr>
@@ -2673,7 +2673,7 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tbody></table>
 <h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
 <p>テストの単位は UseCase（CLAUDE.md）。D-04 §7 と同じく drift は <code>NativeDatabase.memory()</code> の実物を使い（本書の SQL、特に <code>markAsRead</code> の存在確認・<code>clearAll</code> のトランザクション・<code>deleteUnsavedOutOfFeed</code> の述語・<code>watchInFeed</code> / <code>watchAll</code> の結合を UseCase 経由で検証する）、外部境界（<code>url_launcher</code>・<code>package_info_plus</code>・FCM）はフェイクに差し替える。記事の投入は <code>test/helpers/seed_articles.dart</code>（実物の <code>DriftArticleRepository.applyFeed</code> 経由。API と契約は下記）。投入後に記事を足す・差分を当てるケース（<code>group(&#39;再発火&#39;)</code> 等）は <code>applyFeed</code> を直接呼ぶ（<code>seedArticles</code> は 1 テスト 1 回）。Widget・Notifier（<code>HomeTabController</code>・<code>SavedListController</code>・<code>SettingsScreen</code> の状態）・<code>AnchoredListView</code>・Provider の配線はテストしない。ネットワークへは一切アクセスしない。</p>
-<p><strong><code>AnchoredListView</code> の代わりの担保</strong>（§5.11.6・§10 T-H3・T-M）：<code>AnchoredListView</code>（Widget）自体は自動テストを持たない方針を維持する。<strong>アンカーの付け替え規則だけは純粋関数 <code>resolveAnchorId</code> に切り出して直接テストする</strong>（下記「純粋関数の直接テスト」。§8 #33）。残るレイアウト補正（<code>H</code> の優先順・<code>_ExtentCompensatingSliver</code>・2 形態の切替）は、<strong>依存している Flutter SDK 内部の前提と、それを確認した Flutter のバージョンを <code>core/ui/list/anchored_list_view.dart</code> 冒頭の library doc に列挙して残す</strong>ことで担保する（Flutter を上げたときの再確認の手掛かりがこれしか無いため。挙動の確認は T-M の目視項目）。初版（Flutter 3.47.4 stable で実機確認）の列挙は次の 8 項目：</p>
+<p><strong><code>AnchoredListView</code> の代わりの担保</strong>（§5.11.6・§10 T-H3・T-Q・T-M）：<code>AnchoredListView</code>（Widget）自体は自動テストを持たない方針を維持する。<strong>アンカーの付け替え規則だけは純粋関数 <code>resolveAnchorId</code> に切り出して直接テストする</strong>（下記「純粋関数の直接テスト」。§8 #33）。残るレイアウト補正（<code>H</code> の優先順・<code>_ExtentCompensatingSliver</code>・2 形態の切替）は、<strong>依存している Flutter SDK 内部の前提と、それを確認した Flutter のバージョンを <code>core/ui/list/anchored_list_view.dart</code> 冒頭の library doc に列挙して残す</strong>ことで担保する（Flutter を上げたときの再確認の手掛かりがこれしか無いため。挙動の確認は T-M の目視項目）。初版（Flutter 3.47.4 stable で実機確認）の列挙は次の 8 項目：</p>
 <ul>
 <li><code>RenderViewport</code> は <code>center</code> の有無で逆成長側の有無が決まる</li>
 <li><code>SliverGeometry.scrollOffsetCorrection</code> は通知なしに <code>pixels</code> をずらせる</li>
@@ -3155,7 +3155,7 @@ Future&lt;void&gt; seedArticles(
 </tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
-<p>宛先の末尾に <strong>（反映済み）</strong> / <strong>（未反映）</strong> を付ける（反映済みの行を根拠に <code>depends_on</code> の <code>reopen:D-yy</code> を書かないため。pm plan 手順 1）。</p>
+<p>宛先の末尾に <strong>（反映済み）</strong> / <strong>（未反映）</strong> / <strong>（一部反映済み。未反映分を本文に列挙する）</strong> のいずれかを付ける（反映済みの行を根拠に <code>depends_on</code> の <code>reopen:D-yy</code> を書かないため。pm plan 手順 1）。</p>
 <table>
 <thead>
 <tr>
@@ -3178,6 +3178,11 @@ Future&lt;void&gt; seedArticles(
 <td>D-04（<strong>未反映</strong>。§9 Q-4 として起票済み、開発者判断待ち）</td>
 <td><code>notifications/presentation/notification_tap_providers.dart</code> の 3 Provider は他 feature の presentation（S-03）と <code>lib/app</code> が読む。本書は <code>core/di/notifications_providers.dart</code> の委譲 Provider で回避している（§8 #10）ため必須ではないが、元の Provider を <code>core/di</code> へ移せば委譲が不要になる。<strong>D-04 §9 Q-4 の推奨は (A) 現状維持（移設しない）</strong>。したがって<strong>本書 §4.6 の委譲 Provider 3 つ（<code>initialNotificationTapForApp</code>・<code>latestNotificationTap</code>・<code>pushPermissionStatusForSettings</code>）はそのまま残す</strong>。開発者が (B)（移設）を選んだ場合にだけ §3.1・§4.6 の委譲 3 つ・§5.7・§5.9・§8 #10・§10 T-K を見直す。委譲を先回りで削ると <code>lib/app</code> と <code>settings/presentation</code> が <code>notifications/presentation</code> を直接 import する形になり、CLAUDE.md の presentation 間 import 禁止に戻る</td>
 <td>§3.1 / §4.6</td>
+</tr>
+<tr>
+<td>D-04（<strong>未反映</strong>。次回 reopen 時。§10 の文言のみ）</td>
+<td>§10 の <code>T-P</code> 行と §10 末尾の実行時期「<strong>D-05 の全タスク完了後</strong>」を「<strong>D-05 の T-H1〜T-O の完了後</strong>」に限定する。本書 §10 の <code>T-Q</code>（<code>resolveAnchorId</code> の切り出し）は <code>lib/core/ui/list/</code> だけを触り、<code>T-P</code> が触る <code>core/ui/status</code>・<code>lib/app</code> と重ならないため <strong><code>T-Q</code> と <code>T-P</code> は並行してよい</strong>。現行の文言のままだと、<code>T-Q</code> も「D-05 の全タスク」に含まれるため、pm が <code>T-Q</code> を <code>T-P</code> の前に直列に置くか並行に置くかで分岐する。本書 §10 末尾は限定後の関係で書いてあり、本書側の追随は不要</td>
+<td>§10</td>
 </tr>
 <tr>
 <td>S-01（<strong>未反映</strong>。次回 reopen 時）</td>
@@ -3225,13 +3230,13 @@ Future&lt;void&gt; seedArticles(
 <td>§4.6 / §5.1 / §6 / §8 #11</td>
 </tr>
 <tr>
-<td>CLAUDE.md（司令塔）（<strong>一部反映済み・追加 3 件は未反映</strong>）</td>
-<td>「テスト方針」の純粋関数の例示に <code>mergeSavedList</code>・<code>buildArticleCellModel</code> を、ディレクトリ規約に <code>features/browser/</code>（§8 #8。開発者確認済み 2026-09-20）・<code>core/ui/list/</code> を追記する。<strong>反映済み（2026-09-23 確認。4 項目とも CLAUDE.md に記載されている）</strong>。<strong>未反映の追加 3 件</strong>：(a) 純粋関数の例示に <code>resolveAnchorId</code>（§8 #33）を足す、(b) <code>app/</code> のディレクトリ規約の <code>core/database/</code> の説明（現在「drift の定義・migration」）に「2 つ以上の feature の infrastructure が共有する述語・写像（<code>article_row_mapper.dart</code>）」を足す（§3.1・§8 #32）、(c) <strong>純粋関数テストの置き場の列挙に <code>core/ui/list/</code> を足す</strong>：「テスト方針」の許容パス列挙（<code>test/features/&lt;feature&gt;/{domain,presentation}/</code>・<code>test/app/</code>・<code>test/core/ui/article/</code>）に <code>test/core/ui/list/</code> を、<code>app/</code> の <code>test/</code> ツリーの行（<code>features/&lt;feature&gt;/{domain,presentation}/, app/, core/ui/article/</code>）に <code>core/ui/list/</code> を加える。無いまま T-H3 を実装すると、規約の列挙に無いディレクトリにテストが生まれ実装レビューで配置違反になる（§3.2・§7・§8 #33）</td>
+<td>CLAUDE.md（司令塔）（<strong>一部反映済み</strong>。未反映分は本文の (a)〜(c) の 3 件）</td>
+<td>「テスト方針」の純粋関数の例示に <code>mergeSavedList</code>・<code>buildArticleCellModel</code> を、ディレクトリ規約に <code>features/browser/</code>（§8 #8。開発者確認済み 2026-09-20）・<code>core/ui/list/</code> を追記する。<strong>反映済み（2026-09-23 確認。4 項目とも CLAUDE.md に記載されている）</strong>。<strong>未反映の追加 3 件</strong>：(a) 純粋関数の例示に <code>resolveAnchorId</code>（§8 #33）を足す、(b) <code>app/</code> のディレクトリ規約の <code>core/database/</code> の説明（現在「drift の定義・migration」）に「2 つ以上の feature の infrastructure が共有する述語・写像（<code>article_row_mapper.dart</code>）」を足す（§3.1・§8 #32）、(c) <strong>純粋関数テストの置き場の列挙に <code>core/ui/list/</code> を足す</strong>：「テスト方針」の許容パス列挙（<code>test/features/&lt;feature&gt;/{domain,presentation}/</code>・<code>test/app/</code>・<code>test/core/ui/article/</code>）に <code>test/core/ui/list/</code> を、<code>app/</code> の <code>test/</code> ツリーの行（<code>features/&lt;feature&gt;/{domain,presentation}/, app/, core/ui/article/</code>）に <code>core/ui/list/</code> を加える。無いまま <code>T-Q</code> を実装すると、規約の列挙に無いディレクトリにテストが生まれ実装レビューで配置違反になる（§3.2・§7・§8 #33）</td>
 <td>§7 / §3.1 / §3.2</td>
 </tr>
 <tr>
 <td>実装（片付け。<strong>未反映</strong>。<strong>D-04 §10 T-P とは別</strong>。本書の反映後に行う）</td>
-<td><strong><code>resolveAnchorId</code> の切り出し</strong>（§8 #33）：T-28 で実装済みの <code>_AnchoredListViewState</code> 内のアンカー走査ロジックを <code>lib/core/ui/list/anchor_resolution.dart</code> の純粋関数へ移し、<code>test/core/ui/list/anchor_resolution_test.dart</code> を追加する。振る舞いは変えない（走査を「直後の 1 件」から「後方へ順に走査」に直す分だけ変わる。§5.11.4 手順 2）。§10 の T-H3 の成果物に含めるが、T-28 が既に完了しているため <strong>§10 の <code>T-Q</code>（追随タスク 1 つ）として切る</strong>。<strong>D-04 §10 T-P とは別系統で、T-P は <code>core/ui/status</code>・<code>lib/app</code> を触るため並行してよい</strong>（触るファイルが重ならない）</td>
+<td><strong><code>resolveAnchorId</code> の切り出し</strong>（§8 #33）：T-28 で実装済みの <code>_AnchoredListViewState</code> 内のアンカー走査ロジックを <code>lib/core/ui/list/anchor_resolution.dart</code> の純粋関数へ移し、<code>test/core/ui/list/anchor_resolution_test.dart</code> を追加する。振る舞いは変えない（走査を「直後の 1 件」から「後方へ順に走査」に直す分だけ変わる。§5.11.4 手順 2）。本来は T-H3 の成果物だが、T-28 が既に完了しているため <strong>§10 では T-H3 に含めず <code>T-Q</code>（追随タスク 1 つ）として切る</strong>（T-H3 の成果物欄・完了条件からも外してある）。<strong>D-04 §10 T-P とは別系統で、T-P は <code>core/ui/status</code>・<code>lib/app</code> を触るため並行してよい</strong>（触るファイルが重ならない）</td>
 <td>§5.11.4 / §7 / §8 #33 / §10</td>
 </tr>
 </tbody></table>
@@ -3250,7 +3255,7 @@ Future&lt;void&gt; seedArticles(
 <li><strong>影響範囲</strong>：CLAUDE.md「テスト方針」の 1 行（例外列挙）、本書 §7（ヘルパ表とケースの列挙）、<code>test/helpers/seed_articles_test.dart</code> の新規 1 ファイル。<strong>CLAUDE.md の変更を伴うため開発者の判断が要る</strong>（エージェントの自動採用の対象外）。A を採る場合の実装は既存タスクに載せず、追加タスク 1 つ（<code>test/helpers/</code> のみ）に切る</li>
 </ul>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
-<p>D-04 §10 の T-F1・T-F2a・T-F2b の後に続く。各タスクは新規ファイル 5〜10（テストを含む。生成物は数えない）・UseCase 3 以内で、単独で <code>flutter analyze &amp;&amp; flutter test</code> を通す。並行タスクが同じファイル（生成物を含む）を編集しないよう、<code>core/di/providers.dart</code> は T-H1 → T-H2 の順に直列で編集し、UseCase の Provider は feature 別ファイルに置く（§4.6）。</p>
+<p>D-04 §10 の T-F1・T-F2a・T-F2b の後に続く。各タスクは新規ファイル 10 以内（テストを含む。生成物は数えない）・UseCase 3 以内で、単独で <code>flutter analyze &amp;&amp; flutter test</code> を通す。<strong>下限（5）を下回るのは T-I・T-N・T-O・T-Q の 4 つ</strong>で、いずれも触るディレクトリが他タスクと重なるため統合せず独立させている（pm は再分割・統合をしない）。並行タスクが同じファイル（生成物を含む）を編集しないよう、<code>core/di/providers.dart</code> は T-H1 → T-H2 の順に直列で編集し、UseCase の Provider は feature 別ファイルに置く（§4.6）。</p>
 <table>
 <thead>
 <tr>
@@ -3281,10 +3286,10 @@ Future&lt;void&gt; seedArticles(
 <tr>
 <td>T-H3</td>
 <td>app 側の骨格（3 画面のスタブ・時計・位置保持一覧）</td>
-<td><code>articles/presentation/home_screen.dart</code>・<code>saved/presentation/saved_screen.dart</code>・<code>settings/presentation/settings_screen.dart</code>（ナビゲーションバーだけのスタブ）、<code>lib/app/minute_clock.dart</code>、<code>core/ui/list/anchored_list_view.dart</code>（<code>AnchoredListView</code> + <code>AnchoredListController</code> + <code>_ExtentCompensatingSliver</code>。§5.11）、<code>core/ui/list/anchor_resolution.dart</code>（<code>resolveAnchorId</code>。§8 #33）、<code>test/core/ui/list/anchor_resolution_test.dart</code>。改修：<code>lib/app/root_tabs.dart</code>（3 画面を載せる）。新規 7 + 改修 1。<strong><code>anchored_list_view.dart</code> が T-28 で実装済みのときは、<code>anchor_resolution.dart</code> と同テストの 2 ファイルを本タスクではなく <code>T-Q</code> で切り出す</strong>（§8.1「実装（片付け）」）</td>
-<td><code>lib/app/</code>、<code>lib/core/ui/list/</code>、<code>lib/features/*/presentation/</code>（各 1 ファイル）、<code>test/core/ui/list/</code></td>
+<td><code>articles/presentation/home_screen.dart</code>・<code>saved/presentation/saved_screen.dart</code>・<code>settings/presentation/settings_screen.dart</code>（ナビゲーションバーだけのスタブ）、<code>lib/app/minute_clock.dart</code>、<code>core/ui/list/anchored_list_view.dart</code>（<code>AnchoredListView</code> + <code>AnchoredListController</code> + <code>_ExtentCompensatingSliver</code>。§5.11）。改修：<code>lib/app/root_tabs.dart</code>（3 画面を載せる）。<strong>新規 5 + 改修 1</strong>。<strong><code>anchor_resolution.dart</code>（<code>resolveAnchorId</code>。§8 #33）と <code>test/core/ui/list/anchor_resolution_test.dart</code> は本タスクに含めず <code>T-Q</code> で切り出す</strong>（T-28 で <code>anchored_list_view.dart</code> が実装済みのため。§8.1「実装（片付け）」）</td>
+<td><code>lib/app/</code>、<code>lib/core/ui/list/</code>、<code>lib/features/*/presentation/</code>（各 1 ファイル）</td>
 <td>T-F1、T-F2a、T-F2b</td>
-<td><code>flutter analyze &amp;&amp; flutter test</code>。シミュレータで 3 タブに各画面のタイトルが出る。<code>core/ui/list</code> が Flutter SDK と <code>dart:async</code> 以外を import しない（§3.1）。<strong><code>anchored_list_view.dart</code> 冒頭の library doc に、依存する Flutter SDK 内部の前提（§7 の 8 項目）と確認した Flutter のバージョンが列挙されていること</strong>（自動テストを持たないため。§5.11.6・§7）。<code>resolveAnchorId</code> の直接テスト（§7 の 7 ケース）が通り、<strong>走査規則が <code>_AnchoredListViewState</code> 側に重複して書かれていないこと</strong>（§5.11.4 手順 2）。T-H1・T-H2 と並行可</td>
+<td><code>flutter analyze &amp;&amp; flutter test</code>。シミュレータで 3 タブに各画面のタイトルが出る。<code>core/ui/list</code> が Flutter SDK と <code>dart:async</code> 以外を import しない（§3.1）。<strong><code>anchored_list_view.dart</code> 冒頭の library doc に、依存する Flutter SDK 内部の前提（§7 の 8 項目）と確認した Flutter のバージョンが列挙されていること</strong>（自動テストを持たないため。§5.11.6・§7）。<strong><code>resolveAnchorId</code> の切り出しと直接テストは <code>T-Q</code> の完了条件</strong>（本タスクでは求めない。§8.1「実装（片付け）」）。T-H1・T-H2 と並行可</td>
 </tr>
 <tr>
 <td>T-I</td>
@@ -3352,7 +3357,7 @@ Future&lt;void&gt; seedArticles(
 </tr>
 </tbody></table>
 <p>並行できる組：T-H1・T-H3（T-H2 は T-H1 の後）、T-I・T-J・T-K・T-L（<code>core/di</code> は別ファイル。<code>test/helpers/</code> の共有ヘルパ（<code>seed_articles.dart</code>・<code>collect_stream.dart</code>）は T-H1 が作り終えているため衝突しない）。T-N は T-M の後（<code>article_cell_model_builder.dart</code> に依存）。T-O は T-M・T-N と並行可（表の依存欄のとおり T-M に依存しない）。T-Q は <code>lib/core/ui/list/</code> だけを触るため T-M・T-N・T-O と並行可。</p>
-<p><strong>D-04 §10 の <code>T-P</code>（D-04 の反映後の片付け）との関係</strong>：<code>T-P</code> は本書の T-H1〜T-O とは別系統で、<strong>本書の全タスクの完了後</strong>に走る（D-04 §10 前文）。<code>T-P</code> は <code>lib/app/root_tabs.dart</code>・<code>lib/app/app_lifecycle_sync.dart</code>・<code>core/ui/status/list_status.dart</code> を触り、本書の <code>T-M</code>（<code>app_lifecycle_sync.dart</code>・<code>home_screen.dart</code>）・<code>T-N</code>（<code>saved_screen.dart</code> の <code>ListStatus</code> の import）と同じファイルに当たるため、<strong><code>T-P</code> と <code>T-M</code>・<code>T-N</code> を並行しない</strong>。本書の <code>T-Q</code> は <code>lib/core/ui/list/</code> だけを触り <code>T-P</code> と重ならないため、<strong><code>T-Q</code> と <code>T-P</code> は並行してよい</strong>（§8.1「実装（片付け）」）。</p>
+<p><strong>D-04 §10 の <code>T-P</code>（D-04 の反映後の片付け）との関係</strong>：<code>T-P</code> は本書の <strong>T-H1〜T-O</strong> とは別系統で、<strong>T-H1〜T-O の完了後</strong>に走る（D-04 §10 前文の「D-05 の全タスク完了後」は T-H1〜T-O を指す。<code>T-Q</code> は含まない。D-04 側の文言の限定は §8.1 の D-04 宛で申し送る）。<code>T-P</code> は <code>lib/app/root_tabs.dart</code>・<code>lib/app/app_lifecycle_sync.dart</code>・<code>core/ui/status/list_status.dart</code> を触り、本書の <code>T-M</code>（<code>app_lifecycle_sync.dart</code>・<code>home_screen.dart</code>）・<code>T-N</code>（<code>saved_screen.dart</code> の <code>ListStatus</code> の import）と同じファイルに当たるため、<strong><code>T-P</code> と <code>T-M</code>・<code>T-N</code> を並行しない</strong>。本書の <code>T-Q</code> は <code>lib/core/ui/list/</code> だけを触り <code>T-P</code> と重ならないため、<strong><code>T-Q</code> と <code>T-P</code> は並行してよい</strong>（§8.1「実装（片付け）」）。</p>
 <h2 id="h-変更履歴">変更履歴<a class="anchor" href="#h-変更履歴">#</a></h2>
 <table>
 <thead>
@@ -3440,6 +3445,10 @@ Future&lt;void&gt; seedArticles(
 <tr>
 <td>2026-09-24</td>
 <td>design-review 第 2 段階・第 1 周の指摘 13 件（R-1〜R-13。中 6・低 7）を修正。書き方・構成のみで §8 の決定は変えていない：<strong>§5.11 を 6 つの小節（§5.11.1 目的と 2 形態／§5.11.2 <code>AnchoredListController</code> と先頭スクロール／§5.11.3 State の状態と共通の手続き／§5.11.4 アンカーの更新／§5.11.5 帯の高さ補正／§5.11.6 縮退の逃げ道・実装コメント・テスト）に分割</strong>し、§2.1・§3.1・§3.2・§4.1・§5.1・§5.5・§5.6・§5.7・§5.12・§6・§7・§8 #21・#28・§8.1・§10（T-H3・T-M・T-N・T-Q）からの参照を小節番号に付け替えた。State のフィールドに <code>_centerKey</code>（<code>build()</code> で作り直さない）を追加し初期値の作り方を明記（R-1）。保存画面の <code>AsyncError</code> のログは listener 側だけで出す形に統一（§5.5・§6。R-2）。<code>homeTabControllerProvider</code> の listener の条件を <code>_animating == false</code> かつ <code>_pageController.page?.round() != next</code> の 1 つに書き切った（§5.1。R-6）。<code>_inFlight</code> を <code>Completer</code> にする理由を §5.11.2「進行中の表し方」の 1 か所に集約し、他は参照に短縮（R-10）。<code>ScrollController</code> の差し替えの発生経路と <code>controller</code> の指す対象を明記（§5.11.4。R-13）。§2.2 #21 に <code>Raw&lt;CupertinoTabController&gt;</code> の引き取りを補足（R-9）。§9 は Q-1 の経路数の数え方を §7 に合わせた 1 か所のみ（8 種 / 12 経路。R-11）。<strong>§10</strong>：<code>test/helpers/collect_stream.dart</code> を T-I から T-H1 の成果物へ移動（R-3）、T-J の依存欄から反映済みの前提を外し §8.1 の宛先に「（反映済み）」「（未反映）」を付けた（R-4）、<code>resolveAnchorId</code> の切り出しを <code>T-Q</code> として 1 行追加（R-5）、T-M の完了条件を番号付き 17 項目に分解し崩れた強調記号を直した（R-8）、T-K の但し書きを「本書が 1 タスクとして確定する」に変更（R-12）。frontmatter・D-04・画面定義書は変更していない</td>
+</tr>
+<tr>
+<td>2026-09-24</td>
+<td>design-review 第 2 段階・第 2 周の指摘 7 件（R-1〜R-7。中 2・低 5）を修正。書き方のみで §8 の決定は変えていない：<strong>§10 T-H3 から <code>anchor_resolution.dart</code> と同テストの 2 ファイルを外し（新規 5 + 改修 1）、完了条件の <code>resolveAnchorId</code> の 2 項目を <code>T-Q</code> の完了条件へ一本化</strong>（T-28 が完了済みで、前周に足した <code>T-Q</code> と二重になっていた。§3.1・§5.11.4・§7・§8.1 の「T-H3 の受け入れ条件 / 完了条件」も <code>T-Q</code> に付け替え。R-1）。<strong>§10 末尾の <code>T-P</code> の実行時期を「本書の全タスクの完了後」から「T-H1〜T-O の完了後」に限定</strong>し、D-04 §10 側の同じ限定を §8.1 の D-04 宛（<strong>未反映</strong>）として 1 行追加（<code>T-Q</code> と <code>T-P</code> の並行可と両立させるため。D-04 は編集していない。R-2）。§6 の <code>AnchoredListView</code> の行に小節番号 §5.11.4 を補う（R-3）。§8.1 前文のマーカーに「（一部反映済み。未反映分を本文に列挙する）」を加え CLAUDE.md 宛の行を同じ形に揃えた（R-4）。§5.1 E-10 に <code>_animating</code> の所有・初期値・<code>setState</code> を使わない旨を明記（R-5）。§10 前文を「新規ファイル 10 以内」+ 下限を下回る 4 タスク（T-I・T-N・T-O・T-Q）の明示に直した（R-6）。§5.11.1・§5.11.4・§5.11.5 の見出しから括弧の要約を外し、小節一覧表の「内容」列に一本化（小節番号は不変。R-7）。§9・frontmatter・D-04・画面定義書は変更していない</td>
 </tr>
 </tbody></table>
 

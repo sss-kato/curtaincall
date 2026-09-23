@@ -62,8 +62,8 @@ presentation / entry   →   application (UseCase)   →   domain (Entity, Repos
 - **テストの単位は Feature（UseCase）。** UseCase を入口として、Repository / Source / 外部 I/O はモックまたはフィクスチャに差し替える
 - Widget テスト・個別クラスのユニットテストは**書かない**（UseCase テストで振る舞いを担保する）
 - 例外：infrastructure のパーサー（cheerio / rss-parser）は**実サイトの HTML / RSS をフィクスチャとして保存**し、パース結果を検証する。サイト改装（R-2）の検知が目的
-- 例外：外部境界の infrastructure 実装（http ラッパー・ファイル storage）は、外部 I/O を **fetch のスタブ・一時ディレクトリに差し替えて**検証してよい（対象は `FetchHttpClient`・`ArticlesFileStore`。D-02 §7.3・§8 #30）
-- 例外：入出力が値だけで I/O・Provider・Widget に触れない**純粋関数**（状態判定・並び順・日時書式・ライフサイクル判定・通知ペイロードの写像。app では `resolveListStatus`・`resolveReadDisplayState`・`compareArticles`・`formatPublishedDate`・`shouldSyncOnResume`・`parseNotificationTap`・`mergeSavedList`・`buildArticleCellModel`）は、関数ごとのテーブル駆動テストを実装ファイルと同じ相対パス（`test/features/<feature>/{domain,presentation}/`・`test/app/`・`test/core/ui/article/`）に置いてよい。対象は設計書 §7 に列挙したものに限る（D-04 §7・§8 #28、D-05 §7）
+- 例外：外部境界の infrastructure 実装（http ラッパー・ファイル storage・git publish）は、外部 I/O を **fetch のスタブ・一時ディレクトリ・`execFile` のスタブに差し替えて**検証してよい（対象は `FetchHttpClient`・`ArticlesFileStore`・`GitArticlesPublisher`。D-02 §7.3・§8 #30）。`GitArticlesPublisher` は **`execFile` を実物を通さないスタブに差し替え、実 git を一度も起動しない**ことが条件（差し替えを忘れたテストがあると実 git が走るため、既定実装は必ず例外を投げる形にする）
+- 例外：入出力が値だけで I/O・Provider・Widget に触れない**純粋関数**（状態判定・並び順・日時書式・ライフサイクル判定・通知ペイロードの写像。app では `resolveListStatus`・`resolveHasArticles`・`shouldLogCountError`・`resolveReadDisplayState`・`compareArticles`・`formatPublishedDate`・`resolveResumeSync`・`shouldNotifyReselect`・`parseNotificationTap`・`mergeSavedList`・`buildArticleCellModel`）は、関数ごとのテーブル駆動テストを実装ファイルと同じ相対パス（`test/features/<feature>/{domain,presentation}/`・`test/app/`・`test/core/ui/article/`）に置いてよい。対象は設計書 §7 に列挙したものに限る（D-04 §7・§8 #28、D-05 §7）
 - ネットワーク呼び出しはテスト内で**必ずモック**。実サイトへアクセスするテストは禁止
 
 ## app/（Flutter）

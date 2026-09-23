@@ -371,6 +371,59 @@ final class ArticleQueryRepositoryProvider
 String _$articleQueryRepositoryHash() =>
     r'e4767c41ecade18681e3b4263feb9b7cf2d2014e';
 
+/// 既読の Repository。
+
+@ProviderFor(readStateRepository)
+const readStateRepositoryProvider = ReadStateRepositoryProvider._();
+
+/// 既読の Repository。
+
+final class ReadStateRepositoryProvider
+    extends
+        $FunctionalProvider<
+          ReadStateRepository,
+          ReadStateRepository,
+          ReadStateRepository
+        >
+    with $Provider<ReadStateRepository> {
+  /// 既読の Repository。
+  const ReadStateRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'readStateRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$readStateRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<ReadStateRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ReadStateRepository create(Ref ref) {
+    return readStateRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ReadStateRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ReadStateRepository>(value),
+    );
+  }
+}
+
+String _$readStateRepositoryHash() =>
+    r'd52be2bb51c6eecb863a040c2f4c4dd2af11cdd1';
+
 /// 保存（あとで読む）の Repository。
 
 @ProviderFor(savedArticleRepository)
@@ -580,3 +633,61 @@ final class PushGatewayProvider
 }
 
 String _$pushGatewayHash() => r'9ce9785e47b7accdd9bf340307befeef1dfb0821';
+
+/// companyId → shortName（S-00 §7.1）。`companiesProvider` から 1 度だけ作る。
+/// id の重複は `AssetCompanyRepository`（T-20）が検証済みのためここでは
+/// 検証しない。
+
+@ProviderFor(companyShortNames)
+const companyShortNamesProvider = CompanyShortNamesProvider._();
+
+/// companyId → shortName（S-00 §7.1）。`companiesProvider` から 1 度だけ作る。
+/// id の重複は `AssetCompanyRepository`（T-20）が検証済みのためここでは
+/// 検証しない。
+
+final class CompanyShortNamesProvider
+    extends
+        $FunctionalProvider<
+          Map<String, String>,
+          Map<String, String>,
+          Map<String, String>
+        >
+    with $Provider<Map<String, String>> {
+  /// companyId → shortName（S-00 §7.1）。`companiesProvider` から 1 度だけ作る。
+  /// id の重複は `AssetCompanyRepository`（T-20）が検証済みのためここでは
+  /// 検証しない。
+  const CompanyShortNamesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'companyShortNamesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$companyShortNamesHash();
+
+  @$internal
+  @override
+  $ProviderElement<Map<String, String>> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  Map<String, String> create(Ref ref) {
+    return companyShortNames(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<String, String> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<String, String>>(value),
+    );
+  }
+}
+
+String _$companyShortNamesHash() => r'815962e2ca9b8fc072d402cc4a2ecb5b7591df4b';

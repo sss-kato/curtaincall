@@ -977,7 +977,7 @@ class ReadStatesCompanion extends UpdateCompanion<ReadState> {
 }
 
 class $SavedArticlesTable extends SavedArticles
-    with TableInfo<$SavedArticlesTable, SavedArticle> {
+    with TableInfo<$SavedArticlesTable, SavedArticleRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -1016,7 +1016,7 @@ class $SavedArticlesTable extends SavedArticles
   static const String $name = 'saved_articles';
   @override
   VerificationContext validateIntegrity(
-    Insertable<SavedArticle> instance, {
+    Insertable<SavedArticleRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -1043,9 +1043,9 @@ class $SavedArticlesTable extends SavedArticles
   @override
   Set<GeneratedColumn> get $primaryKey => {articleId};
   @override
-  SavedArticle map(Map<String, dynamic> data, {String? tablePrefix}) {
+  SavedArticleRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SavedArticle(
+    return SavedArticleRow(
       articleId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}article_id'],
@@ -1063,13 +1063,13 @@ class $SavedArticlesTable extends SavedArticles
   }
 }
 
-class SavedArticle extends DataClass implements Insertable<SavedArticle> {
+class SavedArticleRow extends DataClass implements Insertable<SavedArticleRow> {
   /// [Articles.id] への外部キー。
   final String articleId;
 
   /// 保存操作の日時（端末時計、UTC）。S-02 §7.1 の並び順キー。
   final DateTime savedAt;
-  const SavedArticle({required this.articleId, required this.savedAt});
+  const SavedArticleRow({required this.articleId, required this.savedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1085,12 +1085,12 @@ class SavedArticle extends DataClass implements Insertable<SavedArticle> {
     );
   }
 
-  factory SavedArticle.fromJson(
+  factory SavedArticleRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SavedArticle(
+    return SavedArticleRow(
       articleId: serializer.fromJson<String>(json['articleId']),
       savedAt: serializer.fromJson<DateTime>(json['savedAt']),
     );
@@ -1104,12 +1104,13 @@ class SavedArticle extends DataClass implements Insertable<SavedArticle> {
     };
   }
 
-  SavedArticle copyWith({String? articleId, DateTime? savedAt}) => SavedArticle(
-    articleId: articleId ?? this.articleId,
-    savedAt: savedAt ?? this.savedAt,
-  );
-  SavedArticle copyWithCompanion(SavedArticlesCompanion data) {
-    return SavedArticle(
+  SavedArticleRow copyWith({String? articleId, DateTime? savedAt}) =>
+      SavedArticleRow(
+        articleId: articleId ?? this.articleId,
+        savedAt: savedAt ?? this.savedAt,
+      );
+  SavedArticleRow copyWithCompanion(SavedArticlesCompanion data) {
+    return SavedArticleRow(
       articleId: data.articleId.present ? data.articleId.value : this.articleId,
       savedAt: data.savedAt.present ? data.savedAt.value : this.savedAt,
     );
@@ -1117,7 +1118,7 @@ class SavedArticle extends DataClass implements Insertable<SavedArticle> {
 
   @override
   String toString() {
-    return (StringBuffer('SavedArticle(')
+    return (StringBuffer('SavedArticleRow(')
           ..write('articleId: $articleId, ')
           ..write('savedAt: $savedAt')
           ..write(')'))
@@ -1129,12 +1130,12 @@ class SavedArticle extends DataClass implements Insertable<SavedArticle> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SavedArticle &&
+      (other is SavedArticleRow &&
           other.articleId == this.articleId &&
           other.savedAt == this.savedAt);
 }
 
-class SavedArticlesCompanion extends UpdateCompanion<SavedArticle> {
+class SavedArticlesCompanion extends UpdateCompanion<SavedArticleRow> {
   final Value<String> articleId;
   final Value<DateTime> savedAt;
   final Value<int> rowid;
@@ -1149,7 +1150,7 @@ class SavedArticlesCompanion extends UpdateCompanion<SavedArticle> {
     this.rowid = const Value.absent(),
   }) : articleId = Value(articleId),
        savedAt = Value(savedAt);
-  static Insertable<SavedArticle> custom({
+  static Insertable<SavedArticleRow> custom({
     Expression<String>? articleId,
     Expression<DateTime>? savedAt,
     Expression<int>? rowid,
@@ -1499,7 +1500,7 @@ final class $$ArticlesTableReferences
     );
   }
 
-  static MultiTypedResultKey<$SavedArticlesTable, List<SavedArticle>>
+  static MultiTypedResultKey<$SavedArticlesTable, List<SavedArticleRow>>
   _savedArticlesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.savedArticles,
     aliasName: $_aliasNameGenerator(db.articles.id, db.savedArticles.articleId),
@@ -1940,7 +1941,7 @@ class $$ArticlesTableTableManager
                         await $_getPrefetchedData<
                           ArticleRow,
                           $ArticlesTable,
-                          SavedArticle
+                          SavedArticleRow
                         >(
                           currentTable: table,
                           referencedTable: $$ArticlesTableReferences
@@ -2251,7 +2252,8 @@ typedef $$SavedArticlesTableUpdateCompanionBuilder =
     });
 
 final class $$SavedArticlesTableReferences
-    extends BaseReferences<_$AppDatabase, $SavedArticlesTable, SavedArticle> {
+    extends
+        BaseReferences<_$AppDatabase, $SavedArticlesTable, SavedArticleRow> {
   $$SavedArticlesTableReferences(
     super.$_db,
     super.$_table,
@@ -2395,14 +2397,14 @@ class $$SavedArticlesTableTableManager
         RootTableManager<
           _$AppDatabase,
           $SavedArticlesTable,
-          SavedArticle,
+          SavedArticleRow,
           $$SavedArticlesTableFilterComposer,
           $$SavedArticlesTableOrderingComposer,
           $$SavedArticlesTableAnnotationComposer,
           $$SavedArticlesTableCreateCompanionBuilder,
           $$SavedArticlesTableUpdateCompanionBuilder,
-          (SavedArticle, $$SavedArticlesTableReferences),
-          SavedArticle,
+          (SavedArticleRow, $$SavedArticlesTableReferences),
+          SavedArticleRow,
           PrefetchHooks Function({bool articleId})
         > {
   $$SavedArticlesTableTableManager(_$AppDatabase db, $SavedArticlesTable table)
@@ -2491,14 +2493,14 @@ typedef $$SavedArticlesTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
       $SavedArticlesTable,
-      SavedArticle,
+      SavedArticleRow,
       $$SavedArticlesTableFilterComposer,
       $$SavedArticlesTableOrderingComposer,
       $$SavedArticlesTableAnnotationComposer,
       $$SavedArticlesTableCreateCompanionBuilder,
       $$SavedArticlesTableUpdateCompanionBuilder,
-      (SavedArticle, $$SavedArticlesTableReferences),
-      SavedArticle,
+      (SavedArticleRow, $$SavedArticlesTableReferences),
+      SavedArticleRow,
       PrefetchHooks Function({bool articleId})
     >;
 typedef $$SettingsTableCreateCompanionBuilder = SettingsCompanion Function({

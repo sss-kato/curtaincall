@@ -65,6 +65,12 @@ class ReadStates extends Table {
 }
 
 /// 保存（あとで読む）の記録。行があれば保存済み（S-00/ST-04）。
+///
+/// drift の既定の行クラス名（`SavedArticle`）は
+/// `saved/domain/saved_article.dart` の `SavedArticle`（エンティティ。D-05
+/// §4.1）と衝突するため `SavedArticleRow` に変える（`ArticleRow` と同じ
+/// 理由）。
+@DataClassName('SavedArticleRow')
 class SavedArticles extends Table {
   /// [Articles.id] への外部キー。
   TextColumn get articleId =>

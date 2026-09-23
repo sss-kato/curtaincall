@@ -1,5 +1,7 @@
 import 'package:curtaincall/core/database/app_database.dart';
+import 'package:curtaincall/core/database/article_row_mapper.dart';
 import 'package:curtaincall/features/articles/domain/article.dart' as domain;
+import 'package:curtaincall/features/articles/domain/article_list_item.dart';
 import 'package:curtaincall/features/articles/domain/article_query_repository.dart';
 import 'package:curtaincall/features/articles/domain/article_sync_repository.dart';
 import 'package:curtaincall/features/settings/domain/settings_repository.dart';
@@ -21,7 +23,7 @@ class DriftArticleRepository
   @override
   Future<List<domain.Article>> findAll() async {
     final rows = await _db.select(_db.articles).get();
-    return rows.map(_toDomain).toList();
+    return rows.map((row) => row.toDomain()).toList();
   }
 
   @override
@@ -85,12 +87,7 @@ class DriftArticleRepository
 
       // 5. 配信から外れ、かつ未保存の記事を削除する（保存済みは in_feed =
       //    false のまま残す。read_states は外部キーの cascade で消える）
-      final deleted = await _db.customUpdate(
-        'DELETE FROM articles WHERE in_feed = 0 AND id NOT IN '
-        '(SELECT article_id FROM saved_articles)',
-        updates: {_db.articles, _db.readStates},
-        updateKind: UpdateKind.delete,
-      );
+      final deleted = await _db.deleteUnsavedOutOfFeedRows();
 
       // 6. settings を更新する（D-04 §5.2 手順 8-6・§8 #38）。
       // - feedEtag：null なら削除する。次回 If-None-Match を送らないだけで
@@ -123,6 +120,32 @@ class DriftArticleRepository
         .distinct();
   }
 
+  @override
+  Stream<List<ArticleListItem>> watchInFeed() {
+    final query = _db.select(_db.articles).join([
+      leftOuterJoin(
+        _db.readStates,
+        _db.readStates.articleId.equalsExp(_db.articles.id),
+      ),
+      leftOuterJoin(
+        _db.savedArticles,
+        _db.savedArticles.articleId.equalsExp(_db.articles.id),
+      ),
+    ])..where(_db.articles.inFeed.equals(true));
+    return query.watch().map(
+      (rows) => rows
+          .map(
+            (row) => row
+                .readTable(_db.articles)
+                .toListItem(
+                  readState: row.readTableOrNull(_db.readStates),
+                  isSaved: row.readTableOrNull(_db.savedArticles) != null,
+                ),
+          )
+          .toList(),
+    );
+  }
+
   Future<int> _articleCount() async {
     final (:query, :countColumn) = _articleCountQuery();
     final row = await query.getSingle();
@@ -148,21 +171,8 @@ class DriftArticleRepository
     return _db.upsertSetting(key, value);
   }
 
-  domain.Article _toDomain(ArticleRow row) => domain.Article(
-    id: row.id,
-    companyId: row.companyId,
-    title: row.title,
-    url: row.url,
-    category: row.category,
-    publishedAt: row.publishedAt.toUtc(),
-    fetchedAt: row.fetchedAt.toUtc(),
-    contentHash: row.contentHash,
-    thumbnail: row.thumbnail,
-    updatedAt: row.updatedAt?.toUtc(),
-  );
-
   /// `articles` の全列を [article] から埋める。列を追加・変更したときは
-  /// ここに加えて [_toDomain]・（部分更新の対象になるなら）
+  /// ここに加えて `ArticleRowMapper.toDomain`・（部分更新の対象になるなら）
   /// [_refreshCompanion] も直すこと。
   ArticlesCompanion _insertCompanion(domain.Article article) =>
       ArticlesCompanion.insert(

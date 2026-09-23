@@ -11,6 +11,11 @@ import 'package:drift/drift.dart';
 /// 固定値。
 final _seededReadAt = DateTime.utc(2026);
 
+/// [seedArticles] を呼んだ [AppDatabase] を記録する（「1 回だけ」ガード用）。
+/// `articles` の行数ではなく呼び出し自体を見るため、全引数省略（0 件投入）
+/// の 1 回目でも 2 回目の呼び出しを検出できる。
+final Expando<bool> _seeded = Expando<bool>();
+
 /// in-memory drift に記事・既読・保存を投入するテストヘルパ（D-05 §7）。
 ///
 /// テーブルへ直接 INSERT せず、実物の `DriftArticleRepository.applyFeed`・
@@ -35,15 +40,17 @@ final _seededReadAt = DateTime.utc(2026);
 /// [inserts]・[outOfFeed]・[withUpdateBadge]・[readIds] はそれぞれのリスト内で
 /// id が重複していないこと。重複があれば [ArgumentError]。
 ///
-/// **1 テストにつき 1 回だけ呼ぶこと。** 呼び出し時点で `articles`
-/// テーブルが空でなければ [StateError] を投げる。2 回目の呼び出しは
+/// **1 テストにつき 1 回だけ呼ぶこと。** 同じ [db] に対する 2 回目の呼び出しは
+/// （0 件投入の呼び出しであっても）[StateError] を投げる。2 回目の呼び出しは
 /// 1 回目で `in_feed = true` にした未保存記事を「配信外」として消して
 /// しまうため。同じ DB に記事を追加投入したい場合は
-/// `DriftArticleRepository.applyFeed` を直接使う。
+/// `DriftArticleRepository.applyFeed` を直接使う。**引数検証に失敗した
+/// 呼び出しは回数に数えない**（[_validateSeedArguments] は DB に触れない
+/// 純粋な検証のため、失敗しても DB は未使用のまま 1 回目をやり直せる）。
 ///
-/// 手順は [_validateSeedArguments]（検証）→ [_seedRows]（投入）→
-/// [_assertSeeded]（結果確認）の 3 段。各手順の詳細はそれぞれの
-/// 関数のコメントを参照。
+/// 手順は [_validateSeedArguments]（検証）→ 「1 回だけ」ガードの確定 →
+/// [_seedRows]（投入）→ [_assertSeeded]（結果確認）の 4 段。各手順の詳細は
+/// それぞれの関数のコメントを参照。
 Future<void> seedArticles(
   AppDatabase db, {
   List<Article> inserts = const [],
@@ -52,15 +59,6 @@ Future<void> seedArticles(
   List<String> readIds = const [],
   Map<String, DateTime> savedAtByIds = const {},
 }) async {
-  final existingRowCount = await _countArticles(db);
-  if (existingRowCount > 0) {
-    throw StateError(
-      'seedArticles は 1 テストにつき 1 回だけ呼べます '
-      '（既に $existingRowCount 件あります）。 '
-      '追加投入は applyFeed を直接使ってください',
-    );
-  }
-
   _validateSeedArguments(
     inserts: inserts,
     outOfFeed: outOfFeed,
@@ -68,6 +66,15 @@ Future<void> seedArticles(
     readIds: readIds,
     savedAtByIds: savedAtByIds,
   );
+
+  if (_seeded[db] ?? false) {
+    throw StateError(
+      'seedArticles は 1 テストにつき 1 回だけ呼べます '
+      '（この db は既に呼び出し済みです）。 '
+      '追加投入は applyFeed を直接使ってください',
+    );
+  }
+  _seeded[db] = true;
 
   await _seedRows(
     db,
@@ -88,8 +95,13 @@ Future<void> seedArticles(
   );
 }
 
-/// 引数の整合性を検証する（DB が空であることの確認は [seedArticles] 本体が
-/// 先に行う）。
+/// 引数の整合性を検証する。DB に触れない純粋な検証のため [seedArticles]
+/// 本体が「1 回だけ」ガードより先に呼ぶ（検証失敗はガードの回数に
+/// 数えない）。
+///
+/// CLAUDE.md のテスト方針によりこのヘルパ自体のユニットテストは持たない。
+/// 検証条件（throw の契約）を変えるときは、各 throw 経路を手で 1 度ずつ
+/// 通して確認すること。
 void _validateSeedArguments({
   required List<Article> inserts,
   required List<Article> outOfFeed,

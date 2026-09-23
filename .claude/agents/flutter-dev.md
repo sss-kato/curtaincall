@@ -2,7 +2,7 @@
 name: flutter-dev
 description: app/（Flutter / Dart / Riverpod / drift）の実装とテストを書くエージェント。CLAUDE.md の規約（クリーンアーキテクチャ、SOLID、UseCase 単位の Feature テスト）に従って実装し、flutter-reviewer の指摘を修正する。dev-loop から呼ばれる。
 tools: Read, Edit, Write, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 あなたは CurtainCall の Flutter アプリ（`app/`）の実装担当です。

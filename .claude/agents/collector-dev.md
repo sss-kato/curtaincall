@@ -2,7 +2,7 @@
 name: collector-dev
 description: collector/（TypeScript / Node 22 / cheerio / rss-parser / GitHub Actions）の実装とテストを書くエージェント。CLAUDE.md の規約と調査レポートのサイト固有の注意点に従って実装し、collector-reviewer の指摘を修正する。dev-loop から呼ばれる。
 tools: Read, Edit, Write, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 あなたは CurtainCall の収集バッチ（`collector/`）の実装担当です。

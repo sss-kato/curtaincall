@@ -2788,7 +2788,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>DB の open に失敗（破損）</td>
-<td>最初のクエリで例外。<code>SyncFailed(storage)</code> と <code>articleCountProvider</code> のエラー。<code>resolveArticleCount</code> が <code>unavailable</code> になり、<strong><code>lastResult</code> を問わず ST-17</strong>（判定表 1 行目。S-00 §8 #36）。取得が 304 や 0 件成功で終わっていても ST-12（「記事がありません」）にはならない。自動修復（ファイル削除）はしない（既読・保存を黙って消さない）。回復は E-24 の再試行（S-00/A-12）＝ <code>articleCountProvider</code> の再購読だけ。<strong>DB ファイルが恒久的に壊れている場合は A-12 を何度押しても毎回エラーになり ST-17 から抜けられず、回復手段はアプリの削除・再インストール（既読・保存も失われる）だけになる</strong>。<code>shouldLogCountError</code> は「1 障害 1 行」なので 2 回目以降の失敗はログに残らないが、D-05 が A-12 を押した事実を <code>logger.i</code> に 1 行残すため、押した回数だけは切り分けの材料になる（§8.1 の D-05 宛）。設定画面からのデータ初期化は将来の逃げ道として §9 Q-1 に挙げる</td>
+<td>最初のクエリで例外。<code>SyncFailed(storage)</code> と <code>articleCountProvider</code> のエラー。<code>resolveArticleCount</code> が <code>unavailable</code> になり、<strong><code>lastResult</code> を問わず ST-17</strong>（判定表 1 行目。S-00 §8 #36）。取得が 304 や 0 件成功で終わっていても ST-12（「記事がありません」）にはならない。自動修復（ファイル削除）はしない（既読・保存を黙って消さない）。回復は E-24 の再試行（S-00/A-12）＝ <code>articleCountProvider</code> の再購読だけ。<strong>DB ファイルが恒久的に壊れている場合は A-12 を何度押しても毎回エラーになり ST-17 から抜けられず、回復手段はアプリの削除・再インストール（既読・保存も失われる）だけになる</strong>。<code>shouldLogCountError</code> は「1 障害 1 行」なので 2 回目以降の失敗はログに残らないが、D-05 が A-12 を押した事実を <code>logger.i</code> に 1 行残すため、押した回数だけは切り分けの材料になる（§8.1 の D-05 宛）。設定画面からのデータ初期化（逃げ道）は<strong>設けない</strong>と決めた（§8 #68）</td>
 <td>infrastructure / presentation</td>
 </tr>
 <tr>
@@ -3737,6 +3737,12 @@ class TabReselect extends _$TabReselect {
 <td>各ファイルに <code>_noRetry</code> を private で複製する（従来）</td>
 <td>CLAUDE.md「共通処理は…コピーしない」。同じ 1 行を 2 か所に持つと、片方だけ既定に戻されても analyzer では気づけない（自動リトライの有無は #61 の判定の前提で、戻ると「値なし × <code>isLoading</code>」が再購読中と自動リトライ中で重なる）。置き場を <code>core/di/</code> にするのは<strong>新しいディレクトリを作らない</strong>ため（CLAUDE.md のディレクトリ規約に手を入れない）で、このファイルは import を 1 つも持たない定数関数なので「<code>core/di</code> は具象 import を許す唯一の場所」（#43・#45）の趣旨とは独立に扱える（§3.2・§4.7）（reopen 後・第 1 周 [M-13]）</td>
 </tr>
+<tr>
+<td>68</td>
+<td><strong>恒久的な DB 障害からの逃げ道（設定画面からのデータ初期化）は設けない。</strong> DB ファイルが恒久的に壊れた端末は ST-17（E-24 + 再試行）から抜けられず、回復手段はアプリの削除・再インストール（既読・保存も失われる）だけになるが、その旨を画面に出すこともしない。本書・D-05 とも変更は無い（§6 の「DB の open に失敗（破損）」の行）</td>
+<td>(B) 設定画面（S-03）に「データの初期化」を足し、DB ファイルを削除して作り直す（既読・保存・設定を失う代わりに ST-17 から回復できる）／(C) ST-17 の E-24 に「アプリを削除して入れ直すと回復します」の補足文を足す</td>
+<td>DB の恒久破損は iOS では稀（ストレージ障害・強制終了の重なり）で、要件にも復旧手段の記載が無い。要件 §5・F-05・F-06 は既読・保存を<strong>失わない</strong>ことを求めており、(B) はそれを利用者が自ら捨てる操作を増やす方向になる。(C) は画面定義書の reopen を要する割に、利用者が取れる行動は (A) と同じで変わらない。<strong>(A) だけが承認済みの画面定義書（S-00〜S-03）の変更を伴わない</strong>：(B) は S-03、(C) は S-00 の reopen が必要で、reopen すると下流の本書と D-05 が連動して draft に戻り、収束させている design-review をやり直すことになる（CLAUDE.md「画面定義書が上流」）。稀な事象のためにその往復を増やす価値は無い。将来見直す余地は残る（要件書に新しい機能として起票する形。本行に理由が残るので辿れる）（開発者決定 2026-09-24、旧 §9 Q-1、推奨案 (A)）</td>
+</tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
 <table>
@@ -3929,20 +3935,8 @@ class TabReselect extends _$TabReselect {
 </tr>
 </tbody></table>
 <h2 id="sec-9">9. 未決定事項<a class="anchor" href="#sec-9">#</a></h2>
-<p>2026-09-24 の回答で解決した分はすべて §8 に移してある（対応：Q-1 → #55、Q-2 → #56、Q-3 → #57、Q-4 → #58、Q-5 → #59、Q-6 → #60。初稿の Q-1〜Q-6 は 2026-09-19 の回答で §8 #24〜#29 へ）。本改訂で新たに 1 件を挙げる。</p>
-<p><strong>[Q-1] 恒久的な DB 障害からの逃げ道（設定画面からのデータ初期化）を設けるか</strong></p>
-<ul>
-<li>背景：DB ファイルが恒久的に壊れると、件数の読み出しが毎回失敗して ST-17（E-24 + 再試行）から抜けられない。A-12 を何度押しても回復せず、<strong>現在の回復手段はアプリの削除・再インストールだけ</strong>（既読・保存も失われる）。2 回目以降の失敗はログにも残らない（<code>shouldLogCountError</code> の 1 障害 1 行。§5.4・§6）</li>
-<li>選択肢：<ul>
-<li><strong>(A) 設けない（現状のまま）。</strong> 本書・D-05 とも変更なし。再インストールで回復する旨も画面には出さない</li>
-<li>(B) 設定画面（S-03）に「データの初期化」を足す。DB ファイルを削除して作り直し、既読・保存・設定を失う代わりに ST-17 から回復できる。<strong>画面定義書 S-03 の変更（要素・操作・確認ダイアログの文言）が先に必要</strong>で、D-05 に UseCase が 1 つ増える</li>
-<li>(C) ST-17 の E-24 に「アプリを削除して入れ直すと回復します」の補足文を足す。<strong>S-00 §4.3 E-24 の文言変更（画面定義書の変更）が必要</strong>で、実装は文言のみ</li>
-</ul>
-</li>
-<li><strong>推奨：(A)</strong>。理由：DB の恒久破損は iOS では稀（ストレージ障害・強制終了の重なり）で、要件にも復旧手段の記載が無い（要件 §5・F-05・F-06 は既読・保存を失わないことを求めており、(B) はそれを自ら捨てる操作を増やす）。(C) は画面定義書の reopen を要する割に、利用者が取れる行動は (A) と同じ</li>
-<li>影響範囲：(A) なら無し。(B) は S-03（reopen）・D-05（UseCase・画面）・本書 §4.2（DB の作り直し規則）。(C) は S-00（reopen）と <code>FullErrorView</code> の文言</li>
-</ul>
-<p>そのほかに開発者の判断を要する事項は生じていない（§8 #61〜#67 は画面定義書 S-00 §8 #31・#36・#38・§5.2 ST-17、S-01 §5.1 ST-02・ST-04・ST-19・§8 #23・#30・#31、S-02 §5 ST-06 の決定と CLAUDE.md の規約から導けるもので、判断の余地が無い）。</p>
+<p>該当なし。開発者の判断を要する事項は残っていない。</p>
+<p>2026-09-24 の回答で解決した分はすべて §8 に移してある（対応：Q-1 → #55、Q-2 → #56、Q-3 → #57、Q-4 → #58、Q-5 → #59、Q-6 → #60。reopen 後・第 1 周で挙げた Q-1（恒久的な DB 障害からの逃げ道）は <strong>#68</strong>。初稿の Q-1〜Q-6 は 2026-09-19 の回答で §8 #24〜#29 へ）。そのほかの決定（§8 #61〜#67）は画面定義書 S-00 §8 #31・#36・#38・§5.2 ST-17、S-01 §5.1 ST-02・ST-04・ST-19・§8 #23・#30・#31、S-02 §5 ST-06 の決定と CLAUDE.md の規約から導けるもので、判断の余地が無い。</p>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
 <p><strong>本節での「品質ゲート」は <code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test</code> の 3 コマンドを指す</strong>（<code>riverpod_lint</code> は analyzer プラグインなので <code>flutter analyze</code> だけでは実行されない。§4.8。CLAUDE.md の「品質ゲート」も同じ 3 コマンドに更新済み。§8 #60）。<strong>本節のタスク候補 ID（T-A〜T-G・T-F3・T-F4・T-P）は <code>/pm plan</code> 用の ID で、実タスク（<code>docs/tasks/T-nn.md</code>）とは別系統</strong>（本文中の <code>T-17</code>・<code>T-23</code> のような <code>T-nn</code> は実タスクを指す。対応は <code>docs/tasks/README.md</code> が持つ）。<strong><code>T-H</code>〜<code>T-O</code> は D-05 §10 が使う</strong>ため本書では欠番にし、本書の片付けタスクは D-05 の全タスク完了後に行うので末尾の <strong><code>T-P</code></strong> とする（D-05 §10 前文・§1「決めること」9 が「D-04 の T-F1・T-F2a・T-F2b の後に続く T-H〜T-O」と定めており、<strong>D-05 §10 の表が実際に T-H1〜T-O を使っているので本書が譲る</strong>。両書とも review 中だが、ID の割り当ては先に確定した D-05 側に合わせる）。</p>
 <p>D-01 §10 Task C（app 契約実装）は本書の T-B1・T-D に吸収する。各タスクは pm の目安どおり新規ファイルは 5〜10 を目安（テストを含む。<code>build_runner</code> の生成物と <code>articles.sample.json</code> のコピーは数えない）・UseCase 3 以内で、単独で品質ゲートを通す（T-A は <code>flutter test</code> の対象が無いため analyze の 2 コマンドのみ）。目安の<strong>例外は 4 つ</strong>：T-A（<code>flutter create</code> の生成物の整理が主）、T-G（既存ファイルの改修が主）、<strong>T-D（11。うち 3 つはテストヘルパで、UseCase は <code>SyncArticlesUseCase</code> の 1 つだけ）</strong>、<strong>T-F1（14 + 改修 1。純粋関数・Provider・状態表示の型を別ファイルに切り出したためファイル数が増えたが、UseCase は 0）</strong>。T-P は新規ファイルが 0（既存ファイルの改修のみ）なので目安の対象外。<strong>T-F3（新規 3 + 改修 7）・T-F4（新規 2 + 改修 5）は本書の改訂で振る舞いが変わった分を実装済みコードに反映する追随タスク</strong>で、いずれも新規ファイルは目安内。T-F1（= 実タスク T-23）・T-F2a（= T-24）・T-D（= T-21）はすでに <code>done</code> で再実行できないため、差分は新しい ID で引き取る（§8.1 の「実装（§10 T-F3）」「実装（§10 T-F4）」）。T-B1 は <code>feed_state_keys.dart</code> が infrastructure（T-C）へ移ったため 10 で目安内（§8 #47）。将来さらに分けるなら T-F1 を「<code>lib/app/</code> の骨格（起動・下部タブ・ライフサイクル。<code>root_tab.dart</code>・<code>tab_controller.dart</code>・<code>tab_reselect.dart</code> はこちら）」と「状態の型と判定（<code>core/ui/status/list_status.dart</code>・<code>articles/presentation</code> の <code>sync_controller.dart</code>・<code>list_status.dart</code>）」の 2 つに割る（前者の完了条件はシミュレータでの目視、後者はテーブル駆動テストで、検証手段も分かれる）。生成物（<code>*.g.dart</code>・<code>*.drift.dart</code>）は各タスクでコミットする。並行タスクが同じファイル（生成物を含む）を編集しないよう、Provider の定義は feature ごとのファイルに分ける（§4.7。§8 #45）。</p>
@@ -4174,6 +4168,10 @@ class TabReselect extends _$TabReselect {
 <tr>
 <td>2026-09-24</td>
 <td>reopen 後・design-review 第 1 段階・第 1 周の指摘 16 件（M-1〜M-16）を修正。<strong>再試行（A-12 / A-08）の 2 系統をともに <code>ref.invalidate(articleCountProvider)</code> を行う形に改め</strong>（件数 Stream が値を得た後に死ぬと回復できない経路を塞ぎ、S-00 §6 A-12 の移り先 ST-17 と一致させた。§2.1・§5.4・§6・§8 #63・§8.1）、<strong>対応外スキーマの抑止判定を <code>SyncSuppressionPolicy</code> として切り出し <code>SyncCoordinator</code> が <code>execute</code> の前に評価する</strong>形に変更（抑止中に E-21 が出る穴を塞いだ。§3.2・§4.7・§5.2・§5.2.1・§5.3・§6・§7・§8 #64）、<strong>判定表に <code>empty</code> × <code>hasVisible = true</code> → <code>content</code> の行を追加</strong>（件数と一覧の更新順のずれで E-22 が一瞬出る穴。10 行に。§5.4・§6・§7・§8 #65）、件数の初回読み出しが滞留した場合のログ（§8 #66）と <code>noRetry</code> の共有（§8 #67）を追加。<strong>§10 に T-F3（画面まわりの追随。D-05 T-H3 の後・T-M の前）と T-F4（抑止の前倒し）を新設</strong>し、T-P を (1)〜(6)・(8) に限定して失効していた依存の根拠を是正（§8.1・§10）。§8.1 の CLAUDE.md 宛「未反映」と §8 #11・#28 の未処理記述を反映済みに、§4.2・§6・§2.1 の S-02 との「乖離」記述を「一致」に是正。§5.4 の <code>lastResult == null</code> の成立範囲（最長 20 秒）を訂正、S-00/ST-10 の「表示対象が未確定」の分担と <code>sequence</code> の消費規則・<code>savedArticlesProvider</code> の <code>keepAlive</code> を §8.1 に明記、§2.1 に S-01/ST-20・S-02/ST-07 の行を追加、§4.8 の CI 抜粋の範囲を明記。§9 に Q-1（恒久的な DB 障害からの逃げ道）を追加。<strong><code>list_status.dart</code> の改名（[M-12]）は採らない</strong>（理由は §8 #51）。<strong>§8.1 の D-05 宛は 22 行のまま</strong>（行の追加・削除なし）</td>
+</tr>
+<tr>
+<td>2026-09-24</td>
+<td>§9 の Q-1（恒久的な DB 障害からの逃げ道）の回答を反映。<strong>設定画面からのデータ初期化は設けない</strong>（推奨案 (A)）を §8 #68 として記録し、§6「DB の open に失敗（破損）」の行の参照先を §9 Q-1 から §8 #68 に差し替え、<strong>§9 を「該当なし」に戻した</strong>。設計・実装への変更は無い</td>
 </tr>
 </tbody></table>
 

@@ -46,6 +46,7 @@
 | T-40 | D-04 | T-F4 | 対応外スキーマの抑止判定を取得の開始前に出す | app | T-21 | todo |
 | T-41 | D-05 | T-Q | resolveAnchorId を純粋関数に切り出す | app | T-28 | todo |
 | T-42 | D-05 | T-R | seedArticles の契約テストを書く | app | T-26 | todo |
+| T-43 | D-04 | T-P | 振る舞いを変えない片付け（注記の削除・実装済みコードの移動） | app | T-33, T-34, T-35 | todo |
 
 ## 並行の組
 

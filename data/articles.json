@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-23T16:00:04+09:00",
+  "generatedAt": "2026-09-24T13:32:13+09:00",
   "articles": [
+    {
+      "id": "d1bacf64650e9573",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』新人公演",
+      "url": "https://kageki.hankyu.co.jp/news/20260924_001.html",
+      "category": "schedule",
+      "publishedAt": "2026-09-24T00:00:00+09:00",
+      "contentHash": "94d541e06cc6a197",
+      "fetchedAt": "2026-09-24T13:32:13+09:00"
+    },
     {
       "id": "9fb72b21be9f5375",
       "companyId": "takarazuka",
@@ -169,8 +179,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260916_001.html",
       "category": "ticket",
       "publishedAt": "2026-09-16T00:00:00+09:00",
-      "contentHash": "6bb072eb9ca31a3b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "6bb072eb9ca31a3b"
     },
     {
       "id": "e3cfe4a9ad14b621",
@@ -993,16 +1003,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "e39332f8d00b18c3",
-      "companyId": "takarazuka",
-      "title": "チケット不正転売禁止法違反による検挙事案について（2026年2月20日）",
-      "url": "https://kageki.hankyu.co.jp/news/20260221_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-02-21T00:00:00+09:00",
-      "contentHash": "cc3f4a505fe01e77",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "bd5abf779b51a3b1",
       "companyId": "shiki",
       "title": "『王様の耳はロバの耳』全国公演が開幕しました！",
@@ -1119,9 +1119,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037974.html",
       "category": "other",
       "publishedAt": "2026-09-02T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/rig_puppet_00_thum-thumb-500x373-41509.jpg",
-      "contentHash": "8dd845589817ab80",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "8dd845589817ab80"
     },
     {
       "id": "183638f7f1df1bb7",
@@ -1130,9 +1130,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037912.html",
       "category": "streaming",
       "publishedAt": "2026-08-31T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/07/7be9e045156424cf2a9b349eb67ab9a1ebd81cdb-thumb-500x373-38880.jpg",
-      "contentHash": "dece01f008ab8ceb",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "dece01f008ab8ceb"
     },
     {
       "id": "cb3ba1aee882a371",
@@ -1141,9 +1141,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/036752.html",
       "category": "other",
       "publishedAt": "2026-08-31T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "b5819ec5b6d4c625",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "b5819ec5b6d4c625"
     },
     {
       "id": "f759d128bcc66e5f",
@@ -1152,9 +1152,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/033709.html",
       "category": "other",
       "publishedAt": "2026-08-31T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "d6367bed67e650c8",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "d6367bed67e650c8"
     },
     {
       "id": "566de6bd92d2ebe1",
@@ -1163,9 +1163,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037959.html",
       "category": "other",
       "publishedAt": "2026-08-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/08/roba_tokyo_news00-thumb-500x373-41493.jpg",
-      "contentHash": "1e01fa626075438d",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "1e01fa626075438d"
     },
     {
       "id": "3a11b8efb8118c38",
@@ -1174,9 +1174,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037941.html",
       "category": "ticket",
       "publishedAt": "2026-08-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/09/operaza_mtthmn_2025_LWE-thumb-500x373-39301.jpg",
-      "contentHash": "ed41a6cefce5a704",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "ed41a6cefce5a704"
     },
     {
       "id": "30037ff0ea9e020f",
@@ -1185,9 +1185,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037950.html",
       "category": "ticket",
       "publishedAt": "2026-08-28T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2021/11/43617a2768254738eecc1081f718457269a4c168-thumb-500x375-30963.jpg",
-      "contentHash": "5687a0c4ebad5345",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "5687a0c4ebad5345"
     },
     {
       "id": "ddaea42e74244909",
@@ -1196,9 +1196,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037958.html",
       "category": "other",
       "publishedAt": "2026-08-28T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "4184b4c6ecb4584e",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "4184b4c6ecb4584e"
     },
     {
       "id": "fd45d02be54d78ec",
@@ -1207,9 +1207,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/034522.html",
       "category": "other",
       "publishedAt": "2026-08-28T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "5f7c0ea2b5110de4",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "5f7c0ea2b5110de4"
     },
     {
       "id": "9275aa9721dafc40",
@@ -1218,9 +1218,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037934.html",
       "category": "other",
       "publishedAt": "2026-08-26T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/08/thum_DSC_0820-thumb-500x373-41472.jpg",
-      "contentHash": "92fce73666b58fac",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "92fce73666b58fac"
     },
     {
       "id": "5f536c573dcd30f9",
@@ -1229,9 +1229,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037932.html",
       "category": "other",
       "publishedAt": "2026-08-24T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/08/20260822_182334_thum-thumb-500x373-41448.jpg",
-      "contentHash": "e4c8c624ff6406a9",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "e4c8c624ff6406a9"
     },
     {
       "id": "c566d982ff40c070",
@@ -1240,9 +1240,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037935.html",
       "category": "other",
       "publishedAt": "2026-08-22T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/08/260822_lm_thum-thumb-500x373-41444.jpg",
-      "contentHash": "454c2b4545e0c557",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "454c2b4545e0c557"
     },
     {
       "id": "22f4e517907c7313",
@@ -1251,9 +1251,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037926.html",
       "category": "ticket",
       "publishedAt": "2026-08-21T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2022/01/bd99fcaf595d0e934901d39ba530ea5ae5be450a-thumb-500x375-31229.jpg",
-      "contentHash": "da442488b21c6b73",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "da442488b21c6b73"
     },
     {
       "id": "0714535c9e1fe218",
@@ -1262,9 +1262,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037936.html",
       "category": "other",
       "publishedAt": "2026-08-20T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/08/lm_costume_thum-thumb-500x373-41417.jpg",
-      "contentHash": "d7e77e181cc3f3fd",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "d7e77e181cc3f3fd"
     },
     {
       "id": "075ca5ee6fe56e37",
@@ -1273,9 +1273,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037937.html",
       "category": "other",
       "publishedAt": "2026-08-20T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2021/11/43617a2768254738eecc1081f718457269a4c168-thumb-500x375-30963.jpg",
-      "contentHash": "875564f9157ab875",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "875564f9157ab875"
     },
     {
       "id": "1adfe7d5f22ad4e5",
@@ -1284,9 +1284,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/033713.html",
       "category": "other",
       "publishedAt": "2026-08-20T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "3f01562971ffac15",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "3f01562971ffac15"
     },
     {
       "id": "b06399434820318f",
@@ -1295,9 +1295,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037925.html",
       "category": "ticket",
       "publishedAt": "2026-08-20T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/cats_mtthmn_2603-thumb-500x373-40319.jpg",
-      "contentHash": "9e98f116a8c1b82b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "9e98f116a8c1b82b"
     },
     {
       "id": "cd6faaf33596e1b8",
@@ -1306,9 +1306,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037927.html",
       "category": "other",
       "publishedAt": "2026-08-19T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/08/lm_shikomi_thum-thumb-500x373-41408.jpg",
-      "contentHash": "025a31d367a371b3",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "025a31d367a371b3"
     },
     {
       "id": "3e8f83d25f83a931",
@@ -1317,9 +1317,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037924.html",
       "category": "other",
       "publishedAt": "2026-08-18T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/08/260818_LM_puppet_thum-thumb-500x373-41404.jpg",
-      "contentHash": "393985ccbe2428ae",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "393985ccbe2428ae"
     },
     {
       "id": "d2905837962960e4",
@@ -1328,9 +1328,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037918.html",
       "category": "ticket",
       "publishedAt": "2026-08-15T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2024/07/aladdin_mtthmn_NEW-thumb-500x373-36454.jpg",
-      "contentHash": "a867da31d9465673",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "a867da31d9465673"
     },
     {
       "id": "dc66d89078baf0f6",
@@ -1339,9 +1339,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037922.html",
       "category": "ticket",
       "publishedAt": "2026-08-14T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/05/3bf0bab97df29e1ca6a2c710cebc0f5a1fb42520-thumb-500x373-40769.jpg",
-      "contentHash": "b22a14d64fd58e4a",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "b22a14d64fd58e4a"
     },
     {
       "id": "1771fe5a8aea4759",
@@ -1350,9 +1350,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037913.html",
       "category": "other",
       "publishedAt": "2026-08-06T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "926dd179bf9a1e57",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "926dd179bf9a1e57"
     },
     {
       "id": "b426d3d5edfd129f",
@@ -1361,9 +1361,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037914.html",
       "category": "other",
       "publishedAt": "2026-08-06T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/08/MM_yokohama_news00-thumb-500x373-41381.jpg",
-      "contentHash": "7b1247e278ad215e",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "7b1247e278ad215e"
     },
     {
       "id": "3bec0dcbe4cb58bd",
@@ -1372,9 +1372,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037868.html",
       "category": "other",
       "publishedAt": "2026-08-05T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/07/260714_lm_maihama_thum-thumb-500x372-41278.jpg",
-      "contentHash": "312f66c76e2ffe77",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "312f66c76e2ffe77"
     },
     {
       "id": "e1eda01724b05adf",
@@ -1383,9 +1383,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037910.html",
       "category": "other",
       "publishedAt": "2026-08-01T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/08/260801_ACL_zenkoku_thum-thumb-500x373-41367.jpg",
-      "contentHash": "bfc26b682912a323",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "bfc26b682912a323"
     },
     {
       "id": "12cfa550af68e98f",
@@ -1394,9 +1394,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037865.html",
       "category": "new_work",
       "publishedAt": "2026-07-31T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2023/04/elcos_mtthmn-thumb-500x373-33427.jpg",
-      "contentHash": "bfc3aab1ce053738",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "bfc3aab1ce053738"
     },
     {
       "id": "15aa6acf2032c82c",
@@ -1405,9 +1405,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037873.html",
       "category": "other",
       "publishedAt": "2026-07-31T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "35a2b7a512957d54",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "35a2b7a512957d54"
     },
     {
       "id": "49838be88b6a3298",
@@ -1416,9 +1416,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037801.html",
       "category": "streaming",
       "publishedAt": "2026-07-31T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/04/roba_mtthmn_2026-thumb-500x373-40576.jpg",
-      "contentHash": "fc9644d2b4bf3a05",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "fc9644d2b4bf3a05"
     },
     {
       "id": "894f65901e8f9cce",
@@ -1427,9 +1427,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037839.html",
       "category": "other",
       "publishedAt": "2026-07-31T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/05/774a1adeb19969f5f3d80298ebf9ec515bd24b55-thumb-500x373-40735.jpg",
-      "contentHash": "b230b72c40c6c845",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "b230b72c40c6c845"
     },
     {
       "id": "f2349868ac087045",
@@ -1438,9 +1438,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037861.html",
       "category": "other",
       "publishedAt": "2026-07-31T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/07/260731_roba_tokyo_00thum-thumb-500x373-41366.jpg",
-      "contentHash": "fb7b57feb5e8faf6",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "fb7b57feb5e8faf6"
     },
     {
       "id": "84173aaa5b7d1e24",
@@ -1449,9 +1449,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037870.html",
       "category": "other",
       "publishedAt": "2026-07-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/07/260730_ACL_zenkoku_00_thum-thumb-500x373-41282.jpg",
-      "contentHash": "554cdde90b7abb6c",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "554cdde90b7abb6c"
     },
     {
       "id": "12bf44742ab92cfd",
@@ -1460,9 +1460,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037869.html",
       "category": "other",
       "publishedAt": "2026-07-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/05/3bf0bab97df29e1ca6a2c710cebc0f5a1fb42520-thumb-500x373-40769.jpg",
-      "contentHash": "ea5284b04d20217e",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "ea5284b04d20217e"
     },
     {
       "id": "03a8b2130e92ebf2",
@@ -1471,9 +1471,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037863.html",
       "category": "other",
       "publishedAt": "2026-07-28T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/04/roba_mtthmn_2026-thumb-500x373-40576.jpg",
-      "contentHash": "c4feaf5ecc9784f6",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "c4feaf5ecc9784f6"
     },
     {
       "id": "9c49a6138187f652",
@@ -1482,9 +1482,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037860.html",
       "category": "ticket",
       "publishedAt": "2026-07-25T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/09ce5ab2e3d25cb0f135ae6a502d0fff8f65049e-thumb-500x373-40451.jpg",
-      "contentHash": "d9acbe5c659f7ebd",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "d9acbe5c659f7ebd"
     },
     {
       "id": "752b6b890a456b5a",
@@ -1493,9 +1493,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037856.html",
       "category": "ticket",
       "publishedAt": "2026-07-24T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/07/hajimari_roba_mtthmn-thumb-500x373-41224.jpg",
-      "contentHash": "aa2a1ea1e0340ae9",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "aa2a1ea1e0340ae9"
     },
     {
       "id": "9b523af2067c14e6",
@@ -1504,9 +1504,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037857.html",
       "category": "new_work",
       "publishedAt": "2026-07-24T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/07/jol_mtthmn-thumb-500x373-41251.jpg",
-      "contentHash": "b8d069bb29e49605",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "b8d069bb29e49605"
     },
     {
       "id": "2ef461ee35688603",
@@ -1515,9 +1515,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037855.html",
       "category": "other",
       "publishedAt": "2026-07-23T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/07/260721_roba_00_thum-thumb-500x373-41204.jpg",
-      "contentHash": "59d4a7a914e11c5b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "59d4a7a914e11c5b"
     },
     {
       "id": "813c69995794d89a",
@@ -1526,9 +1526,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037851.html",
       "category": "other",
       "publishedAt": "2026-07-22T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/07/260722_HNDosaka_thum-thumb-500x373-41246.jpg",
-      "contentHash": "151c08f397bedefa",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "151c08f397bedefa"
     },
     {
       "id": "e24f9a2494ded9c3",
@@ -1537,9 +1537,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037854.html",
       "category": "other",
       "publishedAt": "2026-07-21T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/07/DSC_7818_thum-thumb-500x373-41199.jpg",
-      "contentHash": "b73b9de5ecdb5401",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "b73b9de5ecdb5401"
     },
     {
       "id": "428b7cad9d900913",
@@ -1548,9 +1548,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037844.html",
       "category": "ticket",
       "publishedAt": "2026-07-17T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/05/RIG_mtthmn_2026-thumb-500x373-40818.jpg",
-      "contentHash": "7e8ccd3b2231b2ca",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "7e8ccd3b2231b2ca"
     },
     {
       "id": "e5c13c9cbf0a76d6",
@@ -1659,9 +1659,9 @@
       "url": "https://stagegate.jp/",
       "category": "new_work",
       "publishedAt": "2026-09-04T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/5ecef086df8546c4fcaa7cee64ae7a6b4f5eee1166f7091ba2fe29085a1e9449.jpg",
-      "contentHash": "0a9956140e53a343",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "0a9956140e53a343"
     },
     {
       "id": "e80d9b79ee76a240",
@@ -1772,6 +1772,17 @@
       "thumbnail": "https://www.toho.co.jp/images/dde9ab273e1d3bd61b9fefc8bedd24f412643f78548e1a13f0a4c6436d40847b.jpg",
       "contentHash": "23a2c614d904a6c2",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "711d22717727b060",
+      "companyId": "toho",
+      "title": "2026年10・11月シアタークリエ ミュージカル『RENT』オールキャスト決定！！",
+      "url": "https://www.tohostage.com/rent2026/",
+      "category": "cast",
+      "publishedAt": "2026-04-29T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/images/93c656ccaef585315ee23a17bdbf4ad76eccc51dbf5d200d674ab4903815bf7e.jpg",
+      "contentHash": "38cec487ce8b7a45",
+      "fetchedAt": "2026-09-24T13:32:13+09:00"
     },
     {
       "id": "383842644c13922d",

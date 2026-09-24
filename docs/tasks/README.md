@@ -35,24 +35,32 @@
 | T-27 | D-05 | T-H2 | settings / notifications / browser のポートと実装、パッケージ | app | T-26 | todo |
 | T-28 | D-05 | T-H3 | app 側の骨格（3 画面のスタブ・時計・位置保持一覧） | app | T-23, T-24, T-25 | todo |
 | T-29 | D-05 | T-I | articles の UseCase | app | T-26 | todo |
-| T-30 | D-05 | T-J | saved の UseCase | app | T-26, reopen:D-04 | todo |
+| T-30 | D-05 | T-J | saved の UseCase | app | T-26 | todo |
 | T-31 | D-05 | T-K | settings / notifications の UseCase | app | T-27 | todo |
 | T-32 | D-05 | T-L | browser の UseCase | app | T-27 | todo |
-| T-33 | D-05 | T-M | ホーム画面（S-01） | app | T-28, T-29, T-30, T-31, T-32 | todo |
-| T-34 | D-05 | T-N | 保存画面（S-02） | app | T-28, T-30, T-32, T-33, reopen:S-02 | todo |
+| T-33 | D-05 | T-M | ホーム画面（S-01） | app | T-28, T-29, T-30, T-31, T-32, T-39 | todo |
+| T-34 | D-05 | T-N | 保存画面（S-02） | app | T-28, T-30, T-32, T-33, T-39 | todo |
 | T-35 | D-05 | T-O | 設定画面（S-03） | app | T-28, T-29, T-31, T-32 | todo |
 | T-36 | D-04 | T-G | FCM 実装（フェーズ 5、Apple Developer Program 加入後） | app | T-23 | todo |
+| T-39 | D-04 | T-F3 | app 基盤の追随（判定・共通 Widget・自動リトライ） | app | T-23, T-24, T-28 | todo |
+| T-40 | D-04 | T-F4 | 対応外スキーマの抑止判定を取得の開始前に出す | app | T-21 | todo |
+| T-41 | D-05 | T-Q | resolveAnchorId を純粋関数に切り出す | app | T-28 | todo |
+| T-42 | D-05 | T-R | seedArticles の契約テストを書く | app | T-26 | todo |
 
 ## 並行の組
 
 - collector: T-06 / T-07 / T-08、T-11〜T-15
 - app: T-18 / T-19、T-21 / T-22、T-24 / T-25、T-29〜T-32、T-34 / T-35
+- T-40（抑止判定）・T-41（resolveAnchorId）・T-42（seedArticles）は触るファイルが他と重ならないため、いつでも単独で実行できる
+- **T-39 は T-28 の後・T-33 の前**（`lib/app/app_lifecycle_sync.dart` を T-33・T-34 と両方が改修するため並行しない）
 - collector と app は T-02 以降並行できる（app の起点 T-17 は T-02 にのみ依存）
 
 ## reopen 前提（dispatch 時に検出）
 
-- T-30（saved の UseCase）: `reopen:D-04` — D-04 §4.2・§8.1 の保存解除記事の削除タイミングを「確定時」に補正
-- T-34（保存画面）: `reopen:S-02` — ST-04 に保留中の解除の扱いと読み出し失敗時の表示を補足
+**すべて解消済み（2026-09-24）。** 現在 `reopen:` を持つタスクは無い。
+
+- ~~T-30: `reopen:D-04`~~ — D-04 が approved（review_rounds 23）になり解消
+- ~~T-34: `reopen:S-02`~~ — S-02 が approved になり解消（§5 ST-04 に保留中の解除の扱い、§5 ST-06 に読み出し失敗時の表示を追加済み）
 
 ## フェーズ 5
 

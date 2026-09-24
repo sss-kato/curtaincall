@@ -1,7 +1,28 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-24T13:32:13+09:00",
+  "generatedAt": "2026-09-24T18:52:44+09:00",
   "articles": [
+    {
+      "id": "63954331275ad261",
+      "companyId": "takarazuka",
+      "title": "（追）2027年「宝塚カレンダー」の発売について",
+      "url": "https://kageki.hankyu.co.jp/news/20260812_004.html",
+      "category": "other",
+      "publishedAt": "2026-09-24T00:00:00+09:00",
+      "contentHash": "7830ee883522efca",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-09-24T18:52:44+09:00"
+    },
+    {
+      "id": "887dd7127db7a98a",
+      "companyId": "takarazuka",
+      "title": "【書籍】「GOETHE［ゲーテ］」",
+      "url": "https://kageki.hankyu.co.jp/news/20260924_003.html",
+      "category": "other",
+      "publishedAt": "2026-09-24T00:00:00+09:00",
+      "contentHash": "86b02f98c8dd6ab7",
+      "fetchedAt": "2026-09-24T18:52:44+09:00"
+    },
     {
       "id": "d1bacf64650e9573",
       "companyId": "takarazuka",
@@ -159,8 +180,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2026/saikai/cast.html",
       "category": "cast",
       "publishedAt": "2026-09-17T00:00:00+09:00",
-      "contentHash": "cadc510b6ccdca11",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "cadc510b6ccdca11"
     },
     {
       "id": "9b14899c0c410247",
@@ -329,8 +350,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260904_003.html",
       "category": "ticket",
       "publishedAt": "2026-09-04T00:00:00+09:00",
-      "contentHash": "52b5b6cfc120de95",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "52b5b6cfc120de95"
     },
     {
       "id": "644bfec7cc461a57",
@@ -550,16 +571,6 @@
       "category": "other",
       "publishedAt": "2026-08-18T00:00:00+09:00",
       "contentHash": "4e6d2f4e43e65b04",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "63954331275ad261",
-      "companyId": "takarazuka",
-      "title": "2027年「宝塚カレンダー」の発売について",
-      "url": "https://kageki.hankyu.co.jp/news/20260812_004.html",
-      "category": "other",
-      "publishedAt": "2026-08-12T00:00:00+09:00",
-      "contentHash": "6703dcf11eb9660b",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -990,16 +1001,6 @@
       "category": "ticket",
       "publishedAt": "2026-02-23T00:00:00+09:00",
       "contentHash": "4a235d341da83533",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "a8523d7bda222735",
-      "companyId": "takarazuka",
-      "title": "第111期生 組配属について",
-      "url": "https://kageki.hankyu.co.jp/news/20260223_003.html",
-      "category": "other",
-      "publishedAt": "2026-02-23T00:00:00+09:00",
-      "contentHash": "ddf9688983a4ed15",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {

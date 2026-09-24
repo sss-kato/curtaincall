@@ -45,10 +45,10 @@ a{color:var(--accent)}
 <a class="home" href="index.html">CurtainCall 設計書</a>
 <a href="index.html">目次</a><a href="D-01.html">D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</a><a href="D-02.html" style="color:var(--accent)">D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</a><a href="D-03.html">D-03 Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応）</a><a href="D-04.html">D-04 app 基盤設計（feature 構成・drift スキーマ・Riverpod / DI・HTTP・FCM 購読・100 件保持・通知許可）</a><a href="D-05.html">D-05 app 機能設計（UseCase 一覧・画面遷移・S-00〜S-03 の対応表・既読 / 保存 / フィルタ / ブラウザ選択）</a>
 <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
-<a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 層と依存の方向</a><a class="d3" href="#sec-3-2">3.2 ファイル配置</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Source インターフェースと素材（<code>domain/source.ts</code>）</a><a class="d3" href="#sec-4-2">4.2 日時の変換（<code>domain/datetime.ts</code>）</a><a class="d3" href="#sec-4-3">4.3 HTTP ポート（<code>domain/http-client.ts</code>）</a><a class="d3" href="#sec-4-4">4.4 storage のポート（<code>domain/article-store.ts</code>・<code>domain/articles-publisher.ts</code>）</a><a class="d3" href="#sec-4-5">4.5 通知のポート（<code>domain/notification-gateway.ts</code>）</a><a class="d3" href="#sec-4-6">4.6 UseCase の入出力型（<code>application/</code>）</a><a class="d3" href="#sec-4-7">4.7 ログと時刻のポート（<code>domain/logger.ts</code>・<code>domain/clock.ts</code>）</a><a class="d3" href="#sec-4-8">4.8 実行サマリ（<code>.run-summary.json</code>）</a><a class="d3" href="#sec-4-9">4.9 プロジェクト設定と環境変数</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 collect-articles（全 Source の並行実行と正規化）</a><a class="d3" href="#sec-5-2">5.2 detect-diff（前回との突合・確定・切り詰め）</a><a class="d3" href="#sec-5-3">5.3 publish-articles（検証 → 書き出し → コミット → push）</a><a class="d3" href="#sec-5-4">5.4 notify-new-articles（新着の通知）</a><a class="d3" href="#sec-5-5">5.5 run-collection と main.ts</a><a class="d3" href="#sec-5-6">5.6 GitHub Actions ワークフロー</a><a class="d3" href="#sec-5-7">5.7 http ラッパー（<code>infrastructure/http</code>）</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d3" href="#sec-7-1">7.1 UseCase ごとのケース</a><a class="d3" href="#sec-7-2">7.2 テストダブル（<code>test/helpers/</code>）</a><a class="d3" href="#sec-7-3">7.3 infrastructure のテスト（CLAUDE.md の例外。§8 #30）</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
+<a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 層と依存の方向</a><a class="d3" href="#sec-3-2">3.2 ファイル配置</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Source インターフェースと素材（<code>domain/source.ts</code>）</a><a class="d3" href="#sec-4-2">4.2 日時の変換（<code>domain/datetime.ts</code>）</a><a class="d3" href="#sec-4-3">4.3 HTTP ポート（<code>domain/http-client.ts</code>）</a><a class="d3" href="#sec-4-4">4.4 storage のポート（<code>domain/article-store.ts</code>・<code>domain/articles-publisher.ts</code>）</a><a class="d3" href="#sec-4-5">4.5 通知のポート（<code>domain/notification-gateway.ts</code>）</a><a class="d3" href="#sec-4-6">4.6 UseCase の入出力型（<code>application/</code>）</a><a class="d3" href="#sec-4-7">4.7 ログと時刻のポート（<code>domain/logger.ts</code>・<code>domain/clock.ts</code>）</a><a class="d3" href="#sec-4-8">4.8 実行サマリ（<code>.run-summary.json</code>）</a><a class="d3" href="#sec-4-9">4.9 プロジェクト設定と環境変数</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 collect-articles（全 Source の並行実行と正規化）</a><a class="d3" href="#sec-5-2">5.2 detect-diff（前回との突合・確定・切り詰め）</a><a class="d3" href="#sec-5-3">5.3 publish-articles（検証 → 書き出し → コミット → push）</a><a class="d3" href="#sec-5-4">5.4 notify-new-articles（新着の通知）</a><a class="d3" href="#sec-5-5">5.5 run-collection と main.ts</a><a class="d3" href="#sec-5-6">5.6 GitHub Actions ワークフロー</a><a class="d3" href="#sec-5-7">5.7 http ラッパー（<code>infrastructure/http</code>）</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d3" href="#sec-7-1">7.1 UseCase ごとのケース</a><a class="d3" href="#sec-7-2">7.2 テストダブル（<code>test/helpers/</code>）</a><a class="d3" href="#sec-7-3">7.3 infrastructure のテスト（CLAUDE.md の例外。§8 #30・#37・#38）</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
 </nav>
 <main>
-<header><h1>D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</h1><div class="meta"><b>status</b><span><span class="badge approved">approved</span></span><b>scope</b><span>collector</span><b>features</b><span>F-07, F-11</span><b>risks</b><span>R-2, R-7</span><b>depends_on</b><span>D-01</span><b>review_rounds</b><span>7</span></div></header>
+<header><h1>D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</h1><div class="meta"><b>status</b><span><span class="badge draft">draft</span></span><b>scope</b><span>collector</span><b>features</b><span>F-07, F-11</span><b>risks</b><span>R-2, R-7</span><b>depends_on</b><span>D-01</span><b>review_rounds</b><span>7</span></div></header>
 <h2 id="sec-1">1. 目的と範囲<a class="anchor" href="#sec-1">#</a></h2>
 <p>本書は、収集バッチ <code>collector/</code> が<strong>どう動くか</strong>を定める。<a href="D-01.html">D-01</a> が「何を出力するか（<code>articles.json</code>・<code>companies.json</code>・<code>id</code> / <code>contentHash</code> の規則・通知ペイロード）」を決めたのに対し、本書は (1) 層構成と手動 DI の組み立て、(2) <code>Source</code> インターフェースと Source↔Company の対応付け、(3) <code>infrastructure/http</code> のラッパー（User-Agent・間隔・タイムアウト・文字コード）、(4) application の 5 UseCase（<code>collect-articles</code>・<code>detect-diff</code>・<code>publish-articles</code>・<code>notify-new-articles</code>・<code>run-collection</code>）の入出力と手順、(5) <code>infrastructure/storage</code>（<code>articles.json</code> の読み書き・原子性・git への確定）、(6) <code>infrastructure/fcm</code> の送信、(7) GitHub Actions のワークフロー（cron・権限・Secrets・GitHub Pages デプロイ・失敗の検知）、(8) ログと終了コードを決める。決めないのは、団体別のセレクタ・URL 規則・日付書式・カテゴリ対応表（<a href="D-03.html">D-03</a>）と、app 側のすべて（<a href="D-04.html">D-04</a>・<a href="D-05.html">D-05</a>）である。D-01 の決定（§8 #1〜#34）は本書の前提であり、変更しない。</p>
 <p>用語：設計上の要素（インターフェース・実装・テストダブル・失敗種別）は <strong>Source</strong> と書き、開発者向けの日本語メッセージ（ワークフローのステップ名・ステップサマリ・ログ本文）だけは「情報源」と書く。両者は同じものを指す。</p>
@@ -200,6 +200,7 @@ a{color:var(--accent)}
         articles-file-store.ts    ArticleReader + ArticleWriter 実装（§5.3）
         companies-file-store.ts   companies.json の読み込みと検証（main.ts が使う）
         git-articles-publisher.ts ArticlesPublisher 実装（git add / commit / push）
+        sanitize-git-output.ts    git の stderr をログへ出す前の伏せ字化と切り詰め（§7.3。純粋関数）
         json-format.ts            決定的シリアライズ（D-01 §4.2 書式）
         run-summary-store.ts      実行サマリ（§4.8）の書き出し
         noop-article-writer.ts    ArticleWriter 実装。書かずに info ログだけ残す（CURTAINCALL_DRY_RUN=1。§4.9）
@@ -226,6 +227,8 @@ a{color:var(--accent)}
         fetch-http-client.test.ts     fetch をスタブに差し替える（§7.3。CLAUDE.md の例外。§8 #30）
       storage/
         articles-file-store.test.ts   一時ディレクトリの実ファイル（§7.3。同上）
+        git-articles-publisher.test.ts  execFile をスタブに差し替える（§7.3。同上。§8 #37）
+        sanitize-git-output.test.ts     純粋関数のテーブル駆動テスト（§7.3。CLAUDE.md の純粋関数の例外。§8 #38）
       sources/                （D-03。パーサーのフィクスチャテスト）
     domain/
       contract.test.ts        （D-01）
@@ -239,7 +242,7 @@ data/
 .github/workflows/
   collect.yml               収集 + Pages デプロイ（§5.6）
   collector-ci.yml          品質ゲート（§5.6）</code></pre>
-<p>CLAUDE.md の <code>infrastructure/</code> の列挙（<code>sources</code> / <code>http</code> / <code>fcm</code> / <code>storage</code>）に <code>logging</code> / <code>clock</code> / <code>hash</code> を加える。いずれも domain のポートの実装であり、依存の方向の規約は満たす（§8 #19）。<code>test/</code> は CLAUDE.md の列挙（<code>test/application/</code>・<code>test/infrastructure/sources/fixtures/</code>）に対し、フィクスチャを <code>test/fixtures/</code> にまとめ、<code>test/domain/</code>（D-01 の契約テスト）・<code>test/helpers/</code>（テストダブル）・<code>test/infrastructure/{http,storage}/</code>（§7.3）を加えた構成にする（§8 #28）。CLAUDE.md 側への反映は開発者確認済みで、§8.1 の申し送りに更新内容を挙げる（D-02 承認後に司令塔が更新する）。</p>
+<p>CLAUDE.md の <code>infrastructure/</code> の列挙（<code>sources</code> / <code>http</code> / <code>fcm</code> / <code>storage</code>）に <code>logging</code> / <code>clock</code> / <code>hash</code> を加える。いずれも domain のポートの実装であり、依存の方向の規約は満たす（§8 #19）。<code>test/</code> は CLAUDE.md の列挙（<code>test/application/</code>・<code>test/infrastructure/sources/fixtures/</code>）に対し、フィクスチャを <code>test/fixtures/</code> にまとめ、<code>test/domain/</code>（D-01 の契約テスト）・<code>test/helpers/</code>（テストダブル）・<code>test/infrastructure/{http,storage}/</code>（§7.3。<code>storage/</code> には <code>articles-file-store.test.ts</code>・<code>git-articles-publisher.test.ts</code>（§8 #37）・<code>sanitize-git-output.test.ts</code>（§8 #38）が入る）を加えた構成にする（§8 #28）。CLAUDE.md 側への反映は開発者確認済みで、§8.1 の申し送りに更新内容を挙げる（D-02 承認後に司令塔が更新する）。</p>
 <h2 id="sec-4">4. データ<a class="anchor" href="#sec-4">#</a></h2>
 <h3 id="sec-4-1">4.1 Source インターフェースと素材（<code>domain/source.ts</code>）<a class="anchor" href="#sec-4-1">#</a></h3>
 <pre><code class="language-ts">import type { Category } from &quot;./article&quot;;
@@ -1353,7 +1356,7 @@ jobs:
 </tr>
 </tbody></table>
 <h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
-<p>テストの単位は UseCase（CLAUDE.md）。Source・HTTP・storage・git・FCM・時計はすべて差し替える。ネットワークへは一切アクセスしない。パーサーのフィクスチャテスト（実サイトの HTML / RSS）は D-03 が <code>test/infrastructure/sources/</code> に置く。<code>main.ts</code>・<code>ConsoleLogger</code>・<code>SystemClock</code>・<code>GitArticlesPublisher</code>・<code>FirebaseNotificationGateway</code> の単体テストは書かない。例外として <code>FetchHttpClient</code> と <code>ArticlesFileStore</code> の 2 クラスは §7.3 の infrastructure テストを持つ（UseCase テストからは到達できない振る舞いで、D-01 #15・§8 #7・#29 の土台になるため。§8 #30）。</p>
+<p>テストの単位は UseCase（CLAUDE.md）。Source・HTTP・storage・git・FCM・時計はすべて差し替える。ネットワークへは一切アクセスしない。パーサーのフィクスチャテスト（実サイトの HTML / RSS）は D-03 が <code>test/infrastructure/sources/</code> に置く。<code>main.ts</code>・<code>ConsoleLogger</code>・<code>SystemClock</code>・<code>FirebaseNotificationGateway</code> の単体テストは書かない。例外として <code>FetchHttpClient</code>・<code>ArticlesFileStore</code>・<code>GitArticlesPublisher</code> の 3 クラスは §7.3 の infrastructure テストを持つ（UseCase テストからは到達できない振る舞いで、D-01 #15・§8 #7・#29 と §5.3 手順 3 の土台になるため。§8 #30・#37）。<code>GitArticlesPublisher</code> は <code>node:child_process</code> の <code>execFile</code> を<strong>実物を通さないスタブに差し替え、実 git を一度も起動しない</strong>ことを条件に例外とする（§7.3、§8 #37）。加えて <code>infrastructure/storage/sanitize-git-output.ts</code> の 2 つの<strong>純粋関数</strong>（<code>maskCredentials</code>・<code>sanitizeGitOutput</code>）は、CLAUDE.md「テスト方針」の純粋関数の例外としてテーブル駆動テストを直接書く（§7.3、§8 #38）。</p>
 <h3 id="sec-7-1">7.1 UseCase ごとのケース<a class="anchor" href="#sec-7-1">#</a></h3>
 <p>「D-01」列は D-01 §7.2 の申し送り行との対応（行 4 の category ケースだけは Source 内の判定なので D-03 へ移管し、それ以外はすべて本書が含める。§8.1）。</p>
 <p>読み替え規則：表の 1 行を 1 つの <code>describe</code>（名前は「ケース」列の先頭の見出し語）にし、「ケース」列の「／」区切り、または <code>- 入力 → 期待結果</code> の箇条書き 1 項目を 1 つの <code>it</code> にする。<code>it</code> の名前は区切られた文をそのまま使う。</p>
@@ -1556,12 +1559,14 @@ jobs:
 <td>§7.3 用。グローバル <code>fetch</code> を <code>vi.stubGlobal(&quot;fetch&quot;, ...)</code> で差し替え、URL ごとの応答（status・headers・body の <code>Uint8Array</code>）と、遅延・<code>AbortError</code>・ネットワーク例外を指定できる。呼び出し時刻と順序を記録する</td>
 </tr>
 </tbody></table>
-<h3 id="sec-7-3">7.3 infrastructure のテスト（CLAUDE.md の例外。§8 #30）<a class="anchor" href="#sec-7-3">#</a></h3>
-<p>UseCase テストでは差し替えられて到達しない振る舞いのうち、誤動作が F-11 の誤バッジ（§8 #7）・D-01 #15 の通知抑止・§8 #29 のデータ保護に直結する 2 クラスだけを対象にする。実ネットワークへのアクセス禁止は維持する（<code>fetch</code> はスタブ、ファイルは一時ディレクトリ）。</p>
+<h3 id="sec-7-3">7.3 infrastructure のテスト（CLAUDE.md の例外。§8 #30・#37・#38）<a class="anchor" href="#sec-7-3">#</a></h3>
+<p>UseCase テストでは差し替えられて到達しない振る舞いのうち、誤動作が F-11 の誤バッジ（§8 #7）・D-01 #15 の通知抑止・§8 #29 のデータ保護・配信の停止（§5.3 手順 3 の publish が常に失敗する）に直結する 3 クラスだけを対象にする（クラスの例外はこの 3 つに限る。同じ <code>storage/</code> の純粋関数 2 つは別の根拠で加える。後述・§8 #38）。実ネットワークへのアクセス禁止は維持する（<code>fetch</code> はスタブ、ファイルは一時ディレクトリ）。</p>
+<p><code>GitArticlesPublisher</code> を例外に加える条件（§8 #37）：<code>node:child_process</code> の <code>execFile</code> を <code>vi.mock</code> で<strong>実物を通さないスタブに差し替え、実 git を一度も起動しない</strong>こと。差し替えを忘れたテストがあると実 git が走るため、モジュールモックの<strong>既定実装は必ず例外を投げる</strong>形にし、各テストは <code>publish()</code> を呼ぶ前にスタブを登録する。§7.3 が本クラスを除外していた理由（「git を実行するコードはテストで呼ばない」）は、<code>execFile</code> を丸ごとスタブ化すれば実 git を一切起動せずに検証できるため、ここでは成立しない。実 git は一度も起動しないが、実行時の <code>signal: null</code>（Node の型定義に無い値）を実測で固定する 1 ケースだけは <code>process.execPath -e &quot;process.exit(1)&quot;</code> の子プロセス（git ではなく即座に終了する Node プロセス）を起動する。</p>
+<p><code>infrastructure/storage/sanitize-git-output.ts</code> の <code>maskCredentials</code>・<code>sanitizeGitOutput</code> は、クラスではなく<strong>入出力が値だけの純粋関数</strong>（I/O・外部プロセスに触れない）なので、CLAUDE.md「テスト方針」の純粋関数の例外として関数ごとのテーブル駆動テストを <code>test/infrastructure/storage/sanitize-git-output.test.ts</code>（実装と同じ相対パス）に置く（§8 #38）。<code>GitArticlesPublisher</code> のテスト（上の 2 行）は「呼び出し経路でマスクが効いていること」を 2 ケースで押さえるだけにし、境界（<code>@</code> を含むトークン・サロゲートペア・<code>STDERR_LOG_LIMIT</code>）の網羅はこちらに置く。</p>
 <table>
 <thead>
 <tr>
-<th>クラス</th>
+<th>対象</th>
 <th>ケース</th>
 <th>使うもの</th>
 </tr>
@@ -1590,6 +1595,26 @@ jobs:
 <td><code>ArticlesFileStore</code></td>
 <td><code>write</code>：<code>data/articles.json.tmp</code> に書いてから <code>rename</code> する（完了後に <code>.tmp</code> が無く、内容が D-01 §4.2 の書式）／既存の <code>.tmp</code> があっても上書きして成功／書き込み中の例外で <code>.tmp</code> が残らず <code>articles.json</code> が元のまま／検証は行わない（101 件のファイルもそのまま書く。検証は <code>publish-articles</code>）</td>
 <td>一時ディレクトリ、<code>fs</code> の一部を <code>vi.spyOn</code> で失敗させる</td>
+</tr>
+<tr>
+<td><code>GitArticlesPublisher</code></td>
+<td>差分判定（§5.3 手順 3-2）：<br>- <code>git diff --cached --quiet</code> が<strong>終了コード 1</strong>・<code>signal: null</code> で reject → <strong>差分あり</strong>として commit / push まで進み <code>&quot;published&quot;</code> を返す・<code>error</code> ログ 0 件（障害の再現と修正の証明）<br>- 実プロセス（<code>process.execPath -e &quot;process.exit(1)&quot;</code>）の reject 値を実測して <code>code === 1</code>・<code>signal === null</code> を固定し、同じ値を diff の失敗として流す → <code>&quot;published&quot;</code>（Node の型定義に無い実行時の <code>null</code> を型ガードが受理することの実測）<br>- 終了コード 0（差分なし）→ <code>&quot;no_changes&quot;</code> を返し commit / push を呼ばない<br>- 終了コード 1 以外（128・<code>signal: null</code>）→ 差分ありとみなさず <code>PublishFailedError</code>・commit / push を呼ばない・<code>error</code> ログの診断接尾辞が <code>(code=128, signal=undefined)</code><br>- <code>code: 1</code> と非文字列 <code>signal</code>（数値）の同時発生 → code / signal が独立に検証されて <code>code === 1</code> だけが活き、<code>&quot;published&quot;</code></td>
+<td><code>node:child_process</code> を <code>vi.mock</code> で差し替えた <code>execFile</code> スタブ（既定実装は必ず例外を投げ、実 git を起動しない）、<code>RecordingLogger</code></td>
+</tr>
+<tr>
+<td><code>GitArticlesPublisher</code></td>
+<td>失敗時の復元と診断ログ（§5.3 手順 3-5・3-6、§8 #35）：<br>- push 失敗 → 例外を投げる前に <code>git checkout origin/main -- data/articles.json</code> を呼ぶ<br>- <code>git add</code> 失敗 → commit / push を呼ばず、復元してから <code>PublishFailedError</code><br>- 復元（checkout）自体も失敗 → <code>warn</code> 1 件・<code>error</code> 1 件を出し、元の <code>PublishFailedError</code> をそのまま投げる<br>- push が <code>code: null</code>・<code>signal: &quot;SIGTERM&quot;</code> → 型ガードを通り <code>PublishFailedError</code>・接尾辞が <code>(code=undefined, signal=SIGTERM)</code><br>- push が文字列 <code>code</code>（<code>ENOENT</code>）→ 接尾辞が <code>(code=ENOENT, signal=undefined)</code><br>- push が非プリミティブ <code>code</code> + <code>signal: &quot;SIGTERM&quot;</code> → 接尾辞が <code>(code=undefined, signal=SIGTERM)</code><br>- push が <code>code: 128</code> + 非文字列 <code>signal</code> → 接尾辞が <code>(code=128, signal=undefined)</code><br>- push の stderr に origin の認証情報（<code>https://x-access-token:ghs_...@github.com/...</code>）→ <code>error</code> フィールドからトークンが消え <code>https://***@github.com</code> と接尾辞が残る<br>- stderr が <code>STDERR_LOG_LIMIT</code> を超える → 本文が切り詰められ、接尾辞は残る</td>
+<td>同上</td>
+</tr>
+<tr>
+<td><code>maskCredentials</code>（純粋関数）</td>
+<td>伏せ字化（テーブル駆動。入力 → 期待値の組）：<br>- <code>https://user:pass@host/x</code> → <code>https://***@host/x</code><br>- <code>https://x-access-token:ghs_abc@github.com/o/r.git</code> → <code>https://***@github.com/o/r.git</code>（Actions が origin に埋め込む形）<br>- <code>HTTPS://user:pass@host/x</code> → <code>HTTPS://***@host/x</code>（スキームの大文字も一致する）<br>- <code>git@github.com:o/r.git</code> → 変化しない（scp 形式は対象外）<br>- 認証情報を含まない <code>fatal: unable to access &#39;https://github.com/o/r.git/&#39;</code> → 変化しない<br>- 1 行に認証情報つき URL が 2 つ（<code>https://a:b@host1/x https://c:d@host2/y</code>）→ それぞれ独立にマスクされる</td>
+<td>なし（入力は値のみ。差し替え不要）</td>
+</tr>
+<tr>
+<td><code>sanitizeGitOutput</code>（純粋関数）</td>
+<td>マスクと切り詰め：<br>- <code>STDERR_LOG_LIMIT</code>（500）以下の入力 → 切り詰めず、マスクだけが適用される<br>- 500 文字を超える入力（<code>&quot;a&quot;.repeat(600)</code>）→ 先頭 500 文字になる<br>- マスク → 切り詰めの順（485 文字のパディング + <code>https://user:pass@host/path</code> + 200 文字。元の <code>@</code> が 500 文字目より後に来る位置）→ 結果に <code>user:pass</code> を含まず <code>https://***@</code> を含む（順序が逆なら生のトークンの断片が残る境界）<br>- 切り詰めはコードポイント単位（<code>&quot;🎭&quot;.repeat(501)</code>）→ <code>Array.from(result).length</code> が 500 で、サロゲートペアが分割されない</td>
+<td>同上</td>
 </tr>
 </tbody></table>
 <h2 id="sec-8">8. 決定事項と根拠<a class="anchor" href="#sec-8">#</a></h2>
@@ -1778,7 +1803,7 @@ jobs:
 </tr>
 <tr>
 <td>30</td>
-<td><code>FetchHttpClient</code> と <code>ArticlesFileStore</code> の 2 クラスに限り、infrastructure のテスト（§7.3）を書く。<code>fetch</code> はグローバルをスタブに差し替え、ファイルは一時ディレクトリを使う。実ネットワークは使わない</td>
+<td><code>FetchHttpClient</code> と <code>ArticlesFileStore</code> の 2 クラスに限り、infrastructure のテスト（§7.3）を書く。<code>fetch</code> はグローバルをスタブに差し替え、ファイルは一時ディレクトリを使う。実ネットワークは使わない（<strong>#37 で <code>GitArticlesPublisher</code> を加え、対象は 3 クラスになった</strong>）</td>
 <td>CLAUDE.md どおり UseCase テストのみにする／<code>FetchHttpClient</code> を UseCase テストから実物で使う</td>
 <td>CLAUDE.md「個別クラスのユニットテストは書かない」の趣旨は UseCase テストで振る舞いを担保することだが、リトライ・ホスト間隔・文字コード判定・<code>readPrevious</code> の寛容な読み込み・<code>.tmp</code> → <code>rename</code> は UseCase テストでは必ず差し替えられて到達しない。文字化けは <code>contentHash</code> を毎時変えて F-11 の誤バッジを生み（#7）、<code>readPrevious</code> の契約は D-01 #15 の通知抑止と #29 のデータ保護の土台で、壊れても既存テストのどれも赤くならない。UseCase テストから実物を使う案は <code>fetch</code> のスタブが UseCase テストに漏れ、Source 実装（D-03）にも依存する。例外は CLAUDE.md の「パーサーのフィクスチャテスト」と同じ性質（外部境界の実装を実データで固定する）に限る。CLAUDE.md「テスト方針」の例外規定に「外部境界の infrastructure 実装（http ラッパー・ファイル storage）は外部 I/O をスタブ・一時ディレクトリに差し替えて検証してよい」を追記することは開発者確認済み（2026-09-19、旧 Q-2 の A 案）。CLAUDE.md は D-02 承認後に司令塔が更新する（§8.1）</td>
 </tr>
@@ -1818,6 +1843,18 @@ jobs:
 <td><code>CollectArticlesResult</code> に <code>discarded</code> と <code>discardedByCompany</code> の両方を持つ（第 2 周まで）／<code>.run-summary.json</code> からも <code>discarded</code> を落として jq で合算する</td>
 <td>合計は団体別から導出できる事実で、2 か所に持つと <code>collect-articles</code> の実装で両者がずれる余地（片方だけ増やす）が生まれ、§7.1 に「総和と一致」の検証が要る。<code>.run-summary.json</code> に合計を残すのは、ステップサマリの 1 行を作る jq を <code>\(.discarded)</code> で済ませ、<code>[.discardedByCompany[]] | add</code>（空オブジェクトで <code>null</code> になる分岐を持つ）を避けるための意図的な冗長で、書き手は <code>RunCollection</code> 1 か所に限る。design-review 第 3 周で追加</td>
 </tr>
+<tr>
+<td>37</td>
+<td>§7.3 の例外（#30）に <code>GitArticlesPublisher</code> を加えて 3 クラスにする。条件は <code>node:child_process</code> の <code>execFile</code> を<strong>実物を通さないスタブに差し替え、実 git を一度も起動しない</strong>こと。差し替えを忘れたテストがあると実 git が走るため、モジュールモックの<strong>既定実装は必ず例外を投げる</strong>形にし、実 git を起動する経路を残さない</td>
+<td>例外に加えず §7.3 の除外リストに残す（ホットフィックスで追加した回帰テストを削除する）／一時ディレクトリに <code>git init</code> した実リポジトリと実 git で検証する</td>
+<td>#30 が <code>GitArticlesPublisher</code> を除外していた前提は「git を実行するコードはテストで呼ばない」ことだが、<code>execFile</code> を丸ごとスタブ化すれば実 git を一切起動せずに検証できるため、この前提はここでは成立しない。対象の振る舞いは UseCase テストからは到達できない（<code>run-collection</code> / <code>publish-articles</code> のテストは <code>FakePublisher</code> に差し替える。§7.2）。具体的には、<code>hasStagedDiff</code>（§5.3 手順 3-2）が <code>git diff --cached --quiet</code> の**終了コード 1 を「差分あり」**と解釈する分岐と、<code>execFile</code> の reject 値の型ガードが実行時の <code>signal: null</code>（Node の型定義 <code>ExecFileException.signal?: NodeJS.Signals</code> に無い値）を受理するかで、ここを誤ると「記事が 1 件でも変われば publish が必ず失敗する」という障害になり、<code>articles.json</code> が push されず配信も通知も止まったまま毎時ジョブが失敗し続ける。除外リストに残す案は、この回帰テストを将来 §7.3 を根拠に削除でき、同じ盲点が復活する（T-37 の起票理由）。実 git を使う案は品質ゲートを外部コマンドと実リポジトリの状態に依存させ、<code>push</code>（リモートを要する）の失敗経路と §8 #35 の復元を検証できない。本決定は CLAUDE.md「テスト方針」の例外規定に既に反映済み（<code>dd47a4f</code>）で、本書がそれに追随する（T-37。publish 障害のホットフィックス <code>fix/publish-staged-diff</code> で追加した <code>test/infrastructure/storage/git-articles-publisher.test.ts</code> が対象）</td>
+</tr>
+<tr>
+<td>38</td>
+<td><code>infrastructure/storage/sanitize-git-output.ts</code> の <code>maskCredentials</code>・<code>sanitizeGitOutput</code> を CLAUDE.md「テスト方針」の<strong>純粋関数の例外</strong>の対象に加え、テーブル駆動テストを <code>test/infrastructure/storage/sanitize-git-output.test.ts</code>（実装と同じ相対パス）に置く。境界の網羅（<code>@</code> を含むトークン・サロゲートペア・<code>STDERR_LOG_LIMIT</code>）はこのテストが持ち、<code>GitArticlesPublisher</code> のテスト（§7.3）は呼び出し経路でマスクが効くことを 2 ケース押さえるだけにする</td>
+<td>例外を作らず、テスト内容を #37 で追認した <code>GitArticlesPublisher</code> のテストに吸収して <code>sanitize-git-output.test.ts</code> を削除する／現状のまま文書化しない</td>
+<td>認証情報の伏せ字化は壊れても他のテストが赤くならない一方、漏れれば <code>error</code> ログに GitHub トークン（<code>x-access-token:ghs_...</code>）が残り、Actions のログは同一リポジトリの閲覧者に見える（要件 §5、CLAUDE.md「秘密情報」）。対象は入出力が値だけで I/O にも外部プロセスにも触れない純粋関数なので、境界の検証はテーブル駆動テストが最も安く、app 側で既に認めている例外（D-04 §7・D-05 §7）と同じ性質である。吸収案（B）は境界の検証を <code>publish</code> 経路の <code>execFile</code> スタブ越しに書くことになり、1 ケースごとに publish の前提（<code>git add</code> / <code>diff</code> / <code>push</code> の応答）を組む必要があって読みにくく、境界を足すたびにスタブが増える。文書化しない案（C）は §7.3 を根拠にテストを削除できてしまい、#37 と同じ盲点が復活する。CLAUDE.md「テスト方針」の純粋関数の例外に collector 側の対象（<code>maskCredentials</code>・<code>sanitizeGitOutput</code>。テストは <code>test/infrastructure/storage/</code>）を追記することは開発者の承認を得て<strong>既に反映済み</strong>（2026-09-25。§8.1）で、本書がそれに追随する（T-37。旧 §9 Q-1 の A 案）</td>
+</tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
 <table>
@@ -1845,8 +1882,8 @@ jobs:
 </tr>
 <tr>
 <td>CLAUDE.md（司令塔。D-02 承認後に更新。開発者確認済み 2026-09-19）</td>
-<td>次の 3 か所を更新する。(1) <code>collector/</code> の「ディレクトリ」節：<code>src/infrastructure/</code> の列挙に <code>logging/</code>（Logger 実装）・<code>clock/</code>（Clock 実装）・<code>hash/</code>（contentHash 計算）を加え、<code>test/</code> の列挙を <code>test/application/</code>（UseCase テスト）・<code>test/infrastructure/{http,storage,sources}/</code>（§7.3 と D-03 のパーサーテスト）・<code>test/domain/</code>（D-01 の契約テスト）・<code>test/helpers/</code>（テストダブル）・<code>test/fixtures/{contract,sources}/</code>（フィクスチャ）に置き換える（§3.2、§8 #28）。(2) 「アーキテクチャ原則」の SOLID 表 L 行と <code>collector/</code> 節の <code>Source</code> の契約：戻り値を <code>Article[]</code> から <code>RawArticle[]</code>（<code>id</code>・<code>contentHash</code>・<code>fetchedAt</code>・<code>updatedAt</code> を持たず application が確定する）に改める。契約の形「入力なし → 配列、失敗は例外」は変えない（§4.1、§8 #1）。(3) 「テスト方針」の例外規定：既存のパーサーの例外に続けて「外部境界の infrastructure 実装（http ラッパー・ファイル storage）は外部 I/O をスタブ・一時ディレクトリに差し替えて検証してよい」を追記する（対象は <code>FetchHttpClient</code>・<code>ArticlesFileStore</code> の 2 クラス。§7.3、§8 #30）</td>
-<td>§3.2、§4.1、§7.3、§8 #1・#28・#30</td>
+<td>次の 3 か所を更新する。(1) <code>collector/</code> の「ディレクトリ」節：<code>src/infrastructure/</code> の列挙に <code>logging/</code>（Logger 実装）・<code>clock/</code>（Clock 実装）・<code>hash/</code>（contentHash 計算）を加え、<code>test/</code> の列挙を <code>test/application/</code>（UseCase テスト）・<code>test/infrastructure/{http,storage,sources}/</code>（§7.3 と D-03 のパーサーテスト）・<code>test/domain/</code>（D-01 の契約テスト）・<code>test/helpers/</code>（テストダブル）・<code>test/fixtures/{contract,sources}/</code>（フィクスチャ）に置き換える（§3.2、§8 #28）。(2) 「アーキテクチャ原則」の SOLID 表 L 行と <code>collector/</code> 節の <code>Source</code> の契約：戻り値を <code>Article[]</code> から <code>RawArticle[]</code>（<code>id</code>・<code>contentHash</code>・<code>fetchedAt</code>・<code>updatedAt</code> を持たず application が確定する）に改める。契約の形「入力なし → 配列、失敗は例外」は変えない（§4.1、§8 #1）。(3) 「テスト方針」の例外規定：既存のパーサーの例外に続けて「外部境界の infrastructure 実装（http ラッパー・ファイル storage）は外部 I/O をスタブ・一時ディレクトリに差し替えて検証してよい」を追記する（対象は <code>FetchHttpClient</code>・<code>ArticlesFileStore</code> の 2 クラス。§7.3、§8 #30）。(3) は 2026-09-25 に <code>GitArticlesPublisher</code>（<code>execFile</code> をスタブに差し替え実 git を起動しないことが条件）を加えた形へ更新済み（CLAUDE.md <code>dd47a4f</code>。§8 #37）。同じ 2026-09-25 に、「テスト方針」の<strong>純粋関数の例外</strong>（これまで app の列挙のみ）へ collector 側の対象 <code>maskCredentials</code>・<code>sanitizeGitOutput</code>（<code>infrastructure/storage/sanitize-git-output.ts</code>。テストは <code>test/infrastructure/storage/</code> に置く。境界は <code>@</code> を含むトークン・サロゲートペア・<code>STDERR_LOG_LIMIT</code>）も追記済み（§8 #38）。CLAUDE.md 側の更新は完了しており、残るのは (1)・(2) の 2 か所（D-02 承認後に司令塔が更新する）</td>
+<td>§3.2、§4.1、§7.3、§8 #1・#28・#30・#37・#38</td>
 </tr>
 <tr>
 <td>D-03</td>
@@ -1890,7 +1927,7 @@ jobs:
 </tr>
 </tbody></table>
 <h2 id="sec-9">9. 未決定事項<a class="anchor" href="#sec-9">#</a></h2>
-<p>該当なし。初稿の 3 件（情報源の失敗の通知手段・http の既定値・四季の初回判定）は §8 #25〜#27 に、design-review 第 1 周の 2 件（CLAUDE.md のディレクトリ節・テスト方針の例外の更新）は §8 #28・#30 と §8.1 に、いずれも開発者の回答を得て移した（2026-09-19）。</p>
+<p>該当なし。初稿の 3 件（情報源の失敗の通知手段・http の既定値・四季の初回判定）は §8 #25〜#27 に、design-review 第 1 周の 2 件（CLAUDE.md のディレクトリ節・テスト方針の例外の更新）は §8 #28・#30 と §8.1 に、いずれも開発者の回答を得て移した（2026-09-19）。T-37 で挙げた 1 件（<code>sanitize-git-output.ts</code> の純粋関数テストの扱い）は A 案の採用を得て §8 #38 と §8.1 に移した（2026-09-25）。</p>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
 <p>D-01 §10 の Task A（契約スキーマ・契約データ）・Task B（純粋関数群）と合わせた順序で並べる。Task S は D-01 Task A の前提（D-01 §10 の「collector 側は D-02 のスキャフォールドが先」）。各タスクは単独で品質ゲート <code>npm run lint &amp;&amp; npx tsc --noEmit &amp;&amp; npx vitest run</code> を通す。</p>
 <table>
@@ -1955,10 +1992,10 @@ jobs:
 <tr>
 <td>G</td>
 <td>storage と publish-articles</td>
-<td><code>src/infrastructure/storage/articles-file-store.ts</code>・<code>companies-file-store.ts</code>・<code>git-articles-publisher.ts</code>・<code>json-format.ts</code>・<code>run-summary-store.ts</code>・<code>noop-article-writer.ts</code>・<code>noop-articles-publisher.ts</code>、<code>src/application/publish-articles.ts</code>、<code>test/helpers/</code>（<code>InMemoryArticleStore</code>・<code>FakePublisher</code>）、<code>test/application/publish-articles.test.ts</code>、<code>test/infrastructure/storage/articles-file-store.test.ts</code>（§7.3 の 2 行）。計 12</td>
+<td><code>src/infrastructure/storage/articles-file-store.ts</code>・<code>companies-file-store.ts</code>・<code>git-articles-publisher.ts</code>・<code>sanitize-git-output.ts</code>・<code>json-format.ts</code>・<code>run-summary-store.ts</code>・<code>noop-article-writer.ts</code>・<code>noop-articles-publisher.ts</code>、<code>src/application/publish-articles.ts</code>、<code>test/helpers/</code>（<code>InMemoryArticleStore</code>・<code>FakePublisher</code>）、<code>test/application/publish-articles.test.ts</code>、<code>test/infrastructure/storage/articles-file-store.test.ts</code>・<code>git-articles-publisher.test.ts</code>・<code>sanitize-git-output.test.ts</code>（§7.3 の 6 行）。計 15</td>
 <td><code>src/infrastructure/storage/</code>、<code>src/application/</code>、<code>test/</code></td>
 <td>D、E（<code>RecordingLogger</code>）</td>
-<td>品質ゲート通過。§7.1 の <code>publish-articles</code> 1 行と §7.3 の <code>ArticlesFileStore</code> 2 行を含む</td>
+<td>品質ゲート通過。§7.1 の <code>publish-articles</code> 1 行と §7.3 の <code>ArticlesFileStore</code> 2 行・<code>GitArticlesPublisher</code> 2 行・純粋関数 2 行（<code>maskCredentials</code>・<code>sanitizeGitOutput</code>）を含む（後者 4 行はホットフィックス <code>fix/publish-staged-diff</code> で追加済み。本書は T-37 で追随した）</td>
 </tr>
 <tr>
 <td>H</td>
@@ -1992,7 +2029,7 @@ jobs:
 </tr>
 <tr>
 <td>G</td>
-<td><code>src/infrastructure/storage/*</code>（7 ファイル）、<code>src/application/publish-articles.ts</code>、<code>test/helpers/in-memory-article-store.ts</code>・<code>fake-publisher.ts</code>、<code>test/application/publish-articles.test.ts</code>、<code>test/infrastructure/storage/articles-file-store.test.ts</code></td>
+<td><code>src/infrastructure/storage/*</code>（8 ファイル）、<code>src/application/publish-articles.ts</code>、<code>test/helpers/in-memory-article-store.ts</code>・<code>fake-publisher.ts</code>、<code>test/application/publish-articles.test.ts</code>、<code>test/infrastructure/storage/articles-file-store.test.ts</code>・<code>git-articles-publisher.test.ts</code>・<code>sanitize-git-output.test.ts</code></td>
 </tr>
 <tr>
 <td>H</td>
@@ -2051,6 +2088,18 @@ jobs:
 <tr>
 <td>2026-09-19</td>
 <td>承認（approved）</td>
+</tr>
+<tr>
+<td>2026-09-25</td>
+<td>再開：§7.3 のテスト方針を <code>GitArticlesPublisher</code> の回帰テスト（publish の差分判定が常に失敗する障害の再発防止）に追随させる。CLAUDE.md は <code>dd47a4f</code> で既に更新済みで、設計書側だけが古い（T-37）</td>
+</tr>
+<tr>
+<td>2026-09-25</td>
+<td>§7 冒頭・§7.3 の除外リストから <code>GitArticlesPublisher</code> を外して例外（3 クラス目）に加え、§7.3 に 2 行（差分判定の終了コード 1・<code>signal: null</code>／失敗時の復元と診断ログ）を追加。§8 #30 に対象の拡張を追記し #37 を追加、§8.1 の CLAUDE.md 宛申し送りに反映済みの旨を追記（T-37）。§3.2 の <code>test/</code> 一覧と §10 Task G を同期し、§9 に Q-1（<code>sanitize-git-output.ts</code> の純粋関数テストの扱い）を追加</td>
+</tr>
+<tr>
+<td>2026-09-25</td>
+<td>未決定事項 1 件（Q-1）を開発者の承認（A 案）で確定。§8 #38 を追加して §9 を空にし、§7 冒頭・§7.3 に <code>maskCredentials</code>・<code>sanitizeGitOutput</code> の純粋関数テスト 2 行を追加。§3.2 に <code>sanitize-git-output.ts</code> / <code>sanitize-git-output.test.ts</code>、§10 Task G に同テストを同期し、§8.1 の CLAUDE.md 宛申し送りに純粋関数の例外が反映済みであることを追記（T-37）</td>
 </tr>
 </tbody></table>
 

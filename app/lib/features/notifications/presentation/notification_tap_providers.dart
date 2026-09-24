@@ -5,7 +5,9 @@
 /// 無い・null のときの扱い（「すべて」）も D-05（S-01 §8 #15）。
 library;
 
+import 'package:curtaincall/core/di/no_retry.dart';
 import 'package:curtaincall/core/di/providers.dart';
+import 'package:curtaincall/core/logging/app_logger.dart';
 import 'package:curtaincall/features/notifications/domain/notification_tap.dart';
 import 'package:curtaincall/features/notifications/domain/push_gateway.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -15,9 +17,26 @@ part 'notification_tap_providers.g.dart';
 /// アプリ未起動から通知タップで起動した場合のタップ情報。無ければ
 /// null。2 回目以降の読み込みは null（`PushGateway.takeInitialTap()` が
 /// 1 度だけ消費する）。
-@Riverpod(keepAlive: true)
-Future<NotificationTap?> initialNotificationTap(Ref ref) =>
-    ref.watch(pushGatewayProvider).takeInitialTap();
+///
+/// 例外はこの関数の中で捕捉して `logger.w` に残し null を返すため、この
+/// Provider は通常はエラー状態にならず、Riverpod の自動リトライの経路には
+/// 入らない（D-05 は「通知タップ無し」として扱う）。`retry: noRetry` は
+/// 多層防御として残す：将来この catch を外したとき、1 回目が
+/// `PlatformException` で失敗すると自動リトライで 2 回目が呼ばれ、
+/// `takeInitialTap()` が契約どおり null を返して `AsyncData(null)` に
+/// 落ち着き「通知タップ無し」に化ける（ログも残らない）。`retry: noRetry`
+/// はその経路を塞ぐ保険（D-04 §6・§8 #67）。
+@Riverpod(keepAlive: true, retry: noRetry)
+Future<NotificationTap?> initialNotificationTap(Ref ref) async {
+  try {
+    return await ref.watch(pushGatewayProvider).takeInitialTap();
+  } on Object catch (e, s) {
+    ref
+        .read(loggerProvider)
+        .w('通知タップ情報の取得に失敗', error: e, stackTrace: releaseSafeStackTrace(s));
+    return null;
+  }
+}
 
 /// 起動中（バックグラウンド・フォアグラウンド）に通知をタップしたときに
 /// 流れる Stream。

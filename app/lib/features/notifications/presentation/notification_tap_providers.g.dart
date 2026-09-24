@@ -11,6 +11,15 @@ part of 'notification_tap_providers.dart';
 /// アプリ未起動から通知タップで起動した場合のタップ情報。無ければ
 /// null。2 回目以降の読み込みは null（`PushGateway.takeInitialTap()` が
 /// 1 度だけ消費する）。
+///
+/// 例外はこの関数の中で捕捉して `logger.w` に残し null を返すため、この
+/// Provider は通常はエラー状態にならず、Riverpod の自動リトライの経路には
+/// 入らない（D-05 は「通知タップ無し」として扱う）。`retry: noRetry` は
+/// 多層防御として残す：将来この catch を外したとき、1 回目が
+/// `PlatformException` で失敗すると自動リトライで 2 回目が呼ばれ、
+/// `takeInitialTap()` が契約どおり null を返して `AsyncData(null)` に
+/// 落ち着き「通知タップ無し」に化ける（ログも残らない）。`retry: noRetry`
+/// はその経路を塞ぐ保険（D-04 §6・§8 #67）。
 
 @ProviderFor(initialNotificationTap)
 const initialNotificationTapProvider = InitialNotificationTapProvider._();
@@ -18,6 +27,15 @@ const initialNotificationTapProvider = InitialNotificationTapProvider._();
 /// アプリ未起動から通知タップで起動した場合のタップ情報。無ければ
 /// null。2 回目以降の読み込みは null（`PushGateway.takeInitialTap()` が
 /// 1 度だけ消費する）。
+///
+/// 例外はこの関数の中で捕捉して `logger.w` に残し null を返すため、この
+/// Provider は通常はエラー状態にならず、Riverpod の自動リトライの経路には
+/// 入らない（D-05 は「通知タップ無し」として扱う）。`retry: noRetry` は
+/// 多層防御として残す：将来この catch を外したとき、1 回目が
+/// `PlatformException` で失敗すると自動リトライで 2 回目が呼ばれ、
+/// `takeInitialTap()` が契約どおり null を返して `AsyncData(null)` に
+/// 落ち着き「通知タップ無し」に化ける（ログも残らない）。`retry: noRetry`
+/// はその経路を塞ぐ保険（D-04 §6・§8 #67）。
 
 final class InitialNotificationTapProvider
     extends
@@ -30,11 +48,20 @@ final class InitialNotificationTapProvider
   /// アプリ未起動から通知タップで起動した場合のタップ情報。無ければ
   /// null。2 回目以降の読み込みは null（`PushGateway.takeInitialTap()` が
   /// 1 度だけ消費する）。
+  ///
+  /// 例外はこの関数の中で捕捉して `logger.w` に残し null を返すため、この
+  /// Provider は通常はエラー状態にならず、Riverpod の自動リトライの経路には
+  /// 入らない（D-05 は「通知タップ無し」として扱う）。`retry: noRetry` は
+  /// 多層防御として残す：将来この catch を外したとき、1 回目が
+  /// `PlatformException` で失敗すると自動リトライで 2 回目が呼ばれ、
+  /// `takeInitialTap()` が契約どおり null を返して `AsyncData(null)` に
+  /// 落ち着き「通知タップ無し」に化ける（ログも残らない）。`retry: noRetry`
+  /// はその経路を塞ぐ保険（D-04 §6・§8 #67）。
   const InitialNotificationTapProvider._()
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: noRetry,
         name: r'initialNotificationTapProvider',
         isAutoDispose: false,
         dependencies: null,
@@ -57,7 +84,7 @@ final class InitialNotificationTapProvider
 }
 
 String _$initialNotificationTapHash() =>
-    r'18f5ce8fe36c2a7e7722deeb832c7233c95a289f';
+    r'91f87fd50827cee30be330caff2448649abbaf78';
 
 /// 起動中（バックグラウンド・フォアグラウンド）に通知をタップしたときに
 /// 流れる Stream。

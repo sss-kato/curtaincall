@@ -1,60 +1,106 @@
-import 'dart:async';
-
+import 'package:curtaincall/core/ui/status/list_status.dart';
 import 'package:curtaincall/features/articles/application/sync_result.dart';
 import 'package:curtaincall/features/articles/presentation/list_status.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// `AsyncValue` の合成状態（値あり＋エラー／枯渇後の `AsyncError`）を作る。
-/// `resolveHasArticles`・`shouldLogCountError` のテーブル駆動テストでは
-/// 作れない入力を用意するため。`AsyncValue` は値ありエラー
-/// （`hasValue: true, hasError: true`）のような組み合わせ状態を公開
-/// コンストラクタから直接組み立てられない（内部合成は `@internal`）ため、
-/// 実際に `StreamProvider` へ値とエラーを流し、Riverpod 自身に合成させて
-/// 取り出す。[retry] を渡すとリトライ方針を上書きできる（`null` を常に
-/// 返す関数を渡すとリトライを起こさず、その場で「リトライ枯渇後」に
-/// 相当する `AsyncError` を得られる）。
+/// [previous] を保持したまま Stream が再購読中（`ref.invalidate` 直後、
+/// または再購読が継続中）であることを表す `AsyncValue` を作る。
 ///
-/// `ProviderContainer.new` の `retry` 引数の型は riverpod の
-/// `Retry`（`Duration? Function(int retryCount, Object error)`）だが、
-/// `riverpod` の公開バレルが `export 'src/internals.dart' show …` で
-/// 列挙する型に `Retry` が含まれないため、`flutter_riverpod` / `riverpod`
-/// のどちらの公開エントリからも参照できない（実測で `undefined_class`）。
-/// さらに `flutter_test`（`test_api`）が同名の `Retry` クラス
-/// （`@Retry(n)` アノテーション用）を公開しているため、もし `Retry` と
-/// 書くとそちらに解決され型不一致でコンパイルが通らない（実測）。
-/// 関数型のシグネチャをそのまま書く。
-Future<AsyncValue<int>> _asyncCountAfterError({
-  required int? previousValue,
-  Duration? Function(int retryCount, Object error)? retry,
-}) async {
-  final controller = StreamController<int>();
-  final provider = StreamProvider<int>((ref) => controller.stream);
-  final container = ProviderContainer(retry: retry);
-  final sub = container.listen(provider, (previous, next) {});
-  if (previousValue != null) {
-    controller.add(previousValue);
-    await Future<void>.delayed(Duration.zero);
-  }
-  controller.addError(Exception('boom'), StackTrace.empty);
-  await Future<void>.delayed(Duration.zero);
-  final state = container.read(provider);
-  sub.close();
-  container.dispose();
-  await controller.close();
-  return state;
-}
+/// Riverpod の `copyWithPrevious`（`@internal` だが公開メソッド）を実際に
+/// 呼び、Framework が本番で作る合成状態をそのまま再現する（D-04 §8 #63・
+/// §8 #69「`copyWithPrevious` の意味論が変わった場合は、入力をそれで
+/// 組み立てている本ファイルのケースが落ちることで検知する」）。
+///
+/// `isRefresh` は既定の `true` のままにする：`ref.invalidate` は
+/// `asReload: false` で呼ばれるため `ProviderElement` 側が `seamless:
+/// true`（＝ `isRefresh: true`）で合成する（riverpod 3.0.3
+/// `common_notifiers.dart` / `framework.dart`。`app/pubspec.lock` が pin
+/// する版。`copyWithPrevious` と `asyncTransition` の該当箇所は riverpod
+/// 3.0.3 と 3.4.3 で同一と確認済み）。`isRefresh: false`（依存変更による
+/// reload）でも `hasValue` / `isLoading` / `hasError` は一致するため、
+/// 本ファイルでは片方（refresh 側）だけを組み立てる。
+AsyncValue<int> _refreshingWithPrevious(AsyncValue<int> previous) =>
+    // ignore: invalid_use_of_internal_member
+    const AsyncValue<int>.loading().copyWithPrevious(previous);
+
+/// [previous] を保持したまま Stream がエラーで終了したことを表す
+/// `AsyncValue`（受動的な失敗・A-12 による再購読の失敗の両方を表す。
+/// [_refreshingWithPrevious] と同じ理由で `copyWithPrevious` を直接使う）。
+AsyncValue<int> _errorWithPrevious(AsyncValue<int> previous) =>
+    AsyncValue<int>.error(Exception('boom'), StackTrace.empty)
+    // ignore: invalid_use_of_internal_member
+    .copyWithPrevious(previous);
 
 void main() {
   group('resolveListStatus', () {
-    // D-04 §5.4 判定表 10 行。
+    // D-04 §5.4.3 判定表 10 行。
 
-    test('行1: syncsOnLaunch=false, hasVisible=true → content（S-02/ST-01）', () {
+    test('行1: count=unavailable → unavailable（取得の成否では抜けない。 '
+        'S-00 §8 #36）', () {
       const feed = FeedStatus(
-        hasArticles: null,
+        count: ArticleCountState.unavailable,
+        inProgress: true,
+        lastResult: SyncFailed(SyncFailureReason.storage),
+      );
+      final status = resolveListStatus(feed, hasVisible: true);
+      expect(status.full, FullView.unavailable);
+      expect(status.refreshing, isFalse);
+      expect(status.offlineBanner, isFalse);
+      expect(status.errorNotice, isFalse);
+    });
+
+    test('行2: count=pending → loading（起動直後、または A-12 による '
+        '再購読中）', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.pending,
+        inProgress: false,
+        lastResult: SyncFailed(SyncFailureReason.httpStatus),
+      );
+      final status = resolveListStatus(feed, hasVisible: true);
+      expect(status.full, FullView.loading);
+      expect(status.refreshing, isFalse);
+      expect(status.offlineBanner, isFalse);
+      expect(status.errorNotice, isFalse);
+    });
+
+    test('起動直後：count=pending, inProgress=false, lastResult=null, '
+        'hasVisible=false → loading（empty にならない。D-04 §8 #36）', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.pending,
         inProgress: false,
         lastResult: null,
-        syncsOnLaunch: false,
+      );
+      final status = resolveListStatus(feed, hasVisible: false);
+      expect(status.full, FullView.loading);
+    });
+
+    test('行3: count=empty, hasVisible=true → content（件数と一覧の更新順の '
+        'ずれ。S-00 §8 #4・D-04 §8 #65）', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.empty,
+        inProgress: true,
+        lastResult: SyncOffline(),
+      );
+      final status = resolveListStatus(feed, hasVisible: true);
+      expect(status.full, FullView.content);
+      expect(status.refreshing, isTrue);
+      expect(status.offlineBanner, isTrue);
+      expect(status.errorNotice, isFalse);
+    });
+
+    test('行3: count=empty, hasVisible=true, inProgress=false, '
+        'lastResult=SyncSucceeded → content（SyncSucceeded でも empty に '
+        'ならないことを固定する。D-04 §7・§8 #65）', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.empty,
+        inProgress: false,
+        lastResult: SyncSucceeded(
+          inserted: 0,
+          updated: 0,
+          deleted: 0,
+          notModified: true,
+        ),
       );
       final status = resolveListStatus(feed, hasVisible: true);
       expect(status.full, FullView.content);
@@ -63,12 +109,105 @@ void main() {
       expect(status.errorNotice, isFalse);
     });
 
-    test('行2: syncsOnLaunch=false, hasVisible=false → empty（S-02/ST-02）', () {
+    test('行3: count=empty, hasVisible=true, inProgress=false, '
+        'lastResult=SyncFailed → content + errorNotice=true（errorNotice の '
+        'true 方向を固定する。D-04 §7）', () {
       const feed = FeedStatus(
-        hasArticles: null,
+        count: ArticleCountState.empty,
+        inProgress: false,
+        lastResult: SyncFailed(SyncFailureReason.timeout),
+      );
+      final status = resolveListStatus(feed, hasVisible: true);
+      expect(status.full, FullView.content);
+      expect(status.refreshing, isFalse);
+      expect(status.offlineBanner, isFalse);
+      expect(status.errorNotice, isTrue);
+    });
+
+    test('行3: count=empty, hasVisible=true, lastResult=null（launchPending '
+        '中でも行3が行4より先。D-04 §5.4.3 判定表の行順）', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.empty,
         inProgress: false,
         lastResult: null,
-        syncsOnLaunch: false,
+      );
+      final status = resolveListStatus(feed, hasVisible: true);
+      expect(status.full, FullView.content);
+      expect(status.refreshing, isFalse);
+      expect(status.offlineBanner, isFalse);
+      expect(status.errorNotice, isFalse);
+    });
+
+    test('行4: count=empty, lastResult=null（launchPending） → loading', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.empty,
+        inProgress: false,
+        lastResult: null,
+      );
+      final status = resolveListStatus(feed, hasVisible: false);
+      expect(status.full, FullView.loading);
+      expect(status.refreshing, isFalse);
+      expect(status.offlineBanner, isFalse);
+      expect(status.errorNotice, isFalse);
+    });
+
+    test('行5: count=empty, inProgress=true, lastResult 非 null → loading', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.empty,
+        inProgress: true,
+        lastResult: SyncSucceeded(
+          inserted: 0,
+          updated: 0,
+          deleted: 0,
+          notModified: true,
+        ),
+      );
+      final status = resolveListStatus(feed, hasVisible: false);
+      expect(status.full, FullView.loading);
+      expect(status.refreshing, isFalse);
+      expect(status.offlineBanner, isFalse);
+      expect(status.errorNotice, isFalse);
+    });
+
+    test('行6: count=empty, inProgress=false, lastResult=SyncOffline → '
+        'offline（ST-16）', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.empty,
+        inProgress: false,
+        lastResult: SyncOffline(),
+      );
+      final status = resolveListStatus(feed, hasVisible: false);
+      expect(status.full, FullView.offline);
+      expect(status.refreshing, isFalse);
+      expect(status.offlineBanner, isFalse);
+      expect(status.errorNotice, isFalse);
+    });
+
+    test('行7: count=empty, inProgress=false, lastResult=SyncFailed → '
+        'error（ST-14）', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.empty,
+        inProgress: false,
+        lastResult: SyncFailed(SyncFailureReason.malformed),
+      );
+      final status = resolveListStatus(feed, hasVisible: false);
+      expect(status.full, FullView.error);
+      expect(status.refreshing, isFalse);
+      expect(status.offlineBanner, isFalse);
+      expect(status.errorNotice, isFalse);
+    });
+
+    test('行8: count=empty, inProgress=false, lastResult=SyncSucceeded → '
+        'empty（ST-12。取得成功で 0 件）', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.empty,
+        inProgress: false,
+        lastResult: SyncSucceeded(
+          inserted: 0,
+          updated: 0,
+          deleted: 3,
+          notModified: false,
+        ),
       );
       final status = resolveListStatus(feed, hasVisible: false);
       expect(status.full, FullView.empty);
@@ -77,114 +216,14 @@ void main() {
       expect(status.errorNotice, isFalse);
     });
 
-    test('行3: syncsOnLaunch=true, hasArticles=null（未確定） → loading', () {
-      const feed = FeedStatus(
-        hasArticles: null,
-        inProgress: true,
-        lastResult: SyncFailed(SyncFailureReason.httpStatus),
-        syncsOnLaunch: true,
-      );
-      final status = resolveListStatus(feed, hasVisible: true);
-      expect(status.full, FullView.loading);
-      expect(status.refreshing, isFalse);
-      expect(status.offlineBanner, isFalse);
-      expect(status.errorNotice, isFalse);
-    });
-
-    test('行4: syncsOnLaunch=true, hasArticles=false, '
-        'launchPending（lastResult=null） → loading', () {
-      const feed = FeedStatus(
-        hasArticles: false,
-        inProgress: false,
-        lastResult: null,
-        syncsOnLaunch: true,
-      );
-      final status = resolveListStatus(feed, hasVisible: true);
-      expect(status.full, FullView.loading);
-      expect(status.refreshing, isFalse);
-      expect(status.offlineBanner, isFalse);
-      expect(status.errorNotice, isFalse);
-    });
-
-    test('行5: syncsOnLaunch=true, hasArticles=false, inProgress=true, '
-        'launchPending=false → loading', () {
-      const feed = FeedStatus(
-        hasArticles: false,
-        inProgress: true,
-        lastResult: SyncSucceeded(
-          inserted: 0,
-          updated: 0,
-          deleted: 0,
-          notModified: true,
-        ),
-        syncsOnLaunch: true,
-      );
-      final status = resolveListStatus(feed, hasVisible: true);
-      expect(status.full, FullView.loading);
-      expect(status.refreshing, isFalse);
-      expect(status.offlineBanner, isFalse);
-      expect(status.errorNotice, isFalse);
-    });
-
-    test('行6: syncsOnLaunch=true, hasArticles=false, inProgress=false, '
-        'lastResult=SyncOffline → offline（ST-16）', () {
-      const feed = FeedStatus(
-        hasArticles: false,
-        inProgress: false,
-        lastResult: SyncOffline(),
-        syncsOnLaunch: true,
-      );
-      final status = resolveListStatus(feed, hasVisible: true);
-      expect(status.full, FullView.offline);
-      expect(status.refreshing, isFalse);
-      expect(status.offlineBanner, isFalse);
-      expect(status.errorNotice, isFalse);
-    });
-
-    test('行7: syncsOnLaunch=true, hasArticles=false, inProgress=false, '
-        'lastResult=SyncFailed → error（ST-14）', () {
-      const feed = FeedStatus(
-        hasArticles: false,
-        inProgress: false,
-        lastResult: SyncFailed(SyncFailureReason.malformed),
-        syncsOnLaunch: true,
-      );
-      final status = resolveListStatus(feed, hasVisible: true);
-      expect(status.full, FullView.error);
-      expect(status.refreshing, isFalse);
-      expect(status.offlineBanner, isFalse);
-      expect(status.errorNotice, isFalse);
-    });
-
-    test('行8: syncsOnLaunch=true, hasArticles=false, inProgress=false, '
-        'lastResult=SyncSucceeded → empty（ST-12。取得成功で 0 件）', () {
-      const feed = FeedStatus(
-        hasArticles: false,
-        inProgress: false,
-        lastResult: SyncSucceeded(
-          inserted: 0,
-          updated: 0,
-          deleted: 3,
-          notModified: false,
-        ),
-        syncsOnLaunch: true,
-      );
-      final status = resolveListStatus(feed, hasVisible: true);
-      expect(status.full, FullView.empty);
-      expect(status.refreshing, isFalse);
-      expect(status.offlineBanner, isFalse);
-      expect(status.errorNotice, isFalse);
-    });
-
     test(
-      '行9: syncsOnLaunch=true, hasArticles=true, hasVisible=true → content '
+      '行9: count=present, hasVisible=true → content '
       '+ refreshing/offlineBanner/errorNotice は inProgress・lastResult どおり',
       () {
         const feed = FeedStatus(
-          hasArticles: true,
+          count: ArticleCountState.present,
           inProgress: true,
           lastResult: SyncOffline(),
-          syncsOnLaunch: true,
         );
         final status = resolveListStatus(feed, hasVisible: true);
         expect(status.full, FullView.content);
@@ -194,13 +233,12 @@ void main() {
       },
     );
 
-    test('行10: syncsOnLaunch=true, hasArticles=true, hasVisible=false → empty '
+    test('行10: count=present, hasVisible=false → empty '
         '（ST-12 + ST-11/ST-13/ST-15。S-00 §8 #24）', () {
       const feed = FeedStatus(
-        hasArticles: true,
+        count: ArticleCountState.present,
         inProgress: false,
         lastResult: SyncFailed(SyncFailureReason.timeout),
-        syncsOnLaunch: true,
       );
       final status = resolveListStatus(feed, hasVisible: false);
       expect(status.full, FullView.empty);
@@ -209,232 +247,361 @@ void main() {
       expect(status.errorNotice, isTrue);
     });
 
-    test('起動直後の最初のフレーム（syncsOnLaunch=true, hasArticles=null, '
-        'inProgress=false, lastResult=null） → loading（empty にならない。'
-        ' D-04 §8 #36）', () {
+    test('count=present, hasVisible=false, lastResult=SyncFailed → '
+        'empty のまま（一覧の中身を組み立てられなかったときもこの行。 '
+        'S-01 §5.1 ST-04「件数と直近の取得結果によらず」）', () {
       const feed = FeedStatus(
-        hasArticles: null,
+        count: ArticleCountState.present,
         inProgress: false,
-        lastResult: null,
-        syncsOnLaunch: true,
-      );
-      final status = resolveListStatus(feed, hasVisible: false);
-      expect(status.full, FullView.loading);
-    });
-
-    test('S-02（syncsOnLaunch=false）: lastResult=SyncOffline・inProgress=true・'
-        ' hasArticles=null でも full が content/empty 以外にならず、'
-        ' refreshing・offlineBanner・errorNotice はすべて false（S-02 §3・§5）', () {
-      const feed = FeedStatus(
-        hasArticles: null,
-        inProgress: true,
-        lastResult: SyncOffline(),
-        syncsOnLaunch: false,
-      );
-      final content = resolveListStatus(feed, hasVisible: true);
-      expect(content.full, FullView.content);
-      expect(content.refreshing, isFalse);
-      expect(content.offlineBanner, isFalse);
-      expect(content.errorNotice, isFalse);
-
-      final empty = resolveListStatus(feed, hasVisible: false);
-      expect(empty.full, FullView.empty);
-      expect(empty.refreshing, isFalse);
-      expect(empty.offlineBanner, isFalse);
-      expect(empty.errorNotice, isFalse);
-    });
-
-    test('S-02（syncsOnLaunch=false）: lastResult=SyncFailed でも取得の状態を '
-        '一切見ない（content/empty 以外にならない）', () {
-      const feed = FeedStatus(
-        hasArticles: false,
-        inProgress: false,
-        lastResult: SyncFailed(SyncFailureReason.storage),
-        syncsOnLaunch: false,
-      );
-      final status = resolveListStatus(feed, hasVisible: true);
-      expect(status.full, FullView.content);
-      expect(status.refreshing, isFalse);
-      expect(status.offlineBanner, isFalse);
-      expect(status.errorNotice, isFalse);
-    });
-
-    // 以下 3 件は行9（hasArticles=true）が launchPending や排他の組み合わせ
-    // でも正しく判定できることを担保する。
-    // なお feedStatus は articleCountProvider の値を resolveHasArticles で
-    // hasArticles に写す（値を一度も得ていないエラーは false、値を得て
-    // いれば data・リフレッシュ中・リトライ中を問わず直前値を優先する。
-    // 下の group('resolveHasArticles') 参照）ため、値を一度も得ていない
-    // エラー発生時の分岐は既存の hasArticles=false のケース（行4〜8。
-    // とくに lastResult が SyncFailed の行7）が担保する。resolveListStatus
-    // 自身は hasArticles の由来（0 件かエラーか）を区別しない。
-
-    test('行9 補完: hasArticles=true, lastResult=null（launchPending） → '
-        'content（記事がある端末の起動直後。!hasArticles && launchPending の '
-        '判定に hasArticles が正しく効いていることを確認）', () {
-      const feed = FeedStatus(
-        hasArticles: true,
-        inProgress: false,
-        lastResult: null,
-        syncsOnLaunch: true,
-      );
-      final status = resolveListStatus(feed, hasVisible: true);
-      expect(status.full, FullView.content);
-      expect(status.refreshing, isFalse);
-      expect(status.offlineBanner, isFalse);
-      expect(status.errorNotice, isFalse);
-    });
-
-    test('行9 補完: hasArticles=true, hasVisible=true, lastResult=SyncFailed → '
-        'content + errorNotice（ST-13 と ST-15 の組み合わせ）', () {
-      const feed = FeedStatus(
-        hasArticles: true,
-        inProgress: false,
-        lastResult: SyncFailed(SyncFailureReason.timeout),
-        syncsOnLaunch: true,
-      );
-      final status = resolveListStatus(feed, hasVisible: true);
-      expect(status.full, FullView.content);
-      expect(status.refreshing, isFalse);
-      expect(status.offlineBanner, isFalse);
-      expect(status.errorNotice, isTrue);
-    });
-
-    test('行10 補完: hasArticles=true, hasVisible=false, lastResult=SyncOffline '
-        '→ empty + offlineBanner（ST-12 と ST-13 の組み合わせ）', () {
-      const feed = FeedStatus(
-        hasArticles: true,
-        inProgress: false,
-        lastResult: SyncOffline(),
-        syncsOnLaunch: true,
+        lastResult: SyncFailed(SyncFailureReason.malformed),
       );
       final status = resolveListStatus(feed, hasVisible: false);
       expect(status.full, FullView.empty);
-      expect(status.refreshing, isFalse);
+      expect(status.errorNotice, isTrue);
+    });
+
+    test('count=present, hasVisible=false, lastResult=SyncOffline → '
+        'empty のまま + offlineBanner', () {
+      const feed = FeedStatus(
+        count: ArticleCountState.present,
+        inProgress: false,
+        lastResult: SyncOffline(),
+      );
+      final status = resolveListStatus(feed, hasVisible: false);
+      expect(status.full, FullView.empty);
       expect(status.offlineBanner, isTrue);
-      expect(status.errorNotice, isFalse);
+    });
+
+    group('unavailable の網羅（hasVisible は true / false のどちらでも同じ。 '
+        'D-04 §7）', () {
+      final lastResults = <String, SyncResult?>{
+        'SyncSucceeded': const SyncSucceeded(
+          inserted: 0,
+          updated: 0,
+          deleted: 0,
+          notModified: true,
+        ),
+        'SyncFailed': const SyncFailed(SyncFailureReason.storage),
+        'SyncOffline': const SyncOffline(),
+        'null': null,
+      };
+
+      // hasVisible の両方の値が使われることも確認する（判定に効かない
+      // ことを担保する）。nextHasVisible はループ外の可変変数で、
+      // test() のコールバックが走る時点（ループ終了後）には最後の値に
+      // なってしまうため、反復ごとにローカル変数 hasVisible へ確定
+      // させてからコールバックに渡す。
+      var nextHasVisible = true;
+      for (final inProgress in [true, false]) {
+        for (final entry in lastResults.entries) {
+          final hasVisible = nextHasVisible;
+          nextHasVisible = !nextHasVisible;
+          test('inProgress=$inProgress, lastResult=${entry.key}, '
+              'hasVisible=$hasVisible → unavailable、E-21/E-23/E-25 を重ねない', () {
+            final feed = FeedStatus(
+              count: ArticleCountState.unavailable,
+              inProgress: inProgress,
+              lastResult: entry.value,
+            );
+            final status = resolveListStatus(feed, hasVisible: hasVisible);
+            expect(status.full, FullView.unavailable);
+            expect(status.refreshing, isFalse);
+            expect(status.offlineBanner, isFalse);
+            expect(status.errorNotice, isFalse);
+          });
+        }
+      }
+    });
+
+    group('A-12 / A-08 後の再購読（D-04 §7・S-01 §8 #31）', () {
+      test('再購読中：count=pending → loading（lastResult・hasVisible を '
+          '問わず。S-01 §5.1 ST-02）', () {
+        const feed = FeedStatus(
+          count: ArticleCountState.pending,
+          inProgress: false,
+          lastResult: SyncSucceeded(
+            inserted: 5,
+            updated: 0,
+            deleted: 0,
+            notModified: false,
+          ),
+        );
+        final status = resolveListStatus(feed, hasVisible: true);
+        expect(status.full, FullView.loading);
+        expect(status.refreshing, isFalse);
+        expect(status.offlineBanner, isFalse);
+        expect(status.errorNotice, isFalse);
+      });
+
+      test('再購読の成功で 0 件：count=empty × SyncSucceeded → empty '
+          '（S-01 §8 #31 の 4 分岐）', () {
+        const feed = FeedStatus(
+          count: ArticleCountState.empty,
+          inProgress: false,
+          lastResult: SyncSucceeded(
+            inserted: 0,
+            updated: 0,
+            deleted: 0,
+            notModified: false,
+          ),
+        );
+        expect(resolveListStatus(feed, hasVisible: false).full, FullView.empty);
+      });
+
+      test('再購読の成功で 0 件：count=empty × SyncOffline → offline', () {
+        const feed = FeedStatus(
+          count: ArticleCountState.empty,
+          inProgress: false,
+          lastResult: SyncOffline(),
+        );
+        expect(
+          resolveListStatus(feed, hasVisible: false).full,
+          FullView.offline,
+        );
+      });
+
+      test('再購読の成功で 0 件：count=empty × SyncFailed → error', () {
+        const feed = FeedStatus(
+          count: ArticleCountState.empty,
+          inProgress: false,
+          lastResult: SyncFailed(SyncFailureReason.timeout),
+        );
+        expect(resolveListStatus(feed, hasVisible: false).full, FullView.error);
+      });
+
+      test('再購読の成功で 0 件：count=empty × inProgress=true → loading '
+          '（取得がまだ続いている。S-01 §8 #31「→ ST-02」）', () {
+        const feed = FeedStatus(
+          count: ArticleCountState.empty,
+          inProgress: true,
+          lastResult: SyncFailed(SyncFailureReason.timeout),
+        );
+        expect(
+          resolveListStatus(feed, hasVisible: false).full,
+          FullView.loading,
+        );
+      });
     });
   });
 
-  group('前提: Riverpod 3 が返す AsyncValue の合成', () {
-    // resolveHasArticles が状態クラスではなく hasValue/hasError で判定する
-    // 動機（`ProviderContainer.defaultRetry`：maxRetries=10、指数バック
-    // オフ上限 6.4s によりエラーは直ちに AsyncError にならない）を
-    // _asyncCountAfterError の前提として固定する。Riverpod のメジャー
-    // アップデートでここが落ちたら、「純粋関数が壊れた」のではなく
-    // 「Riverpod の前提が変わった」と分かる（group('resolveHasArticles')
-    // 側とは別に検証する）。
+  group('resolveArticleCount', () {
+    // D-04 §5.4.2・§7。retryRequested = false と true で分ける。
 
-    test('値あり＋エラーは（自動リトライ中）isLoading && hasValue && '
-        'hasError', () async {
-      final state = await _asyncCountAfterError(previousValue: 7);
-      expect(state.isLoading, isTrue);
-      expect(state.hasValue, isTrue);
-      expect(state.hasError, isTrue);
+    group('retryRequested = false', () {
+      test('AsyncData(0) → empty', () {
+        expect(
+          resolveArticleCount(const AsyncValue.data(0), retryRequested: false),
+          ArticleCountState.empty,
+        );
+      });
+
+      test('AsyncData(3) → present', () {
+        expect(
+          resolveArticleCount(const AsyncValue.data(3), retryRequested: false),
+          ArticleCountState.present,
+        );
+      });
+
+      test('AsyncLoading（初回） → pending', () {
+        expect(
+          resolveArticleCount(
+            const AsyncValue.loading(),
+            retryRequested: false,
+          ),
+          ArticleCountState.pending,
+        );
+      });
+
+      test('AsyncError（値なし） → unavailable（ST-17）', () {
+        final state = AsyncValue<int>.error(
+          Exception('boom'),
+          StackTrace.empty,
+        );
+        expect(
+          resolveArticleCount(state, retryRequested: false),
+          ArticleCountState.unavailable,
+        );
+      });
+
+      test('AsyncLoading(hasError: true) で値なし → pending', () {
+        final noValueError = AsyncValue<int>.error(
+          Exception('boom'),
+          StackTrace.empty,
+        );
+        final state = _refreshingWithPrevious(noValueError);
+        expect(state.hasValue, isFalse);
+        expect(state.hasError, isTrue);
+        expect(
+          resolveArticleCount(state, retryRequested: false),
+          ArticleCountState.pending,
+        );
+      });
+
+      test('AsyncLoading で直前値あり → 直前の件数で判定（present。 '
+          '全面表示にしない）', () {
+        final state = _refreshingWithPrevious(const AsyncValue.data(3));
+        expect(state.hasValue, isTrue);
+        expect(state.isLoading, isTrue);
+        expect(
+          resolveArticleCount(state, retryRequested: false),
+          ArticleCountState.present,
+        );
+      });
+
+      test('AsyncError で直前値あり → 直前の件数で判定（受動的な失敗では '
+          '一度得た件数を捨てない。S-00 §5.2 ST-17・S-01 §5.1 ST-19の限定。 '
+          'D-04 §8 #63）', () {
+        final state = _errorWithPrevious(const AsyncValue.data(3));
+        expect(state.hasValue, isTrue);
+        expect(state.hasError, isTrue);
+        expect(
+          resolveArticleCount(state, retryRequested: false),
+          ArticleCountState.present,
+        );
+      });
     });
 
-    test('retry を無効化すると AsyncError（値の有無は維持）', () async {
-      final withValue = await _asyncCountAfterError(
-        previousValue: 7,
-        retry: (retryCount, error) => null,
-      );
-      expect(withValue, isA<AsyncError<int>>());
-      expect(withValue.hasValue, isTrue);
+    group('retryRequested = true（A-12 / A-08 を押した後）', () {
+      test('AsyncLoading().copyWithPrevious(AsyncError(直前値 0)) '
+          '（invalidate 直後。直前値 0 を保持したまま飛行中） → pending（ST-10）', () {
+        final errorAfterData0 = _errorWithPrevious(const AsyncValue.data(0));
+        final state = _refreshingWithPrevious(errorAfterData0);
+        expect(state.isLoading, isTrue);
+        expect(
+          resolveArticleCount(state, retryRequested: true),
+          ArticleCountState.pending,
+        );
+      });
 
-      final withoutValue = await _asyncCountAfterError(
-        previousValue: null,
-        retry: (retryCount, error) => null,
-      );
-      expect(withoutValue, isA<AsyncError<int>>());
-      expect(withoutValue.hasValue, isFalse);
-    });
-  });
+      test('同じ形の AsyncError（再購読が再び失敗。直前値 0 あり） → '
+          'unavailable（ST-17）。retryRequested = false なら empty になる '
+          '同じ入力で結果が変わることを 1 組で比較する（D-04 §8 #63）', () {
+        final state = _errorWithPrevious(const AsyncValue.data(0));
+        expect(state.hasValue, isTrue);
+        expect(state.hasError, isTrue);
 
-  group('resolveHasArticles', () {
-    // D-04 §6・§7。「リトライ中」と「リトライ枯渇後（AsyncError）」の
-    // 双方を検証する（合成状態そのものの検証は
-    // group('前提: Riverpod 3 が返す AsyncValue の合成') 側）。
+        expect(
+          resolveArticleCount(state, retryRequested: true),
+          ArticleCountState.unavailable,
+        );
+        expect(
+          resolveArticleCount(state, retryRequested: false),
+          ArticleCountState.empty,
+        );
+      });
 
-    test('AsyncData（0 件） → false', () {
-      expect(resolveHasArticles(const AsyncValue.data(0)), isFalse);
-    });
+      test('AsyncData(5)（新しい件数が届いた） → present（pending の '
+          'ままにしない）', () {
+        expect(
+          resolveArticleCount(const AsyncValue.data(5), retryRequested: true),
+          ArticleCountState.present,
+        );
+      });
 
-    test('AsyncData（1 件以上） → true', () {
-      expect(resolveHasArticles(const AsyncValue.data(7)), isTrue);
-    });
+      test('AsyncData(0)（再購読に成功して 0 件） → empty '
+          '（S-01 §8 #31 の 4 分岐の入口。present にしない）', () {
+        expect(
+          resolveArticleCount(const AsyncValue.data(0), retryRequested: true),
+          ArticleCountState.empty,
+        );
+      });
 
-    test('AsyncLoading（値なし・エラーなし） → null（未確定）', () {
-      expect(resolveHasArticles(const AsyncValue.loading()), isNull);
-    });
-
-    test('リトライ中（値あり・エラーあり） → isLoading のまま直前値を優先して '
-        'true', () async {
-      final state = await _asyncCountAfterError(previousValue: 7);
-      expect(resolveHasArticles(state), isTrue);
-    });
-
-    test('リトライ中（値なし・エラーあり） → isLoading のまま false', () async {
-      final state = await _asyncCountAfterError(previousValue: null);
-      expect(resolveHasArticles(state), isFalse);
-    });
-
-    test('AsyncError（値あり。リトライ枯渇後） → 直前値を優先して true', () async {
-      final state = await _asyncCountAfterError(
-        previousValue: 7,
-        retry: (retryCount, error) => null,
-      );
-      expect(resolveHasArticles(state), isTrue);
-    });
-
-    test('AsyncError（値なし。DB open / migration 失敗など） → false', () async {
-      final state = await _asyncCountAfterError(
-        previousValue: null,
-        retry: (retryCount, error) => null,
-      );
-      expect(resolveHasArticles(state), isFalse);
+      test('値なしの AsyncError → unavailable', () {
+        final state = AsyncValue<int>.error(
+          Exception('boom'),
+          StackTrace.empty,
+        );
+        expect(
+          resolveArticleCount(state, retryRequested: true),
+          ArticleCountState.unavailable,
+        );
+      });
     });
   });
 
   group('shouldLogCountError', () {
-    // D-04 §7。previous（null / 正常 / エラー） × next（正常 / エラー）
-    // の 6 通り。「エラーでなかった → エラーになった」遷移が起きた瞬間
+    // D-04 §7。「エラーでなかった → エラーになった」遷移が起きた瞬間
     // だけ true になることを固定する。
-    const normal = AsyncValue<int>.data(3);
-    final error = AsyncValue<int>.error(Exception('boom'), StackTrace.empty);
 
-    for (final testCase in <(String, AsyncValue<int>?, AsyncValue<int>, bool)>[
-      ('previous=null, next=正常 → false', null, normal, false),
-      ('previous=null, next=エラー → true（初回発火）', null, error, true),
-      ('previous=正常, next=正常 → false', normal, normal, false),
-      ('previous=正常, next=エラー → true（新規に壊れた）', normal, error, true),
-      ('previous=エラー, next=正常 → false（回復。回復自体は記録しない）', error, normal, false),
-      ('previous=エラー, next=エラー → false（重複抑止）', error, error, false),
-    ]) {
-      final (description, previous, next, expected) = testCase;
-      test(description, () {
-        expect(shouldLogCountError(previous, next), expected);
-      });
-    }
-
-    // 上の 6 通りは AsyncValue.data / AsyncValue.error だけで構成されて
-    // おり、この関数が hasError 判定になっている動機（Riverpod 3 の自動
-    // リトライ中は AsyncLoading(hasError: true) として現れる。
-    // resolveHasArticles と同じ理由）を入力として確認できていない。
-    // _asyncCountAfterError で合成した実際の状態を追加する。
-    test('previous=正常, next=リトライ中（値あり・エラーあり） → true（自動 '
-        'リトライ中の障害も新規発生として検知する）', () async {
-      final retrying = await _asyncCountAfterError(previousValue: 3);
-      expect(shouldLogCountError(normal, retrying), isTrue);
+    test('null → AsyncLoading → false（初期値で記録しない）', () {
+      expect(
+        shouldLogCountError(null, const AsyncValue<int>.loading()),
+        isFalse,
+      );
     });
 
-    test('previous=リトライ中, next=枯渇後の AsyncError → false（同じ障害の '
-        '継続なので重複抑止）', () async {
-      final retrying = await _asyncCountAfterError(previousValue: 3);
-      final exhausted = await _asyncCountAfterError(
-        previousValue: 3,
-        retry: (retryCount, error) => null,
+    test('AsyncLoading → AsyncLoading(hasError: true) → true', () {
+      final errorState = AsyncValue<int>.error(
+        Exception('boom'),
+        StackTrace.empty,
       );
-      expect(shouldLogCountError(retrying, exhausted), isFalse);
+      final loadingWithError = _refreshingWithPrevious(errorState);
+      expect(loadingWithError.isLoading, isTrue);
+      expect(loadingWithError.hasError, isTrue);
+      expect(
+        shouldLogCountError(const AsyncValue<int>.loading(), loadingWithError),
+        isTrue,
+      );
+    });
+
+    test('hasError → hasError → false（同じ障害を二重に記録しない。 '
+        'ref.invalidate による再購読が再び失敗した場合もここに当たり、 '
+        '記録しないのが意図した挙動。D-04 §5.4.2）', () {
+      final error = AsyncValue<int>.error(Exception('boom'), StackTrace.empty);
+      expect(shouldLogCountError(error, error), isFalse);
+    });
+
+    test('hasError → AsyncData → false（回復自体は記録しない）', () {
+      final error = AsyncValue<int>.error(Exception('boom'), StackTrace.empty);
+      expect(
+        shouldLogCountError(error, const AsyncValue<int>.data(3)),
+        isFalse,
+      );
+    });
+
+    test('AsyncData → hasError → true（回復後に再発した障害は記録する）', () {
+      final error = AsyncValue<int>.error(Exception('boom'), StackTrace.empty);
+      expect(shouldLogCountError(const AsyncValue<int>.data(3), error), isTrue);
+    });
+  });
+
+  group('shouldClearRetryRequested', () {
+    // D-04 §5.4.2・§5.4.4・§7。「早すぎる下ろし」と「下ろし損ね」の両方を
+    // ここで検出する。
+
+    test('飛行中で直前値あり（AsyncLoading().copyWithPrevious(AsyncData(0))）'
+        ' → false（invalidate 直後に下ろさない）', () {
+      final state = _refreshingWithPrevious(const AsyncValue.data(0));
+      expect(state.isLoading, isTrue);
+      expect(shouldClearRetryRequested(state), isFalse);
+    });
+
+    test('AsyncError で直前値あり（AsyncError(…).copyWithPrevious '
+        '(AsyncData(0))） → false（再試行が失敗したときに下ろさない。 '
+        '下ろすと ST-17 へ移れない）', () {
+      final state = _errorWithPrevious(const AsyncValue.data(0));
+      expect(state.hasError, isTrue);
+      expect(shouldClearRetryRequested(state), isFalse);
+    });
+
+    test('決着した AsyncData(5) → true', () {
+      expect(shouldClearRetryRequested(const AsyncValue.data(5)), isTrue);
+    });
+
+    test('AsyncData(0) → true（0 件でも下ろす）', () {
+      expect(shouldClearRetryRequested(const AsyncValue.data(0)), isTrue);
+    });
+
+    test('値なしの AsyncLoading → false', () {
+      expect(
+        shouldClearRetryRequested(const AsyncValue<int>.loading()),
+        isFalse,
+      );
+    });
+
+    test('値なしの AsyncError → false', () {
+      final state = AsyncValue<int>.error(Exception('boom'), StackTrace.empty);
+      expect(shouldClearRetryRequested(state), isFalse);
     });
   });
 }

@@ -72,4 +72,4 @@ final class MinuteClockProvider
   }
 }
 
-String _$minuteClockHash() => r'b3ed3820817332dd5dc864b8e4c43924af912416';
+String _$minuteClockHash() => r'6ea2bf66ce1af1d16c9a30c975bf55e958333f3a';

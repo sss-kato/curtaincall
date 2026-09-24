@@ -10,6 +10,7 @@ import 'package:curtaincall/core/di/notifications_providers.dart';
 import 'package:curtaincall/core/di/providers.dart';
 import 'package:curtaincall/core/logging/app_logger.dart';
 import 'package:curtaincall/features/articles/application/sync_result.dart';
+import 'package:curtaincall/features/articles/presentation/list_status.dart';
 import 'package:curtaincall/features/articles/presentation/sync_controller.dart';
 import 'package:curtaincall/features/notifications/application/push_subscription_coordinator.dart';
 import 'package:curtaincall/features/notifications/presentation/notification_tap_providers.dart';
@@ -43,21 +44,68 @@ class _AppLifecycleSyncState extends ConsumerState<AppLifecycleSync>
   // State 生成時に 1 度だけ読んで保持する（D-04 §4.9）。
   late final Logger _logger;
 
+  // 記事件数の初回読み出しの滞留を 1 度だけ記録するためのタイマー
+  // （D-04 §5.4.2・§8 #66）。
+  Timer? _countStallTimer;
+
   @override
   void initState() {
     super.initState();
     _logger = ref.read(loggerProvider);
     WidgetsBinding.instance.addObserver(this);
+    _startCountDiagnostics();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return; // 最初のフレーム前に破棄された（起動直後の終了・ホットリスタート）。
       unawaited(_onLaunch());
     });
   }
 
+  // 記事件数の監視（購読失敗の記録・初回読み出しの滞留の記録）を開始する。
+  void _startCountDiagnostics() {
+    // 開始自体が失敗しても、後続の addPostFrameCallback（起動時の取得・
+    // 通知許可・購読同期）がスキップされないよう、他の手順と同じく
+    // `on Object` で捕捉して `logger.w` に残すだけにする（クラス doc
+    // 参照）。
+    try {
+      // 記事件数 Stream の購読失敗を 1 障害につき 1 回だけ記録する
+      // （D-04 §5.4.2）。ここに置く理由：(1) build 内の ref.listen と違い
+      // rebuild で張り直されないため fireImmediately の重複発火が起きない
+      // （T-23 の実測で 1 障害あたり 31 行）、(2) どのタブを開いているか
+      // に関わらず記録される、(3) 副作用と順序を 1 クラスに閉じる
+      // （§8 #49）。
+      ref.listenManual(articleCountProvider, (previous, next) {
+        if (!shouldLogCountError(previous, next)) return;
+        _logger.w(
+          '記事件数の購読に失敗',
+          error: next.error,
+          stackTrace: releaseSafeStackTrace(next.stackTrace),
+        );
+      }, fireImmediately: true);
+      // 件数の初回読み出しが値もエラーも返さないまま止まった場合の記録
+      // （D-04 §8 #66）。articleCountStallLogDelay 後に 1 度だけ状態を読み、
+      // 値もエラーも無ければ logger.w を 1 行残す（表示は E-20 のまま
+      // 変えない）。
+      _countStallTimer = Timer(articleCountStallLogDelay, () {
+        if (!mounted) return; // タイマー発火前に破棄された。
+        final count = ref.read(articleCountProvider);
+        if (count.hasValue || count.hasError) return;
+        _logger.w(
+          '記事件数の初回読み出しが '
+          '${articleCountStallLogDelay.inSeconds} 秒以内に返らない',
+        );
+      });
+    } on Object catch (e, s) {
+      _warn('記事件数の監視を開始できませんでした', e, s);
+    }
+  }
+
   @override
   void dispose() {
+    _countStallTimer?.cancel(); // _startCountDiagnostics() で張ったタイマーと対にする。
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+    // ref.listenManual の購読は ConsumerState の破棄で自動的に閉じるため、
+    // 明示的な解除は要らない。
   }
 
   Future<void> _onLaunch() async {

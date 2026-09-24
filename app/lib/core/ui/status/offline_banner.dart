@@ -1,3 +1,4 @@
+import 'package:curtaincall/core/ui/status/status_icons.dart';
 import 'package:flutter/cupertino.dart';
 
 /// オフライン表示の帯（S-00/E-23・D-04 §5.9）。
@@ -19,7 +20,7 @@ class OfflineBanner extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            CupertinoIcons.wifi_slash,
+            offlineStatusIcon,
             size: 16,
             color: CupertinoColors.secondaryLabel.resolveFrom(context),
           ),
@@ -27,7 +28,9 @@ class OfflineBanner extends StatelessWidget {
           Expanded(
             child: Text(
               'オフラインです。最後に取得した記事を表示しています',
-              style: textTheme.textStyle,
+              style: textTheme.textStyle.copyWith(
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              ),
             ),
           ),
         ],

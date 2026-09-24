@@ -11,7 +11,7 @@ Markdown（`D-xx.md`）が原稿、`html/D-xx.html` が成果物。運用は `do
 | [D-02](D-02.md) | collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信） | collector | F-07, F-11 / R-2, R-7 | D-01 | — | approved | 7 |
 | [D-03](D-03.md) | Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応） | collector | R-5, R-8, R-9 | D-01, D-02 | — | approved | 6 |
 | [D-04](D-04.md) | app 基盤設計（feature 構成・drift スキーマ・Riverpod / DI・HTTP・FCM 購読・100 件保持・通知許可） | app | F-02, F-05〜F-11 / R-6 | D-01 | S-00, S-01, S-02, S-03 | approved | 23 |
-| [D-05](D-05.md) | app 機能設計（UseCase 一覧・画面遷移・S-00〜S-03 の対応表・既読 / 保存 / フィルタ / ブラウザ選択） | app | F-01〜F-08, F-10, F-11 | D-01, D-04 | S-00, S-01, S-02, S-03 | draft | 15 |
+| [D-05](D-05.md) | app 機能設計（UseCase 一覧・画面遷移・S-00〜S-03 の対応表・既読 / 保存 / フィルタ / ブラウザ選択） | app | F-01〜F-08, F-10, F-11 | D-01, D-04 | S-00, S-01, S-02, S-03 | reviewed | 22 |
 
 ## 分割の根拠
 

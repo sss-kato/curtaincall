@@ -9,6 +9,7 @@ import 'package:curtaincall/core/network/feed_config.dart';
 import 'package:curtaincall/features/articles/application/clear_read_states_use_case.dart';
 import 'package:curtaincall/features/articles/application/sync_articles_use_case.dart';
 import 'package:curtaincall/features/articles/application/sync_coordinator.dart';
+import 'package:curtaincall/features/articles/application/sync_suppression_policy.dart';
 import 'package:curtaincall/features/articles/application/watch_home_articles_use_case.dart';
 import 'package:curtaincall/features/articles/domain/articles_feed.dart';
 import 'package:curtaincall/features/articles/infrastructure/http_articles_feed.dart';
@@ -30,12 +31,20 @@ SyncArticlesUseCase syncArticlesUseCase(Ref ref) => SyncArticlesUseCase(
   articles: ref.watch(articleSyncRepositoryProvider),
 );
 
+/// 対応外スキーマの抑止判定（D-04 §5.2.1。§8 #64）。`SyncCoordinator` に
+/// 関数型で渡す。
+@Riverpod(keepAlive: true)
+SyncSuppressionPolicy syncSuppressionPolicy(Ref ref) =>
+    SyncSuppressionPolicy(articles: ref.watch(articleSyncRepositoryProvider));
+
 /// Coordinator は具象 UseCase ではなく関数型を受け取る（テストでは
 /// スタブ関数を渡す。D-04 §5.3・§8 #33）。
 @Riverpod(keepAlive: true)
 SyncCoordinator syncCoordinator(Ref ref) {
   final coordinator = SyncCoordinator(
     execute: ref.watch(syncArticlesUseCaseProvider).execute,
+    // D-04 §5.3 手順 3。抑止判定を execute の前に評価する（§8 #64）。
+    shouldSuppress: ref.watch(syncSuppressionPolicyProvider).shouldSuppress,
     overallTimeout: feedTimeout + syncOverallTimeoutMargin,
   );
   // events の StreamController を閉じる（D-04 §4.7）。

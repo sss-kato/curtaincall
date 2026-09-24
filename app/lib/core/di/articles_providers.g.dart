@@ -107,6 +107,62 @@ final class SyncArticlesUseCaseProvider
 String _$syncArticlesUseCaseHash() =>
     r'dbc91f034560d62697c2ae1655e7a924a59de45e';
 
+/// 対応外スキーマの抑止判定（D-04 §5.2.1。§8 #64）。`SyncCoordinator` に
+/// 関数型で渡す。
+
+@ProviderFor(syncSuppressionPolicy)
+const syncSuppressionPolicyProvider = SyncSuppressionPolicyProvider._();
+
+/// 対応外スキーマの抑止判定（D-04 §5.2.1。§8 #64）。`SyncCoordinator` に
+/// 関数型で渡す。
+
+final class SyncSuppressionPolicyProvider
+    extends
+        $FunctionalProvider<
+          SyncSuppressionPolicy,
+          SyncSuppressionPolicy,
+          SyncSuppressionPolicy
+        >
+    with $Provider<SyncSuppressionPolicy> {
+  /// 対応外スキーマの抑止判定（D-04 §5.2.1。§8 #64）。`SyncCoordinator` に
+  /// 関数型で渡す。
+  const SyncSuppressionPolicyProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'syncSuppressionPolicyProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$syncSuppressionPolicyHash();
+
+  @$internal
+  @override
+  $ProviderElement<SyncSuppressionPolicy> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SyncSuppressionPolicy create(Ref ref) {
+    return syncSuppressionPolicy(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SyncSuppressionPolicy value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SyncSuppressionPolicy>(value),
+    );
+  }
+}
+
+String _$syncSuppressionPolicyHash() =>
+    r'c93309db72d748c5b0b330d45c70603a5c346621';
+
 /// Coordinator は具象 UseCase ではなく関数型を受け取る（テストでは
 /// スタブ関数を渡す。D-04 §5.3・§8 #33）。
 
@@ -155,7 +211,7 @@ final class SyncCoordinatorProvider
   }
 }
 
-String _$syncCoordinatorHash() => r'554918924a24acf2c217d7cfeb4fca0fc98ea5f0';
+String _$syncCoordinatorHash() => r'd0c226292ad6a02919de61fd83a7201ee328fbb8';
 
 /// D-05 §5.2。ホーム一覧の表示対象の絞り込みと並び。
 

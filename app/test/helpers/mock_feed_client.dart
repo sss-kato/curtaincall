@@ -1,6 +1,8 @@
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:curtaincall/core/network/feed_config.dart';
+import 'package:curtaincall/core/network/user_agent_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -86,3 +88,8 @@ class MockFeedClient {
     };
   });
 }
+
+/// [mock] の [MockFeedClient.client] を `UserAgentClient` で包んで返す
+/// （本番と同じ層で UA が付く。D-04 §4.3・§4.7）。
+http.Client feedHttpClient(MockFeedClient mock) =>
+    UserAgentClient(mock.client, userAgent: appUserAgent);

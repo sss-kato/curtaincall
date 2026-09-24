@@ -12,7 +12,7 @@ abstract final class SettingKeys {
   static const String feedGeneratedAt = 'feed_generated_at';
 
   /// 対応外だった配信の `schemaVersion`（テキスト）。この行がある間は
-  /// `launch` / `foreground` の取得を行わない（D-04 §5.2 手順 0・§8 #32）。
+  /// `launch` / `foreground` の取得を行わない（D-04 §5.2.1・§8 #64）。
   /// 書き手は feedEtag と同じ。
   static const String feedUnsupportedSchema = 'feed_unsupported_schema';
 

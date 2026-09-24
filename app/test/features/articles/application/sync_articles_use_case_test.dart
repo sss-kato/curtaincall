@@ -4,12 +4,10 @@ import 'dart:io';
 
 import 'package:curtaincall/core/database/app_database.dart';
 import 'package:curtaincall/core/network/feed_config.dart';
-import 'package:curtaincall/core/network/user_agent_client.dart';
 import 'package:curtaincall/features/articles/application/sync_articles_use_case.dart';
 import 'package:curtaincall/features/articles/application/sync_result.dart';
 import 'package:curtaincall/features/articles/domain/article.dart';
 import 'package:curtaincall/features/articles/domain/article_sync_repository.dart';
-import 'package:curtaincall/features/articles/domain/articles_file.dart';
 import 'package:curtaincall/features/articles/infrastructure/drift_article_repository.dart';
 import 'package:curtaincall/features/articles/infrastructure/http_articles_feed.dart';
 import 'package:curtaincall/features/saved/infrastructure/drift_saved_article_repository.dart';
@@ -19,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 
+import '../../../helpers/delegating_article_sync_repository.dart';
 import '../../../helpers/in_memory_database.dart';
 import '../../../helpers/mock_feed_client.dart';
 import '../../../helpers/test_articles.dart';
@@ -54,7 +53,6 @@ class _Env {
 
 _Env _buildEnv({
   List<MockFeedResponse> responses = const [],
-  Set<int>? supportedSchemaVersions,
   DateTime Function()? now,
   ArticleSyncRepository Function(AppDatabase db)? articles,
 }) {
@@ -62,13 +60,13 @@ _Env _buildEnv({
   final repository = DriftArticleRepository(db);
   final saved = DriftSavedArticleRepository(db);
   final mock = MockFeedClient(List.of(responses));
-  final client = UserAgentClient(mock.client, userAgent: appUserAgent);
-  final feed = HttpArticlesFeed(client, logger: Logger(level: Level.off));
+  final feed = HttpArticlesFeed(
+    feedHttpClient(mock),
+    logger: Logger(level: Level.off),
+  );
   final useCase = SyncArticlesUseCase(
     feed: feed,
     articles: articles?.call(db) ?? repository,
-    supportedSchemaVersions:
-        supportedSchemaVersions ?? supportedArticlesSchemaVersions,
     now: now ?? DateTime.now,
   );
   return _Env(
@@ -468,7 +466,9 @@ void main() {
     });
   });
 
-  group('対応外スキーマの抑止', () {
+  // 抑止するかどうかの判定は SyncSuppressionPolicy に移った（D-04 §5.2.1・
+  // §8 #64）ので、本 group は記録と解除だけを見る。
+  group('対応外スキーマの記録', () {
     test("schemaVersion: 2 を launch で受ける → feed_unsupported_schema = '2' が記録され、"
         ' 結果の suppressed == false（通信して失敗した）', () async {
       final env = _buildEnv(
@@ -488,60 +488,11 @@ void main() {
       expect(await env.repository.unsupportedSchemaVersion(), 2);
     });
 
-    test("記録 '2' がある状態の launch / foreground → HTTP リクエストが発生せず"
-        ' （MockClient の呼び出し回数が増えない）'
-        ' SyncFailed(unsupportedSchema, suppressed: true)', () async {
-      for (final trigger in [SyncTrigger.launch, SyncTrigger.foreground]) {
-        final env = _buildEnv();
-        await env.repository.setUnsupportedSchemaVersion(2);
-
-        final result = await env.useCase.execute(
-          trigger,
-          isCancelled: _notCancelled,
-        );
-
-        expect(env.mock.requests, isEmpty, reason: trigger.name);
-        expect(
-          result,
-          const SyncFailed(
-            SyncFailureReason.unsupportedSchema,
-            suppressed: true,
-          ),
-          reason: trigger.name,
-        );
-      }
-    });
-
-    test(
-      '同じ状態の pullToRefresh / retry / notificationTap → リクエストが発生する',
-      () async {
-        for (final trigger in [
-          SyncTrigger.pullToRefresh,
-          SyncTrigger.retry,
-          SyncTrigger.notificationTap,
-        ]) {
-          final env = _buildEnv(
-            responses: [
-              MockFeedHttpResponse(
-                body: jsonEncode(articlesFileJson(schemaVersion: 2)),
-              ),
-            ],
-          );
-          await env.repository.setUnsupportedSchemaVersion(2);
-
-          await env.useCase.execute(trigger, isCancelled: _notCancelled);
-
-          expect(env.mock.requests, hasLength(1), reason: trigger.name);
-        }
-      },
-    );
-
     test("記録 '2' の後に schemaVersion: 1 を 200 で受ける → 反映され "
-        'feed_unsupported_schema の行が消え、次の launch は再びリクエストする', () async {
+        'feed_unsupported_schema の行が消える', () async {
       final env = _buildEnv(
         responses: [
           feedResponse(articles: [articleJson(id: testArticleId(1))]),
-          const MockFeedHttpResponse(statusCode: 304),
         ],
       );
       await env.repository.setUnsupportedSchemaVersion(2);
@@ -550,37 +501,32 @@ void main() {
         SyncTrigger.pullToRefresh,
         isCancelled: _notCancelled,
       );
-      expect(await env.repository.unsupportedSchemaVersion(), isNull);
 
-      await env.useCase.execute(SyncTrigger.launch, isCancelled: _notCancelled);
-      expect(env.mock.requests, hasLength(2));
+      expect(await env.repository.unsupportedSchemaVersion(), isNull);
     });
 
-    test("記録 '2' がある状態で 304 → 記録が消え、次の launch はリクエストする", () async {
-      final env = _buildEnv(
-        responses: [
-          const MockFeedHttpResponse(statusCode: 304),
-          const MockFeedHttpResponse(statusCode: 304),
-        ],
-      );
-      await env.repository.setUnsupportedSchemaVersion(2);
-
-      await env.useCase.execute(
-        SyncTrigger.pullToRefresh,
-        isCancelled: _notCancelled,
-      );
-      expect(await env.repository.unsupportedSchemaVersion(), isNull);
-
-      await env.useCase.execute(SyncTrigger.launch, isCancelled: _notCancelled);
-      expect(env.mock.requests, hasLength(2));
-    });
-
-    test("記録 '2' があり supportedArticlesSchemaVersions を {1, 2} に差し替えた "
-        'UseCase（テスト用の引数で注入。既定は定数）の launch → リクエストを発行する'
-        ' （app 更新後に抑止が残らない）', () async {
+    test("記録 '2' がある状態で 304 → 記録が消える", () async {
       final env = _buildEnv(
         responses: [const MockFeedHttpResponse(statusCode: 304)],
-        supportedSchemaVersions: {1, 2},
+      );
+      await env.repository.setUnsupportedSchemaVersion(2);
+
+      await env.useCase.execute(
+        SyncTrigger.pullToRefresh,
+        isCancelled: _notCancelled,
+      );
+
+      expect(await env.repository.unsupportedSchemaVersion(), isNull);
+    });
+
+    test("記録 '2' がある状態で launch を渡す → UseCase 自身は抑止しない "
+        '（HTTP リクエストが発生する。抑止は Coordinator の責務）', () async {
+      final env = _buildEnv(
+        responses: [
+          MockFeedHttpResponse(
+            body: jsonEncode(articlesFileJson(schemaVersion: 2)),
+          ),
+        ],
       );
       await env.repository.setUnsupportedSchemaVersion(2);
 
@@ -1695,11 +1641,11 @@ void main() {
 /// `insertAll` が 2 件目で UNIQUE 制約違反を投げるようにする
 /// （D-04 §7「保存の失敗」。トランザクション巻き戻りの検証には実物の
 /// `applyFeed` を通す必要がある）。
-class _ConflictInjectingApplyFeedRepository implements ArticleSyncRepository {
-  _ConflictInjectingApplyFeedRepository(this._db, this._inner);
+final class _ConflictInjectingApplyFeedRepository
+    extends DelegatingArticleSyncRepository {
+  _ConflictInjectingApplyFeedRepository(this._db, super.inner);
 
   final AppDatabase _db;
-  final ArticleSyncRepository _inner;
 
   @override
   Future<FeedApplyResult> applyFeed(FeedApplyPlan plan) async {
@@ -1718,22 +1664,6 @@ class _ConflictInjectingApplyFeedRepository implements ArticleSyncRepository {
             contentHash: 'conflict',
           ),
         );
-    return _inner.applyFeed(plan);
+    return super.applyFeed(plan);
   }
-
-  @override
-  Future<List<Article>> findAll() => _inner.findAll();
-
-  @override
-  Future<String?> feedEtag() => _inner.feedEtag();
-
-  @override
-  Future<DateTime?> feedGeneratedAt() => _inner.feedGeneratedAt();
-
-  @override
-  Future<int?> unsupportedSchemaVersion() => _inner.unsupportedSchemaVersion();
-
-  @override
-  Future<void> setUnsupportedSchemaVersion(int? version) =>
-      _inner.setUnsupportedSchemaVersion(version);
 }

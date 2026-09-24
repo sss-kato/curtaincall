@@ -5,7 +5,7 @@ import 'package:meta/meta.dart';
 const int articlesSchemaVersion = 1;
 
 /// 現在の app が反映できる schemaVersion の集合。app 更新で版を増やすときは
-/// ここに足す（D-04 §5.2 手順 0 の抑止判定に使う。D-04 §8 #32）。
+/// ここに足す（D-04 §5.2.1 の抑止判定に使う。D-04 §8 #64）。
 const Set<int> supportedArticlesSchemaVersions = {articlesSchemaVersion};
 
 /// 団体ごとの保持上限（要件 §5）。

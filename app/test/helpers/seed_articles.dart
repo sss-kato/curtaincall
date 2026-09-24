@@ -99,9 +99,13 @@ Future<void> seedArticles(
 /// 本体が「1 回だけ」ガードより先に呼ぶ（検証失敗はガードの回数に
 /// 数えない）。
 ///
-/// CLAUDE.md のテスト方針によりこのヘルパ自体のユニットテストは持たない。
-/// 検証条件（throw の契約）を変えるときは、各 throw 経路を手で 1 度ずつ
-/// 通して確認すること。
+/// 検証条件（throw の契約）は `seed_articles_test.dart` の
+/// `group('引数の検証')` が担保する（CLAUDE.md「テスト方針」の例外・
+/// D-05 §7・§8 #36）。条件を変えるときは同テストも同じ変更で更新すること。
+/// 同テストは throw の**メッセージ文面の一部**も固定している（同一条件が
+/// 複数の入力パターンから発火しうる箇所を区別するため）。文面だけを
+/// 変えるときも、テスト側の `contains`／`messageMatcher` を同じ変更で
+/// 更新すればよい。
 void _validateSeedArguments({
   required List<Article> inserts,
   required List<Article> outOfFeed,

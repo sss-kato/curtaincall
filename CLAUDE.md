@@ -189,7 +189,7 @@ test/
 すべての変更は以下を通過してからレビュー依頼する。
 
 ```
-app/        flutter analyze && dart analyze --fatal-infos && flutter test
+app/        flutter analyze && dart analyze --fatal-infos && flutter test && dart format --output=none --set-exit-if-changed lib test
 collector/  npm run lint && npx tsc --noEmit && npx vitest run
 ```
 

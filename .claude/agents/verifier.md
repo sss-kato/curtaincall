@@ -1,6 +1,6 @@
 ---
 name: verifier
-description: 品質ゲート（flutter analyze / flutter test / eslint / tsc / vitest）を実行して結果を固定フォーマットで報告するエージェント。判断はせず、コマンドの実行と結果の整形のみを行う。dev-loop の最終ステップで呼ばれる。
+description: 品質ゲート（flutter analyze / dart analyze / flutter test / dart format / eslint / tsc / vitest）を実行して結果を固定フォーマットで報告するエージェント。判断はせず、コマンドの実行と結果の整形のみを行う。dev-loop の最終ステップで呼ばれる。
 tools: Bash, Read, Glob
 model: haiku
 ---
@@ -16,7 +16,9 @@ model: haiku
 
 ```
 cd app && flutter analyze
+cd app && dart analyze --fatal-infos
 cd app && flutter test
+cd app && dart format --output=none --set-exit-if-changed lib test
 ```
 
 ### collector

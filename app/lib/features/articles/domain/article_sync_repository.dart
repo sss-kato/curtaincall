@@ -79,7 +79,9 @@ abstract interface class ArticleSyncRepository {
   Future<DateTime?> feedGeneratedAt();
 
   /// `settings.feed_unsupported_schema`。行が無ければ null
-  /// （D-04 §5.2 手順 0、D-04 §8 #32）。
+  /// （D-04 §5.2.1、D-04 §8 #64）。`SyncSuppressionPolicy` が抑止判定に
+  /// 使う（記録は `SyncArticlesUseCase` の手順 2、解除は手順 3・8-6 が
+  /// `setUnsupportedSchemaVersion` で行う）。
   Future<int?> unsupportedSchemaVersion();
 
   /// `settings.feed_unsupported_schema` を upsert（null なら行を削除）。

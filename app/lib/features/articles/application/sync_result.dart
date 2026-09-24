@@ -136,9 +136,10 @@ final class SyncFailed extends SyncResult {
   /// 失敗理由。
   final SyncFailureReason reason;
 
-  /// true = 通信せずに失敗を返した（D-04 §5.2 手順 0 の対応外スキーマの
-  /// 抑止）。起動・復帰のたびに E-25 を出すかどうかは D-05 がこの値で
-  /// 判断する（D-04 §6、§8 #44）。
+  /// true = 通信せずに失敗を返した（D-04 §5.2.1 の対応外スキーマの抑止。
+  /// 判定するのは `SyncSuppressionPolicy`、返すのは `SyncCoordinator`）。
+  /// 起動・復帰のたびに E-25 を出すかどうかは D-05 がこの値で判断する
+  /// （D-04 §6、§8 #44・#64）。
   final bool suppressed;
 
   @override

@@ -84,7 +84,7 @@ final class FeedErrorException implements Exception {
   final Object? cause;
 
   /// [reason] == [FeedFailureReason.unsupportedSchema] のとき、配信の
-  /// schemaVersion（D-04 §5.2 手順 0 の記録用）。
+  /// schemaVersion（D-04 §5.2 手順 2 の記録用）。
   final int? schemaVersion;
 
   @override

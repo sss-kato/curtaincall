@@ -12,18 +12,20 @@ import 'package:curtaincall/features/articles/domain/articles_file.dart';
 class SyncArticlesUseCase {
   /// [_feed] から取得し [_articles] に反映する [SyncArticlesUseCase] を作る。
   ///
-  /// [_supportedSchemaVersions] と [_now] はテスト専用の差し替え口（D-04
-  /// §5.2「依存」）。DI では既定のまま使う。
+  /// [_now] はテスト専用の差し替え口（D-04 §5.2「依存」。端末時計を固定する
+  /// ためだけに使う）。DI では既定のまま使う。
+  ///
+  /// 対応外 schemaVersion の抑止判定は本クラスの責務ではない。
+  /// `SyncSuppressionPolicy` が `SyncCoordinator` から [execute] を呼ぶ前に
+  /// 行う（D-04 §5.2 手順 0（欠番）・§5.2.1・§8 #64）。
   SyncArticlesUseCase({
     required this._feed,
     required this._articles,
-    this._supportedSchemaVersions = supportedArticlesSchemaVersions,
     this._now = DateTime.now,
   });
 
   final ArticlesFeed _feed;
   final ArticleSyncRepository _articles;
-  final Set<int> _supportedSchemaVersions;
   final DateTime Function() _now;
 
   /// 配信を取得して端末 DB に反映する。
@@ -39,7 +41,7 @@ class SyncArticlesUseCase {
     try {
       return await _execute(trigger, isCancelled);
     } on Exception {
-      // 手順 0・1・2・3・4・6 の DB 読み書き、手順 8 の applyFeed で
+      // 手順 1・2・3・4・6 の DB 読み書き、手順 8 の applyFeed で
       // drift が例外を投げた場合（D-04 §5.2「失敗時」）。
       return const SyncFailed(SyncFailureReason.storage);
     }
@@ -49,17 +51,6 @@ class SyncArticlesUseCase {
     SyncTrigger trigger,
     bool Function() isCancelled,
   ) async {
-    // 0. 対応外スキーマの抑止（D-04 §8 #32）。
-    if (trigger == SyncTrigger.launch || trigger == SyncTrigger.foreground) {
-      final recorded = await _articles.unsupportedSchemaVersion();
-      if (recorded != null && !_supportedSchemaVersions.contains(recorded)) {
-        return const SyncFailed(
-          SyncFailureReason.unsupportedSchema,
-          suppressed: true,
-        );
-      }
-    }
-
     // 1. 前回の ETag
     final etag = await _articles.feedEtag();
 

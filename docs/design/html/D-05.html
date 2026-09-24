@@ -239,13 +239,13 @@ a{color:var(--accent)}
 <tbody><tr>
 <td>S-01/A-01</td>
 <td>操作</td>
-<td><code>HomeTabBar.onTap(index)</code> → <code>homeTabControllerProvider.notifier.select(index)</code> → <code>PageController</code> を非隣接ならワープ（§5.1）で <code>animateToPage</code></td>
+<td><code>HomeTabBar.onTap(index)</code> → <code>homeTabControllerProvider.notifier.select(index, source: TabSelectSource.user)</code> → <code>PageController</code> を非隣接ならワープ（§5.1）で <code>animateToPage</code>。<strong><code>PageController</code> に client が無いとき（全面表示中・初回 build）は <code>select</code> だけを行う</strong>（§5.1「タブのタップ（A-01）」）。<strong>アニメーション中の再タップは、走っている系列をその目的ページで即座に終わらせてから新しい系列を始める</strong>（§5.1・§8 #43）</td>
 <td>§5.1</td>
 </tr>
 <tr>
 <td>S-01/A-02</td>
 <td>操作</td>
-<td><code>PageView.onPageChanged</code> → <code>select(index)</code>。端は <code>BouncingScrollPhysics</code> のバウンス</td>
+<td><code>PageView.onPageChanged</code> → <code>select(index, source: TabSelectSource.user)</code>。端は <code>BouncingScrollPhysics</code> のバウンス</td>
 <td>§5.1</td>
 </tr>
 <tr>
@@ -323,13 +323,13 @@ a{color:var(--accent)}
 <tr>
 <td>S-01/ST-04</td>
 <td>状態</td>
-<td><code>FullView.empty</code> かつ <code>HomeArticles.totalInTab == 0</code> → <code>EmptyView</code>（S-01 §5.1 ST-04 の文言）</td>
+<td><code>HomePage</code> の <code>showEmpty</code>（自ページの一覧が決着していて 0 件。§8 #41）かつ <code>HomeArticles.totalInTab == 0</code> → <code>EmptyView</code>（S-01 §5.1 ST-04 の文言）</td>
 <td>§5.1 / §5.2</td>
 </tr>
 <tr>
 <td>S-01/ST-05</td>
 <td>状態</td>
-<td><code>FullView.empty</code> かつ <code>totalInTab &gt; 0</code>（未読フィルタ ON で未読 0 件）→ <code>EmptyView</code>（S-01 §5.1 ST-05 の文言）</td>
+<td>同じ <code>showEmpty</code> かつ <code>totalInTab &gt; 0</code>（未読フィルタ ON で未読 0 件）→ <code>EmptyView</code>（S-01 §5.1 ST-05 の文言）</td>
 <td>§5.1 / §5.2</td>
 </tr>
 <tr>
@@ -359,7 +359,7 @@ a{color:var(--accent)}
 <tr>
 <td>S-01/ST-10</td>
 <td>状態</td>
-<td><code>homeTabControllerProvider</code>（<code>keepAlive</code> の <code>Notifier&lt;int&gt;</code>。初期 0。永続化しない）</td>
+<td><code>homeTabControllerProvider</code>（<code>keepAlive</code> の <code>Notifier&lt;HomeTabSelection&gt;</code>。<code>HomeTabSelection</code> は選択中の index と<strong>その選択の出所</strong>（<code>TabSelectSource.user</code> / <code>notification</code>）の 2 値。初期 <code>(index: 0, source: user)</code>。永続化しない。§4.6・§8 #43）</td>
 <td>§5.1</td>
 </tr>
 <tr>
@@ -371,7 +371,7 @@ a{color:var(--accent)}
 <tr>
 <td>S-01/ST-13</td>
 <td>状態</td>
-<td><code>PageView</code> のドラッグ。下線は <code>PageController.page</code> の小数部で補間する（<code>HomeTabBar</code> が <code>_pageController</code> を <code>ListenableBuilder</code> で購読して再 build する）。<strong><code>PageController</code> に client が無いとき</strong>（全面表示中で <code>PageView</code> がツリーに無い・初回 build）は <code>page</code> を読まず選択中タブの index を使う（§5.1「下線位置の入力」・§6）</td>
+<td><code>PageView</code> のドラッグ。下線は <code>PageController.page</code> の小数部で補間する（<code>HomeTabBar</code> が <code>_pageController</code> を <code>ListenableBuilder</code> で購読して再 build する）。<strong><code>PageController</code> に client が無いとき</strong>（全面表示中で <code>PageView</code> がツリーに無い・初回 build）は <code>page</code> を読まず選択中タブの index（<code>homeTabControllerProvider.select((s) =&gt; s.index)</code>）を使う（§5.1「下線位置の入力」・§6）</td>
 <td>§5.1</td>
 </tr>
 <tr>
@@ -383,7 +383,7 @@ a{color:var(--accent)}
 <tr>
 <td>S-01/ST-15</td>
 <td>状態</td>
-<td><code>NotificationTapHandler</code>：下部タブ <code>RootTab.home.index</code> → アプリ内ブラウザを閉じる → 団体タブ選択 → 先頭へ（表示中のページのみ）→ <code>sync(SyncTrigger.notificationTap)</code>。未起動からの起動でも最初のフレームから一致する（<code>PageController.initialPage</code> を <code>homeTabControllerProvider</code> から取る。§5.1）</td>
+<td><code>NotificationTapHandler</code>：下部タブ <code>RootTab.home.index</code> → アプリ内ブラウザを閉じる → 団体タブ選択 → 先頭へ（表示中のページのみ）→ <code>sync(SyncTrigger.notificationTap)</code>。未起動からの起動でも最初のフレームから一致する（<code>PageController.initialPage</code> を <code>homeTabControllerProvider</code> の index から取る。全面表示中に選ばれたときは <code>PageView</code> が現れた最初のフレームで合わせる。§5.1）</td>
 <td>§5.7</td>
 </tr>
 <tr>
@@ -466,7 +466,7 @@ a{color:var(--accent)}
 <tr>
 <td>S-02/A-05</td>
 <td>操作</td>
-<td><code>FullErrorView.onRetry</code> → <strong><code>ref.invalidate(savedArticlesProvider)</code> だけ</strong>（<code>sync()</code> も <code>countRetryRequestedProvider.retry()</code> も呼ばない。本画面は取得を伴わず件数も読まない。S-02 §8 #1・D-04 §5.4.2）。<code>SavedListController</code> はやり直しの間も <code>AsyncError</code> のままで、新しい <code>AsyncData</code> が届いたときだけ一覧に戻る</td>
+<td><code>FullErrorView.onRetry</code> → <strong><code>savedListControllerProvider.notifier.allowReload()</code>（張り直しの回数枠を解くだけ。§5.5）と <code>ref.invalidate(savedArticlesProvider)</code> の 2 つだけ</strong>（<code>sync()</code> も <code>countRetryRequestedProvider.retry()</code> も呼ばない。本画面は取得を伴わず件数も読まない。S-02 §8 #1・D-04 §5.4.2）。<code>SavedListController</code> はやり直しの間も <code>AsyncError</code> のままで、新しい <code>AsyncData</code> が届いたときだけ一覧に戻る</td>
 <td>§5.5</td>
 </tr>
 <tr>
@@ -705,7 +705,7 @@ a{color:var(--accent)}
 <tr>
 <td>13</td>
 <td><strong><code>feedStatusProvider</code> は引数なし・<code>resolveListStatus</code> はホーム専用</strong>（<code>syncsOnLaunch</code> は廃止）。<strong>保存画面は <code>feedStatusProvider</code> も <code>resolveListStatus</code> も使わず</strong>、<code>ListStatus</code>・<code>FullView</code> を <code>core/ui/status/list_status.dart</code> から import し <code>hasVisible</code> から <code>content</code> / <code>empty</code> を直接組み立てる。<strong>値を 1 度も得ずにエラーで終わったときは <code>FullView.unavailable</code></strong>（S-02/ST-06）にし、<code>FullErrorView(kind: unavailable, onRetry:)</code> を E-02 の領域全体に出す。<strong><code>savedArticlesProvider</code> は <code>keepAlive: true</code> にする</strong>（自動破棄だと「起動してから一度も」の単位が画面の再訪単位にずれる）。<strong>A-05 は <code>savedArticlesProvider</code> の再購読だけ</strong>で、やり直し中も <code>unavailable</code> のまま（<code>resolveArticleCount</code> と同じ写し方をしない。<code>retryRequested</code> 相当のフラグも持たない）。<code>AsyncLoading</code> → <code>SizedBox.shrink()</code> は現行どおり。保存は <code>sequence</code> を listen しない（<strong>取得の失敗</strong>の E-25 を出す画面はホームだけ）。<strong>記事を開けなかったときの E-25 は S-02 にも出す</strong>（契機は A-01 の結果で <code>sequence</code> とは無関係）。<strong>§7 に保存画面の状態判定テストを置かない</strong></td>
-<td>§5.1（ホーム。引数なし）・§5.5（保存。<code>_statusFor</code> で <code>content</code> / <code>empty</code> を直接組み立て、<code>AsyncError</code> は <code>FullErrorView(kind: unavailable)</code> を直接置く。A-05 の再購読を持つ）・§4.6（<code>savedArticlesProvider</code> は <code>@Riverpod(keepAlive: true)</code>。理由は §5.5）・§2.1 の S-01/ST-01 行と S-02/ST-01・ST-02・ST-06・ST-07・A-05 行・§3.2 の <code>saved_screen.dart</code> の import・§5.3（E-25 の呼び出し元）・§8 #12・#35。§7 に保存画面の状態判定テストは無い</td>
+<td>§5.1（ホーム。引数なし）・§5.5（保存。<code>_statusFor</code> で <code>content</code> / <code>empty</code> を直接組み立て、<code>AsyncError</code> は <code>FullErrorView(kind: unavailable)</code> を直接置く。A-05 の再購読を持つ。<strong>再購読は <code>allowReload()</code> + <code>ref.invalidate(savedArticlesProvider)</code> の 2 行で、<code>sync()</code> も <code>retry()</code> も呼ばない</strong>。§8 #40）・§4.6（<code>savedArticlesProvider</code> は <code>@Riverpod(keepAlive: true)</code>。理由は §5.5）・§2.1 の S-01/ST-01 行と S-02/ST-01・ST-02・ST-06・ST-07・A-05 行・§3.2 の <code>saved_screen.dart</code> の import・§5.3（E-25 の呼び出し元）・§8 #12・#35。§7 に保存画面の状態判定テストは無い</td>
 <td>§4.6 / §5.1 / §5.3 / §5.5 / §2.1 / §3.2</td>
 </tr>
 <tr>
@@ -963,12 +963,14 @@ a{color:var(--accent)}
                                             同じ feature の list_status.dart（D-04 所管）から feedStatusProvider・
                                             countRetryRequestedProvider（A-08 の _retry()）を使う（§5.1・§5.6）。
                                             状態判定は home_status.dart の 3 関数だけを呼ぶ（§8 #39）
-          home_status.dart                  homeListStateOf・homePageListStateOf・resolveHomeStatus（純粋関数。
+          home_status.dart                  homeListStateOf・homePageListStateOf・resolveHomeStatus と
+                                            ScreenListState・PageListState（純粋関数と値型。§8 #42）。
                                             HomeScreen・HomePage・§5.6 の listener が共有する唯一の判定規則。
                                             resolveListStatus（D-04 所管）を呼ぶのは本ファイルだけ。§5.1・§7・§8 #39）
           home_tab_bar.dart                 S-01/E-03〜E-09（下線・横スクロール）
           home_page.dart                    S-01/E-11 の 1 ページ（AnchoredListView。leadingSlivers = 引っ張り更新、headerSliver = RefreshingHeader、emptyView = 空表示）。ST-20 は TransientNotice.show（§5.3）
-          home_providers.dart               homeTabControllerProvider・homeScrollToTopProvider・homeArticlesProvider（§4.6）
+          home_providers.dart               homeTabControllerProvider（HomeTabSelection・TabSelectSource。§8 #43）・
+                                            homeScrollToTopProvider・homeArticlesProvider（§4.6）
       saved/
         domain/
           saved_article.dart                SavedArticle・compareSavedArticles（§4.1）
@@ -1453,16 +1455,36 @@ final class LoggingOpenArticleAction {
 }</code></pre>
 <p>presentation 側の Provider：</p>
 <pre><code class="language-dart">// lib/features/articles/presentation/home_providers.dart
-/// 選択中の団体タブ（S-01/ST-10）。0 = すべて、n = companiesProvider[n-1]。起動時 0（S-01 §8 #3）。永続化しない
+/// 上部タブの選択の出所。listener が「通知由来か」を PageController.page から推定せずに判別するために持つ（§8 #43）
+enum TabSelectSource { user, notification }
+
+/// 選択中の団体タブ（S-01/ST-10）とその選択の出所。index 0 = すべて、n = companiesProvider[n-1]
+final class HomeTabSelection {
+  const HomeTabSelection({required this.index, required this.source});
+  final int index;
+  final TabSelectSource source;
+
+  @override
+  bool operator ==(Object other) =&gt;
+      other is HomeTabSelection &amp;&amp; other.index == index &amp;&amp; other.source == source;
+  @override
+  int get hashCode =&gt; Object.hash(index, source);
+}
+
+/// 選択中の団体タブ（S-01/ST-10）。起動時 (index: 0, source: user)（S-01 §8 #3）。永続化しない
 @Riverpod(keepAlive: true)
 class HomeTabController extends _$HomeTabController {
   @override
-  int build() =&gt; 0;
-  void select(int index) =&gt; state = index;
-  /// companyId が companiesProvider に無い・null なら 0（S-01 §8 #15）
+  HomeTabSelection build() =&gt; const HomeTabSelection(index: 0, source: TabSelectSource.user);
+
+  /// A-01（タップ）・A-02（スワイプ）・アニメーション完了後の反映は source: user
+  void select(int index, {required TabSelectSource source}) =&gt;
+      state = HomeTabSelection(index: index, source: source);
+
+  /// 通知タップ（§5.7 手順 3-4）。companyId が companiesProvider に無い・null なら 0（S-01 §8 #15）
   void selectCompany(String? companyId) {
     final i = ref.read(companiesProvider).indexWhere((c) =&gt; c.id == companyId);
-    state = i &lt; 0 ? 0 : i + 1;
+    select(i &lt; 0 ? 0 : i + 1, source: TabSelectSource.notification);
   }
 }
 
@@ -1557,24 +1579,54 @@ dependencies:
 <h3 id="sec-5-1">5.1 ホーム画面（S-01）の構成と状態<a class="anchor" href="#sec-5-1">#</a></h3>
 <p>状態判定の規則は <strong><code>lib/features/articles/presentation/home_status.dart</code> の 3 つの純粋関数に 1 箇所だけ置く</strong>（§8 #39。<code>HomeScreen</code> と <code>HomePage</code> が同じ規則を別々の書き方で持つと、片方だけを直す事故が型検査でもテストでも落ちない）。<code>HomeScreen</code>・<code>HomePage</code>・§5.6 の listener はこの 3 つを呼ぶだけで、<code>switch</code> も <code>resolveListStatus</code> の直接呼び出しも持たない。</p>
 <pre><code class="language-dart">// lib/features/articles/presentation/home_status.dart（純粋関数。§7 で直接テストする）
-typedef HomeListState = ({bool settled, bool hasVisible});
 
-/// 画面全体（HomeScreen）の判定に与える状態。
-/// hasVisible は **未読フィルタで絞る前**の件数（totalInTab &gt; 0）から取る（§8 #38）。
+/// 画面全体（HomeScreen・§5.6 の listener）の判定に与える状態。
+/// ページ用（PageListState）と取り違えても型検査で落ちるよう、別の型にする（§8 #42）。
+/// select() に渡すため値の等価性（==・hashCode）を必ず実装する（実装しないと 2 値が同じでも毎回再 build する）。
+final class ScreenListState {
+  const ScreenListState({required this.settled, required this.hasVisible});
+  final bool settled;
+  final bool hasVisible;
+
+  @override
+  bool operator ==(Object other) =&gt;
+      other is ScreenListState &amp;&amp; other.settled == settled &amp;&amp; other.hasVisible == hasVisible;
+  @override
+  int get hashCode =&gt; Object.hash(settled, hasVisible);
+}
+
+/// ページ（HomePage）の空表示・読み込み表示の判定に与える状態。ListStatus には渡さない（§8 #41・#42）。
+final class PageListState {
+  const PageListState({required this.settled, required this.hasVisible});
+  final bool settled;
+  final bool hasVisible;
+
+  @override
+  bool operator ==(Object other) =&gt;
+      other is PageListState &amp;&amp; other.settled == settled &amp;&amp; other.hasVisible == hasVisible;
+  @override
+  int get hashCode =&gt; Object.hash(settled, hasVisible);
+}
+
+/// 画面全体の状態。hasVisible は **未読フィルタで絞る前**の件数（totalInTab &gt; 0）から取る（§8 #38）。
 /// items から取ると、件数 Stream が 0 のまま固着した端末で未読フィルタ ON かつ全件既読のときに
 /// 「記事を 100 件持っているのに全面 E-24」になる（§6）。
-HomeListState homeListStateOf(AsyncValue&lt;HomeArticles&gt; v) =&gt;
-    (settled: v.hasValue || v.hasError, hasVisible: (v.valueOrNull?.totalInTab ?? 0) &gt; 0);
+ScreenListState homeListStateOf(AsyncValue&lt;HomeArticles&gt; v) =&gt; ScreenListState(
+      settled: v.hasValue || v.hasError,
+      hasVisible: (v.valueOrNull?.totalInTab ?? 0) &gt; 0,
+    );
 
-/// ページ（HomePage）の判定に与える状態。
-/// hasVisible は **未読フィルタで絞った後**の表示対象（items）から取る。
-/// ここを totalInTab にすると、未読フィルタ ON で全件既読のページが content になり
-/// S-01/ST-05（「未読の記事はありません」）が一度も出なくなる（§8 #38）。
-HomeListState homePageListStateOf(AsyncValue&lt;HomeArticles&gt; v) =&gt;
-    (settled: v.hasValue || v.hasError, hasVisible: v.valueOrNull?.items.isNotEmpty ?? false);
+/// ページの状態。hasVisible は **未読フィルタで絞った後**の表示対象（items）から取る。
+/// ここを totalInTab にすると、未読フィルタ ON で全件既読のページの items が空でも hasVisible が
+/// true になり、S-01/ST-05（「未読の記事はありません」）が一度も出なくなる（§8 #38）。
+PageListState homePageListStateOf(AsyncValue&lt;HomeArticles&gt; v) =&gt; PageListState(
+      settled: v.hasValue || v.hasError,
+      hasVisible: v.valueOrNull?.items.isNotEmpty ?? false,
+    );
 
-/// 2 つの入力から ListStatus を作る唯一の規則。HomeScreen・HomePage・§5.6 の listener が共有する。
-ListStatus resolveHomeStatus(FeedStatus feed, HomeListState s) =&gt; s.settled
+/// ListStatus を作る唯一の規則。HomeScreen・HomePage（refreshing 用）・§5.6 の listener が共有する。
+/// 引数は ScreenListState だけを受ける（PageListState を渡すとコンパイルエラー。§8 #42）。
+ListStatus resolveHomeStatus(FeedStatus feed, ScreenListState s) =&gt; s.settled
     ? resolveListStatus(feed, hasVisible: s.hasVisible)                 // D-04 §5.4.3 の判定表
     : const ListStatus(full: FullView.loading, refreshing: false, offlineBanner: false, errorNotice: false);  // 表示対象が未確定（§8 #11。D-04 §5.4.1「例外は 1 つだけ」）</code></pre>
 <p><code>HomeScreen</code>（<code>ConsumerStatefulWidget</code>）は <code>companyId</code> を持たない（ページ横断の要素だけを描く）ため、全面表示とオフライン帯の判定には<strong>ページに依らない状態</strong>を使う。<code>build</code> の先頭で</p>
@@ -1584,8 +1636,8 @@ final screenStatus = resolveHomeStatus(
   ref.watch(feedStatusProvider),                                          // D-04 §5.4.1・§5.4.2（引数を取らない。D-04 §8 #51）
   ref.watch(homeArticlesProvider(companyId: null).select(homeListStateOf)),
 );</code></pre>
-<p>を計算し、<code>screenStatus.full</code>（<code>loading</code> / <code>error</code> / <code>offline</code> / <code>unavailable</code> なら全面表示。<code>content</code> / <code>empty</code> なら <code>PageView</code>）と <code>screenStatus.offlineBanner</code>（S-00/E-23）を使う。<code>empty</code>（S-01/ST-04・ST-05）と <code>refreshing</code>（ST-03）は各 <code>HomePage</code> が自ページの <code>homeArticlesProvider</code> で判定する（下記「ページの状態判定」）。</p>
-<p><strong><code>homeListStateOf</code> と <code>homePageListStateOf</code> の違いは <code>hasVisible</code> の由来（絞り込み前／後）だけ</strong>で、<code>settled</code> の決め方も判定規則（<code>resolveHomeStatus</code>）も共通にする。判定表のどの行に落ちるかを変えるのは入力だけで、規則そのものは 1 つしか無い（§8 #38・#39）。</p>
+<p>を計算し、<code>screenStatus.full</code>（<code>loading</code> / <code>error</code> / <code>offline</code> / <code>unavailable</code> なら全面表示。<code>content</code> / <code>empty</code> なら <code>PageView</code>）と <code>screenStatus.offlineBanner</code>（S-00/E-23）を使う。空表示（S-01/ST-04・ST-05）は各 <code>HomePage</code> が自ページの <code>homeArticlesProvider</code> で判定し、<code>refreshing</code>（ST-03）は全ページ共通の表示なので各 <code>HomePage</code> が画面全体と同じ入力（「すべて」ページ）で判定する（下記「ページの状態判定」）。</p>
+<p><strong><code>homeListStateOf</code> と <code>homePageListStateOf</code> の違いは <code>hasVisible</code> の由来（絞り込み前／後）だけ</strong>で、<code>settled</code> の決め方も判定規則（<code>resolveHomeStatus</code>）も共通にする。判定表のどの行に落ちるかを変えるのは入力だけで、規則そのものは 1 つしか無い（§8 #38・#39）。戻り値の型だけを <code>ScreenListState</code> / <code>PageListState</code> に分け、<strong>画面全体の判定に誤ってページの値を渡す取り違えを型検査で落とす</strong>（§8 #42。関数名は 3 つのまま変えない）。</p>
 <p><strong><code>hasVisible</code> に固定値（<code>true</code>）を渡さない</strong>（§8 #38）。D-04 §5.4.3 の判定表は 10 行あり、<strong>3 行目（<code>count == empty</code> × <code>hasVisible == true</code> → <code>content</code>）が <code>count == empty</code> のすべての <code>inProgress</code> / <code>lastResult</code> より先に一致する</strong>ため、<code>true</code> を固定すると記事 0 件の端末で取得が失敗しても <code>content</code> になり、S-01/ST-07・ST-08（全面の S-00/E-24）と ST-10・ST-12 が一度も出なくなる。「すべて」ページは <code>in_feed = true</code> の記事を表す唯一のページ（団体タブの絞り込みが無い）で、その <code>totalInTab</code> は<strong>未読フィルタで絞る前の <code>in_feed = true</code> の全件数</strong>なので、<strong><code>count == empty</code>（件数 0）と端末に記事がある状態が食い違う過渡状態</strong>（D-04 §5.4.3 の 2 番目の注記。初回の 100 件反映で件数 Stream が <code>SyncStatus</code> より遅れる窓）をそのまま表す。<code>count == present</code> のときは <code>hasVisible</code> の真偽で <code>content</code>（9 行目）と <code>empty</code>（10 行目）に分かれるが、<code>HomeScreen</code> はどちらでも <code>PageView</code> を出すため表示は変わらない（ST-04・ST-05 の文言は <code>HomePage</code> が選ぶ）。未読フィルタの切替（S-01/A-03）で Stream を作り直した直後も <code>AsyncLoading</code> が前の値を保つ（<code>hasValue == true</code>）ので <code>settled</code> は true のままで、<strong>全面ローディングを挟まない</strong>（§4.6）。<code>select</code> で <code>(settled, hasVisible)</code> の 2 値に落とすのは、記事が増減するたびに <code>HomeScreen</code>（上部タブと <code>PageView.builder</code>）を再 build しないためで、ページの <code>State</code>（<code>AutomaticKeepAliveClientMixin</code> とスクロール位置）は再 build でも保たれる（§5.1 E-11）。</p>
 <p><code>HomeScreen</code> の構成：</p>
 <table>
@@ -1609,7 +1661,7 @@ final screenStatus = resolveHomeStatus(
 </tr>
 <tr>
 <td>S-01/E-10</td>
-<td><code>PageView.builder(controller: _pageController, physics: BouncingScrollPhysics)</code>。<code>_pageController</code> は <code>HomeScreen</code> の <code>initState</code> で <strong>1 度だけ</strong> <code>PageController(initialPage: ref.read(homeTabControllerProvider))</code> として生成し、<code>dispose</code> で破棄する（<code>build</code> 内で生成すると再 build のたびにページが初期値へ戻る）。<code>initialPage</code> を Provider から取るのは、未起動から通知タップで起動したとき（S-01/ST-15）に <code>HomeScreen</code> の初回 build より前に <code>selectCompany()</code> が済んでいる場合があるため（通常の起動では 0。§5.7）。ページ数 = 1 + companies。<code>onPageChanged</code> → <code>homeTabControllerProvider.notifier.select(i)</code>（A-02。ただし <code>_pendingTabIndex != null</code> のときは無視する。下記「通知由来の変化を取りこぼさない」）。<code>homeTabControllerProvider</code> の変化を <code>ref.listen</code> し、<strong><code>_pageController.page?.round() != next</code></strong>（= タブのタップ・スワイプ以外の変化 = 通知由来の <code>selectCompany</code>）なら、<code>_animating == false</code> のとき <code>jumpToPage(next)</code>、<code>_animating == true</code> のとき <code>_pendingTabIndex = next</code>（アニメーションの完了時に反映する。下記）（§5.7・§8 #13）。<code>_animating</code>・<code>_pendingTabIndex</code> は <code>HomeScreen</code> の <code>State</code> のフィールド（<code>bool _animating = false;</code>・<code>int? _pendingTabIndex;</code>）で、<code>build</code> の出力に影響しない（listener の条件にしか使わない）ため <strong><code>setState</code> を使わない素の代入</strong>で書く</td>
+<td><code>PageView.builder(controller: _pageController, physics: BouncingScrollPhysics)</code>。<code>_pageController</code> は <code>HomeScreen</code> の <code>initState</code> で <strong>1 度だけ</strong> <code>PageController(initialPage: ref.read(homeTabControllerProvider).index)</code> として生成し、<code>dispose</code> で破棄する（<code>build</code> 内で生成すると再 build のたびにページが初期値へ戻る）。<code>initialPage</code> を Provider から取るのは、未起動から通知タップで起動したとき（S-01/ST-15）に <code>HomeScreen</code> の初回 build より前に <code>selectCompany()</code> が済んでいる場合があるため（通常の起動では 0。§5.7）。ページ数 = 1 + companies。<code>onPageChanged</code> → <code>homeTabControllerProvider.notifier.select(i, source: TabSelectSource.user)</code>（A-02。ただし <code>_pendingTabIndex != null</code> のときは無視する。下記「通知由来の変化を取りこぼさない」）。<code>homeTabControllerProvider</code> の変化を <code>ref.listen</code> し、<strong><code>next.source == TabSelectSource.notification</code> のときだけ</strong>（= 通知由来。<code>PageController.page</code> からの推定はしない。§8 #43）、<code>_pageController.hasClients == false</code> なら何もせず（全面表示中。下記「<code>PageView</code> が現れたフレームで合わせる」が拾う）、client があって <code>_animating == false</code> なら <code>jumpToPage(next.index)</code>、<code>_animating == true</code> なら <code>_pendingTabIndex = next.index</code>（アニメーションの完了時に反映する。下記）（§5.7・§8 #13・#43）。<code>_animating</code>・<code>_animatingTo</code>・<code>_animationGeneration</code>・<code>_pendingTabIndex</code>・<code>_pageViewShown</code> は <code>HomeScreen</code> の <code>State</code> のフィールド（<code>bool _animating = false;</code>・<code>int? _animatingTo;</code>・<code>int _animationGeneration = 0;</code>・<code>int? _pendingTabIndex;</code>・<code>bool _pageViewShown = false;</code>）で、<code>build</code> の出力に影響しない（listener と後始末の条件にしか使わない）ため <strong><code>setState</code> を使わない素の代入</strong>で書く（ワープの並べ替えだけは <code>build</code> の出力を変えるので <code>setState</code>）</td>
 </tr>
 <tr>
 <td>全面表示</td>
@@ -1620,54 +1672,112 @@ final screenStatus = resolveHomeStatus(
 <td><code>PageView.builder</code> の <code>itemBuilder: (_, i) =&gt; HomePage(index: i, companyId: i == 0 ? null : companies[i - 1].id)</code>（<code>companies</code> は <code>companiesProvider</code> の配列。<code>index</code> は「自ページが表示中か」の判定に使う。§5.6）。<code>HomePage</code> は <code>AutomaticKeepAliveClientMixin</code>。6 ページを生かしてスクロール位置を保つ。S-01/A-01「前回そのページを見ていた位置」）。中身は <code>AnchoredListView</code> 1 つ。<code>AnchoredListController</code>（<code>_listController</code>）は <strong><code>HomePage</code> の <code>State</code> が <code>initState</code> でページごとに 1 つ</strong>生成し <code>dispose</code> で破棄する（ページ間で共有しない。1 つの Controller を 2 つの <code>AnchoredListView</code> で共有すると後勝ちで <code>scrollToTop()</code> が片方にしか届かない。§5.11.2「<code>attach</code> / <code>detach</code> の規則」。保存画面は <code>SavedScreen</code> の <code>State</code> が同じように 1 つ持つ。§5.5）。<code>leadingSlivers: [CupertinoSliverRefreshControl(...)]</code>（アンカー形のときは <code>AnchoredListView</code> 側で出さない。§5.11.1）、<code>headerSliver: status.refreshing &amp;&amp; !_pulling ? const RefreshingHeader() : null</code>（S-00/E-21 は「一覧の先頭。iOS 標準の引っ張り更新の位置」＝スクロール追随。S-00 §3.3・§4）。帯の出現・消失による位置ずれは <code>AnchoredListView</code> が相殺する（§5.11.5・§8 #28）</td>
 </tr>
 </tbody></table>
-<p><strong>タブのタップ（A-01）</strong>：<code>_animating = true</code> → <code>select(index)</code> → <code>index</code> が現在の隣なら <code>animateToPage</code>。隣でなければ Material <code>TabBarView</code> と同じワープ（アニメーションの間だけ目的ページを現在ページの隣に並べ替えて <code>animateToPage</code> し、完了後に並びを戻して <code>jumpToPage</code>）。<strong><code>_animating = true</code> の代入から完了処理までを <code>try</code> / <code>finally</code> で囲み、<code>finally</code> で (1) ワープの並べ替えの復元、(2) <code>_pendingTabIndex</code> の反映（下記）、(3) <code>_animating = false</code> の順に行う</strong>（<code>animateToPage</code> の <code>Future</code> はドラッグで中断されたときも完了するが、例外で終わる経路や State が作り直される経路でフラグと並べ替えを下ろし損ねると、以後すべての通知タップが <code>jumpToPage</code> しなくなり、ワープ用の並びが残ったまま固定される）。<code>dispose</code> でも同じ <code>finally</code> 相当の後始末を行う（<code>mounted</code> を見て <code>jumpToPage</code> は呼ばない）。<code>index == 現在</code> なら A-10（§5.6）。スワイプ（A-02）は <code>onPageChanged</code> から <code>select</code> を呼ぶだけで、listener は上の条件（<code>_pageController.page?.round() != next</code>）が成立しないため何もしない。</p>
-<p><strong>通知由来の変化を取りこぼさない</strong>（S-01/ST-15。§6）：<code>selectCompany()</code>（§5.7 手順 3-4）は A-01 のアニメーション中にも届きうる。その場合 listener は <code>_pendingTabIndex = next</code> に保持するだけで <code>jumpToPage</code> せず、上の <code>finally</code> の (2) で <code>_pendingTabIndex</code> が非 null なら <code>jumpToPage(_pendingTabIndex!)</code>（非 null を直前に確認しているための <code>!</code>）→ <code>select(_pendingTabIndex!)</code> → <code>_pendingTabIndex = null</code> とする。<strong><code>_pendingTabIndex != null</code> の間は <code>onPageChanged</code> からの <code>select</code> を呼ばない</strong>（アニメーションの完了で発火する <code>onPageChanged</code> が、利用者のタップ先で通知の選択を上書きしてしまうため。S-01/ST-15 は「通知タップ後は対象の団体タブが最初のフレームから一致する」）。</p>
-<p><strong>下線位置の入力</strong>（S-01/ST-13。§6）：<code>HomeTabBar</code> の下線は、<strong><code>_pageController.hasClients &amp;&amp; _pageController.positions.length == 1</code> のときだけ <code>_pageController.page</code>（小数部で補間）を使い、そうでなければ <code>ref.watch(homeTabControllerProvider).toDouble()</code>（選択中タブの index）を使う</strong>。<code>PageController.page</code> は <code>PageView</code> がツリーに無いと <code>positions</code> が空で、<code>assert(positions.isNotEmpty)</code>（debug）／<code>StateError</code>（release）になる。<strong>全面表示中（<code>screenStatus.full</code> が <code>loading</code> / <code>error</code> / <code>offline</code> / <code>unavailable</code>）は <code>PageView</code> をツリーに置かない</strong>ため必ずこの経路に入り、起動直後の S-01/ST-02（<code>count == pending</code> → <code>FullView.loading</code>）でも通る。<code>PageView</code> を出す経路でも<strong>最初のフレームは <code>HomeTabBar</code> の build がレイアウトより前</strong>なので同じ状態になる。<code>page</code> の変化（ドラッグ中の補間）で <code>HomeTabBar</code> を再 build する契機は、<code>HomeTabBar</code> が <code>_pageController</code> を <code>ListenableBuilder</code>（<code>listenable: _pageController</code>）で購読して作る（<code>PageController</code> は <code>ScrollController</code> なので <code>Listenable</code>）。<code>_pageController</code> を渡すのは <code>HomeScreen</code> で、<code>HomeTabBar</code> は client の有無を自分で確かめてから <code>page</code> を読む（例外にしない）。</p>
+<p><strong>タブのタップ（A-01）</strong>（§8 #43）：手順は次のとおりで、<strong>入口のガードと後始末の所有者を 1 つに決める</strong>。</p>
+<pre><code class="language-dart">Future&lt;void&gt; _onTabTapped(int index) async {
+  if (index == ref.read(homeTabControllerProvider).index) { /* A-10。§5.6 */ return; }
+  final tab = ref.read(homeTabControllerProvider.notifier);
+  if (!_pageController.hasClients) {          // 全面表示中（ST-02・ST-07・ST-08・ST-19）・初回 build
+    tab.select(index, source: TabSelectSource.user);   // PageView がツリーに無いので animateToPage を呼ばない（S-01 §8 #13）
+    return;                                            // 下線は「下線位置の入力」の fallback で選択中タブに付く
+  }
+  if (_animating) _finishTabAnimation(landingIndex: _animatingTo!);  // 走っている系列を即座に終わらせる（非 null は直前の _animating で保証）
+  final generation = ++_animationGeneration;  // この系列の世代。後始末は最新の世代だけが行う
+  _animating = true;
+  _animatingTo = index;
+  tab.select(index, source: TabSelectSource.user);
+  try {
+    // index が現在の隣なら animateToPage。隣でなければ Material TabBarView と同じワープ
+    //（アニメーションの間だけ目的ページを現在ページの隣に並べ替えて animateToPage する。並べ替えは setState）
+    await _pageController.animateToPage(/* … */);
+  } finally {
+    if (mounted &amp;&amp; generation == _animationGeneration) _finishTabAnimation(landingIndex: index);
+  }
+}
+
+/// 系列の後始末。(1) ワープの並べ替えの復元（setState）、(2) 着地、(3) 保留の破棄、(4) フラグ下ろし
+void _finishTabAnimation({required int landingIndex}) {
+  // (1) ワープしていた場合だけ並びを元に戻す
+  final landing = _pendingTabIndex ?? landingIndex;   // 通知の選択があればそちらへ着地する
+  // (2) 復元した並びでの位置に合わせる。アニメーションの最中に全面表示へ移って PageView が
+  //     ツリーから外れていることがあるため、client の有無を必ず確かめる（外れていれば
+  //    「PageView が現れたフレームで合わせる」が後で拾う）
+  if (_pageController.hasClients) _pageController.jumpToPage(landing);
+  _pendingTabIndex = null;                            // (3)
+  _animating = false;                                 // (4)
+  _animatingTo = null;
+}</code></pre>
+<ul>
+<li><strong>再入（アニメーション中の別タブのタップ）は「走っている系列をその目的ページで即座に終わらせてから新しい系列を始める」</strong>。<code>_animationGeneration</code> により、<strong><code>finally</code> は自分が始めた系列が最新のときだけ後始末する</strong>ので、1 本目の <code>finally</code> が 2 本目のワープの並びを復元したり <code>_animating</code> を下ろしたりしない。結果は<strong>最後にタップしたタブに落ち着く</strong>（§10 T-M の目視 24）</li>
+<li><strong><code>dispose</code> では <code>jumpToPage</code> も <code>select</code> も行わず <code>_pendingTabIndex</code> を捨てる</strong>（<code>_animationGeneration</code> を 1 つ進めて進行中の <code>finally</code> を無効化し、<code>_animating</code> / <code>_animatingTo</code> も下ろす）。<code>homeTabControllerProvider</code> は通知タップの時点の <code>selectCompany()</code> で既に更新済みで、State が作り直されたときは <code>initState</code> の <code>PageController(initialPage: …)</code> がその値を拾うため、<code>dispose</code> 中に Provider を書き換える必要が無い（§8 #43）</li>
+<li><code>index == 現在</code> なら A-10（§5.6）。スワイプ（A-02）は <code>onPageChanged</code> から <code>select(i, source: user)</code> を呼ぶだけで、listener は <code>source == notification</code> の条件が成立しないため何もしない</li>
+</ul>
+<p><strong>通知由来の変化を取りこぼさない</strong>（S-01 §5.3 ST-15・§8 #25。§6）：<code>selectCompany()</code>（§5.7 手順 3-4）は A-01 のアニメーション中にも届きうる。その場合 listener（<code>source == TabSelectSource.notification</code>）は <code>_pendingTabIndex = next.index</code> に保持するだけで <code>jumpToPage</code> せず、上の <code>_finishTabAnimation</code> が <code>_pendingTabIndex</code> を着地点に使う。<strong><code>_pendingTabIndex != null</code> の間は <code>onPageChanged</code> からの <code>select</code> を呼ばない</strong>（アニメーションの完了で発火する <code>onPageChanged</code> が、利用者のタップ先で通知の選択を上書きしてしまうため）。<code>jumpToPage</code> が発火させる <code>onPageChanged</code> は <code>_pendingTabIndex</code> を null に戻した後に届くので <code>select(landing, source: user)</code> になり、index は変わらず出所だけが <code>user</code> に戻る（次の通知タップが <code>source</code> の変化として必ず届く）。</p>
+<p><strong><code>PageView</code> が現れたフレームで合わせる</strong>（§8 #43。§6）：全面表示（ST-02・ST-07・ST-08・ST-19）の間に届いた通知の選択は <code>PageController</code> に client が無いため反映できない。<code>HomeScreen.build</code> は <code>screenStatus.full</code> が <code>content</code> / <code>empty</code> に変わって <code>PageView</code> を<strong>出し始めたフレームだけ</strong> <code>WidgetsBinding.instance.addPostFrameCallback</code> を 1 度張り、<code>mounted &amp;&amp; _pageController.hasClients</code> かつ <code>_pageController.page?.round() != ref.read(homeTabControllerProvider).index</code> なら <code>jumpToPage(そのindex)</code> で合わせる（<code>_pageViewShown</code> で「出し始めたフレーム」を 1 度に限り、<code>PageView</code> を出さないフレームで false に戻す）。全面表示を挟まない通常の起動では <code>initialPage</code> が既に一致しているため何も起きない。</p>
+<p><strong>下線位置の入力</strong>（S-01/ST-13。§6）：<code>HomeTabBar</code> の下線は、<strong><code>_pageController.hasClients &amp;&amp; _pageController.positions.length == 1</code> のときだけ <code>_pageController.page</code>（小数部で補間）を使い、そうでなければ <code>ref.watch(homeTabControllerProvider.select((s) =&gt; s.index)).toDouble()</code>（選択中タブの index）を使う</strong>。<code>PageController.page</code> は <code>PageView</code> がツリーに無いと <code>positions</code> が空で、<code>assert(positions.isNotEmpty)</code>（debug）／<code>StateError</code>（release）になる。<strong>全面表示中（<code>screenStatus.full</code> が <code>loading</code> / <code>error</code> / <code>offline</code> / <code>unavailable</code>）は <code>PageView</code> をツリーに置かない</strong>ため必ずこの経路に入り、起動直後の S-01/ST-02（<code>count == pending</code> → <code>FullView.loading</code>）でも通る。<code>PageView</code> を出す経路でも<strong>最初のフレームは <code>HomeTabBar</code> の build がレイアウトより前</strong>なので同じ状態になる。<code>page</code> の変化（ドラッグ中の補間）で <code>HomeTabBar</code> を再 build する契機は、<code>HomeTabBar</code> が <code>_pageController</code> を <code>ListenableBuilder</code>（<code>listenable: _pageController</code>）で購読して作る（<code>PageController</code> は <code>ScrollController</code> なので <code>Listenable</code>）。<code>_pageController</code> を渡すのは <code>HomeScreen</code> で、<code>HomeTabBar</code> は client の有無を自分で確かめてから <code>page</code> を読む（例外にしない）。</p>
 <p>ページの状態判定（<code>HomePage.build</code>）：</p>
 <pre><code class="language-dart">final feed = ref.watch(feedStatusProvider);                                // D-04 §5.4.1・§5.4.2（引数なし）
 final home = ref.watch(homeArticlesProvider(companyId: companyId));
 final items = home.valueOrNull?.items ?? const &lt;ArticleListItem&gt;[];        // 値が無い（初回 AsyncLoading・AsyncError）ときは空
 final totalInTab = home.valueOrNull?.totalInTab ?? 0;                      // 同上。requireValue を読まない（§6）
-// 判定規則は HomeScreen と同じ resolveHomeStatus。違いは hasVisible の由来だけ（ページは未読フィルタ適用後の items）。
-// 前の値を持つ AsyncLoading（未読フィルタ切替で Stream を作り直した直後）は settled が true のまま前の値で判定され、
-// 全面ローディングを挟まない（S-01/A-03）。値もエラーも未着のときだけ FullView.loading（§8 #11）。
-// 値を持ったままエラーになった場合は hasValue が優先され、直前の一覧で判定する（§6）。
-final status = resolveHomeStatus(feed, homePageListStateOf(home));</code></pre>
-<p><strong><code>requireValue</code> を読まない。</strong> <code>AsyncError</code> で前の値が無いとき（<code>articles</code> の 1 行の <code>published_at</code> / <code>category</code> が壊れて <code>ArticleRowMapper</code> が写像で例外を投げた等）に <code>requireValue</code> は <code>StateError</code> を投げ、<code>HomePage.build</code> が例外で落ちる。このとき <code>articleCountProvider</code>（<code>SELECT COUNT(*)</code>）は成功しうるので <code>feed.count == ArticleCountState.present</code> のまま <code>hasVisible == false</code> となり、D-04 §5.4.3 判定表の最終行（10 行目）で <code>FullView.empty</code> になる（件数が読めている以上 <code>unavailable</code> にはならない。S-00 §8 #36 の ST-17 は「件数そのものが分からない」ときの状態）。文言は <code>totalInTab == 0</code> の側（S-01 §5.1 ST-04）を出す（§6）。分岐は <code>AsyncData</code> / <code>AsyncError</code> の状態クラスではなく <code>hasValue</code> / <code>hasError</code> のフラグで書く（D-04 §5.4.2「Riverpod 3 の自動リトライは切る」により、<code>articleCountProvider</code> 以外の Provider ではリトライ中が <code>AsyncLoading(hasError: true)</code> として現れるため）。</p>
+// 自ページの状態（未読フィルタ適用後の items）。前の値を持つ AsyncLoading（未読フィルタ切替で Stream を
+// 作り直した直後）は settled が true のまま前の値で判定され、全面ローディングを挟まない（S-01/A-03）。
+// 値を持ったままエラーになった場合も hasValue が優先され、直前の一覧で判定する（§6）。
+final pageState = homePageListStateOf(home);
+// 読み込み表示は自ページの一覧が未確定のときだけ（§8 #11）
+final showLoading = !pageState.settled;
+// 空表示は「決着していて 1 件も無い」ときに必ず出す。判定表で full が error / offline / unavailable に
+// 落ちても出す（全面表示は HomeScreen だけが出すため、出さないと文言もアイコンも無い空白のページになる。§8 #41）
+final showEmpty = pageState.settled &amp;&amp; !pageState.hasVisible;
+// E-21（取得中の帯）は全ページ共通の表示なので、画面全体と同じ入力（「すべて」ページの ScreenListState）で判定する。
+// resolveHomeStatus は ScreenListState しか受け取らないため、pageState を渡す取り違えはコンパイルエラー（§8 #42）
+final status = resolveHomeStatus(
+  feed,
+  ref.watch(homeArticlesProvider(companyId: null).select(homeListStateOf)),
+);</code></pre>
+<p><strong><code>requireValue</code> を読まない。</strong> <code>AsyncError</code> で前の値が無いとき（<code>articles</code> の 1 行の <code>published_at</code> / <code>category</code> が壊れて <code>ArticleRowMapper</code> が写像で例外を投げた等）に <code>requireValue</code> は <code>StateError</code> を投げ、<code>HomePage.build</code> が例外で落ちる。このとき <code>articleCountProvider</code>（<code>SELECT COUNT(*)</code>）は成功しうるので <code>feed.count == ArticleCountState.present</code> のまま画面全体は <code>hasVisible == false</code> となり、D-04 §5.4.3 判定表の最終行（10 行目）で <code>FullView.empty</code> になる（件数が読めている以上 <code>unavailable</code> にはならない。S-00 §8 #36 の ST-17 は「件数そのものが分からない」ときの状態）。ページ側も <code>pageState.settled == true</code>・<code>hasVisible == false</code> で <code>showEmpty</code> になり、文言は <code>totalInTab == 0</code> の側（S-01 §5.1 ST-04）を出す（§6）。分岐は <code>AsyncData</code> / <code>AsyncError</code> の状態クラスではなく <code>hasValue</code> / <code>hasError</code> のフラグで書く（D-04 §5.4.2「Riverpod 3 の自動リトライは切る」により、<code>articleCountProvider</code> 以外の Provider ではリトライ中が <code>AsyncLoading(hasError: true)</code> として現れるため）。</p>
 <p><code>AsyncError</code> の <code>logger.w</code> は <code>build</code> の判定（<code>resolveHomeStatus</code>。純粋関数なのでログを持てない）では出さず、<code>HomePage.build</code> の先頭（<code>ref.watch</code> より前）で <code>ref.listen(homeArticlesProvider(companyId: companyId), (_, next) { if (next case AsyncValue(hasError: true, :final error?, :final stackTrace)) _logger.w(&#39;ホーム一覧の読み出しに失敗&#39;, error: error, stackTrace: stackTrace); })</code> と登録して、エラーの到着ごとに 1 回だけ出す（§5.5 の <code>SavedListController</code> の listener と同じ方式。再 build では出ない）。同様に <code>HomeScreen.build</code> の先頭で <code>ref.listen(unreadFilterProvider, ...)</code> を登録し、<code>hasError</code> のときに 1 回だけ <code>logger.w(&#39;未読フィルタの設定値の読み出しに失敗&#39;, ...)</code> を残す（<code>HomeScreen</code> は 1 つなので 6 ページ分重複しない。表示は既定 OFF で続ける。§4.6・§6）。</p>
 <p><strong>一覧 Stream が値を得た後にエラー終了したときの張り直し</strong>（§6・§8 #40）：<code>homeArticlesProvider</code> は直前値を引き継ぐため、値を流した<strong>後</strong>に Stream がエラー終了すると <code>hasValue == true</code> のままになり、<code>resolveHomeStatus</code> は <code>content</code> を返す（全面表示にならない＝ <strong>A-08 の再試行ボタンが出ない</strong>）。Stream は終了済みなので、以後 Pull to Refresh が成功しても一覧は古いままで、<strong>画面上に <code>homeArticlesProvider</code> を張り直す動線が 1 つも無くなる</strong>。これを塞ぐため <code>HomeScreen.build</code> の先頭で次を登録する。</p>
 <pre><code class="language-dart">// HomeScreen.build で登録する（ページごとではなく画面に 1 つ）
 ref.listen(homeArticlesProvider(companyId: null), (prev, next) {
+  if (next.isLoading) return;             // 再購読中（AsyncLoading.copyWithPrevious は value も error も保つ）は契機にしない
   if (next.hasValue &amp;&amp; !next.hasError) {
     _articlesReloaded = false;            // 健全な値が届いた＝次のエラーでは 1 回張り直してよい
     return;
   }
-  if (!next.hasError || !next.hasValue) return;   // 値なしのエラーは全面表示 + A-08 の動線があるので触らない
-  if (_articlesReloaded) return;                  // 同じ障害では 1 回だけ（無限 invalidate を避ける）
+  _reloadArticlesIfDead();                // 確定したエラーだけを契機にする
+});
+
+/// 値つきエラー（Stream が値を流した後に終了した状態）なら、契機ごとに 1 回だけ張り直す
+void _reloadArticlesIfDead() {
+  if (_articlesReloaded) return;          // この契機ではもう試した（無限 invalidate を避ける）
+  final v = ref.read(homeArticlesProvider(companyId: null));
+  if (v.isLoading || !v.hasError || !v.hasValue) return;  // 値なしのエラーは全面表示 + A-08 の動線があるので触らない
   _articlesReloaded = true;
   _logger.w('ホーム一覧の Stream を張り直した');
-  ref.invalidate(homeArticlesProvider);           // family 全 6 ページ分を張り直す
-});</code></pre>
+  ref.invalidate(homeArticlesProvider);   // family 全 6 ページ分を張り直す
+}</code></pre>
 <ul>
-<li><p><code>_articlesReloaded</code> は <code>HomeScreen</code> の <code>State</code> の <code>bool</code> フィールド（初期 false。<code>build</code> の出力に影響しないため <code>setState</code> を使わない素の代入）。<strong><code>_retry()</code>（§5.6）でも false に戻す</strong>（利用者が明示的に押したときは常にやり直せる）</p>
+<li><p><code>_articlesReloaded</code> は <code>HomeScreen</code> の <code>State</code> の <code>bool</code> フィールド（初期 false。<code>build</code> の出力に影響しないため <code>setState</code> を使わない素の代入）。意味は「<strong>この契機では既に 1 回試した</strong>」で、次の 3 つで false に戻す：<strong>(1) 健全な値が届いたとき</strong>（上の listener）、<strong>(2) 取得が完了したとき</strong>（<code>syncControllerProvider</code> の <code>sequence</code> が増えた瞬間。§5.6 の listener が <code>_articlesReloaded = false;</code> → <code>_reloadArticlesIfDead();</code> の 2 行を行う）、<strong>(3) <code>_retry()</code>（§5.6）</strong></p>
 </li>
-<li><p><strong>値ありエラーだけを契機にする</strong>のは、値なしエラーでは判定表が <code>unavailable</code> / <code>empty</code> / <code>error</code> / <code>offline</code> に落ちて A-08 の動線が出る（あるいは S-01 §5.1 ST-04 の「件数は読めたが一覧を組み立てられなかった」表示になる）ためで、そこに自動の張り直しを重ねない（§6・§8.1 の S-01 宛 (a)）</p>
+<li><p><strong><code>isLoading</code> を先に除く</strong>（<code>AsyncLoading.copyWithPrevious(previous, isRefresh: true)</code> は value と error の両方を保つため。D-04 §5.4.2）。除かないと <code>_retry()</code> や A-05 による再購読中の状態を「また死んだ」と誤判定し、余分な invalidate とログが押下のたびに出て、<strong>その契機の回数枠が即座に消費される</strong>（判定は <code>hasValue</code> / <code>hasError</code> / <code>isLoading</code> の 3 つのフラグで書き、<code>AsyncData</code> / <code>AsyncError</code> の状態クラスで分岐しない）</p>
 </li>
-<li><p><strong>1 回で止める</strong>のは、<code>ref.invalidate</code> の後に張り直した Stream も直前値を引き継いだうえで同じ行の写像に失敗すると、再び値ありエラーになって listener が再入し、invalidate のループになるため（<code>_articlesReloaded</code> が立っている間は何もしない）。張り直しても直らない障害は、次の健全な値（別の同期で問題の行が消えたとき）まで古い一覧を表示したままになる</p>
+<li><p><strong>値ありエラーだけを契機にする</strong>のは、値なしエラーでは判定表が <code>unavailable</code> / <code>empty</code> / <code>error</code> / <code>offline</code> に落ちて A-08 の動線が出る（あるいは S-01 §5.1 ST-04 の表示になる）ためで、そこに自動の張り直しを重ねない（§6・§8.1 の S-01 宛 (a)）</p>
+</li>
+<li><p><strong>契機ごとに 1 回</strong>にするのは、<code>ref.invalidate</code> の後に張り直した Stream も直前値を引き継いだうえで同じ行の写像に失敗すると、再び値ありエラーになって listener が再入し、invalidate のループになるため。<strong>「起動してから 1 回だけ」ではない</strong>：張り直した Stream が同じ行で再び失敗しても、<strong>次に取得が完了した時点で 1 回やり直せる</strong>ので、問題の行が別の同期で消えれば（あるいは DB が回復すれば）再起動せずに一覧へ戻れる（§8 #40。取得 1 回につき invalidate は最大 1 回で、オフラインが続く端末では取得自体が起きないため回数も増えない）</p>
 </li>
 <li><p><strong>監視するのは「すべて」ページだけ</strong>でよい。<code>watchInFeed()</code> は団体で絞らない同じ 1 本のクエリで、<code>ArticleRowMapper</code> の写像失敗・DB のエラーはどのページの Stream でも同じ行で起きる。団体ページだけが落ちて「すべて」ページが健全、という状態は起こらない（絞り込みは UseCase が写像後の <code>List</code> に対して行う。§5.2）</p>
 </li>
-<li><p>張り直しの事実は上の <code>logger.w</code> に 1 回残す（<code>HomePage</code> の <code>ref.listen</code> が残すエラー本体のログとは別。恒久的な障害では 1 回しか出ないため、ログの有無で「1 回試して直らなかった」ことが分かる）</p>
+<li><p>張り直しの事実は上の <code>logger.w</code> に残す（<code>HomePage</code> の <code>ref.listen</code> が残すエラー本体のログとは別）。恒久的な障害では<strong>取得 1 回につき 1 行</strong>出るため、ログの並びで「何度試して直らなかったか」が分かる</p>
 </li>
-<li><p><code>status.full == FullView.empty</code> のとき <code>EmptyView</code> に渡すアイコン・文言：<code>totalInTab == 0</code> なら S-01 §5.1 ST-04、そうでなければ ST-05（未読フィルタ ON で未読 0 件）。<code>EmptyView</code> は <code>AnchoredListView.emptyView</code> に渡し（<code>empty</code> 以外は <code>null</code>）、<code>AnchoredListView</code> が <code>SliverFillRemaining</code> に置くので引っ張り更新できる（S-01 §8 #14。§5.11.1）</p>
+<li><p><code>showEmpty</code> のとき <code>EmptyView</code> に渡すアイコン・文言：<code>totalInTab == 0</code> なら S-01 §5.1 ST-04、そうでなければ ST-05（未読フィルタ ON で未読 0 件）。<code>EmptyView</code> は <code>AnchoredListView.emptyView</code> に渡し（<code>showEmpty</code> でなければ <code>null</code>）、<code>AnchoredListView</code> が <code>SliverFillRemaining</code> に置くので引っ張り更新できる（S-01 §8 #14。§5.11.1）</p>
 </li>
 <li><p><code>status.refreshing</code> かつ引っ張り中でない（<code>_pulling == false</code>）→ <code>AnchoredListView.headerSliver</code> に <code>RefreshingHeader()</code>（D-04 §5.9。<code>CupertinoSliverRefreshControl</code> の直後、記事の前）を渡す（S-00/E-21「一覧の先頭」。一覧と一緒にスクロールする）。それ以外は <code>null</code>。帯の出現・消失で表示中の記事がずれないよう、<code>AnchoredListView</code> が帯の高さ変化を <code>correctPixels(±h)</code> 相当（<code>SliverGeometry.scrollOffsetCorrection</code>）で相殺する（§5.11.5・§8 #28）</p>
 </li>
 <li><p><code>screenStatus.full</code>（<code>HomeScreen</code> が計算。上記）が <code>loading</code> / <code>error</code> / <code>offline</code> / <code>unavailable</code> のときは <code>HomeScreen</code> が全面表示を出すため、<code>HomePage</code> は <code>PageView</code> ごと描画されない（全ページ同じ表示。S-01/ST-02・ST-07・ST-08・ST-19）。<strong><code>unavailable</code> は判定表の先頭行で <code>inProgress</code>・<code>lastResult</code> を問わず拾われる</strong>ため、裏の取得が成功しても失敗しても表示は変わらず、<code>refreshing</code>・<code>offlineBanner</code>・<code>errorNotice</code> もすべて false になる（S-01/ST-19。D-04 §5.4.3）</p>
 </li>
-<li><p><strong><code>HomePage</code> が自分で出す全面表示は <code>FullLoadingView</code>（自ページの一覧が未確定 = <code>settled == false</code>）だけ</strong>で、<code>error</code> / <code>offline</code> / <code>unavailable</code> の全面表示は出さない（再試行 A-08 の動線は <code>HomeScreen</code> が持つ。§5.6）。<code>HomeScreen</code> と <code>HomePage</code> は同じ <code>feed</code> を使うが <code>hasVisible</code> の由来が異なる（画面は「すべて」ページの <code>totalInTab</code>、ページは自ページの <code>items</code>）ため、<strong>判定表 3 行目の過渡状態では <code>HomeScreen</code> が <code>content</code>・ある団体ページが <code>error</code> / <code>offline</code> / <code>loading</code> という食い違いが 1 フレーム起こりうる</strong>。このとき <code>HomePage</code> は <code>EmptyView</code> を渡さずに一覧（0 件なので空の領域）をそのまま描く。次のフレームで件数 Stream が追いつけば通常の表示に戻るため、専用の分岐は持たない（§8 #38）</p>
+<li><p><strong><code>HomePage</code> が自分で出す全面表示は <code>FullLoadingView</code>（自ページの一覧が未確定 = <code>pageState.settled == false</code>）だけ</strong>で、<code>error</code> / <code>offline</code> / <code>unavailable</code> の全面表示は出さない（再試行 A-08 の動線は <code>HomeScreen</code> が持つ。§5.6）。<strong><code>HomeScreen</code> が <code>PageView</code> を出している間（<code>screenStatus.full</code> が <code>content</code> / <code>empty</code>）、ページ側の判定が何であれ、決着していて 0 件のページは必ず <code>EmptyView</code>（<code>showEmpty</code>）を出す</strong>（§8 #41）。<code>HomeScreen</code> と <code>HomePage</code> は同じ <code>feed</code> を使うが <code>hasVisible</code> の由来が異なる（画面は「すべて」ページの <code>totalInTab</code>、ページは自ページの <code>items</code>）ため、<strong>判定表 3 行目では <code>HomeScreen</code> が <code>content</code>・自ページの入力では <code>error</code> / <code>offline</code> / <code>loading</code> に落ちる、という食い違いが起こりうる</strong>。件数 Stream が次のフレームで追いつく過渡状態のこともあるが、<strong>件数が <code>empty</code> で固着した端末（§6）では機内モードが続く限り恒久的</strong>なので、「1 フレームで戻る」を前提にしない。<code>showEmpty</code> を <code>status.full</code> ではなく <code>pageState</code> から直接決めることで、どちらの場合も文言とアイコンのある表示になる（文言は自ページの <code>totalInTab</code> で ST-04 / ST-05 を出し分ける。S-01 §5.1 ST-04・ST-05 は取得結果によらず E-22 を出すと定めている）</p>
 </li>
-<li><p><strong><code>FullView.empty</code> が成立する経路は 2 つある</strong>（§8 #38）。(1) 判定表 8 行目（<code>count == empty</code> × <code>hasVisible == false</code>。取得成功で端末に記事が 0 件）：<code>HomeScreen</code> は <code>PageView</code> を出し、<code>HomePage</code> も <code>items</code> が空・<code>totalInTab == 0</code> で <code>empty</code> になり <strong>ST-04</strong>（「記事がありません」）を出す。(2) 判定表 10 行目（<code>count == present</code> × <code>hasVisible == false</code>）：<code>HomeScreen</code> 側では「すべて」ページの <code>totalInTab == 0</code>（件数は読めているが <code>in_feed = true</code> の一覧が組み立てられなかった。§6）、<code>HomePage</code> 側では未読フィルタ ON で自ページの未読が 0 件になった場合が典型で、後者は <code>totalInTab &gt; 0</code> なので <strong>ST-05</strong>（「未読の記事はありません」）を出す。<strong><code>empty</code> なら常に ST-04、ではない。</strong> どちらの経路でも <code>HomeScreen</code> は <code>PageView</code> を出すため画面全体の見え方は変わらず、文言の出し分けは <code>HomePage</code> の <code>totalInTab</code> だけが決める。全面表示用の <code>empty</code> Widget は持たない</p>
+<li><p><strong>0 件の表示が成立する経路は 3 つある</strong>（§8 #38・#41）。(1) 判定表 8 行目（<code>count == empty</code> × <code>hasVisible == false</code>。取得成功で端末に記事が 0 件）：<code>HomeScreen</code> は <code>PageView</code> を出し、<code>HomePage</code> も <code>items</code> が空・<code>totalInTab == 0</code> で <strong>ST-04</strong>（「記事がありません」）を出す。(2) 判定表 10 行目（<code>count == present</code> × <code>hasVisible == false</code>）：<code>HomeScreen</code> 側では「すべて」ページの <code>totalInTab == 0</code>（件数は読めているが <code>in_feed = true</code> の一覧が組み立てられなかった。§6）、<code>HomePage</code> 側では未読フィルタ ON で自ページの未読が 0 件になった場合が典型で、後者は <code>totalInTab &gt; 0</code> なので <strong>ST-05</strong>（「未読の記事はありません」）を出す。(3) 画面全体が <code>content</code>（判定表 3 行目）でページ側の入力が <code>error</code> / <code>offline</code> / <code>unavailable</code> / <code>loading</code> に落ちた場合：<code>showEmpty</code> が true なので同じく ST-04 / ST-05 を出す（§8 #41）。<strong><code>empty</code> なら常に ST-04、ではない。</strong> どの経路でも <code>HomeScreen</code> は <code>PageView</code> を出すため画面全体の見え方は変わらず、文言の出し分けは <code>HomePage</code> の <code>totalInTab</code> だけが決める。全面表示用の <code>empty</code> Widget は持たない</p>
 </li>
 </ul>
 <h3 id="sec-5-2">5.2 WatchHomeArticlesUseCase（表示対象の絞り込みと並び）<a class="anchor" href="#sec-5-2">#</a></h3>
@@ -1748,12 +1858,15 @@ return switch (saved) {
   AsyncValue(hasValue: true, :final value?) =&gt; _buildList(_statusFor(hasVisible: value.isNotEmpty), value),
   AsyncValue(hasError: true) =&gt; FullErrorView(                        // ST-06。ログは listener 側で 1 回だけ
         kind: FullErrorKind.unavailable,
-        onRetry: () =&gt; ref.invalidate(savedArticlesProvider),          // A-05。sync() を呼ばない（S-02 §8 #1）
+        onRetry: () {                                                  // A-05。sync() を呼ばない（S-02 §8 #1）
+          ref.read(savedListControllerProvider.notifier).allowReload(); // 張り直しの回数枠を解く（§8 #40）
+          ref.invalidate(savedArticlesProvider);
+        },
       ),
   _ =&gt; const SizedBox.shrink(),                                       // 初回値が未着（ST-01）
 };</code></pre>
 <p><code>_statusFor({required bool hasVisible})</code> は <code>SavedScreen</code> 内の関数 <code>ListStatus(full: hasVisible ? FullView.content : FullView.empty, refreshing: false, offlineBanner: false, errorNotice: false)</code>（<code>core/ui/status/list_status.dart</code> の型を値で作る）。<code>unavailable</code> は <code>ListStatus</code> を組み立てずに <code>FullErrorView</code> を直接置くため、<code>_emptyStatus</code> の定数は持たない（<code>_statusFor(hasVisible: false)</code> が ST-02 を作る）。</p>
-<p><strong>S-02/A-05（再試行）</strong>：<code>FullErrorView.onRetry</code> は <strong><code>ref.invalidate(savedArticlesProvider)</code> だけ</strong>を行う。<code>sync()</code> も <code>articleCountProvider</code> の invalidate も呼ばない（本画面は取得を伴わず、記事件数も読まない。S-02 §8 #1・§6 A-05）。ホーム（S-01/A-08・S-00/A-12）の 2 系統（D-04 §5.4.4「全面表示からの復帰（再試行の 2 系統）」）に対し、<strong>取得を持たない画面の第 3 の経路</strong>として本書が持つ。</p>
+<p><strong>S-02/A-05（再試行）</strong>：<code>FullErrorView.onRetry</code> は <strong><code>savedListControllerProvider.notifier.allowReload()</code>（回数枠を解くだけ。§8 #40）と <code>ref.invalidate(savedArticlesProvider)</code> だけ</strong>を行う。<code>sync()</code> も <code>articleCountProvider</code> の invalidate も呼ばない（本画面は取得を伴わず、記事件数も読まない。S-02 §8 #1・§6 A-05）。ホーム（S-01/A-08・S-00/A-12）の 2 系統（D-04 §5.4.4「全面表示からの復帰（再試行の 2 系統）」）に対し、<strong>取得を持たない画面の第 3 の経路</strong>として本書が持つ。</p>
 <ul>
 <li><strong><code>countRetryRequestedProvider</code>（<code>retry()</code>）を呼んではならない</strong>（D-04 §5.4.2・§8.1）。<code>retry()</code> は <code>articleCountProvider</code> の invalidate を内包するため、保存一覧とは無関係にホームの件数購読が張り直されてホームが <code>pending</code> → S-01/ST-02 を経由する。加えて <code>countRetryRequestedProvider</code> は <code>articles/presentation</code> にあり、<code>saved/presentation</code> から import すること自体が CLAUDE.md の禁止事項にあたる。<strong><code>saved_screen.dart</code>・<code>saved_list_controller.dart</code> は <code>features/articles/presentation/</code> を import しない</strong>（§3.2）</li>
 <li><strong><code>retryRequested</code> 相当のフラグも保存画面には置かない</strong>（D-04 §8 #63）。S-02 §5 ST-06 は「アプリを起動してから一度も保存済みの件数が分からないとき」に限られ、A-05 は ST-06 のときだけ表示される（S-02 §6 A-05）ので、押した時点で <code>savedArticlesProvider</code> は値を 1 度も得ていない（<code>hasValue == false</code>）。ホームが <code>retryRequested</code> で解いた「直前値があるのに捨てたい」状況が生じないため、フラグ無しで成立する</li>
@@ -1765,7 +1878,7 @@ return switch (saved) {
 <p><strong>解除の保留と確定</strong>（S-02/ST-04。§8 #5・#6）：保存画面での星のタップは DB に書かない。<code>SavedListController</code> が「解除を保留した id」を持ち、<strong>下部タブが <code>RootTab.saved.index</code> から離れたとき</strong>に <code>CommitSavedChangesUseCase</code> でまとめて DB に確定する。保留中も <code>saved_articles</code> の行は残るため、D-04 §5.2 手順 8-5（<code>in_feed = 0 AND id NOT IN saved_articles</code>）の述語に該当せず、ロック → 復帰の同期で <code>articles</code> の行が消えることは無い（再タップは常に成立する）。</p>
 <p><strong><code>SavedListController</code></strong>（<code>saved/presentation/saved_list_controller.dart</code>。<code>@Riverpod(keepAlive: true) class</code>。状態 <code>AsyncValue&lt;List&lt;SavedArticle&gt;&gt;</code>）：</p>
 <ul>
-<li><p><strong>内部状態</strong>：<code>_fromDb: List&lt;SavedArticle&gt;?</code>（<code>savedArticlesProvider</code> の最新値。null = 初回値が未着）、<code>_pendingUnsave: Set&lt;String&gt;</code>（解除を保留した id）、<code>_resaveAt: Map&lt;String, DateTime&gt;</code>（保留を取り消した = 再保存した id と、その時刻）、<code>_committing: bool</code>（<code>CommitSavedChangesUseCase</code> の await 中。§8 #30）</p>
+<li><p><strong>内部状態</strong>：<code>_fromDb: List&lt;SavedArticle&gt;?</code>（<code>savedArticlesProvider</code> の最新値。null = 初回値が未着）、<code>_pendingUnsave: Set&lt;String&gt;</code>（解除を保留した id）、<code>_resaveAt: Map&lt;String, DateTime&gt;</code>（保留を取り消した = 再保存した id と、その時刻）、<code>_committing: bool</code>（<code>CommitSavedChangesUseCase</code> の await 中。§8 #30）、<code>_reloadAllowed: bool</code>（初期 true。死んだ Stream の張り直しの回数枠。下記・§8 #40）</p>
 </li>
 <li><p><strong><code>build()</code></strong>：<code>savedArticlesProvider</code> は Stream Provider なので listener には <code>AsyncValue&lt;List&lt;SavedArticle&gt;&gt;</code> が届き、Stream のエラーは <code>next</code> が <code>AsyncError</code> として届く（<code>ref.listen</code> の <code>onError</code> は Provider の <code>build</code> 自体の失敗用で、ここでは使わない）。次のとおり <code>switch</code> で受ける：</p>
 <pre><code class="language-dart">ref.listen(savedArticlesProvider, (prev, next) {
@@ -1779,11 +1892,19 @@ return switch (saved) {
       // copyWithPrevious を必ず通す：直前値を捨てた AsyncError は hasValue == false になり、
       // 一覧を表示中に受動的なエラーで終わっただけで全面 E-24（ST-06）が一覧を覆う（§6・§8 #35）。
       state = AsyncError&lt;List&lt;SavedArticle&gt;&gt;(error, stackTrace).copyWithPrevious(state);
+      _reloadIfDead();                     // 値つきエラーなら契機ごとに 1 回だけ張り直す（下記）
     case _:
-      break;                               // AsyncLoading（初回）は何もしない
+      break;                               // AsyncLoading（再購読中も含む）は何もしない
   }
 });</code></pre>
-<p><code>ref.read(tabControllerProvider)</code> に <code>addListener</code> し（<code>ref.onDispose</code> で外す）、index が <code>RootTab.saved.index</code> から他へ変わったとき <code>_onLeave()</code>（index の数値リテラルを書かない。D-04 §5.8・§8.1）。<code>ref.watch</code> は使わず、状態は <code>_recompute()</code> と上記 <code>AsyncError</code> の分岐だけが書く（Notifier の再生成で保留を失わないため）。初期値 <code>AsyncLoading</code></p>
+<p><code>AsyncData</code> の分岐では <code>_reloadAllowed = true</code> に戻す（健全な値が届いた＝次のエラーで 1 回張り直してよい）。再購読中（<code>AsyncLoading.copyWithPrevious</code>）が <code>case _</code> に落ちて何もしないことが、ホーム（§5.1）の <code>if (next.isLoading) return;</code> と同じ役割を果たす（回数枠を再購読中に消費しない）。</p>
+<p><code>ref.read(tabControllerProvider)</code> に <code>addListener</code> し（<code>ref.onDispose</code> で外す）、index が <code>RootTab.saved.index</code> から他へ変わったとき <code>_onLeave()</code>、他から <code>RootTab.saved.index</code> へ変わったとき <code>_onEnter()</code>（index の数値リテラルを書かない。D-04 §5.8・§8.1）。<code>ref.watch</code> は使わず、状態は <code>_recompute()</code> と上記 <code>AsyncError</code> の分岐だけが書く（Notifier の再生成で保留を失わないため）。初期値 <code>AsyncLoading</code></p>
+</li>
+<li><p><strong>死んだ Stream の張り直し</strong>（§6・§8 #40。ホーム §5.1 と対称）：<code>_reloadAllowed: bool</code>（初期 true）を持ち、<code>_reloadIfDead()</code> は「<code>_reloadAllowed == true</code> かつ <code>state.hasError &amp;&amp; state.hasValue</code>（値つきエラー＝一覧は出ているが <code>watchAll()</code> の購読は終了済み）」のときだけ <code>_reloadAllowed = false</code> にして <code>_logger.w(&#39;保存一覧の Stream を張り直した&#39;)</code> と <code>ref.invalidate(savedArticlesProvider)</code> を行う。<code>_reloadAllowed</code> を true に戻す契機は <strong>(1) 健全な <code>AsyncData</code> が届いたとき</strong>、<strong>(2) <code>_onEnter()</code>（下部タブの選択が保存になった瞬間）</strong>、<strong>(3) A-05 の <code>allowReload()</code></strong>。<code>_reloadIfDead()</code> を呼ぶのは <strong>(a) 上の listener の <code>AsyncError</code> 分岐</strong>と <strong>(b) <code>_onEnter()</code> の <code>_reloadAllowed = true</code> の直後</strong>。保存画面は取得を持たないため、ホームの「取得が完了するたび」に相当する契機を<strong>画面に入った瞬間</strong>が担う（§8 #40）</p>
+</li>
+<li><p><strong><code>allowReload()</code></strong>（public。A-05 から呼ぶ）：<code>_reloadAllowed = true</code> にするだけ。<code>SavedScreen</code> の <code>onRetry</code> は <code>allowReload()</code> → <code>ref.invalidate(savedArticlesProvider)</code> の 2 行で、<code>sync()</code> も <code>countRetryRequestedProvider.retry()</code> も呼ばない（S-02 §8 #1）。A-05 は値なしエラー（<code>hasValue == false</code>）のときだけ表示されるので <code>_reloadIfDead()</code> は関与せず、<code>allowReload()</code> は「A-05 で回復した後に再び値つきエラーになったときの枠」を残すためだけに呼ぶ</p>
+</li>
+<li><p><strong><code>_onEnter()</code></strong>：<code>_reloadAllowed = true;</code> → <code>_reloadIfDead();</code> の 2 行だけ（保留や <code>_fromDb</code> には触らない）。一覧を表示したまま <code>watchAll()</code> が死んだ端末でも、他タブへ移って保存タブに戻るたびに 1 回だけ張り直しを試みるため、<strong>アプリを再起動しなくても最新の保存一覧に戻れる</strong>（回復しない間は直前の一覧を表示したままで、入るたびに invalidate が 1 回だけ走る）</p>
 </li>
 <li><p><strong><code>_recompute({bool fromData = false})</code></strong>：<code>_fromDb == null</code> なら <code>AsyncLoading</code> のまま。<strong><code>state.hasError &amp;&amp; !state.hasValue</code>（値を 1 度も得ていないエラー）かつ <code>fromData == false</code> なら何もしない</strong>（<code>toggle()</code>・<code>_onLeave()</code> の完了による <code>_recompute()</code> で、ST-06 を出しているのに古い <code>_fromDb</code> の一覧を復活させない。ここから <code>AsyncData</code> へ戻すのは listener が新しい <code>AsyncData</code> を受けたとき（<code>fromData: true</code>）だけで、<strong>A-05 の再購読もこの経路で戻る</strong>。§6）。そうでなければ <code>state = AsyncData(mergeSavedList(fromDb: _fromDb, pendingUnsave: _pendingUnsave))</code></p>
 <ul>
@@ -1792,7 +1913,11 @@ return switch (saved) {
 </li>
 <li><p><strong><code>toggle(String id, DateTime now)</code></strong>（A-02）：<strong><code>_committing</code> なら何もしない</strong>（確定中の操作は無視する。§8 #30・§6）。<code>_pendingUnsave.contains(id)</code> なら <code>_pendingUnsave.remove(id)</code> と <code>_resaveAt[id] = now</code>（取り消し = 再保存。星は塗りつぶしに戻る）。含まれなければ <code>_pendingUnsave.add(id)</code> と <code>_resaveAt.remove(id)</code>（解除を保留。星は枠線）。どちらも <code>_recompute()</code>。DB の <code>saved_at</code> は変わらないので位置は動かない（S-02 §7.1「ST-04 の間」・A-02「一覧の位置は変わらない」）</p>
 </li>
-<li><p><strong><code>_onLeave()</code></strong>：<code>_committing</code>、または <code>_pendingUnsave</code>・<code>_resaveAt</code> がともに空なら何もしない。そうでなければ <code>_committing = true</code> にし、<strong><code>_pendingUnsave</code>・<code>_resaveAt</code> は消さずに</strong>両方のコピーを渡して <code>await ref.read(commitSavedChangesUseCaseProvider).execute(unsave: copyOfPending, resaveAt: copyOfResave)</code>（例外は <code>logger.w</code>）。完了（成功・失敗とも）後に <code>_pendingUnsave.clear()</code>・<code>_resaveAt.clear()</code>・<code>_committing = false</code> → <code>_recompute()</code>。await 中は保留が残っているため、確定の途中で保存タブへ戻っても解除したセルは枠線のまま（DB の再発火で 1 件ずつ消える）で、塗りつぶしの星で一瞬再表示されることは無い（§8 #30・§6）。確定後は <code>watchAll()</code> の再発火で解除した記事が消え、再保存した記事は新しい <code>saved_at</code> で先頭に移る（S-02/ST-04「下部タブを切り替えて戻ったとき」、§7.1「解除して再保存したとき」）。確定に失敗した場合は DB が正（解除は取り消され保存済みのまま。§6）</p>
+<li><p><strong><code>_onLeave()</code></strong>：<code>_committing</code>、または <code>_pendingUnsave</code>・<code>_resaveAt</code> がともに空なら何もしない。そうでなければ <code>_committing = true</code> にし、<strong><code>_pendingUnsave</code>・<code>_resaveAt</code> は消さずに</strong>両方のコピーを渡して <code>await ref.read(commitSavedChangesUseCaseProvider).execute(unsave: copyOfPending, resaveAt: copyOfResave)</code>（例外は <code>logger.w</code>）。完了（成功・失敗とも）後に <strong><code>_fromDb</code> から確定を試みた <code>unsave</code> の id を取り除き</strong>（下記）、<code>_pendingUnsave.clear()</code>・<code>_resaveAt.clear()</code>・<code>_committing = false</code> → <code>_recompute()</code>。await 中は保留が残っているため、確定の途中で保存タブへ戻っても解除したセルは枠線のまま（DB の再発火で 1 件ずつ消える）で、塗りつぶしの星で一瞬再表示されることは無い（§8 #30・§6）。確定後は <code>watchAll()</code> の再発火で解除した記事が消え、再保存した記事は新しい <code>saved_at</code> で先頭に移る（S-02/ST-04「下部タブを切り替えて戻ったとき」、§7.1「解除して再保存したとき」）。確定に失敗した場合は DB が正（解除は取り消され保存済みのまま。§6）</p>
+<ul>
+<li><strong>確定した解除を <code>_fromDb</code> からも取り除く</strong>（§6・§8 #44）：<code>_fromDb = _fromDb?.where((a) =&gt; !committed.contains(a.id)).toList()</code>（<code>committed</code> は <code>_onLeave()</code> が <code>execute()</code> に渡した <code>unsave</code> のコピー）。これを行わないと、完了後の <code>_recompute()</code> が <code>mergeSavedList(fromDb: 古い _fromDb, pendingUnsave: {})</code> を書くため、<strong>DB から削除済みの記事が塗りつぶしの星で一覧に戻る</strong>（利用者から見ると「解除したのに元に戻った」。<code>deleteUnsavedOutOfFeed</code> で <code>articles</code> の行ごと消えていることもある）。値つきエラーで <code>watchAll()</code> の購読が終了している端末では再発火による自己修復も起きないため、恒久的に復活したままになる</li>
+<li>確定が<strong>失敗</strong>して DB に残った記事も <code>_fromDb</code> から消えるが、<strong>購読が生きていれば</strong> <code>watchAll()</code> の再発火（1 件でも削除が成功していれば必ず起きる）で <code>_fromDb</code> が DB の内容に置き換わり、削除できなかった記事は塗りつぶしの星で戻る（S-02/ST-05・§6「確定が失敗」の行）。<code>_resaveAt</code> で <code>saved_at</code> を更新した記事も同じ再発火で新しい位置に移る（それまでは元の位置に塗りつぶしの星で出る）</li>
+</ul>
 </li>
 </ul>
 <pre><code class="language-dart">// lib/features/saved/presentation/saved_list_merge.dart（純粋関数。§7）
@@ -1835,11 +1960,11 @@ List&lt;SavedArticle&gt; mergeSavedList({required List&lt;SavedArticle&gt; fromD
 </tr>
 <tr>
 <td>A-09 下部タブ再タップ</td>
-<td><code>HomePage</code> が <code>ref.listen(tabReselectProvider.select((m) =&gt; m[RootTab.home.index]), ...)</code> し、自ページが表示中（<code>ref.read(homeTabControllerProvider) == widget.index</code>。§5.1 E-11）なら <code>_listController.scrollToTop(animated: true)</code>（<code>AnchoredListController</code>。§5.11.2。300ms・<code>easeOut</code>）</td>
+<td><code>HomePage</code> が <code>ref.listen(tabReselectProvider.select((m) =&gt; m[RootTab.home.index]), ...)</code> し、自ページが表示中（<code>ref.read(homeTabControllerProvider).index == widget.index</code>。§5.1 E-11）なら <code>_listController.scrollToTop(animated: true)</code>（<code>AnchoredListController</code>。§5.11.2。300ms・<code>easeOut</code>）</td>
 </tr>
 <tr>
 <td>A-10 団体タブ再タップ、ST-15</td>
-<td><code>homeScrollToTopProvider.notifier.request()</code>（<code>allPages: false</code>）→ <code>HomePage</code> が <code>ref.listen(homeScrollToTopProvider, ...)</code> し、自ページが表示中（同上 <code>ref.read(homeTabControllerProvider) == widget.index</code>）なら <code>scrollToTop(animated: true)</code>。他のページは何もしない</td>
+<td><code>homeScrollToTopProvider.notifier.request()</code>（<code>allPages: false</code>）→ <code>HomePage</code> が <code>ref.listen(homeScrollToTopProvider, ...)</code> し、自ページが表示中（同上 <code>ref.read(homeTabControllerProvider).index == widget.index</code>）なら <code>scrollToTop(animated: true)</code>。他のページは何もしない</td>
 </tr>
 <tr>
 <td>A-03 未読フィルタ切替</td>
@@ -1879,6 +2004,11 @@ FullErrorView(
 <pre><code class="language-dart">// HomeScreen.build で登録する
 ref.listen(syncControllerProvider, (prev, next) {
   if (prev == null || next.sequence == prev.sequence) return;   // 完了 1 回につき 1 回（D-04 §8 #40）
+  // 取得が完了した＝一覧 Stream の張り直しを 1 回許す契機（§5.1「一覧 Stream が値を得た後に…」・§8 #40）。
+  // E-25 の抑止（下の 2 つの return）より先に置く：抑止された取得でも回数枠の解除は行ってよく、
+  // 「解除したのに契機が来ない」状態を作らない。invalidate は取得 1 回につき最大 1 回で、ループしない。
+  _articlesReloaded = false;
+  _reloadArticlesIfDead();
   // 抑止 1：取得そのものを行わなかった（対応外スキーマの抑止）ときは出さない（S-00 §8 #31・S-01 §8 #23。§8 #12）
   if (next.lastResult case SyncFailed(suppressed: true)) return;
   // 判定は §5.1 と同じ関数に ref.read の値を与えて listener 内で計算し直す（build のローカル変数
@@ -1928,7 +2058,7 @@ bool _isHomeVisible() =&gt;
 <li><code>companyId = await ref.read(handleNotificationTapUseCaseProvider).execute(tap, companyIds: ref.read(companiesProvider).map((c) =&gt; c.id).toList())</code></li>
 <li><code>if (!mounted) return;</code></li>
 <li><code>ref.read(tabControllerProvider).index = RootTab.home.index</code>（S-00/E-02 へ。数値リテラルを書かない。D-04 §5.8・§8.1）。<code>_handle</code> は <code>await</code>（手順 1）の後なのでビルドフェーズ外で、<code>CupertinoTabScaffold</code> の listener が <code>setState</code> を呼んでも「setState() called during build」にならない（D-04 §8.1）</li>
-<li><code>ref.read(homeTabControllerProvider.notifier).selectCompany(companyId)</code>（S-01/ST-10）。<code>HomeScreen</code> が build 済みなら <code>homeTabControllerProvider</code> の listener が <code>PageController.jumpToPage</code>（通知からの切替はアニメーションしない。<strong>S-01 §8 #25</strong>。§8 #13）。未 build（未起動からの起動）なら <code>PageController(initialPage: ref.read(homeTabControllerProvider))</code> で最初のフレームからそのページが出る（§5.1）</li>
+<li><code>ref.read(homeTabControllerProvider.notifier).selectCompany(companyId)</code>（S-01/ST-10。<code>select(…, source: TabSelectSource.notification)</code> を内包する。§4.6）。<code>HomeScreen</code> が build 済みで <code>PageView</code> を出していれば <code>homeTabControllerProvider</code> の listener が <code>PageController.jumpToPage</code>（通知からの切替はアニメーションしない。<strong>S-01 §8 #25</strong>。§8 #13）。未 build（未起動からの起動）なら <code>PageController(initialPage: ref.read(homeTabControllerProvider).index)</code> で最初のフレームからそのページが出る。全面表示中（<code>PageController</code> に client が無い）なら <code>PageView</code> が現れた最初のフレームで合わせる（いずれも §5.1・§8 #43）</li>
 <li><code>ref.read(homeScrollToTopProvider.notifier).request()</code>（表示中のページを先頭へ。<code>HomePage</code> が <code>scrollToTop(animated: true)</code> に写す。§5.6・§5.11.2）。対象ページが未生成なら生成時に offset 0 で出るため、要求の取りこぼしは起きない（§4.6・§5.6）</li>
 <li><code>unawaited(ref.read(syncControllerProvider.notifier).sync(SyncTrigger.notificationTap))</code>（<code>forceReload</code>・後追いは D-04 §5.3 / §8 #31）</li>
 <li>未読フィルタは触らない。記事は開かず既読にもしない（S-01 §8 #20）</li>
@@ -2562,12 +2692,17 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td><code>homeArticlesProvider</code> が <code>AsyncError</code>（DB 破損・<code>ArticleRowMapper</code> の写像失敗）</td>
-<td><code>hasVisible = false</code>・<strong><code>totalInTab == 0</code> 扱い</strong>で判定する（<code>requireValue</code> を読まない。読むと <code>StateError</code> で <code>HomePage.build</code> が落ちる。§5.1）。<code>ref.listen</code> でエラー到着ごとに 1 回 <code>logger.w</code>。<code>articleCountProvider</code> も失敗していれば <code>count == unavailable</code> で <strong>ST-19（S-00/ST-17。全面 E-24 + 再試行）</strong>（D-04 §5.4.3 の判定表の先頭行・§6「DB の open に失敗」）、<strong>件数クエリだけ成功していれば <code>count == present</code>・<code>hasVisible == false</code> で <code>empty</code></strong>（S-01 §5.1 ST-04 の文言）になる。<strong>再試行（S-01/A-08 = S-00/A-12）は系統を問わず <code>_retry()</code> が <code>countRetryRequestedProvider.retry()</code>（＝ <code>articleCountProvider</code> の invalidate）と <code>homeArticlesProvider</code>（family 全ページ分）の invalidate を行って Stream を張り直す</strong>ので、DB が正常に戻れば再起動せずに一覧へ戻れる（§5.6。D-04 §5.4.2・§5.4.4・§8.1）。件数だけ成功している経路（ST-04 と同じ表示）は <strong>S-01 §5.1 ST-04 の発生条件</strong>（「件数は読み出せたが一覧の中身を組み立てられなかったとき」）に反映済みで、本書の扱いと一致する</td>
+<td><code>hasVisible = false</code>・<strong><code>totalInTab == 0</code> 扱い</strong>で判定する（<code>requireValue</code> を読まない。読むと <code>StateError</code> で <code>HomePage.build</code> が落ちる。§5.1）。<code>ref.listen</code> でエラー到着ごとに 1 回 <code>logger.w</code>。<code>articleCountProvider</code> も失敗していれば <code>count == unavailable</code> で <strong>ST-19（S-00/ST-17。全面 E-24 + 再試行）</strong>（D-04 §5.4.3 の判定表の先頭行・§6「DB の open に失敗」）、<strong>件数クエリだけ成功していれば <code>count == present</code>・<code>hasVisible == false</code> で <code>empty</code></strong>（S-01 §5.1 ST-04 の文言）になる。<strong>再試行（S-01/A-08 = S-00/A-12）は系統を問わず <code>_retry()</code> が <code>countRetryRequestedProvider.retry()</code>（＝ <code>articleCountProvider</code> の invalidate）と <code>homeArticlesProvider</code>（family 全ページ分）の invalidate を行って Stream を張り直す</strong>ので、DB が正常に戻れば再起動せずに一覧へ戻れる（§5.6。D-04 §5.4.2・§5.4.4・§8.1）。件数だけ成功している経路（ST-04 と同じ表示）は <strong>S-01 §5.1 ST-04 の発生条件</strong>（件数は読み出せたが一覧を組み立てられなかったとき）に反映済みで、本書の扱いと一致する</td>
 <td>presentation</td>
 </tr>
 <tr>
 <td><code>homeArticlesProvider</code> の Stream が<strong>値を流した後に</strong>エラー終了した（100 件表示できている端末で、同期後に 1 行だけ <code>published_at</code> の写像に失敗する記事が入った等）</td>
-<td>Riverpod が直前値を引き継ぐので <code>hasValue == true</code> のままで <code>resolveHomeStatus</code> は <code>content</code> を返し、<strong>全面表示にならない＝ A-08 の再試行ボタンが出ない</strong>。Stream は終了済みなので Pull to Refresh が成功しても一覧は古いままになる。これを塞ぐため <code>HomeScreen</code> の <code>ref.listen</code> が <strong><code>hasError &amp;&amp; hasValue</code> を検知したら 1 度だけ <code>ref.invalidate(homeArticlesProvider)</code> で張り直す</strong>（<code>_articlesReloaded</code> で同じ障害の間は 1 回に限り、健全な値が届いたときと <code>_retry()</code> で解く。§5.1「一覧 Stream が値を得た後にエラー終了したときの張り直し」）。張り直した先で<strong>値なし</strong>のエラーになれば通常どおり判定表に落ち、A-08 の動線（<code>unavailable</code> / <code>error</code> / <code>offline</code>）か S-01 §5.1 ST-04 の表示になる。上の「1 行だけ写像に失敗する」例のように張り直しても直らない障害では、次の健全な値まで古い一覧を表示したままになる（<code>logger.w</code> に記録が残る）</td>
+<td>Riverpod が直前値を引き継ぐので <code>hasValue == true</code> のままで <code>resolveHomeStatus</code> は <code>content</code> を返し、<strong>全面表示にならない＝ A-08 の再試行ボタンが出ない</strong>。Stream は終了済みなので Pull to Refresh が成功しても一覧は古いままになる。これを塞ぐため <code>HomeScreen</code> の <code>ref.listen</code> が <strong><code>hasError &amp;&amp; hasValue</code> を検知したら <code>ref.invalidate(homeArticlesProvider)</code> で張り直す</strong>（契機ごとに 1 回。契機は「値つきエラーの到着」「取得の完了＝ <code>sequence</code> の増分」「<code>_retry()</code>」で、<code>_articlesReloaded</code> が同じ契機での再入を止める。<code>isLoading</code> は契機にしない。§5.1「一覧 Stream が値を得た後にエラー終了したときの張り直し」）。張り直した先で<strong>値なし</strong>のエラーになれば通常どおり判定表に落ち、A-08 の動線（<code>unavailable</code> / <code>error</code> / <code>offline</code>）か S-01 §5.1 ST-04 の表示になる。上の「1 行だけ写像に失敗する」例のように張り直しても直らない障害では古い一覧を表示したままになるが、<strong>取得が完了するたびに 1 回ずつやり直す</strong>ので、問題の行が別の同期で消えれば再起動せずに一覧へ戻る（<code>logger.w</code> に取得 1 回につき 1 行残る。§8 #40）</td>
+<td>presentation</td>
+</tr>
+<tr>
+<td>値つきエラーの状態が続いている端末で <code>_retry()</code>（A-08）を押した・A-05 で再購読した</td>
+<td>再購読中は <code>AsyncLoading.copyWithPrevious</code> で value と error の両方を保つが、<strong><code>isLoading</code> を先に除くため契機にしない</strong>（除かないと押すたびに余分な invalidate と <code>logger.w</code> が出て、その契機の回数枠が即座に消費され、押下後に本当に死んだときの張り直しが走らない。§5.1・§5.5。D-04 §5.4.2）</td>
 <td>presentation</td>
 </tr>
 <tr>
@@ -2578,6 +2713,11 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <tr>
 <td>S-02/A-05（再試行）を押した</td>
 <td><code>ref.invalidate(savedArticlesProvider)</code> だけを行う（取得しない。<code>countRetryRequestedProvider</code> も呼ばない。S-02 §8 #1・D-04 §5.4.2）。<code>SavedListController</code> の状態は <code>AsyncError</code> のままなので<strong>やり直し中も S-00/E-24 を出したまま</strong>（S-00/E-20 を出さない。S-02 §5 ST-06 の「読み込み中」の行）。新しい <code>AsyncData</code> が届けば ST-01（0 件なら ST-02）に移り、再び <code>AsyncError</code> なら ST-06 のまま何度でも押せる（§5.5）</td>
+<td>presentation</td>
+</tr>
+<tr>
+<td>値を持った後（一覧を 10 件表示中）に <code>watchAll()</code> の Stream が受動的にエラー終了し、他のタブへ移って保存タブに戻った</td>
+<td><code>_onEnter()</code> が <code>_reloadAllowed</code> を戻して <code>_reloadIfDead()</code> を呼ぶため、<strong>入った時点で 1 回だけ <code>ref.invalidate(savedArticlesProvider)</code></strong> が走る。DB が回復していれば最新の保存一覧（ホームで新たに保存した記事を含む）に戻り、回復していなければ直前の一覧を表示したままで次に入ったときにまた 1 回試す。<strong>再起動を待たずに回復できる</strong>（ホーム §5.1 の「取得の完了ごとに 1 回」と対称。§5.5・§8 #40）</td>
 <td>presentation</td>
 </tr>
 <tr>
@@ -2597,7 +2737,7 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td>記事件数 Stream が 0 を 1 度流した後にエラー終了し（<code>count</code> が <code>empty</code> に固着）、その後の取得で記事が 100 件入った端末で、未読フィルタ ON にして全件を既読にした</td>
-<td><code>HomeScreen</code> の <code>hasVisible</code> は<strong>未読フィルタ適用前の <code>totalInTab</code>（100 &gt; 0）<strong>なので true になり、判定表 3 行目で <code>content</code> → <code>PageView</code> が出る（各 <code>HomePage</code> は <code>items</code> が 0 件・<code>totalInTab &gt; 0</code> で S-01/ST-05）。<code>hasVisible</code> を <code>items</code> から取ると false になり、次の取得が失敗した時点で判定表 7 行目に落ちて</strong>記事を 100 件持っている端末に全面 E-24（ST-08）が出て一覧が消える</strong>（§5.1・§8 #38）</td>
+<td><code>HomeScreen</code> の <code>hasVisible</code> は<strong>未読フィルタ適用前の <code>totalInTab</code>（100 &gt; 0）<strong>なので true になり、判定表 3 行目で <code>content</code> → <code>PageView</code> が出る（各 <code>HomePage</code> は <code>pageState.settled == true</code> かつ <code>items</code> が 0 件なので、<strong>自ページの判定が何であれ</strong> <code>showEmpty</code> で S-01/ST-05 を出す。<code>totalInTab &gt; 0</code> のため文言は ST-05。§8 #41）。<code>hasVisible</code> を <code>items</code> から取ると false になり、次の取得が失敗した時点で判定表 7 行目に落ちて</strong>記事を 100 件持っている端末に全面 E-24（ST-08）が出て一覧が消える</strong>（§5.1・§8 #38）</td>
 <td>presentation</td>
 </tr>
 <tr>
@@ -2606,9 +2746,19 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <td>presentation</td>
 </tr>
 <tr>
+<td>件数が <code>empty</code> で固着した端末（上の行）で未読フィルタ ON・全件既読のまま機内モードにして団体タブを開いた</td>
+<td><code>HomeScreen</code> は <code>content</code>（判定表 3 行目）で <code>PageView</code> を出し、<code>HomePage</code> の入力では <code>count == empty</code> × <code>hasVisible == false</code> × <code>SyncOffline</code> で <code>full == offline</code> に落ちるが、<strong><code>HomePage</code> は全面のエラー表示を持たず <code>showEmpty</code> で S-01/ST-05 の <code>EmptyView</code> を出す</strong>（文言とアイコンのない空白のページにしない。S-01 §5.1 ST-04・ST-05 は取得結果によらず E-22 を出す）。全面のエラー表示と再試行（A-08）は <code>HomeScreen</code> だけが持つ。<strong>このケースは 1 フレームの過渡状態ではなく、オフラインが続く限り恒久的</strong>（§5.1・§8 #41）</td>
+<td>presentation</td>
+</tr>
+<tr>
 <td>記事件数 Stream が 0 を 1 度流した後にエラー終了した端末で S-01/A-08 を押した</td>
 <td><code>retry()</code> が <code>retryRequested</code> を立てて <code>articleCountProvider</code> を invalidate するため、再購読中は <code>pending</code>（ST-02）、失敗すれば直前値 0 があっても <code>unavailable</code>（ST-19）、成功すれば新しい件数で <code>content</code> / <code>empty</code>（D-04 §5.4.2 の分岐 0-a〜0-c・§5.4.4 (1)(2)）。<strong><code>retry()</code> を呼ばないと <code>empty</code> のまま ST-12 から抜けられない</strong></td>
 <td>presentation / D-04</td>
+</tr>
+<tr>
+<td>値つきエラーの状態（<code>watchAll()</code> の購読が終了済み）で星を 3 件外し、下部タブを設定へ切り替えて確定させ、保存タブへ戻った</td>
+<td>確定の完了時に <code>_fromDb</code> から確定を試みた id を取り除いてから <code>_recompute()</code> するため、<strong>解除した 3 件は一覧に戻らない</strong>（取り除かないと <code>mergeSavedList(fromDb: 古い _fromDb, pendingUnsave: {})</code> が塗りつぶしの星で復活させ、購読が終了しているので <code>watchAll()</code> の再発火による自己修復も起きない。<code>deleteUnsavedOutOfFeed</code> で <code>articles</code> の行ごと消えている記事まで戻る）。戻った時点の <code>_onEnter()</code> が張り直しを 1 回試み、成功すれば DB の内容で一覧が更新される（§5.5・§8 #44）</td>
+<td>presentation</td>
 </tr>
 <tr>
 <td>確定処理（<code>CommitSavedChangesUseCase</code> の await）中に保存タブへ戻った</td>
@@ -2797,12 +2947,32 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td>タブのタップのアニメーション中（<code>animateToPage</code> の 300ms）に通知タップが届いた</td>
-<td>listener は <code>_pendingTabIndex</code> に保持し、アニメーション完了の <code>finally</code> で <code>jumpToPage</code> → <code>select</code> する。保持している間は <code>onPageChanged</code> からの <code>select</code> を呼ばない（利用者のタップ先が通知の選択を上書きしない。S-01/ST-15。§5.1「通知由来の変化を取りこぼさない」）</td>
+<td>listener は <code>source == notification</code> で判別し（<code>PageController.page</code> から推定しないため、移動中の中間ページと目的の index が一致して取りこぼす窓が無い。§8 #43）、<code>_pendingTabIndex</code> に保持する。アニメーション完了の <code>_finishTabAnimation</code> が <code>_pendingTabIndex</code> を着地点に使う。保持している間は <code>onPageChanged</code> からの <code>select</code> を呼ばない（利用者のタップ先が通知の選択を上書きしない。S-01 §5.3 ST-15。§5.1「通知由来の変化を取りこぼさない」）</td>
+<td>presentation</td>
+</tr>
+<tr>
+<td>タブのタップのアニメーション中に別の上部タブをタップした（再入）</td>
+<td>走っている系列を <code>_finishTabAnimation(landingIndex: _animatingTo!)</code> で即座に終わらせ（ワープの並びを戻し、保留があればそこへ着地）、<code>_animationGeneration</code> を進めて新しい系列を始める。<strong>1 本目の <code>finally</code> は世代が古いので後始末を行わない</strong>ため、2 本目のワープの並びを壊したり <code>_animating</code> を下ろしたりしない。結果は最後にタップしたタブに落ち着く（§5.1「タブのタップ（A-01）」・§8 #43。§10 T-M の目視 24）</td>
+<td>presentation</td>
+</tr>
+<tr>
+<td>全面表示中（ST-02・ST-07・ST-08・ST-19）に上部タブをタップした（S-01 §8 #13「タブの切り替えはできる」）</td>
+<td><code>_pageController.hasClients == false</code> なので <code>select(index, source: user)</code> だけを行い、<code>animateToPage</code> / ワープ / <code>_animating</code> / <code>_pendingTabIndex</code> を使わない（client の無い <code>PageController</code> を操作すると落ちる）。下線は「下線位置の入力」の fallback で選択中タブに付き、全ページ同じ全面表示のままになる（§5.1・§10 T-M の目視 23）</td>
+<td>presentation</td>
+</tr>
+<tr>
+<td>全面表示中に通知タップで団体タブが選ばれ、その後 A-08 などで <code>PageView</code> が現れた</td>
+<td>listener は client が無いので何もしないが、<strong><code>PageView</code> を出し始めたフレームの <code>addPostFrameCallback</code></strong> が選択中の index と <code>_pageController.page?.round()</code> を照合して <code>jumpToPage</code> で合わせる（§5.1「<code>PageView</code> が現れたフレームで合わせる」・§8 #43）</td>
+<td>presentation</td>
+</tr>
+<tr>
+<td>タブのアニメーション中に <code>HomeScreen</code> が破棄された（<code>dispose</code>）</td>
+<td><code>dispose</code> は <code>_animationGeneration</code> を 1 つ進めて進行中の <code>finally</code> を無効化し、<code>_pendingTabIndex</code> を捨てる（<code>jumpToPage</code> も <code>select</code> も行わない）。通知の選択は <code>homeTabControllerProvider</code> に残っているため、State が作り直されたときは <code>initState</code> の <code>PageController(initialPage: …)</code> がその値を拾う（§5.1・§8 #43）</td>
 <td>presentation</td>
 </tr>
 <tr>
 <td>タブのアニメーションがドラッグで中断された・完了前に State が作り直された</td>
-<td><code>_animating = false</code>・ワープの並べ替えの復元・<code>_pendingTabIndex</code> の反映はすべて <code>try</code> / <code>finally</code>（<code>dispose</code> でも同等の後始末）で行うため下ろし損ねない。下ろし損ねると以後すべての通知タップが <code>jumpToPage</code> せず、ワープ用の並びが残ったまま固定される（§5.1「タブのタップ（A-01）」）</td>
+<td><code>_animating = false</code>・ワープの並べ替えの復元・<code>_pendingTabIndex</code> の反映はすべて <code>try</code> / <code>finally</code> の <code>_finishTabAnimation</code>（<code>dispose</code> では世代を進めて無効化し保留を捨てる）で行うため下ろし損ねない。下ろし損ねると以後すべての通知タップが <code>jumpToPage</code> せず、ワープ用の並びが残ったまま固定される（§5.1「タブのタップ（A-01）」）</td>
 <td>presentation</td>
 </tr>
 <tr>
@@ -3266,22 +3436,26 @@ Future&lt;void&gt; seedArticles(
 </tr>
 <tr>
 <td><code>HomeScreen</code> の <code>hasVisible</code> を <code>homeListStateOf</code>（<code>totalInTab</code>）から与える配線（§8 #38）</td>
-<td>規則そのものは上記 <code>resolveHomeStatus</code> / <code>homeListStateOf</code> の直接テストが覆う（<code>items</code> から取る実装に戻すと <code>homeListStateOf</code> のケースが落ちる）。<code>HomeScreen</code> がその関数を <code>select</code> に渡していることは §10 T-M の目視項目 22</td>
+<td>規則そのものは上記 <code>resolveHomeStatus</code> / <code>homeListStateOf</code> の直接テストが覆う（<code>items</code> から取る実装に戻すと <code>homeListStateOf</code> のケースが落ちる）。取り違え（<code>homePageListStateOf</code> を渡す）は <code>resolveHomeStatus</code> が <code>ScreenListState</code> しか受け取らないためコンパイルエラーになる（§8 #42）。<code>HomeScreen</code> がその関数を <code>select</code> に渡していることは §10 T-M の目視項目 22</td>
+</tr>
+<tr>
+<td><code>HomePage</code> の <code>showEmpty</code> を <code>homePageListStateOf</code>（<code>items</code>）から与え、<code>EmptyView</code> の文言を <code>totalInTab == 0</code>（ST-04）/ <code>&gt; 0</code>（ST-05）で分ける配線（§8 #41）</td>
+<td>2 つの関数は <code>hasVisible</code> の由来だけが違い、<code>showEmpty</code> の側は型でも落ちない（どちらの型も <code>settled</code> / <code>hasVisible</code> を持つ）。規則は上記 <code>homePageListStateOf</code> の直接テストが覆い、<strong>配線と文言の出し分けは §10 T-M の目視項目 25</strong></td>
 </tr>
 <tr>
 <td><code>PageController</code> に client が無いときの下線（§5.1「下線位置の入力」）</td>
 <td>値の写像ではなく Widget の配線のため直接テストできない。§10 T-M の目視項目 23（起動直後・全面表示中に落ちないこと）</td>
 </tr>
 <tr>
-<td>一覧 Stream が値を得た後にエラー終了したときの 1 回だけの張り直し（§5.1）</td>
-<td>Provider の配線のためテストしない。§10 T-M の目視項目 24</td>
+<td>一覧 Stream が値を得た後にエラー終了したときの契機ごと 1 回の張り直し（ホーム §5.1・保存 §5.5。§8 #40）</td>
+<td>Provider の配線のためテストしない。ホームは §10 T-M の目視項目 24（2 回続けて起こしても回復できること）、保存は §10 T-N の目視項目</td>
 </tr>
 <tr>
 <td>S-00/E-25 の抑止 2 条件（<code>unavailable</code> 中・<code>suppressed</code>）と <code>sequence</code> の消費規則（§5.6）</td>
 <td>同上。§10 T-M の目視項目 20・21（<code>sequence</code> を <code>build</code> で比較していないことは目視 21 でしか検出できない。D-04 §8.1）</td>
 </tr>
 </tbody></table>
-<p><strong>純粋関数の直接テスト（例外）</strong>：D-04 §8 #28 と同じ基準（入出力が値だけで I/O・Provider・Widget に触れない）で、本書は次の 4 つを追加する（§8 #7・#33・#39。CLAUDE.md の列挙への追記は §8.1 の CLAUDE.md 宛）。</p>
+<p><strong>純粋関数の直接テスト（例外）</strong>：D-04 §8 #28 と同じ基準（入出力が値だけで I/O・Provider・Widget に触れない）で、本書は次の <strong>4 ファイル・6 関数</strong>を追加する（§8 #7・#33・#39。<strong>CLAUDE.md の列挙への追記は反映済み</strong>。§8.1 の CLAUDE.md 宛）。</p>
 <table>
 <thead>
 <tr>
@@ -3291,8 +3465,8 @@ Future&lt;void&gt; seedArticles(
 </tr>
 </thead>
 <tbody><tr>
-<td><code>homeListStateOf</code> / <code>homePageListStateOf</code> / <code>resolveHomeStatus</code>（<code>articles/presentation/home_status.dart</code>）</td>
-<td><strong><code>homeListStateOf</code></strong>：値もエラーも未着 → <code>settled == false</code>／値あり <code>totalInTab: 0</code> → <code>(true, false)</code>／値あり <code>totalInTab: 100</code>・<code>items</code> 空（未読フィルタ ON で全件既読）→ <strong><code>(true, true)</code></strong>（<code>items</code> から取らない。§8 #38）／値なしエラー → <code>(true, false)</code>／<strong>値つきエラー</strong>（直前値 <code>totalInTab: 100</code>）→ <code>(true, true)</code>。<strong><code>homePageListStateOf</code></strong>：値あり <code>items</code> 空・<code>totalInTab: 100</code> → <strong><code>(true, false)</code></strong>（ST-05 の出し分けに使う）／値あり <code>items</code> 1 件 → <code>(true, true)</code>／値なしエラー → <code>(true, false)</code>。<strong><code>resolveHomeStatus</code></strong>：<code>settled == false</code> → <code>full == loading</code>・他 3 つすべて false（<code>resolveListStatus</code> を呼ばない）／<code>count == empty</code> × <code>hasVisible == true</code> × <code>SyncFailed</code> → <strong><code>full == content</code>・<code>errorNotice == true</code></strong>（判定表 3 行目）／<code>count == empty</code> × <code>hasVisible == false</code> × <code>SyncFailed</code> → <strong><code>full == error</code>・<code>errorNotice == false</code></strong>（S-01/ST-08 が出て S-00/E-25 と重ならない。§8 #38・§10 T-M 目視 22）／<code>count == present</code> × <code>hasVisible == false</code> → <code>full == empty</code>／<code>count == unavailable</code> → <code>full == unavailable</code>・<code>refreshing</code>・<code>offlineBanner</code>・<code>errorNotice</code> がすべて false</td>
+<td><code>homeListStateOf</code> / <code>homePageListStateOf</code> / <code>resolveHomeStatus</code>（<code>articles/presentation/home_status.dart</code>。以下 <code>(settled, hasVisible)</code> は <code>ScreenListState</code> / <code>PageListState</code> の 2 つのフィールドを表す）</td>
+<td><strong><code>homeListStateOf</code></strong>：値もエラーも未着 → <code>settled == false</code>／値あり <code>totalInTab: 0</code> → <code>(true, false)</code>／値あり <code>totalInTab: 100</code>・<code>items</code> 空（未読フィルタ ON で全件既読）→ <strong><code>(true, true)</code></strong>（<code>items</code> から取らない。§8 #38）／値なしエラー → <code>(true, false)</code>／<strong>値つきエラー</strong>（直前値 <code>totalInTab: 100</code>）→ <code>(true, true)</code>。<strong><code>homePageListStateOf</code></strong>：値あり <code>items</code> 空・<code>totalInTab: 100</code> → <strong><code>(true, false)</code></strong>（ST-05 の出し分けに使う）／値あり <code>items</code> 1 件 → <code>(true, true)</code>／値なしエラー → <code>(true, false)</code>。<strong><code>resolveHomeStatus</code></strong>：<code>settled == false</code> → <code>full == loading</code>・他 3 つすべて false（<code>resolveListStatus</code> を呼ばない）／<code>count == empty</code> × <code>hasVisible == true</code> × <code>SyncFailed</code> → <strong><code>full == content</code>・<code>errorNotice == true</code></strong>（判定表 3 行目）／<code>count == empty</code> × <code>hasVisible == false</code> × <code>SyncFailed</code> → <strong><code>full == error</code>・<code>errorNotice == false</code></strong>（S-01/ST-08 が出て S-00/E-25 と重ならない。§8 #38・§10 T-M 目視 22）／<code>count == present</code> × <code>hasVisible == false</code> → <code>full == empty</code>／<code>count == unavailable</code> → <code>full == unavailable</code>・<code>refreshing</code>・<code>offlineBanner</code>・<code>errorNotice</code> がすべて false／<strong><code>count == empty</code> × <code>hasVisible == false</code> × <code>SyncOffline</code> → <code>full == offline</code></strong>（ページ側はこの値を全面表示に使わず <code>EmptyView</code> を出す。§8 #41）。<strong><code>resolveHomeStatus</code> に <code>homePageListStateOf</code> の戻り値（<code>PageListState</code>）を渡すコードはコンパイルできない</strong>（§8 #42。テストでも <code>ScreenListState</code> だけを渡す）</td>
 <td><code>test/features/articles/presentation/home_status_test.dart</code></td>
 </tr>
 <tr>
@@ -3554,13 +3728,37 @@ Future&lt;void&gt; seedArticles(
 <td>39</td>
 <td>ホームの状態判定の規則は <code>lib/features/articles/presentation/home_status.dart</code> の 3 つの純粋関数（<code>homeListStateOf</code>・<code>homePageListStateOf</code>・<code>resolveHomeStatus</code>）に 1 箇所だけ置き、<code>HomeScreen.build</code>・<code>HomePage.build</code>・§5.6 の listener がこれを呼ぶ。<strong><code>resolveListStatus</code> の直接呼び出しと <code>AsyncValue</code> の <code>switch</code> を画面側に書かない</strong>。テーブル駆動の直接テストを §7 に持つ</td>
 <td><code>HomeScreen</code> の private 関数（<code>_screenStatus</code> / <code>_allTabOf</code>）と <code>HomePage.build</code> の <code>switch</code> に同じ規則を 2 つの書き方で持つ（2026-09-24 第 1 周の改訂）／<code>HomePage</code> も <code>HomeScreen</code> の関数を private のまま使い回す（同一ファイルに寄せる）</td>
-<td>2 つは「入力（「すべて」ページ／自ページ）が違うだけで同一の規則」で、#38 で <code>hasVisible</code> を実値に変えたことにより完全に一致した重複になった。<strong>片方だけを直す事故（まさに #38 が直した種類の事故）が型検査でもテストでも落ちない。</strong> §5.6 の listener は「同じ関数に同じ入力を与える」形で既に重複を避けており、<code>HomePage</code> だけがその原則の外にあった。切り出せば #38 の規則に自動テストが付き（§7。<code>hasVisible</code> に固定値を渡す実装へ戻す回帰が検出できる）、<code>HomePage</code> を <code>home_screen.dart</code> の private に依存させずに済む。置き場は実装ファイルと同じ相対パスの <code>test/features/articles/presentation/home_status_test.dart</code> で、<strong>CLAUDE.md の既存の許容パス（<code>test/features/&lt;feature&gt;/{domain,presentation}/</code>）に収まるため規約の改訂は不要</strong>（純粋関数の例示への追記だけ §8.1 の CLAUDE.md 宛に足す）</td>
+<td>2 つは「入力（「すべて」ページ／自ページ）が違うだけで同一の規則」で、#38 で <code>hasVisible</code> を実値に変えたことにより完全に一致した重複になった。<strong>片方だけを直す事故（まさに #38 が直した種類の事故）が型検査でもテストでも落ちない。</strong> §5.6 の listener は「同じ関数に同じ入力を与える」形で既に重複を避けており、<code>HomePage</code> だけがその原則の外にあった。切り出せば #38 の規則に自動テストが付き（§7。<code>hasVisible</code> に固定値を渡す実装へ戻す回帰が検出できる）、<code>HomePage</code> を <code>home_screen.dart</code> の private に依存させずに済む。置き場は実装ファイルと同じ相対パスの <code>test/features/articles/presentation/home_status_test.dart</code> で、<strong>CLAUDE.md の既存の許容パス（<code>test/features/&lt;feature&gt;/{domain,presentation}/</code>）に収まるため規約の改訂は不要</strong>（純粋関数の例示への 3 語の追記は<strong>反映済み</strong>。§8.1 の CLAUDE.md 宛）</td>
 </tr>
 <tr>
 <td>40</td>
-<td>一覧 Stream（<code>homeArticlesProvider</code>）が<strong>値を流した後に</strong>エラー終了したときは、<code>HomeScreen</code> の <code>ref.listen</code>（「すべて」ページ）が <code>hasError &amp;&amp; hasValue</code> を検知して <strong>1 度だけ</strong> <code>ref.invalidate(homeArticlesProvider)</code> で張り直す。回数は <code>_articlesReloaded</code> で 1 回に限り、健全な値が届いたときと <code>_retry()</code> で解く</td>
-<td>(a) 何もしない（2026-09-24 第 1 周の改訂まで）／(b) <code>SyncSucceeded</code> を受けた時点で一覧 Provider が <code>hasError</code> なら invalidate する／(c) 値ありエラーでも全面表示（<code>FullView.error</code>）に倒して A-08 の動線を出す</td>
-<td>(a) は <code>hasValue == true</code> のままなので <code>content</code> になり、<strong>全面表示にならないので A-08 の再試行ボタンが出ず、<code>homeArticlesProvider</code> を invalidate する経路が画面に 1 つも無くなる</strong>。Stream は終了済みなので以後 Pull to Refresh が成功しても一覧は古いままで、再起動以外に回復手段が無い（D-04 §8 #63 が <code>retry()</code> で塞いだ「件数 Stream が値を得た後に死んだ端末では取得に成功しても抜けられない」と同型の穴）。(b) は取得が走らない端末（オフラインが続く・S-02 のように取得を持たない経路）で契機が来ず、<code>SyncSucceeded</code> を待つぶん復帰が遅い。(c) は S-01 §5.1 ST-07・ST-08 の発生条件（直近の取得結果で決まる）に反し、取得は成功しているのにエラー表示が出る。回数を 1 回に限るのは、張り直した Stream も直前値を引き継いで同じ行で失敗すると listener が再入して invalidate のループになるため</td>
+<td>一覧 Stream が<strong>値を流した後に</strong>エラー終了したときは、<strong>「自然な契機ごとに 1 回だけ」</strong> <code>ref.invalidate</code> で張り直す。ホーム（<code>homeArticlesProvider</code>）の契機は <strong>(1) 値つきエラーの到着、(2) 取得の完了（<code>syncControllerProvider</code> の <code>sequence</code> の増分）、(3) <code>_retry()</code></strong>。保存（<code>savedArticlesProvider</code>）の契機は <strong>(1) 値つきエラーの到着、(2) 下部タブの選択が保存になった瞬間（<code>_onEnter()</code>）、(3) A-05 の <code>allowReload()</code></strong>。いずれも再入防止のフラグ（<code>_articlesReloaded</code> / <code>_reloadAllowed</code>）を契機ごとに解き、<strong><code>isLoading</code>（再購読中）は契機にしない</strong></td>
+<td>(a) 何もしない（2026-09-24 第 1 周の改訂まで）／(b) <strong>「起動してから 1 回だけ」に限る</strong>（同第 2 周の改訂まで）／(c) <code>SyncSucceeded</code> を受けた時点で一覧 Provider が <code>hasError</code> なら invalidate する／(d) 値ありエラーでも全面表示（<code>FullView.error</code>）に倒して A-08 の動線を出す</td>
+<td>(a) は <code>hasValue == true</code> のままなので <code>content</code> になり、<strong>全面表示にならないので A-08 の再試行ボタンが出ず、Provider を invalidate する経路が画面に 1 つも無くなる</strong>。Stream は終了済みなので以後 Pull to Refresh が成功しても一覧は古いままで、再起動以外に回復手段が無い（D-04 §8 #63 が <code>retry()</code> で塞いだ「件数 Stream が値を得た後に死んだ端末では取得に成功しても抜けられない」と同型の穴）。<strong>(b) は同じ穴が 2 回目以降に開く</strong>：張り直した Stream が同じ行の写像でまた失敗すると購読は終了済み・<code>content</code> のまま・Pull to Refresh も invalidate しない、で (a) と同じ行き止まりになる。保存画面には契機そのものが無く、一度死ぬとアプリを再起動するまで古い一覧のままだった。(c) は「<code>SyncSucceeded</code> だけ」に限ると失敗した取得では契機が来ず、保存画面のように取得を持たない画面に適用できない。(d) は S-01 §5.1 ST-07・ST-08 の発生条件（直近の取得結果で決まる）に反し、取得は成功しているのにエラー表示が出る。<strong>契機ごとに 1 回</strong>に限るのは、張り直した Stream も直前値を引き継いで同じ行で失敗すると listener が再入して invalidate のループになるため。取得の完了・画面への入場はどちらも利用者の操作か 1 時間に 1 度の取得に律速されるので、回数が発散しない。<code>isLoading</code> を除くのは、<code>AsyncLoading.copyWithPrevious(previous, isRefresh: true)</code> が value と error の両方を保つため（D-04 §5.4.2）、再購読中を「また死んだ」と誤判定して回数枠を空振りで消費するのを防ぐため</td>
+</tr>
+<tr>
+<td>41</td>
+<td><code>HomePage</code> の空表示（S-01/ST-04・ST-05）は、<code>ListStatus.full == empty</code> ではなく **<code>pageState.settled &amp;&amp; !pageState.hasVisible</code>（決着していて表示対象が 0 件）**で出す。<code>HomeScreen</code> が <code>PageView</code> を出している間は、ページ側の判定が <code>error</code> / <code>offline</code> / <code>unavailable</code> / <code>loading</code> に落ちても <code>EmptyView</code> を出す（文言は自ページの <code>totalInTab</code> で ST-04 / ST-05 を出し分ける）。全面のエラー表示と再試行は引き続き <code>HomeScreen</code> だけが持つ</td>
+<td>(a) <code>full == empty</code> のときだけ <code>EmptyView</code> を出す（2026-09-24 第 2 周の改訂まで）／(b) <code>HomePage</code> も <code>error</code> / <code>offline</code> の全面表示と A-08 を持つ／(c) ページの <code>hasVisible</code> を <code>totalInTab</code> にして食い違いを無くす</td>
+<td>(a) は、件数 Stream が <code>empty</code> で固着した端末（§6）で未読フィルタ ON・全件既読のページを機内モードで開くと、<code>HomeScreen</code> は判定表 3 行目で <code>content</code>（<code>totalInTab == 100</code>）、<code>HomePage</code> は 6 行目で <code>offline</code> になり、<strong>文言もアイコンも無い空白のページ</strong>になる。しかもこれは件数が固着している限り<strong>オフラインが続く間ずっと</strong>で、「1 フレームの過渡状態」として放置できない。S-01 §5.1 ST-04・ST-05 は<strong>取得結果によらず</strong> E-22 を出すと定めている。(b) は S-01 §8 #13（全面表示のときは上部タブを残して全ページ同じ表示）に反し、ページごとに違う全面表示が並ぶ。再試行の動線も 2 か所になる。(c) は §8 #38 が退けた案で、未読フィルタ ON・全件既読のページが <code>content</code> になり ST-05 が一度も出なくなる</td>
+</tr>
+<tr>
+<td>42</td>
+<td><code>homeListStateOf</code> / <code>homePageListStateOf</code> の戻り値の型を分け（<code>ScreenListState</code> / <code>PageListState</code>）、<code>resolveHomeStatus</code> は <strong><code>ScreenListState</code> だけ</strong>を受け取る。関数名は 3 つのまま変えない</td>
+<td>(a) 現状維持（両方とも同じレコード型）／(b) 画面側を <code>homeScreenListStateOf</code> に改名して対称にする／(c) <code>resolveHomeStatus(..., {required HomeStatusScope scope})</code> で scope を明示する</td>
+<td>(a) は 2 つの関数のシグネチャが完全に同じで、取り違えてもコンパイルが通る（純粋関数の直接テストは関数単体しか見ないため、§8 #38 が直した回帰がそのまま再発する）。型を分けると、<strong>最も影響の大きい取り違え（画面全体の判定にページの <code>hasVisible</code> を渡す ＝ 記事 100 件の端末に全面 E-24）がコンパイルエラーになる</strong>。逆向き（ページの <code>showEmpty</code> に画面の値を渡す）は両型とも <code>settled</code> / <code>hasVisible</code> を持つため型では落ちず、§10 T-M の目視 25 で担保する。(b)(c) は<strong>関数名が増える／変わる</strong>ため CLAUDE.md「テスト方針」の純粋関数の例示（<code>homeListStateOf</code>・<code>homePageListStateOf</code>・<code>resolveHomeStatus</code> で<strong>反映済み</strong>。§8.1）と再びずれる。型の追加は例示に影響しない</td>
+</tr>
+<tr>
+<td>43</td>
+<td>上部タブの選択は <strong><code>homeTabControllerProvider</code> の状態に出所（<code>TabSelectSource.user</code> / <code>notification</code>）を持たせ</strong>、listener は <code>source == notification</code> のときだけ <code>jumpToPage</code> / <code>_pendingTabIndex</code> を扱う。A-01 の再入（アニメーション中の別タブのタップ）は<strong>走っている系列をその目的ページで即座に終わらせてから新しい系列を始め</strong>、<code>_animationGeneration</code>（世代カウンタ）により <strong><code>finally</code> は自分が始めた系列が最新のときだけ後始末する</strong>。全面表示中（client 無し）の A-01 は <code>select</code> だけを行い、<code>PageView</code> が現れた最初のフレームで選択中 index に合わせる。<code>dispose</code> では <code>jumpToPage</code> も <code>select</code> も行わず保留を捨てる</td>
+<td>(a) 通知由来かどうかを <code>_pageController.page?.round() != next</code> から推定する（2026-09-24 第 2 周の改訂まで）／(b) 再入したタップを無視する／(c) 再入時に 2 本目を待たせる（キュー）／(d) <code>dispose</code> で <code>select(_pendingTabIndex!)</code> を呼ぶ</td>
+<td>(a) は出所の情報を持っている発行側ではなく受け側が表示状態から再構成する形で、<strong>アニメーション中（0→3 の移動中で <code>page.round() == 2</code>）に <code>selectCompany(2)</code> が届くと条件が成立せず取りこぼす</strong>（完了時の <code>onPageChanged</code> が 3 で上書きし、通知の選択が失われる）。client が無い間は <code>page</code> の読み出し自体が落ちる。出所を持たせれば推定が不要になり、再入・<code>dispose</code> の判断も単純になる。(b) は「最後にタップしたタブに落ち着く」（S-01/A-01 の期待）を満たさない。(c) は待ち行列の長さと中断の扱いが増え、300ms の間に 2 回以上タップされたときの状態が読めなくなる。世代カウンタなら<strong>常に最後の系列だけが後始末をする</strong>ことを 1 つの条件式で保証できる。(d) は <code>dispose</code> 中に Provider を書き換えることになるうえ不要で、通知の選択は <code>selectCompany()</code> の時点で既に Provider に入っており、State が作り直されれば <code>initState</code> の <code>initialPage</code> が拾う</td>
+</tr>
+<tr>
+<td>44</td>
+<td><code>SavedListController._onLeave()</code> の確定完了後は、<strong>確定を試みた <code>unsave</code> の id を <code>_fromDb</code> から取り除いてから</strong> <code>_recompute()</code> する</td>
+<td>(a) そのまま <code>_recompute()</code> する（2026-09-24 第 2 周の改訂まで）／(b) 確定後は <code>_recompute()</code> を行わず新しい <code>AsyncData</code> を待つ</td>
+<td>(a) は <code>mergeSavedList(fromDb: 古い _fromDb, pendingUnsave: {})</code> を書くため、<strong>DB から削除済みの記事が塗りつぶしの星で一覧に戻る</strong>（利用者から見ると「解除したのに元に戻った」。<code>deleteUnsavedOutOfFeed</code> で <code>articles</code> の行ごと消えていることもある）。値つきエラーで購読が終了している端末では <code>watchAll()</code> の再発火による自己修復も起きず、恒久的に復活したままになる。(b) は、1 件目の <code>remove</code> で失敗して DB に 1 行も書かれなかった場合に再発火が起きず、<strong>解除を保留していたセルが枠線の星のまま固まる</strong>（DB は保存済みなので表示と食い違う）。id を取り除いてから <code>_recompute()</code> すれば、成功時は正しく消え、失敗時も再発火が届けば DB の内容（塗りつぶしの星）に戻る</td>
 </tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
@@ -3610,7 +3808,7 @@ Future&lt;void&gt; seedArticles(
 </tr>
 <tr>
 <td>S-01（<strong>反映済み</strong>。2026-09-24 確認）</td>
-<td>(b) 未読フィルタの設定値を読み出せないとき（<code>unreadFilterProvider</code> が <code>AsyncError</code>）の扱いは <strong>S-01 §8 #27</strong>（「OFF（ST-12）として扱い、E-02 も OFF の見た目にする。画面には何も出さない」）で確定し、本書 §4.6・§6 と一致した。(a) 一覧そのものを読み出せないが<strong>件数クエリだけ成功している</strong>とき（<code>homeArticlesProvider</code> が <code>AsyncError</code> で <code>articleCountProvider</code> は成功。<code>ArticleRowMapper</code> の写像失敗など）の表示も、<strong>S-01 §5.1 ST-04 の発生条件</strong>（「選択中のタブに属する取得済みの記事の件数は読み出せたが、一覧の中身を組み立てられなかったときも、件数と直近の取得結果によらず本状態になる（利用者への追加の知らせは出さない）」）に反映済みで、本書 §5.1・§6 の扱い（<code>hasVisible == false</code>・<code>totalInTab == 0</code> で ST-04 の表示、<code>logger.w</code> だけ）と一致する。<strong>本書から S-01 への未処理の申し送りは無い</strong></td>
+<td>(b) 未読フィルタの設定値を読み出せないとき（<code>unreadFilterProvider</code> が <code>AsyncError</code>）の扱いは <strong>S-01 §8 #27</strong>（「OFF（ST-12）として扱い、E-02 も OFF の見た目にする。画面には何も出さない」）で確定し、本書 §4.6・§6 と一致した。(a) 一覧そのものを読み出せないが<strong>件数クエリだけ成功している</strong>とき（<code>homeArticlesProvider</code> が <code>AsyncError</code> で <code>articleCountProvider</code> は成功。<code>ArticleRowMapper</code> の写像失敗など）の表示も、<strong>S-01 §5.1 ST-04 の発生条件</strong>（件数は読み出せたが一覧を組み立てられなかったとき）に反映済みで、本書 §5.1・§6 の扱い（<code>hasVisible == false</code>・<code>totalInTab == 0</code> で ST-04 の表示、<code>logger.w</code> だけ）と一致する。<strong>本書から S-01 への未処理の申し送りは無い</strong></td>
 <td>§5.1 / §6</td>
 </tr>
 <tr>
@@ -3649,9 +3847,14 @@ Future&lt;void&gt; seedArticles(
 <td>§4.6 / §5.1 / §6 / §8 #11</td>
 </tr>
 <tr>
-<td>CLAUDE.md（司令塔）（<strong>一部反映済み</strong>。未反映分は本文の (d) の 1 件）</td>
-<td><strong>反映済み（2026-09-24 確認）</strong>：(a) 純粋関数の例示の <code>mergeSavedList</code>・<code>buildArticleCellModel</code>・<strong><code>resolveAnchorId</code></strong>（§8 #33）、(b) ディレクトリ規約の <code>features/browser/</code>（§8 #8。開発者確認済み 2026-09-20）・<code>core/ui/list/</code> と、<code>core/database/</code> の説明への「2 つ以上の feature の infrastructure が共有する述語・写像（<code>article_row_mapper.dart</code>）」（§3.1・§8 #32）、(c) 純粋関数テストの置き場の列挙（「テスト方針」の許容パスと <code>app/</code> の <code>test/</code> ツリーの両方）への <code>test/core/ui/list/</code>（§3.2・§7・§8 #33）、<code>test/helpers/</code> の契約テストの例外（§8 #36）。<strong>未反映は (d) の 1 件</strong>：「テスト方針」の純粋関数の例示に <strong><code>resolveHomeStatus</code>・<code>homeListStateOf</code>・<code>homePageListStateOf</code></strong>（§8 #39）を足す。<strong>置き場の列挙（<code>test/features/&lt;feature&gt;/{domain,presentation}/</code>）には既に収まっているため、規約の改訂は例示への追記だけで足りる</strong>（例示が無くても <code>T-M</code> の実装は規約に反しない）</td>
+<td>CLAUDE.md（司令塔）（<strong>反映済み</strong>。2026-09-24 確認。(a)〜(d) すべて）</td>
+<td>(a) 純粋関数の例示の <code>mergeSavedList</code>・<code>buildArticleCellModel</code>・<strong><code>resolveAnchorId</code></strong>（§8 #33）、(b) ディレクトリ規約の <code>features/browser/</code>（§8 #8。開発者確認済み 2026-09-20）・<code>core/ui/list/</code> と、<code>core/database/</code> の説明への「2 つ以上の feature の infrastructure が共有する述語・写像（<code>article_row_mapper.dart</code>）」（§3.1・§8 #32）、(c) 純粋関数テストの置き場の列挙（「テスト方針」の許容パスと <code>app/</code> の <code>test/</code> ツリーの両方）への <code>test/core/ui/list/</code>（§3.2・§7・§8 #33）、<code>test/helpers/</code> の契約テストの例外（§8 #36）、(d) 純粋関数の例示への <strong><code>homeListStateOf</code>・<code>homePageListStateOf</code>・<code>resolveHomeStatus</code></strong>（§8 #39。CLAUDE.md「テスト方針」の当該行に 3 語とも入っていることを確認）。<strong>本書の改訂で関数名は増やさない</strong>ため（§8 #42 は戻り値の型だけを分ける）、以降の追記は不要</td>
 <td>§7 / §3.1 / §3.2</td>
+</tr>
+<tr>
+<td>pm（司令塔）（<strong>未反映</strong>）</td>
+<td>起票済みの実タスク（<code>docs/tasks/</code>）と本書 §10 の乖離が 6 点ある。<strong>着手前にボード側を合わせる</strong>（本書側の変更は不要）：(1) <code>T-33.md</code>（= §10 T-M）の <code>depends_on</code> に <strong>D-04 §10 T-F3 相当</strong>が無い（§2.2 #19）、(2) <code>T-33.md</code> の完了条件に <strong>§10 T-M の目視 21〜25</strong> が無い（§2.2 #20・§8 #41・#42・#43）、(3) <code>T-34.md</code>（= T-N）の <code>depends_on</code> に<strong>解消済みの <code>reopen:S-02</code></strong> が残る（S-02 §5 ST-04・§8 #10 に反映済み。§8.1 の S-02 宛・§10 T-N）、(4) <code>T-30.md</code> の <code>depends_on</code> に<strong>解消済みの <code>reopen:D-04</code></strong> が残る（2026-09-23 の D-04 reopen で反映済み。§8.1 の D-04 宛 1 行目）、(5) 本書 §10 の <strong><code>T-Q</code>（<code>resolveAnchorId</code> の切り出し）・<code>T-R</code>（<code>seedArticles</code> の契約テスト）が未起票</strong>、(6) D-04 §10 の <strong><code>T-F3</code>・<code>T-P</code> が未起票</strong>（(1) の依存先と、T-M・T-N の並行制約の相手が board 上に存在しない）</td>
+<td>§10 / §2.2 #19・#20 / §8.1</td>
 </tr>
 <tr>
 <td>実装（片付け。<strong>未反映</strong>。<strong>D-04 §10 T-P とは別</strong>。本書の反映後に行う）</td>
@@ -3663,7 +3866,8 @@ Future&lt;void&gt; seedArticles(
 <p><strong>該当なし。</strong> 初版の Q-1（<code>features/browser/</code> の新設）は §8 #8 に、レビュー第 1 周後の Q-1（保存画面表示中の終了時の保留の扱い）は §8 #26 に、2026-09-23 の reopen で追加した Q-1（<code>test/helpers/</code> のテストヘルパ自身に契約テストを許すか）は §8 #36 に、いずれも開発者確認済み（順に 2026-09-20・2026-09-20・<strong>2026-09-24</strong>）として移した。</p>
 <p>画面定義書 S-00〜S-03 の approve（2026-09-24）への追随にあたり、新たに開発者の判断を要する事項は生じていない（§8 #34・#35 は S-00 §8 #37、S-01 §8 #28・#30・#31、S-02 §8 #11・#12 の決定と D-04 §5.4.1〜§5.4.4・§5.9 の受け口から導けるもので、判断の余地が無い）。</p>
 <p>D-04 の <code>approved</code>（2026-09-24。<code>review_rounds: 23</code>）への追随（§2.2 の 24 行への再同期、<code>retry()</code> の呼び出し、<code>sequence</code> の消費規則、§10 の T-F3 依存）についても、新たに開発者の判断を要する事項は生じていない（いずれも D-04 §5.4.2・§5.4.4・§8.1 と S-01 §8 #30・S-02 §8 #1 で一意に決まる）。<strong><code>hasVisible</code> の固定値をやめた §8 #38 も、D-04 §5.4.3 の判定表 3 行目から一意に導かれる</strong>（採りうる案はいずれも画面定義書の状態を満たせない）。</p>
-<p>design-review 第 1 周（2026-09-24）の 17 件の修正で新たに加えた決定（§8 #39 判定規則の <code>home_status.dart</code> への集約、§8 #40 値ありエラーでの 1 回だけの張り直し、§8 #37 の <code>_retry()</code> への集約、§8 #38 の <code>hasVisible</code> の由来の書き分け、§5.1 の下線位置と <code>_pendingTabIndex</code>、§5.5 の <code>copyWithPrevious</code>）についても、<strong>開発者の判断を要する事項は生じていない</strong>：いずれも S-00 §5.2・S-01 §5.1〜§5.3・S-02 §5 の状態と D-04 §5.4 の判定表から一意に決まり、CLAUDE.md の改訂も<strong>純粋関数の例示への追記 1 件のみ</strong>（許容パスは既存の列挙に収まる。§8.1 の CLAUDE.md 宛 (d)）で、規約の変更にはあたらない。S-03 §5 ST-01（E-18 の値が未着のとき）は画面定義書側の追記依頼として §8.1 に置いた（本書の振る舞いは既に確定している）。</p>
+<p>design-review 第 1 周（2026-09-24）の 17 件の修正で新たに加えた決定（§8 #39 判定規則の <code>home_status.dart</code> への集約、§8 #40 値ありエラーでの 1 回だけの張り直し、§8 #37 の <code>_retry()</code> への集約、§8 #38 の <code>hasVisible</code> の由来の書き分け、§5.1 の下線位置と <code>_pendingTabIndex</code>、§5.5 の <code>copyWithPrevious</code>）についても、<strong>開発者の判断を要する事項は生じていない</strong>：いずれも S-00 §5.2・S-01 §5.1〜§5.3・S-02 §5 の状態と D-04 §5.4 の判定表から一意に決まり、CLAUDE.md の改訂も<strong>純粋関数の例示への追記 1 件のみ</strong>（許容パスは既存の列挙に収まる。§8.1 の CLAUDE.md 宛 (d)。2026-09-24 に反映済み）で、規約の変更にはあたらない。S-03 §5 ST-01（E-18 の値が未着のとき）は画面定義書側の追記依頼として §8.1 に置いた（本書の振る舞いは既に確定している）。</p>
+<p>design-review 第 2 周（2026-09-24）の 15 件の修正で新たに加えた決定（§8 #41 ページの空表示を <code>pageState</code> から決める、#42 <code>ScreenListState</code> / <code>PageListState</code> の型分離、#43 <code>TabSelectSource</code> と世代カウンタ、#44 確定後に <code>_fromDb</code> から取り除く、#40 の契機の作り直し）についても、<strong>開発者の判断を要する事項は生じていない</strong>：いずれも S-01 §5.1 ST-04・ST-05・§5.3 ST-15・§8 #13・#25、S-02 §5 ST-04・ST-06 の状態と D-04 §5.4.2〜§5.4.4 の判定表から一意に決まり、<strong>CLAUDE.md の改訂も伴わない</strong>（関数名を増やさず型だけを分けたため。§8 #42・§8.1 の CLAUDE.md 宛は全件反映済み）。§8.1 に新設した pm 宛の 6 点はボード（<code>docs/tasks/</code>）側の追随で、本書の内容に関する判断ではない。</p>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
 <p>D-04 §10 の T-F1・T-F2a・T-F2b の後に続く（<strong>T-M・T-N はさらに D-04 §10 の T-F3 の後</strong>。D-04 §8.1）。各タスクは新規ファイル 10 以内（テストを含む。生成物は数えない）・UseCase 3 以内で、単独で <code>flutter analyze &amp;&amp; flutter test</code> を通す。<strong>下限（5）を下回るのは T-I・T-N・T-O・T-Q・T-R の 5 つ</strong>で、T-I・T-N・T-O・T-Q はいずれも触るディレクトリが他タスクと重なるため統合せず独立させている（pm は再分割・統合をしない）。<strong>T-R はテストヘルパの契約テスト 1 ファイルだけ</strong>（<code>lib/</code> を触らない）で、他タスクに混ぜると「UseCase のテスト」と「ヘルパのテスト」が同じ差分に並んでレビューの観点が混ざるため独立させる（§8 #36）。並行タスクが同じファイル（生成物を含む）を編集しないよう、<code>core/di/providers.dart</code> は T-H1 → T-H2 の順に直列で編集し、UseCase の Provider は feature 別ファイルに置く（§4.6）。</p>
 <table>
@@ -3739,7 +3943,7 @@ Future&lt;void&gt; seedArticles(
 <td><code>articles/presentation/home_tab_bar.dart</code>・<code>home_page.dart</code>・<code>home_providers.dart</code>・<strong><code>home_status.dart</code>（§5.1・§8 #39）</strong>、<code>lib/app/notification_tap_handler.dart</code>、<code>core/ui/article/article_cell_model_builder.dart</code>、<code>test/core/ui/article/article_cell_model_builder_test.dart</code>、<strong><code>test/features/articles/presentation/home_status_test.dart</code>（§7）</strong>。改修：<code>home_screen.dart</code>、<code>lib/app/app_lifecycle_sync.dart</code>（<code>NotificationTapHandler</code> を子に挟む）。<strong><code>core/ui/status/transient_notice.dart</code> は触らない</strong>（<code>static void show(BuildContext context, {required String message})</code> は D-04 §5.9 が持ち T-F2a が実装済み。§5.6）。新規 8 + 改修 2</td>
 <td><code>lib/features/articles/presentation/</code>、<code>lib/app/</code>、<code>lib/core/ui/article/</code>、<code>test/core/ui/article/</code>、<code>test/features/articles/presentation/</code></td>
 <td>T-H3、T-I、T-J、T-K、T-L、<strong>D-04 §10 T-F3</strong>（<code>FullView</code> 6 値・<code>FullErrorKind</code> 3 値・<code>resolveArticleCount</code>（<code>retryRequested</code>）・<code>countRetryRequestedProvider</code> を用意し、<code>lib/app/app_lifecycle_sync.dart</code> を同じく改修するため。D-04 §8.1）</td>
-<td>品質ゲート通過。<strong>§7 の <code>home_status_test.dart</code> のケースをすべて含み、<code>home_screen.dart</code> / <code>home_page.dart</code> に <code>resolveListStatus</code> の直接呼び出しと <code>AsyncValue</code> の <code>switch</code> が無いこと（判定は <code>home_status.dart</code> の 3 関数だけが持つ。§8 #39）。<code>countRetryRequestedProvider.retry()</code> と <code>ref.invalidate(homeArticlesProvider)</code> が <code>_retry()</code> の中にしか現れないこと（§8 #37）。</strong> <strong>シミュレータで目視（1〜24。1 項目ずつ確認する）</strong>：<br>1. 上部タブのタップ・スワイプ・非隣接タップが S-01/A-01・A-02 のとおり動く<br>2. 先頭で Pull to Refresh が発火する<br>3. <strong>先頭以外を表示中（アンカー形）のまま引っ張っても更新が始まらず、debug ビルドが落ちない</strong>（§5.11.1「構成（2 形態）」。アンカー形では <code>leadingSlivers</code> を出さない）<br>4. <strong>先頭以外を表示中の状態から上端まで戻して Pull to Refresh が発火する</strong>（§5.11.3「先頭に戻ったときの標準形への復帰」。成立しなければ §8 #21 の縮退）<br>5. 未読フィルタ切替で全面ローディングが出ず全ページが先頭に戻る（<strong>切替の直後にまだ開いていない団体タブへスワイプしても先頭が出ている</strong>。レイアウト未確定のページの保持した先頭スクロール。§5.11.2 手順 3）<br>6. <strong>未読フィルタを切り替えた後（<code>animated: false</code> の先頭スクロールを受けた後）に、そのページで下部タブ再タップ・団体タブ再タップが効いて先頭へ戻る</strong>（<code>_inFlight</code> の残留が無い。§5.11.2「先頭スクロール要求」）<br>7. <strong>先頭以外を表示中に団体タブ再タップ・下部タブ再タップで先頭（最新の記事）まで戻る</strong>（§5.11.2 <code>scrollToTop</code>。§8 #27）<br>8. <strong>先頭以外を表示中に取得中の帯（E-21）が出た・消えたとき、表示中の記事の画面上の位置が動かない。先頭を表示中なら帯が一覧の先頭に現れ、一覧と一緒にスクロールする</strong>（§5.11.5 <code>headerSliver</code>。§8 #28）<br>9. <strong>帯の出現・消失を繰り返しても補正が二重にかからず、debug ビルドで <code>RenderViewport exceeded its maximum number of layout cycles</code> が出ない</strong>（<code>_ExtentCompensatingSliver</code> の <code>GlobalKey</code> と保持 extent の更新時点。§5.11.5・§8 #28）<br>10. 記事タップでアプリ内ブラウザが開く<br>11. 星の切替がホームで即時に反映される<br>12. 先頭以外を表示中の差し込みで位置が保たれる<br>13. <strong>先頭以外を表示中のまま団体タブを切り替えて戻し（ページの再構築で <code>ScrollController</code> が差し替わる）、その直後に差し込みが起きても表示中の記事の位置が飛ばない。さらにそのまま操作せず放置しても位置が飛んだままにならない</strong>（§5.11.4 のガード 0 と据え置きの再試行・<code>ScrollController</code> の差し替え）<br>14. <strong>先頭以外を表示中にアンカーの記事が消えて一覧が 1 件だけ・0 件になっても位置が飛ばず落ちない</strong>（§5.11.4 手順 2 の <code>resolveAnchorId</code> が null を返す経路と §5.11.3 <code>_resetAnchorToFirst()</code> の空 <code>items</code> の扱い）<br>15. <strong>未読フィルタ ON で先頭以外を表示中に連続する 2 件以上を開いて戻っても、先頭へジャンプせず直後の記事が同じ位置に来る</strong>（§5.11.4 手順 2 の後方走査）<br>16. 通知タップ相当（<code>notificationTapStreamProvider</code> を手動で流す）で団体タブに切り替わる<br>17. <strong>アプリを終了した状態から通知タップ相当で起動して（<code>takeInitialTap</code> をスタブで返す）、最初のフレームから団体タブが選ばれ先頭が表示されている</strong><br>18. <strong><code>url</code> が <code>https://</code> でない記事をタップすると、ブラウザに移らず S-00/E-25「記事を開けませんでした」が 3 秒出て自動で消え、セルが既読にならず更新バッジも消えない</strong>（S-01/ST-20・§8 #28。§5.3・§8 #34）<br>19. <strong>記事件数の読み出しを失敗させた状態（例：DB を読めない状態で起動）で S-01/ST-19（全面 E-24「記事を表示できませんでした」）になり、「再試行」（A-08）で通信を伴わずに ST-02 → 一覧 の順に遷移する</strong>（§5.6 の 2 系統。D-04 §5.4.4）<br>20. <strong>ST-19 の間は裏の取得が失敗しても S-00/E-25 が出ず、ST-19 を抜けた後にも遡って出ない</strong>（§5.6 の抑止 2。S-01 §8 #30 (c)）<br>21. <strong>D-04 §10 T-F1 の「再現手順 P」＋ T-F3 の (2&#39;)</strong>（手順は D-04 §10 を参照する。ここに転記しない）<strong>を実施し、一覧へ移った直後に S-00/E-25 がさかのぼって出ないこと</strong>（§5.6 の <code>sequence</code> の消費規則。S-01 §8 #30 (c)。D-04 §8.1。<strong>T-F3 の時点ではホームが T-H3 のスタブで観測できないため本タスクで行う</strong>）<br>22. <strong>記事が 0 件の端末（初回起動・機内モード）で全面 E-24（S-01/ST-07 または ST-08）が出て、S-00/E-25 が同時に出ないこと</strong>（<code>hasVisible</code> に <code>true</code> を固定した実装への回帰の検出。§8 #38。S-00 §5.2 の ST-14 と ST-15 の排他）<br>23. <strong>起動直後（全面 E-20 = S-01/ST-02 が出ている間）と、記事件数を読み出せない状態（ST-19）で、上部タブの下線が選択中のタブに出たままアプリが落ちないこと</strong>（<code>PageController</code> に client が無い経路。§5.1「下線位置の入力」）。あわせて<strong>ページをドラッグしている最中に下線が追随して動くこと</strong>（<code>ListenableBuilder</code> による再 build）<br>24. <strong>上部タブを非隣接タップしてワープのアニメーションが走っている最中に通知タップ相当を流すと、アニメーションの完了後に通知先の団体タブが選ばれたままになること</strong>（利用者のタップ先で上書きされない。S-01/ST-15・§5.1「通知由来の変化を取りこぼさない」）</td>
+<td>品質ゲート通過。<strong>§7 の <code>home_status_test.dart</code> のケースをすべて含み、<code>home_screen.dart</code> / <code>home_page.dart</code> に <code>resolveListStatus</code> の直接呼び出しと <code>AsyncValue</code> の <code>switch</code> が無いこと（判定は <code>home_status.dart</code> の 3 関数だけが持つ。§8 #39）。<code>countRetryRequestedProvider.retry()</code> と <code>ref.invalidate(homeArticlesProvider)</code> が <code>_retry()</code> の中にしか現れないこと（§8 #37）。</strong> <strong>シミュレータで目視（1〜26。1 項目ずつ確認する）</strong>：<br>1. 上部タブのタップ・スワイプ・非隣接タップが S-01/A-01・A-02 のとおり動く<br>2. 先頭で Pull to Refresh が発火する<br>3. <strong>先頭以外を表示中（アンカー形）のまま引っ張っても更新が始まらず、debug ビルドが落ちない</strong>（§5.11.1「構成（2 形態）」。アンカー形では <code>leadingSlivers</code> を出さない）<br>4. <strong>先頭以外を表示中の状態から上端まで戻して Pull to Refresh が発火する</strong>（§5.11.3「先頭に戻ったときの標準形への復帰」。成立しなければ §8 #21 の縮退）<br>5. 未読フィルタ切替で全面ローディングが出ず全ページが先頭に戻る（<strong>切替の直後にまだ開いていない団体タブへスワイプしても先頭が出ている</strong>。レイアウト未確定のページの保持した先頭スクロール。§5.11.2 手順 3）<br>6. <strong>未読フィルタを切り替えた後（<code>animated: false</code> の先頭スクロールを受けた後）に、そのページで下部タブ再タップ・団体タブ再タップが効いて先頭へ戻る</strong>（<code>_inFlight</code> の残留が無い。§5.11.2「先頭スクロール要求」）<br>7. <strong>先頭以外を表示中に団体タブ再タップ・下部タブ再タップで先頭（最新の記事）まで戻る</strong>（§5.11.2 <code>scrollToTop</code>。§8 #27）<br>8. <strong>先頭以外を表示中に取得中の帯（E-21）が出た・消えたとき、表示中の記事の画面上の位置が動かない。先頭を表示中なら帯が一覧の先頭に現れ、一覧と一緒にスクロールする</strong>（§5.11.5 <code>headerSliver</code>。§8 #28）<br>9. <strong>帯の出現・消失を繰り返しても補正が二重にかからず、debug ビルドで <code>RenderViewport exceeded its maximum number of layout cycles</code> が出ない</strong>（<code>_ExtentCompensatingSliver</code> の <code>GlobalKey</code> と保持 extent の更新時点。§5.11.5・§8 #28）<br>10. 記事タップでアプリ内ブラウザが開く<br>11. 星の切替がホームで即時に反映される<br>12. 先頭以外を表示中の差し込みで位置が保たれる<br>13. <strong>先頭以外を表示中のまま団体タブを切り替えて戻し（ページの再構築で <code>ScrollController</code> が差し替わる）、その直後に差し込みが起きても表示中の記事の位置が飛ばない。さらにそのまま操作せず放置しても位置が飛んだままにならない</strong>（§5.11.4 のガード 0 と据え置きの再試行・<code>ScrollController</code> の差し替え）<br>14. <strong>先頭以外を表示中にアンカーの記事が消えて一覧が 1 件だけ・0 件になっても位置が飛ばず落ちない</strong>（§5.11.4 手順 2 の <code>resolveAnchorId</code> が null を返す経路と §5.11.3 <code>_resetAnchorToFirst()</code> の空 <code>items</code> の扱い）<br>15. <strong>未読フィルタ ON で先頭以外を表示中に連続する 2 件以上を開いて戻っても、先頭へジャンプせず直後の記事が同じ位置に来る</strong>（§5.11.4 手順 2 の後方走査）<br>16. 通知タップ相当（<code>notificationTapStreamProvider</code> を手動で流す）で団体タブに切り替わる<br>17. <strong>アプリを終了した状態から通知タップ相当で起動して（<code>takeInitialTap</code> をスタブで返す）、最初のフレームから団体タブが選ばれ先頭が表示されている</strong><br>18. <strong><code>url</code> が <code>https://</code> でない記事をタップすると、ブラウザに移らず S-00/E-25「記事を開けませんでした」が 3 秒出て自動で消え、セルが既読にならず更新バッジも消えない</strong>（S-01/ST-20・§8 #28。§5.3・§8 #34）<br>19. <strong>記事件数の読み出しを失敗させた状態（例：DB を読めない状態で起動）で S-01/ST-19（全面 E-24「記事を表示できませんでした」）になり、「再試行」（A-08）で通信を伴わずに ST-02 → 一覧 の順に遷移する</strong>（§5.6 の 2 系統。D-04 §5.4.4）<br>20. <strong>ST-19 の間は裏の取得が失敗しても S-00/E-25 が出ず、ST-19 を抜けた後にも遡って出ない</strong>（§5.6 の抑止 2。S-01 §8 #30 (c)）<br>21. <strong>D-04 §10 T-F1 の「再現手順 P」＋ T-F3 の (2&#39;)</strong>（手順は D-04 §10 を参照する。ここに転記しない）<strong>を実施し、一覧へ移った直後に S-00/E-25 がさかのぼって出ないこと</strong>（§5.6 の <code>sequence</code> の消費規則。S-01 §8 #30 (c)。D-04 §8.1。<strong>T-F3 の時点ではホームが T-H3 のスタブで観測できないため本タスクで行う</strong>）<br>22. <strong>記事が 0 件の端末（初回起動・機内モード）で全面 E-24（S-01/ST-07 または ST-08）が出て、S-00/E-25 が同時に出ないこと</strong>（<code>hasVisible</code> に <code>true</code> を固定した実装への回帰の検出。§8 #38。S-00 §5.2 の ST-14 と ST-15 の排他）<br>23. <strong>起動直後（全面 E-20 = S-01/ST-02 が出ている間）と、記事件数を読み出せない状態（ST-19）で、上部タブの下線が選択中のタブに出たままアプリが落ちないこと</strong>（<code>PageController</code> に client が無い経路。§5.1「下線位置の入力」）。あわせて<strong>ページをドラッグしている最中に下線が追随して動くこと</strong>（<code>ListenableBuilder</code> による再 build）と、<strong>全面表示中に上部タブをタップすると選択中タブと下線がそのタブへ移り、落ちないこと</strong>（S-01 §8 #13。<code>select</code> だけを行う経路。§5.1「タブのタップ（A-01）」）<br>24. <strong>上部タブを非隣接タップしてワープのアニメーションが走っている最中に、(a) 別の上部タブを続けてタップすると最後にタップしたタブに落ち着くこと</strong>（並びが壊れて別のページに着地しない。§5.1「タブのタップ（A-01）」・§8 #43）、<strong>(b) 通知タップ相当を流すと、アニメーションの完了後に通知先の団体タブが選ばれたままになること</strong>（利用者のタップ先で上書きされない。S-01 §5.3 ST-15・§5.1「通知由来の変化を取りこぼさない」）<br>25. <strong>記事が 1 件以上ある団体タブで未読フィルタ ON にして全件を既読にすると、そのページに「未読の記事はありません」（S-01/ST-05）が出る。記事 0 件の団体タブでは「記事がありません」（ST-04）が出る。機内モードにしても（ページ側の判定が <code>offline</code> に落ちても）空白にならず同じ文言が出ること</strong>（<code>homePageListStateOf</code> と <code>showEmpty</code> の配線。§8 #41・#42）<br>26. <strong>一覧が出ている状態で一覧 Stream を値つきエラーで終了させる操作を 2 回続けても、次の取得（Pull to Refresh）の完了で一覧が最新に戻ること</strong>（張り直しが「起動してから 1 回だけ」になっていないこと。§5.1・§8 #40）<br><br><strong>T-M は <code>home_screen.dart</code> / <code>home_page.dart</code> / <code>home_status.dart</code> / <code>home_providers.dart</code> が相互に依存し（同じ 3 関数と <code>HomeTabSelection</code> を共有し、片方だけを直すと §8 #38・#41・#43 の不変条件が崩れる）、分けると同一ファイルの並行編集になるため 1 タスクとして確定する</strong>（pm は再分割・統合をしない。T-K と同じ扱い。§10 冒頭）。分ける必要が生じたときは<strong>本書を reopen して</strong> T-M1（<code>home_status.dart</code>・<code>home_page.dart</code>・<code>article_cell_model_builder.dart</code> と直接テスト）と T-M2（<code>home_screen.dart</code>・<code>home_tab_bar.dart</code>・<code>home_providers.dart</code>・<code>notification_tap_handler.dart</code>）の 2 行に割る（目視は T-M2 にまとめる）</td>
 </tr>
 <tr>
 <td>T-N</td>
@@ -3747,7 +3951,7 @@ Future&lt;void&gt; seedArticles(
 <td><code>saved/presentation/saved_list_controller.dart</code>・<code>saved_list_merge.dart</code>、<code>test/features/saved/presentation/saved_list_merge_test.dart</code>。改修：<code>saved_screen.dart</code>。新規 3 + 改修 1</td>
 <td><code>lib/features/saved/presentation/</code>、<code>test/features/saved/presentation/</code></td>
 <td>T-H3、T-J、T-L、T-M（<code>article_cell_model_builder.dart</code>）、<strong>D-04 §10 T-F3</strong>（<code>FullView.unavailable</code> を含む 6 値と <code>FullErrorKind</code> 3 値、<code>core/ui/status/list_status.dart</code> への型の切り出しを用意するため。D-04 §8.1）。<strong>S-02 §5 ST-04 の補足は 2026-09-24 の approve で反映済みで、<code>reopen:S-02</code> は不要</strong>（§8.1）</td>
-<td>品質ゲート通過。<code>mergeSavedList</code> の直接テスト（§7）。シミュレータで目視：解除 → 枠線の星で残る → 再タップで戻る → 他タブへ → 戻ると消える／解除 → ロック → 復帰 → 再タップで戻ること／初回表示で空表示・読み込み表示が一瞬も出ないこと／下部タブ再タップで先頭以外から先頭へ戻ること（§5.11.2）／<strong>保存一覧の読み出しを失敗させた状態で S-02/ST-06（全面 E-24「記事を表示できませんでした」）になり ST-02（「保存した記事はありません」）にならないこと、「再試行」（A-05）で通信を伴わずに一覧へ戻り、やり直し中も S-00/E-20 が出ずに E-24 のままであること</strong>（§5.5・§8 #35）／<strong><code>url</code> が <code>https://</code> でない保存記事をタップすると S-00/E-25「記事を開けませんでした」が 3 秒出て、セルが既読にならず保留中の解除も確定しないこと</strong>（S-02/ST-07・§8 #12。§5.3・§8 #34）／<strong>一覧が出た後に保存一覧の読み出しを失敗させても（<code>watchAll()</code> の Stream を受動的にエラー終了させる）全面 E-24（ST-06）にならず直前の一覧が残り、その状態で星をタップすると保留（枠線の星）が画面に反映されること</strong>（<code>copyWithPrevious</code> と <code>_recompute</code> の停止条件。§5.5・§6）</td>
+<td>品質ゲート通過。<code>mergeSavedList</code> の直接テスト（§7）。シミュレータで目視：解除 → 枠線の星で残る → 再タップで戻る → 他タブへ → 戻ると消える／解除 → ロック → 復帰 → 再タップで戻ること／初回表示で空表示・読み込み表示が一瞬も出ないこと／下部タブ再タップで先頭以外から先頭へ戻ること（§5.11.2）／<strong>保存一覧の読み出しを失敗させた状態で S-02/ST-06（全面 E-24「記事を表示できませんでした」）になり ST-02（「保存した記事はありません」）にならないこと、「再試行」（A-05）で通信を伴わずに一覧へ戻り、やり直し中も S-00/E-20 が出ずに E-24 のままであること</strong>（§5.5・§8 #35）／<strong><code>url</code> が <code>https://</code> でない保存記事をタップすると S-00/E-25「記事を開けませんでした」が 3 秒出て、セルが既読にならず保留中の解除も確定しないこと</strong>（S-02/ST-07・§8 #12。§5.3・§8 #34）／<strong>一覧が出た後に保存一覧の読み出しを失敗させても（<code>watchAll()</code> の Stream を受動的にエラー終了させる）全面 E-24（ST-06）にならず直前の一覧が残り、その状態で星をタップすると保留（枠線の星）が画面に反映されること</strong>（<code>copyWithPrevious</code> と <code>_recompute</code> の停止条件。§5.5・§6）／<strong>その状態（一覧を出したまま Stream をエラー終了させた後）で他のタブへ移って保存タブに戻ると、最新の保存一覧が出ること</strong>（ホームで新たに保存した記事が現れる。<code>_onEnter()</code> の張り直し。§5.5・§8 #40）／<strong>その状態で星を 3 件外して他のタブへ移り、保存タブに戻ったとき、外した記事が復活していないこと</strong>（<code>_fromDb</code> から確定分を取り除く。§5.5・§8 #44）</td>
 </tr>
 <tr>
 <td>T-O</td>
@@ -3821,10 +4025,6 @@ Future&lt;void&gt; seedArticles(
 <td>design-review 通過（第 1 段階 4 周 / 第 2 段階 3 周）</td>
 </tr>
 <tr>
-<td>2026-09-24</td>
-<td>画面定義書 S-00〜S-03 の approve に追随（申し送り [D-3]〜[D-7]・[D-9]〜[D-12]・[D-16] の 10 件）。記事を開けなかったときの S-00/E-25 を S-01・S-02 の両方に出す経路を追加（<code>OpenArticleAction</code> を <code>Future&lt;bool&gt;</code> に。§5.3・§8 #34）、保存一覧の読み出し失敗を ST-02 から **S-02/ST-06（<code>FullView.unavailable</code> + A-05 の再購読）**へ改め（§5.5・§8 #35）、再試行を <code>full</code> による 2 系統に分け（§5.6）、E-25 の抑止 2 条件（<code>unavailable</code> 中・<code>suppressed</code>）を明記（§5.6・§8 #12）。§2.1 に S-00/ST-17・S-01/ST-19・ST-20・§8 #30・#31、S-02/ST-06・ST-07・A-05 の行を追加、§2.2 の 5 行（#2・#3・#13・#14・#22）を D-04 §8.1 の改訂に同期、§8.1 の申し送り 8 行を「反映済み」に畳み、§8 #13 の暫定表記を外した。§9 の Q-1（<code>test/helpers/</code> の契約テスト）は開発者確認（A: 許す。2026-09-24）を受けて §8 #36 へ移し §9 を「該当なし」に。§7 に <code>seedArticles</code> の契約 8 ケースと「自動テストで覆わない画面側の振る舞い」の表を追加し、§10 に T-R（契約テスト）を追加して T-M・T-N の目視項目と T-N の依存を更新</td>
-</tr>
-<tr>
 <td>2026-09-20</td>
 <td>design-review 第 2 段階・第 3 周で残った低 3 件を修正（承認前）。書き方のみで §8 の決定は変えていない：§5.1「全面表示」行の括弧を分割、§5.9 <code>OpenNotificationSettingsUseCase</code> の <code>logger.w</code> の層を明記、§5.11 <code>AnchoredListController</code> に <code>_target</code> の宣言を追加</td>
 </tr>
@@ -3886,11 +4086,19 @@ Future&lt;void&gt; seedArticles(
 </tr>
 <tr>
 <td>2026-09-24</td>
+<td>画面定義書 S-00〜S-03 の approve に追随（申し送り [D-3]〜[D-7]・[D-9]〜[D-12]・[D-16] の 10 件）。記事を開けなかったときの S-00/E-25 を S-01・S-02 の両方に出す経路を追加（<code>OpenArticleAction</code> を <code>Future&lt;bool&gt;</code> に。§5.3・§8 #34）、保存一覧の読み出し失敗を ST-02 から **S-02/ST-06（<code>FullView.unavailable</code> + A-05 の再購読）**へ改め（§5.5・§8 #35）、再試行を <code>full</code> による 2 系統に分け（§5.6）、E-25 の抑止 2 条件（<code>unavailable</code> 中・<code>suppressed</code>）を明記（§5.6・§8 #12）。§2.1 に S-00/ST-17・S-01/ST-19・ST-20・§8 #30・#31、S-02/ST-06・ST-07・A-05 の行を追加、§2.2 の 5 行（#2・#3・#13・#14・#22）を D-04 §8.1 の改訂に同期、§8.1 の申し送り 8 行を「反映済み」に畳み、§8 #13 の暫定表記を外した。§9 の Q-1（<code>test/helpers/</code> の契約テスト）は開発者確認（A: 許す。2026-09-24）を受けて §8 #36 へ移し §9 を「該当なし」に。§7 に <code>seedArticles</code> の契約 8 ケースと「自動テストで覆わない画面側の振る舞い」の表を追加し、§10 に T-R（契約テスト）を追加して T-M・T-N の目視項目と T-N の依存を更新</td>
+</tr>
+<tr>
+<td>2026-09-24</td>
 <td><strong>D-04 の <code>approved</code>（<code>review_rounds: 23</code>）に追随（2 回目）。</strong> §2.2 を D-04 §8.1 の D-05 宛 <strong>24 行</strong>に再同期（旧 22 行。T-F3 の依存と T-M の目視の 2 行が新規、旧「<code>onRetry</code> の 2 系統」と「<code>retryRequested</code> の責務」は D-04 側で 1 行に統合）。再試行（S-01/A-08 = S-00/A-12）を<strong>両系統で <code>countRetryRequestedProvider.retry()</code> + <code>homeArticlesProvider</code> の invalidate を呼び、<code>sync(retry)</code> だけを分岐させる</strong>形に改め、押下を <code>logger.i</code> に残すことを明記（§2.1・§5.6・§6・§8 #37）。保存画面 A-05 は <code>countRetryRequestedProvider</code> を呼ばず <code>retryRequested</code> 相当のフラグも持たないこと、<code>savedArticlesProvider</code> が <code>keepAlive: true</code> である理由を明記（§3.2・§4.6・§5.5・§8 #35）。<code>sequence</code> は <code>ref.listen</code> のコールバックでだけ消費し <code>build</code> で前回値比較にしない規則を追加（§2.1・§5.6・§7・§10 T-M の目視 21）。抑止時は <code>SyncStarted</code> が流れず E-21 も出ないことを追記（§5.6・§6・§8 #12）。<strong><code>HomeScreen</code> の <code>hasVisible</code> の固定値（<code>true</code>）を廃し「すべて」ページの一覧から与える形に改めた</strong>（判定表が 10 行になり 3 行目が先に一致するため、記事 0 件の端末で ST-07・ST-08・ST-10・ST-12 が出ず E-25 が ST-14 と重なっていた。§5.1・§5.6・§8 #38）。<code>D-04 §5.4</code> の参照を §5.4.1〜§5.4.4 の小節に付け替え、判定表の行番号（10 行・<code>empty</code> 5 行・8 行目・10 行目）を更新。§10 の T-M・T-N の依存欄に <strong>D-04 §10 T-F3</strong> を追加し、末尾の並行の組に「T-F3 と T-M・T-N は並行しない」を明記。§9 は「該当なし」のまま（新たな判断事項は生じていない）</td>
 </tr>
 <tr>
 <td>2026-09-24</td>
 <td>design-review（再開後 2 回目）第 1 段階・第 1 周の指摘 17 件（M-1〜M-17。高 3・中 9・低 5）を修正。<strong>高 3 件はいずれも「設計どおり実装すると壊れる」もの</strong>：(1) 全面表示中・初回 build は <code>PageView</code> がツリーに無いため <code>PageController.page</code> が <code>assert(positions.isNotEmpty)</code> / <code>StateError</code> になる件を、<strong>client の有無を見て選択中タブの index に倒す</strong>形に確定し <code>ListenableBuilder</code> による再 build の契機も明記（§2.1 S-01/ST-13・§5.1「下線位置の入力」・§6・§10 T-M 目視 23）。(2) <code>SavedListController</code> の listener が <code>AsyncError</code> を無条件に代入していた件を <strong><code>copyWithPrevious(state)</code></strong> に直し、あわせて <code>_recompute</code> の停止条件を <strong><code>hasError &amp;&amp; !hasValue</code></strong> に変えた（値つきエラーで星が反映されなくなるのを防ぐ。§5.5・§6・§10 T-N 目視）。(3) ホームの一覧 Stream が<strong>値を得た後に</strong>死ぬと再試行の動線が画面から消える件を、<code>HomeScreen</code> の <code>ref.listen</code> による <strong>1 回だけの張り直し</strong>で塞いだ（§5.1・§6・§8 #40・§10 T-M 目視 24）。<strong>中 9 件</strong>：<code>hasVisible</code> の由来を画面全体は <code>totalInTab</code>（未読フィルタ適用前）・ページは <code>items</code>（適用後）に書き分け（§8 #38）、判定規則を <strong><code>home_status.dart</code> の 3 つの純粋関数</strong>（<code>homeListStateOf</code>・<code>homePageListStateOf</code>・<code>resolveHomeStatus</code>）に集約して §7 の直接テストと §10 T-M 目視 22 を追加（§8 #39。<code>HomeScreen</code> / <code>HomePage</code> の二重実装を解消）、再試行の 3 行を <strong><code>HomeScreen._retry({required bool withSync})</code></strong> に畳み（§8 #37）、タブのアニメーション中の通知タップを <code>_pendingTabIndex</code> で取りこぼさず <code>try</code> / <code>finally</code> でフラグとワープの並びを下ろす形に（§5.1・§6・§10 T-M 目視 24）、<strong>§8.1 の「未反映」マーカー 6 件を宛先側（D-04 §8.1・§10、S-01 §5.1 ST-04、<code>docs/requirements.md</code> §5、CLAUDE.md）で確認して「反映済み」に畳み</strong>（<code>/pm plan</code> が不要な <code>reopen:</code> を書かないため）、代わりに <strong>D-04 宛に <code>hasVisible</code> の定義の書き分け</strong>（未反映）を 1 行追加（§2.2 #2 にも 1 文）、§2.1 S-02/ST-06 を §5.5 の「<code>ListStatus</code> を組み立てず <code>FullErrorView</code> を直接置く」に統一（§2.1 S-00/ST-17 も）、S-02/ST-04 の存在しない引用を ID 参照に置換（§5.5・§8 #26）。<strong>低 5 件</strong>：再試行直後に 1 フレーム ST-04 が出うることを許容として §6 に明記、§2.2 #2 の引き取り欄を「listener 内で計算し直す」に訂正、<code>FullView.empty</code> の 2 経路（ST-04 / ST-05）を §5.1 に補足、変更履歴の 1 行と §10 の T-Q / T-R の並びを時系列・依存順に直し、参照の書き方を統一（<code>S-01 §5.1 ST-nn</code> / <code>S-00 §4.3 E-25 (b)</code>、<code>S-01 §8 #30</code> の (a)(b)(c) の定義を §2.1 で 1 度だけ断る、§3.3 の mermaid ラベルを画面 ID 付きに）。§8.1 の S-03 宛に E-18 の値が未着のときの追記依頼（未反映）を追加。§9 は「該当なし」のまま</td>
+</tr>
+<tr>
+<td>2026-09-24</td>
+<td>design-review（再開後 2 回目）第 1 段階・第 2 周の指摘 15 件（M-1〜M-15。高 4・中 4・低 7）を修正。<strong>高 4 件のうち 2 件は契機・機構そのものを作り直した</strong>：(1) 死んだ Stream の張り直しを「起動してから 1 回だけ」から**「自然な契機ごとに 1 回だけ」<strong>に改め、ホームは</strong>取得の完了（<code>sequence</code> の増分）<strong>、保存は</strong>保存タブに入った瞬間（<code>_onEnter()</code>）と A-05 の <code>allowReload()</code>** を契機にした（2 回目以降に詰まる穴と、保存画面に契機が無かった穴を同時に塞ぐ。listener は <code>isLoading</code> を除いて確定したエラーだけを契機にする。§5.1・§5.5・§6・§8 #40）。(2) A-01 のタブ切替を <strong><code>TabSelectSource</code>（<code>user</code> / <code>notification</code>）を状態に持たせる形</strong>に変え、通知由来かどうかを <code>PageController.page</code> から推定するのをやめたうえで、再入は「走っている系列を即座に終わらせて新しい系列を始める」＋<strong>世代カウンタで自分の系列のときだけ後始末</strong>、全面表示中（client 無し）は <code>select</code> のみ、<code>PageView</code> が現れたフレームで選択中 index に合わせる、<code>dispose</code> は保留を捨てる、に確定（§4.6・§5.1・§6・§8 #43）。残る高 2 件：確定した解除が <code>_recompute()</code> で復活する件を <strong><code>_fromDb</code> から確定分を取り除く</strong>形で塞ぎ（§5.5・§6・§8 #44）、画面が <code>content</code> でページが <code>offline</code> / <code>error</code> / <code>loading</code> のときに空白ページになる件を <strong><code>showEmpty</code>（<code>settled &amp;&amp; !hasVisible</code>）で必ず <code>EmptyView</code> を出す</strong>形に改めた（件数が固着した端末では恒久的だったため。§5.1・§6・§8 #41）。<strong>中 4 件</strong>：全面表示中の A-01 は <code>select</code> だけを行う（§5.1・§10 T-M 目視 23）、listener の <code>isLoading</code> 除外（§5.1・§5.5・§6）、<code>HomePage</code> 側の配線の担保（§7・§10 T-M 目視 25）、§8.1 の CLAUDE.md 宛を<strong>全件反映済み</strong>に畳んだ（§7 前文・§8 #39 も）。<strong>低 7 件</strong>：<code>homeListStateOf</code> / <code>homePageListStateOf</code> の戻り値を <code>ScreenListState</code> / <code>PageListState</code> に分けて取り違えを型検査で落とし（関数名は 3 つのままにして CLAUDE.md の例示とずらさない。§8 #42）、§10 T-M に「1 タスクとして確定する」注記と目視 25・26 を追加（§8 #41・#40）、§8.1 に **pm 宛（未反映。実タスクとの乖離 6 点）**を追加、変更履歴の 1 行を時系列に戻し、§7 の「次の 4 つ」を「4 ファイル・6 関数」に、画面定義書の鉤括弧引用を ID 参照に置換。§9 は「該当なし」のまま（新たな判断事項は生じていない）</td>
 </tr>
 </tbody></table>
 

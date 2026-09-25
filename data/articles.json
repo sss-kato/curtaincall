@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-25T07:12:25+09:00",
+  "generatedAt": "2026-09-25T10:22:48+09:00",
   "articles": [
+    {
+      "id": "b0f90a25c4d5edd9",
+      "companyId": "takarazuka",
+      "title": "＜ブルーレイ・DVD・CD予約受付開始のお知らせ＞星組宝塚大劇場公演『RRR × TAKA”R”AZUKA ～√Rama～』",
+      "url": "https://www.tca-pictures.net/stage/2026/rrr/",
+      "category": "ticket",
+      "publishedAt": "2026-09-25T00:00:00+09:00",
+      "contentHash": "731bc95b0a405e9d",
+      "fetchedAt": "2026-09-25T10:22:48+09:00"
+    },
     {
       "id": "63954331275ad261",
       "companyId": "takarazuka",
@@ -992,16 +1002,6 @@
       "publishedAt": "2026-02-25T00:00:00+09:00",
       "contentHash": "7de547f5af8b62b8",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "a8523d7bda222735",
-      "companyId": "takarazuka",
-      "title": "第111期生 組配属について",
-      "url": "https://kageki.hankyu.co.jp/news/20260223_003.html",
-      "category": "other",
-      "publishedAt": "2026-02-23T00:00:00+09:00",
-      "contentHash": "ddf9688983a4ed15",
-      "fetchedAt": "2026-09-25T07:12:25+09:00"
     },
     {
       "id": "bd5abf779b51a3b1",

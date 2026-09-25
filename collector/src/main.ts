@@ -121,15 +121,13 @@ interface NotificationSetup {
   readonly kind: NotificationGatewayKind;
 }
 
-/** 手順 5 の通知ゲートウェイの生成。生成に失敗（JSON.parse・サービスアカウント不正）したら例外を投げる */
-function buildNotificationGateway(
-  serviceAccountJson: string | undefined,
-  logger: Logger,
-): NotificationSetup {
-  if (serviceAccountJson === undefined) {
-    return { gateway: new NoopNotificationGateway(logger), kind: "noop" };
-  }
-  return { gateway: new FirebaseNotificationGateway(serviceAccountJson), kind: "firebase" };
+/**
+ * FIREBASE_SERVICE_ACCOUNT を JSON.parse した結果（unknown）を FirebaseNotificationGateway に
+ * 渡せる形へ絞り込む型ガード（§5.5 手順 4a）。any を経由せずに Readonly<Record<string, unknown>> へ
+ * 絞り込むためだけに使う。project_id 等の必須キーの妥当性はゲートウェイ側（手順 5）で検証する。
+ */
+function isPlainRecord(v: unknown): v is Readonly<Record<string, unknown>> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 /**
@@ -169,7 +167,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  // 手順 4：通知設定の検証（§8 #32）
+  // 手順 4a：通知設定の検証（§8 #32）
   const serviceAccountJson = nonEmptyEnv(process.env.FIREBASE_SERVICE_ACCOUNT);
   const requireNotifications = process.env.CURTAINCALL_REQUIRE_NOTIFICATIONS === "1";
   if (serviceAccountJson === undefined && requireNotifications) {
@@ -178,16 +176,56 @@ async function main(): Promise<void> {
     return;
   }
 
-  let notificationSetup: NotificationSetup;
-  try {
-    notificationSetup = buildNotificationGateway(serviceAccountJson, logger);
-  } catch (e) {
-    logger.error("failed to initialize notification gateway", { error: formatError(e) });
-    process.exitCode = 1;
-    return;
+  // JSON.parse はここ 1 回だけ行う（§5.5 手順 4a）。SyntaxError.message には不正位置周辺の原文
+  // （サービスアカウント JSON の断片。private_key を含みうる）が載り、Actions の Secret マスクは
+  // 行の途中を切り出した断片には効かないため、formatError(e) を渡さず固定文言だけを出す（§4.7、§8 #48）。
+  // JSON.parse が投げる SyntaxError と isPlainRecord の不一致は「妥当な JSON ではない」という同じ結果
+  // なので、一度 unknown で受けてから 1 つの分岐にまとめる（文言・終了コードの二重管理を避ける）。
+  let serviceAccount: Readonly<Record<string, unknown>> | undefined;
+  if (serviceAccountJson !== undefined) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(serviceAccountJson);
+    } catch {
+      parsed = undefined;
+    }
+    if (!isPlainRecord(parsed)) {
+      logger.error("FIREBASE_SERVICE_ACCOUNT is not valid JSON");
+      process.exitCode = 1;
+      return;
+    }
+    serviceAccount = parsed;
   }
 
-  // 手順 5：残りの具象の生成
+  // 手順 5（の一部）：通知ゲートウェイの生成。serviceAccount が無ければ Noop（FCM 初期化とは無関係の
+  // 経路なので try の外で生成する）。ある場合だけ FirebaseNotificationGateway の生成を try で囲み、
+  // cert() / initializeApp の失敗も固定文言だけを出す（message も cause もログに出さない。
+  // §4.7、§5.4、§8 #48）。
+  let notificationSetup: NotificationSetup;
+  if (serviceAccount === undefined) {
+    notificationSetup = { gateway: new NoopNotificationGateway(logger), kind: "noop" };
+  } else {
+    try {
+      notificationSetup = {
+        gateway: new FirebaseNotificationGateway(serviceAccount, logger),
+        kind: "firebase",
+      };
+    } catch (e) {
+      // message・cause は出さない（秘密の断片を含みうる。§4.7）。errorName（Error.name。クラス名の
+      // みで入力由来の断片を含まない）だけを添え、切り分けの手がかりにする。想定内（鍵不正等）は
+      // ゲートウェイ側が Error で throw するため "Error" になり、想定外（実装バグ）は TypeError 等
+      // 別の名前になって区別できる。直前に出る 3 つの warn（ゲートウェイ側）が切り分け用の一次情報
+      // で、warn が無ければ想定外の例外という読み方になる。errorName フィールド自体も §5.5 手順 5・
+      // §6 には無い追加。D-02 側の追随が必要。
+      logger.error("failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT", {
+        errorName: e instanceof Error ? e.name : "unknown",
+      });
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // 手順 5（続き）：残りの具象の生成
   const clock = new SystemClock();
   const hasher = new Sha256Hasher();
   const http = new FetchHttpClient(

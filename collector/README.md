@@ -47,6 +47,48 @@ npm run lint && npx tsc --noEmit && npx vitest run
 
 秘密情報は `.env`（Git 管理外）と GitHub Secrets のみで扱う。リポジトリにコミットしない。
 
+### `FIREBASE_SERVICE_ACCOUNT` の設定ミスの切り分け
+
+設定ミスは 2 段階で検知され、Actions のログに出る `error` の意味が段階によって異なる（秘密情報の
+断片がログへ漏れないよう、いずれの `error` も `message` も `cause` も出さない）。
+
+**1. `main.ts` が Secret を読む・JSON として解釈する段階。** ここで失敗すると `error` 1 本だけで
+即座に終了する（`warn` は出ない）。
+
+| `error` の固定文言（Actions ログ）           | 原因                                                                                                 | 出どころ（`main.ts` 手順 4a）         |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `FIREBASE_SERVICE_ACCOUNT is required`       | `CURTAINCALL_REQUIRE_NOTIFICATIONS=1` なのに Secret が未設定（Secret 名のタイポ等の検知用）          | `requireNotifications` の分岐         |
+| `FIREBASE_SERVICE_ACCOUNT is not valid JSON` | Secret の JSON 自体が壊れている（JSON として読めてもオブジェクトでない場合（配列・文字列等）を含む） | `JSON.parse` / `isPlainRecord` の分岐 |
+
+**2. JSON としては読めた後、`FirebaseNotificationGateway` を初期化する段階。** ここで失敗すると
+`main.ts` 手順 5 が `error` 1 本（固定文言 `failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT`）
+を出す。**どの段で落ちたかは、その直前に出る `warn` 1 行が一次情報になる。** 切り分けには
+`CURTAINCALL_LOG_LEVEL` を `warn` 以下（`debug` / `warn`。既定の `info` でもよい）にしておく必要が
+ある（`error` にすると warn が出力されず切り分けができない）。
+
+| warn の固定文言（Actions ログ）                                                     | 原因                                                                 |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `FIREBASE_SERVICE_ACCOUNT does not have project_id/client_email/private_key`        | 必須キーの欠落（snake_case / camelCase いずれの表記でも可）          |
+| `FIREBASE_SERVICE_ACCOUNT private_key could not be parsed (check newline escaping)` | 秘密鍵（PEM）の改行エスケープ崩れ等、`cert()` が拒否する鍵の内容不正 |
+| `failed to initialize firebase app`                                                 | 鍵とは無関係な失敗（二重初期化の衝突等）                             |
+
+直前の warn が無ければ、ゲートウェイが想定していない例外（実装バグ）が起きている。
+
+`warn: fcm gateway reused an existing firebase app` は上記の失敗表には含めない。これは失敗ではなく
+初期化自体は成功しているが、`FIREBASE_SERVICE_ACCOUNT` から作った認証情報ではなく既存の既定アプリが
+再利用されている、という情報。通知の送信先プロジェクトが想定と異なる可能性があるため、同一プロセス
+で他に firebase-admin を初期化している箇所が無いか確認する。
+
+### 依存を上げるときに確認すること
+
+`firebase-admin` をメジャー更新するときは、`FirebaseNotificationGateway` が次に依存していないか確認する。
+
+1. `DEFAULT_FIREBASE_APP_NAME = "[DEFAULT]"`（`firebase-notification-gateway.ts`）が、firebase-admin
+   内部の既定アプリ名として引き続き有効か
+2. `Credential` / `App` 型と、`cert` / `getApps` / `initializeApp` / `getMessaging(app)` のシグネチャ
+   が変わっていないか
+3. `ServiceAccount` の必須キー（`project_id` / `client_email` / `private_key` 相当）が変わっていないか
+
 ## 団体の追加手順
 
 1. `../data/companies.json` と `../app/assets/companies.json` の**両方**に同じ団体 1 要素を追加する

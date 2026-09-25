@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-25T10:22:48+09:00",
+  "generatedAt": "2026-09-25T16:37:31+09:00",
   "articles": [
+    {
+      "id": "161877df0658421f",
+      "companyId": "takarazuka",
+      "title": "＜人物相関図 公開＞花組公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/revue/2026/elisabeth/correlation.html",
+      "category": "other",
+      "publishedAt": "2026-09-25T00:00:00+09:00",
+      "contentHash": "0b5f47ab613bf259",
+      "fetchedAt": "2026-09-25T16:37:31+09:00"
+    },
     {
       "id": "b0f90a25c4d5edd9",
       "companyId": "takarazuka",
@@ -11,6 +21,16 @@
       "publishedAt": "2026-09-25T00:00:00+09:00",
       "contentHash": "731bc95b0a405e9d",
       "fetchedAt": "2026-09-25T10:22:48+09:00"
+    },
+    {
+      "id": "27565e1874df6532",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞月組 東急シアターオーブ公演『NINE』",
+      "url": "https://kageki.hankyu.co.jp/news/20260613_001.html",
+      "category": "streaming",
+      "publishedAt": "2026-09-25T00:00:00+09:00",
+      "contentHash": "212e27c03b299d7c",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "63954331275ad261",
@@ -134,16 +154,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "27565e1874df6532",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞月組 東急シアターオーブ公演『NINE』",
-      "url": "https://kageki.hankyu.co.jp/news/20260613_001.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-18T00:00:00+09:00",
-      "contentHash": "212e27c03b299d7c",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "3b2d2a782ca777d5",
       "companyId": "takarazuka",
       "title": "【テレビ】フジテレビ「STAR」（FNS歌謡祭 アーカイブ映像）",
@@ -160,8 +170,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260918_003.html",
       "category": "new_work",
       "publishedAt": "2026-09-18T00:00:00+09:00",
-      "contentHash": "4f45557f0c6e70b0",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "4f45557f0c6e70b0"
     },
     {
       "id": "8907c7d6fbb184f0",
@@ -994,14 +1004,15 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "118f19ddbb885018",
-      "companyId": "takarazuka",
-      "title": "副組長2名制の導入について",
-      "url": "https://kageki.hankyu.co.jp/news/20260225_007.html",
-      "category": "other",
-      "publishedAt": "2026-02-25T00:00:00+09:00",
-      "contentHash": "7de547f5af8b62b8",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "id": "6a2f18026cd04e0b",
+      "companyId": "shiki",
+      "title": "『ライオンキング』東京公演 明日26日（土）「四季の会」会員先行予約開始！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/037991.html",
+      "category": "ticket",
+      "publishedAt": "2026-09-25T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/12/lk_mtthmn_2512-thumb-500x373-39833.jpg",
+      "contentHash": "8935f2b2b6002137",
+      "fetchedAt": "2026-09-25T16:37:31+09:00"
     },
     {
       "id": "bd5abf779b51a3b1",
@@ -1098,9 +1109,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037804.html",
       "category": "other",
       "publishedAt": "2026-09-10T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/36189a2185a3b440b2866909a5d4dc1206902f10-thumb-500x373-40278.jpg",
-      "contentHash": "b5a64683f728aa1f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "b5a64683f728aa1f"
     },
     {
       "id": "c1b02d31e7eeb7cc",
@@ -1816,6 +1827,16 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "be367a0cefd258ba",
+      "companyId": "shinkansen",
+      "title": "／髑髏城／鑑賞サポート:聴覚に障がいのあるお客様のためのタブレット台本の貸出サービスのご案内",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=13880",
+      "category": "other",
+      "publishedAt": "2026-09-25T11:00:00+09:00",
+      "contentHash": "2991e8c2a89534c4",
+      "fetchedAt": "2026-09-25T16:37:31+09:00"
+    },
+    {
       "id": "4c7c67295c4e3eb1",
       "companyId": "shinkansen",
       "title": "／DOKURO77／『髑髏城の七人』花鳥風月極BD-BOX ECサイト販売決定！",
@@ -1912,8 +1933,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13640",
       "category": "ticket",
       "publishedAt": "2026-08-20T17:00:00+09:00",
-      "contentHash": "3a4686a6c640a43b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "3a4686a6c640a43b"
     }
   ]
 }

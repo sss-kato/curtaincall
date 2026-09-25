@@ -35,8 +35,8 @@ export class ArticlesFileStore implements ArticleReader, ArticleWriter {
       text = await fsPromises.readFile(this.filePath, "utf-8");
     } catch (error) {
       if (isEnoentError(error)) {
-        // D-02 追随: §7.3 は warn としているが、ENOENT は初回実行の正常経路なので info に落とす
-        // （warn は異常の監視に使う）
+        // ENOENT は初回実行・articles.json を作り直した直後の正常経路なので info に落とす
+        // （warn は異常の監視に使う。§8 #42）
         this.logger.info("previous articles.json not found (first run)", {
           error: formatError(error),
         });

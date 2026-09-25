@@ -1,8 +1,8 @@
 // 参照する § は特記なき限り docs/design/D-02.md（§5.3 手順 3）
-// D-02 §7.3 はこのクラスの単体テストを対象外としているが（「git を実行するコードはテストで呼ばない」）、
-// このテストは execFile だけを、実物を通さないスタブに差し替えることで実際の git を一切実行しない
-// 例外（§7.3 の記述自体への追随は T-37）。git diff --cached --quiet の非 0 終了（code=1・signal=null）を
-// 差分ありとして扱えることの回帰テストとして追加した。
+// D-02 §7.3・§8 #37・CLAUDE.md「テスト方針」に従い、execFile を実物を通さないスタブへ差し替えて
+// 実 git を一度も起動しない（既定実装は必ず例外を投げる）。carve-out は vi.importActual で
+// process.execPath を起動する 1 ケースのみ。git diff --cached --quiet の非 0 終了
+// （code=1・signal=null）を差分ありとして扱えることの回帰テストとして追加した。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { promisify } from "node:util";
 import { PublishFailedError } from "../../../src/domain/articles-publisher.js";
@@ -116,6 +116,8 @@ const COMMIT_NOTE = "note";
 const ERROR_LOG_NAME_PREFIX = "GitCommandError: ";
 /** 値が取れなかったときに suffix へ出る表示（実装の formatExitValue と対） */
 const ABSENT_EXIT_VALUE = "undefined";
+/** 実装の GIT_TIMEOUT_MS（非公開定数）と対。ずれたらどちらかの変更漏れ */
+const EXPECTED_GIT_TIMEOUT_MS = 60_000;
 
 let logger: RecordingLogger;
 
@@ -164,7 +166,9 @@ describe("publish", () => {
       );
       expect(actualRejection).toBeInstanceOf(Error);
       const confirmedRejection = actualRejection as ExecFileRejection;
-      expect(confirmedRejection.signal).toBeNull(); // 型定義に無い実行時の値を明示的に固定する
+      // 型定義に無い実行時の値を許容集合で固定する。集合から外れたら §5.3 手順 3-5 の
+      // 型ガードの前提を見直す（実測値を完全一致で固定しない。§7.3）
+      expect([null, undefined]).toContain(confirmedRejection.signal);
       expect(confirmedRejection.code).toBe(1);
 
       stubGit((args) => (gitSubcommand(args) === "diff" ? confirmedRejection : undefined));
@@ -311,6 +315,8 @@ describe("publish", () => {
     await expect(publisher.publish(COMMIT_NOTE)).rejects.toBeInstanceOf(PublishFailedError);
 
     expect(calledSubcommand("checkout")).toBe(true);
+    // §8 #10：push 失敗時もローカルコミットを reset で巻き戻さない（復元は checkout のみで行う）
+    expect(calledSubcommand("reset")).toBe(false);
   });
 
   it("git add が失敗したら commit / push へ進まず、復元してから PublishFailedError になる", async () => {
@@ -326,6 +332,42 @@ describe("publish", () => {
     expect(calledSubcommand("commit")).toBe(false);
     expect(calledSubcommand("push")).toBe(false);
     expect(calledSubcommand("checkout")).toBe(true);
+  });
+
+  it("git commit が失敗したら（差分ありと判定された後）push へ進まず、復元してから PublishFailedError になる", async () => {
+    stubGit((args) => {
+      const sub = gitSubcommand(args);
+      // diff は「差分あり」（code=1・signal=null）を返し、commit まで進ませる
+      if (sub === "diff") return gitFailure("git diff --cached --quiet", { code: 1, signal: null });
+      if (sub === "commit") return gitFailure("git commit -m note", { code: 128, signal: null });
+      return undefined;
+    });
+    const publisher = createPublisher();
+
+    await expect(publisher.publish(COMMIT_NOTE)).rejects.toBeInstanceOf(PublishFailedError);
+
+    expect(calledSubcommand("push")).toBe(false);
+    expect(calledSubcommand("checkout")).toBe(true);
+    // §8 #10：commit 失敗時もローカルコミットを reset で巻き戻さない
+    expect(calledSubcommand("reset")).toBe(false);
+  });
+
+  it("publish が成功する経路で execFile の呼び出し 4 件（add/diff/commit/push）すべての第 3 引数が cwd・timeout・GIT_TERMINAL_PROMPT を含む（§8 #39）", async () => {
+    stubGit((args) => {
+      if (gitSubcommand(args) === "diff")
+        return gitFailure("git diff --cached --quiet", { code: 1, signal: null });
+      return undefined;
+    });
+    const publisher = createPublisher();
+
+    await expect(publisher.publish(COMMIT_NOTE)).resolves.toBe("published");
+
+    const calls = vi.mocked(childProcess.execFile).mock.calls;
+    expect(calls).toHaveLength(4);
+    for (const call of calls) {
+      expect(call[2]).toMatchObject({ cwd: REPO_ROOT, timeout: EXPECTED_GIT_TIMEOUT_MS });
+      expect(call[2]?.env?.GIT_TERMINAL_PROMPT).toBe("0");
+    }
   });
 
   it("復元（checkout）自体が失敗しても warn を 1 件出すだけで、元の PublishFailedError をそのまま投げる", async () => {
@@ -349,6 +391,53 @@ describe("publish", () => {
     expect(logger.entries.filter((e) => e.level === "warn")).toHaveLength(1);
     expect(logger.entries.filter((e) => e.level === "error")).toHaveLength(1);
   });
+
+  it(
+    "復元（checkout）自体の失敗に認証情報と長文の stderr が含まれても、warn の error フィールドから" +
+      "認証情報が消え、切り詰められる（error 経路だけでなく warn 経路も無害化される。§5.3 手順 3-6）",
+    async () => {
+      const checkoutStderr =
+        "fatal: unable to access " +
+        "'https://x-access-token:ghs_CHECKOUTSECRET@github.com/sss-kato/curtaincall.git/': 403\n" +
+        "http.https://github.com/.extraheader: AUTHORIZATION: basic eHktdG9rZW4=\n" +
+        "x".repeat(STDERR_LOG_LIMIT + 100);
+      stubGit((args) => {
+        const sub = gitSubcommand(args);
+        if (sub === "diff")
+          return gitFailure("git diff --cached --quiet", { code: 1, signal: null });
+        if (sub === "push")
+          return gitFailure("git push origin HEAD:main", { code: 128, signal: null });
+        if (sub === "checkout") {
+          return gitFailure(
+            "git checkout origin/main -- data/articles.json",
+            { code: 1, signal: null },
+            checkoutStderr,
+          );
+        }
+        return undefined;
+      });
+      const publisher = createPublisher();
+
+      await expect(publisher.publish(COMMIT_NOTE)).rejects.toBeInstanceOf(PublishFailedError);
+
+      const warnEntry = logger.entries.find((e) => e.level === "warn");
+      const logged = String(warnEntry?.fields?.error);
+      expect(logged).not.toContain("ghs_CHECKOUTSECRET");
+      expect(logged).not.toContain("eHktdG9rZW4=");
+      expect(logged).toContain("https://***@github.com");
+      // 名前・suffix を除いた本文がちょうど STDERR_LOG_LIMIT で切り詰められることを直接見る
+      // （`toBeLessThanOrEqual` だと、将来マスクが過剰になって本文がほぼ消えても＝診断情報が
+      // 失われても通ってしまうため、この入力ではちょうど STDERR_LOG_LIMIT になることを厳密に見る）
+      const suffix = exitSuffix("1", ABSENT_EXIT_VALUE);
+      // prefix・suffix が実在することを確認してから slice する（姉妹テストの push 失敗側と同様）。
+      // これを確認せずに slice すると、書式が変わって prefix・suffix が変わった場合でも
+      // 位置がずれたまま切り詰め検証だけが通ってしまう
+      expect(logged.startsWith(ERROR_LOG_NAME_PREFIX)).toBe(true);
+      expect(logged.endsWith(suffix)).toBe(true);
+      const body = logged.slice(ERROR_LOG_NAME_PREFIX.length, logged.length - suffix.length);
+      expect(Array.from(body).length).toBe(STDERR_LOG_LIMIT);
+    },
+  );
 
   it("push 失敗時、ログの error フィールドから origin の認証情報が消え、伏せ字とサフィックスが残る", async () => {
     const stderr =
@@ -391,8 +480,10 @@ describe("publish", () => {
     expect(logged).not.toContain(longStderr);
     expect(logged.startsWith(ERROR_LOG_NAME_PREFIX)).toBe(true);
     expect(logged.endsWith(suffix)).toBe(true);
-    // 名前・suffix を除いた本文（sanitizeGitOutput が切り詰める部分）が STDERR_LOG_LIMIT を超えないことを直接見る
+    // 名前・suffix を除いた本文（sanitizeGitOutput が切り詰める部分）がちょうど STDERR_LOG_LIMIT で
+    // 切り詰められることを直接見る（`toBeLessThanOrEqual` だと、将来マスクが過剰になって本文が
+    // ほぼ消えても＝診断情報が失われても通ってしまうため、厳密に一致を見る）
     const sanitizedBody = logged.slice(ERROR_LOG_NAME_PREFIX.length, logged.length - suffix.length);
-    expect(Array.from(sanitizedBody).length).toBeLessThanOrEqual(STDERR_LOG_LIMIT);
+    expect(Array.from(sanitizedBody).length).toBe(STDERR_LOG_LIMIT);
   });
 });

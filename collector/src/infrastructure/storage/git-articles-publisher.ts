@@ -8,14 +8,17 @@ import {
 } from "../../domain/articles-publisher.js";
 import { formatError, type Logger } from "../../domain/logger.js";
 import { sanitizeGitOutput } from "./sanitize-git-output.js";
-import { ARTICLES_JSON_RELATIVE_PATH, PUBLISH_BRANCH } from "./paths.js";
+import { ARTICLES_JSON_RELATIVE_PATH } from "./paths.js";
 
 const execFile = promisify(execFileCallback);
 
 const GIT_AUTHOR_NAME = "github-actions[bot]";
 const GIT_AUTHOR_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com";
 
-/** execFile に渡すタイムアウト（ミリ秒）。D-02 追随: §5.3 に無い。push のハング対策 */
+/** articles.json を確定させるブランチ名（§4.10・§5.3 手順 3-4・3-6）。使うのはこのファイルだけなので非公開定数にする（§8 #49） */
+const PUBLISH_BRANCH = "main";
+
+/** execFile に渡すタイムアウト（ミリ秒）。push のハング対策（§4.9・§8 #39） */
 const GIT_TIMEOUT_MS = 60_000;
 
 /** git diff --quiet が「差分あり」で返す終了コード */

@@ -49,6 +49,10 @@
 | T-41 | D-05 | T-Q | resolveAnchorId を純粋関数に切り出す | app | T-28 | todo |
 | T-42 | D-05 | T-R | seedArticles の契約テストを書く | app | T-26 | done |
 | T-43 | D-04 | T-P | 振る舞いを変えない片付け（注記の削除・実装済みコードの移動） | app | T-33, T-34, T-35 | todo |
+| T-44 | D-02 | §8.1 (a)(c)(e)(f) | git publish 周りの秘密情報マスクと D-02 追随 | collector | — | todo |
+| T-45 | D-02 | §8.1 (d) | 通知ゲートウェイの秘密情報の扱いを D-02 に合わせる | collector | — | todo |
+| T-46 | D-02 | §8.1 (b)(c)(f) | RunSummary と 2 つの静かな停止の検知を D-02 に合わせる | collector | T-45 | todo |
+| T-47 | D-02 | §8.1 (g)(h) | 規定が入った実装コメントを整理する | collector | — | todo |
 
 ## 並行の組
 
@@ -57,6 +61,7 @@
 - T-40（抑止判定）・T-41（resolveAnchorId）・T-42（seedArticles）は触るファイルが他と重ならないため、いつでも単独で実行できる
 - **T-39 は T-28 の後・T-33 の前**（`lib/app/app_lifecycle_sync.dart` を T-33・T-34 と両方が改修するため並行しない）
 - collector と app は T-02 以降並行できる（app の起点 T-17 は T-02 にのみ依存）
+- **T-44 / T-45 / T-47 は並行可**（D-02 §8.1 の実装追随）。T-46 は `main.ts` を共有するため T-45 の後。T-46 と T-47 は `application/` を共有するので、同時に走らせるなら T-46 を先にマージする
 
 ## reopen 前提（dispatch 時に検出）
 

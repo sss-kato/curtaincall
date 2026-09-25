@@ -74,8 +74,7 @@ function articlesFile(articles: readonly Article[]): ArticlesFile {
 
 describe("readPrevious", () => {
   it("ファイル無し（初回実行）なら undefined を返し info が 1 件・warn は 0 件", async () => {
-    // D-02 追随: §7.3 は ENOENT を含めて warn とだけ書いているが、実装は ENOENT を info にする
-    // （src/infrastructure/storage/articles-file-store.ts の D-02 追随コメントを参照）
+    // ENOENT は初回実行の正常経路なので info、それ以外の読み取り失敗は warn（§8 #42）
     const logger = new RecordingLogger();
     const store = new ArticlesFileStore(repoRoot, logger);
 

@@ -5,7 +5,11 @@
 /// `CustomScrollView` の `center` で表示中の先頭記事をアンカーにすることで、
 /// 差し込み・削除の前後で表示中の記事の画面上の位置を保つ。
 ///
-/// `core/ui/list` は Flutter SDK にのみ依存する（CLAUDE.md）。
+/// `core/ui/list` は Flutter SDK にのみ依存する（CLAUDE.md）。アンカーの
+/// 付け替え規則（走査規則）だけは同じ `core/ui/list` の純粋関数
+/// `resolveAnchorId`（`anchor_resolution.dart`。import 無し）に切り出して
+/// あり、本 Widget はこれを呼ぶだけで走査規則を自分で持たない（D-05
+/// §5.11.4 手順 2・§5.11.6・§8 #33）。
 ///
 /// この Widget は次の SDK 内部の前提の上に成り立つ（詳細な根拠は各メソッド
 /// の doc を参照。CLAUDE.md「テスト方針」に準じ、検証時点をここに残す）：
@@ -28,6 +32,7 @@
 /// この節の各項目を再確認する。目視手順は D-05 §10 の T-M 目視項目。
 library;
 
+import 'package:curtaincall/core/ui/list/anchor_resolution.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -361,7 +366,7 @@ class _AnchoredListViewState<T> extends State<AnchoredListView<T>>
       return;
     }
 
-    final anchor = _resolveVisibleAnchor(oldItems, items);
+    final anchor = _resolveVisibleAnchor(oldItems: oldItems, newItems: items);
     if (anchor == null) {
       // 表示中だったアンカーが後続ごと消えた等で新しい基準が見つからない
       // ときも、[_resetAnchorToFirst] を経由して標準形へ戻す。アンカー形
@@ -486,32 +491,40 @@ class _AnchoredListViewState<T> extends State<AnchoredListView<T>>
         geometry.scrollExtent;
   }
 
-  /// ビューポート内で表示中の要素のうち最上部のものを探す（id・その
-  /// dy）。見つかった要素が新しい items に無ければ、旧 items でその直後
-  /// にあり新 items にも残っている要素を採る（S-01 §7.4「表示中の記事が
-  /// 削除された場合はその直後の記事を同じ位置に」。S-02/ST-04）。
-  (String, double)? _resolveVisibleAnchor(List<T> oldItems, List<T> items) {
-    final newIds = items.map(widget.idOf).toSet();
-    String? topId;
-    double? topDy;
+  /// ビューポート内で表示中の要素のうち最上部のもの（id・その dy）を実測し、
+  /// アンカーの付け替えは純粋関数 [resolveAnchorId] に委ねる（走査規則と
+  /// その根拠は [resolveAnchorId] の doc。D-05 §5.11.4 手順 2・§5.11.6・
+  /// §8 #33）。走査規則そのものはこの State に書かない（§5.11.6）。
+  ///
+  /// 戻り値の dy は付け替え**前**の最上部セルの実測値で、付け替え後の
+  /// アンカーをその位置へ置くために意図的に使い回す（S-01 §7.4
+  /// 「同じ位置に」）。
+  /// 戻り値 null は「実測できる要素が無い」か「アンカーを決められない」で、
+  /// いずれも呼び出し側（[_updateAnchor]）が `_resetAnchorToFirst()` に落とす。
+  (String, double)? _resolveVisibleAnchor({
+    required List<T> oldItems,
+    required List<T> newItems,
+  }) {
+    String? visibleId;
+    double? anchorDy;
     for (final item in oldItems) {
       final id = widget.idOf(item);
       final metrics = _cellMetrics(id);
       if (metrics == null) continue;
       if (metrics.dy + metrics.height <= 0) continue;
-      if (topDy != null && metrics.dy >= topDy) continue;
-      topId = id;
-      topDy = metrics.dy;
+      if (anchorDy != null && metrics.dy >= anchorDy) continue;
+      visibleId = id;
+      anchorDy = metrics.dy;
     }
-    if (topId == null || topDy == null) return null;
-    if (newIds.contains(topId)) return (topId, topDy);
+    if (visibleId == null || anchorDy == null) return null;
 
-    final index = oldItems.indexWhere((item) => widget.idOf(item) == topId);
-    for (var i = index + 1; i < oldItems.length; i++) {
-      final id = widget.idOf(oldItems[i]);
-      if (newIds.contains(id)) return (id, topDy);
-    }
-    return null;
+    final anchorId = resolveAnchorId(
+      oldIds: oldItems.map(widget.idOf).toList(),
+      newIds: newItems.map(widget.idOf).toList(),
+      currentAnchorId: visibleId,
+    );
+    if (anchorId == null) return null;
+    return (anchorId, anchorDy);
   }
 
   void _pruneCellKeys() {

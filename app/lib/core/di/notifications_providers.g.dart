@@ -174,3 +174,319 @@ final class RequestNotificationPermissionUseCaseProvider
 
 String _$requestNotificationPermissionUseCaseHash() =>
     r'f298bcdec897dda2d8155aacc6d8fb6a6172f431';
+
+/// D-05 §5.9。団体別の通知 ON/OFF の更新（S-03/A-01）。
+
+@ProviderFor(updateNotificationSettingUseCase)
+const updateNotificationSettingUseCaseProvider =
+    UpdateNotificationSettingUseCaseProvider._();
+
+/// D-05 §5.9。団体別の通知 ON/OFF の更新（S-03/A-01）。
+
+final class UpdateNotificationSettingUseCaseProvider
+    extends
+        $FunctionalProvider<
+          UpdateNotificationSettingUseCase,
+          UpdateNotificationSettingUseCase,
+          UpdateNotificationSettingUseCase
+        >
+    with $Provider<UpdateNotificationSettingUseCase> {
+  /// D-05 §5.9。団体別の通知 ON/OFF の更新（S-03/A-01）。
+  const UpdateNotificationSettingUseCaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'updateNotificationSettingUseCaseProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$updateNotificationSettingUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<UpdateNotificationSettingUseCase> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  UpdateNotificationSettingUseCase create(Ref ref) {
+    return updateNotificationSettingUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(UpdateNotificationSettingUseCase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<UpdateNotificationSettingUseCase>(
+        value,
+      ),
+    );
+  }
+}
+
+String _$updateNotificationSettingUseCaseHash() =>
+    r'f6dcddfb25b922d172ee3f5d9a06a9636b11c075';
+
+/// D-05 §5.9。iOS 設定アプリの本アプリのページを開く（S-03/A-02）。
+
+@ProviderFor(openNotificationSettingsUseCase)
+const openNotificationSettingsUseCaseProvider =
+    OpenNotificationSettingsUseCaseProvider._();
+
+/// D-05 §5.9。iOS 設定アプリの本アプリのページを開く（S-03/A-02）。
+
+final class OpenNotificationSettingsUseCaseProvider
+    extends
+        $FunctionalProvider<
+          OpenNotificationSettingsUseCase,
+          OpenNotificationSettingsUseCase,
+          OpenNotificationSettingsUseCase
+        >
+    with $Provider<OpenNotificationSettingsUseCase> {
+  /// D-05 §5.9。iOS 設定アプリの本アプリのページを開く（S-03/A-02）。
+  const OpenNotificationSettingsUseCaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'openNotificationSettingsUseCaseProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$openNotificationSettingsUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<OpenNotificationSettingsUseCase> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  OpenNotificationSettingsUseCase create(Ref ref) {
+    return openNotificationSettingsUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(OpenNotificationSettingsUseCase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<OpenNotificationSettingsUseCase>(
+        value,
+      ),
+    );
+  }
+}
+
+String _$openNotificationSettingsUseCaseHash() =>
+    r'727b464ee4219be96e245d9029d1c517d3c54121';
+
+/// D-05 §5.7。通知タップで選ぶ団体タブの解決（S-01/A-07・ST-15）。
+
+@ProviderFor(handleNotificationTapUseCase)
+const handleNotificationTapUseCaseProvider =
+    HandleNotificationTapUseCaseProvider._();
+
+/// D-05 §5.7。通知タップで選ぶ団体タブの解決（S-01/A-07・ST-15）。
+
+final class HandleNotificationTapUseCaseProvider
+    extends
+        $FunctionalProvider<
+          HandleNotificationTapUseCase,
+          HandleNotificationTapUseCase,
+          HandleNotificationTapUseCase
+        >
+    with $Provider<HandleNotificationTapUseCase> {
+  /// D-05 §5.7。通知タップで選ぶ団体タブの解決（S-01/A-07・ST-15）。
+  const HandleNotificationTapUseCaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'handleNotificationTapUseCaseProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$handleNotificationTapUseCaseHash();
+
+  @$internal
+  @override
+  $ProviderElement<HandleNotificationTapUseCase> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  HandleNotificationTapUseCase create(Ref ref) {
+    return handleNotificationTapUseCase(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(HandleNotificationTapUseCase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<HandleNotificationTapUseCase>(value),
+    );
+  }
+}
+
+String _$handleNotificationTapUseCaseHash() =>
+    r'f56d82c91801bc0c10c0a24be84a116b779c578c';
+
+/// アプリ未起動から通知タップで起動した場合のタップ情報への委譲
+/// （D-04 §4.6）。
+
+@ProviderFor(initialNotificationTapForApp)
+const initialNotificationTapForAppProvider =
+    InitialNotificationTapForAppProvider._();
+
+/// アプリ未起動から通知タップで起動した場合のタップ情報への委譲
+/// （D-04 §4.6）。
+
+final class InitialNotificationTapForAppProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<NotificationTap?>,
+          NotificationTap?,
+          FutureOr<NotificationTap?>
+        >
+    with $FutureModifier<NotificationTap?>, $FutureProvider<NotificationTap?> {
+  /// アプリ未起動から通知タップで起動した場合のタップ情報への委譲
+  /// （D-04 §4.6）。
+  const InitialNotificationTapForAppProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'initialNotificationTapForAppProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$initialNotificationTapForAppHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<NotificationTap?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<NotificationTap?> create(Ref ref) {
+    return initialNotificationTapForApp(ref);
+  }
+}
+
+String _$initialNotificationTapForAppHash() =>
+    r'a5f59e8c069e260ebca7c8c575973a6064aef411';
+
+/// 起動中に通知をタップしたときに流れる Stream への委譲（D-04 §4.6）。
+
+@ProviderFor(latestNotificationTap)
+const latestNotificationTapProvider = LatestNotificationTapProvider._();
+
+/// 起動中に通知をタップしたときに流れる Stream への委譲（D-04 §4.6）。
+
+final class LatestNotificationTapProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<NotificationTap>,
+          AsyncValue<NotificationTap>,
+          AsyncValue<NotificationTap>
+        >
+    with $Provider<AsyncValue<NotificationTap>> {
+  /// 起動中に通知をタップしたときに流れる Stream への委譲（D-04 §4.6）。
+  const LatestNotificationTapProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'latestNotificationTapProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$latestNotificationTapHash();
+
+  @$internal
+  @override
+  $ProviderElement<AsyncValue<NotificationTap>> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  AsyncValue<NotificationTap> create(Ref ref) {
+    return latestNotificationTap(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AsyncValue<NotificationTap> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AsyncValue<NotificationTap>>(value),
+    );
+  }
+}
+
+String _$latestNotificationTapHash() =>
+    r'b28d6b14813c09321b2f93dc08b4fe4ea306d6c7';
+
+/// S-03/ST-03 の判定入力への委譲（D-04 §4.6）。
+
+@ProviderFor(pushPermissionStatusForSettings)
+const pushPermissionStatusForSettingsProvider =
+    PushPermissionStatusForSettingsProvider._();
+
+/// S-03/ST-03 の判定入力への委譲（D-04 §4.6）。
+
+final class PushPermissionStatusForSettingsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<PushPermissionStatus>,
+          PushPermissionStatus,
+          FutureOr<PushPermissionStatus>
+        >
+    with
+        $FutureModifier<PushPermissionStatus>,
+        $FutureProvider<PushPermissionStatus> {
+  /// S-03/ST-03 の判定入力への委譲（D-04 §4.6）。
+  const PushPermissionStatusForSettingsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'pushPermissionStatusForSettingsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$pushPermissionStatusForSettingsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<PushPermissionStatus> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<PushPermissionStatus> create(Ref ref) {
+    return pushPermissionStatusForSettings(ref);
+  }
+}
+
+String _$pushPermissionStatusForSettingsHash() =>
+    r'94d5cdff7bfdebbba0ba56c2c2b5e8816fc55daf';

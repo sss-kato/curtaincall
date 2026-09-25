@@ -24,3 +24,10 @@ Future<int> readStateCount(AppDatabase db, String articleId) async {
   )..where((t) => t.articleId.equals(articleId))).get();
   return rows.length;
 }
+
+/// `read_states` の1行を id で取得する（D-05 §7）。
+Future<ReadState?> readStateRow(AppDatabase db, String articleId) async {
+  return (db.select(
+    db.readStates,
+  )..where((t) => t.articleId.equals(articleId))).getSingleOrNull();
+}

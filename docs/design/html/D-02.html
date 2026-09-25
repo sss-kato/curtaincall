@@ -195,11 +195,14 @@ a{color:var(--accent)}
       publish-articles.ts     PublishArticles・ArticlesValidationError（§5.3）
       notify-new-articles.ts  NotifyNewArticles（§5.4）
       full-crawl-policy.ts    decideFullCrawlCompanyIds（§5.5。純粋関数）
-      run-collection.ts       RunCollection・RunSummary・SnapshotMissingError（§5.5）・buildFailureSummary・sanitizeFailureMessage（§4.8）
+      run-collection.ts       RunCollection・RunSummary・SnapshotMissingError（§5.5）・buildFailureSummary（§4.8）。
+                              非公開の sanitizeFailureMessage / MAX_FAILURE_MESSAGE_LENGTH を含む（§4.8・§8 #54）
     infrastructure/
       http/
-        fetch-http-client.ts  HttpClient 実装（UA・間隔・タイムアウト・リトライ・文字コード）
+        fetch-http-client.ts  HttpClient 実装（UA・間隔・タイムアウト・リトライ・文字コード・リダイレクトの検査）。
+                              公開の DEFAULT_FETCH_HTTP_CLIENT_OPTIONS（§5.7 の既定値表）を含む
         host-scheduler.ts     ホストごとの直列化と最小間隔
+        sleep.ts              ms 待つ Promise。fetch-http-client（リトライ待ち）と host-scheduler（間隔待ち）が共有する
       sources/
         takarazuka.ts shiki.ts horipro.ts toho.ts shinkansen.ts   （D-03）
       storage/
@@ -370,6 +373,8 @@ export interface ArticleWriter {
    * data/articles.json を書き出す。書き出しだけを行い、検証はしない
    * （buildArticlesFileWriteSchema による検証は application の publish-articles が書き出し前に行う。§5.3、§8 #29）。
    * 書き出しは原子的（.tmp → rename。§5.3）。失敗は Error（fs 由来）をそのまま投げる。
+   * 書き出しを行わない試走用の実装（NoopArticleWriter）は、ファイルを触らずログだけを残して正常に解決してよい
+   * （契約は「呼び出しが解決したら、その実装が定める配信先の状態が file と一致している」ことに限る。§8 #45）。
    */
   write(file: ArticlesFile): Promise&lt;void&gt;;
 }</code></pre>
@@ -379,7 +384,10 @@ export type PublishOutcome = &quot;published&quot; | &quot;no_changes&quot;;
 export interface ArticlesPublisher {
   /**
    * 書き出し済みの data/articles.json を配信元へ確定させる。
-   * 変更が無ければ &quot;no_changes&quot;。確定操作のいずれかが失敗したら PublishFailedError（D-01 #33）。
+   * &quot;published&quot; を返してよいのは配信元へ確定できたときだけで、D-01 #33 の不変条件（push 成功後にのみ通知）は
+   * この向きだけに依存する。確定操作を行わなかった場合 —— 変更が無い、または**確定を行わない試走用の実装**
+   * （NoopArticlesPublisher）である —— は &quot;no_changes&quot; を返す（§8 #45）。
+   * 確定操作のいずれかが失敗したら PublishFailedError。
    * @param note 実装が確定操作に添える説明文（git 実装ではコミットメッセージ）
    */
   publish(note: string): Promise&lt;PublishOutcome&gt;;
@@ -390,7 +398,11 @@ export class PublishFailedError extends Error {}</code></pre>
 <pre><code class="language-ts">import type { NewArticlesNotification } from &quot;./notification&quot;;
 
 export interface NotificationGateway {
-  /** 1 通送る。失敗は NotificationSendError。再送は行わない（D-01 §4.8 至多 1 回） */
+  /**
+   * 1 通を送信先へ渡す。失敗は NotificationSendError。再送は行わない（D-01 §4.8 至多 1 回）。
+   * 送信を行わない試走用の実装（NoopNotificationGateway）は、送らずにログだけを残して正常に解決してよい
+   * （契約は「解決したら、その実装が定める送信先へ至多 1 回渡した」ことに限る。§8 #45）。
+   */
   send(notification: NewArticlesNotification): Promise&lt;void&gt;;
 }
 
@@ -468,6 +480,13 @@ export interface DetectDiffResult {
     readonly updated: number;   // 更新
     readonly carried: number;   // 継続（今回も取れた + 一覧から消えたが保持）
     readonly dropped: number;   // 100 件上限で落ちた
+    /**
+     * 手順 3 で「新着」または「更新」と判定され、かつ手順 5 の切り詰め後にも出力配列（file.articles）に
+     * 残っている記事の件数。changed === false と両立しえない値であり、run-collection 手順 7 の
+     * 矛盾検知の唯一の根拠になる（§5.2 手順 7、§5.5 手順 7、§8 #51）。
+     * created / updated と違い、切り詰めで落ちた新着を数えないので誤検知が出ない。
+     */
+    readonly survivingChanges: number;
   };
 }
 
@@ -541,7 +560,7 @@ export function formatError(e: unknown): string {
   return String(e);
 }</code></pre>
 <p>例外をログのフィールドに載せるときは、<code>error: formatError(e)</code> と文字列化してから渡す（<code>domain/logger.ts</code> に置く。§5.1 手順 4・§5.4 手順 6）。<code>e</code> をそのまま渡す書き方は <code>LogFields</code> の型に合わずコンパイルが通らない。</p>
-<p><strong>秘密情報を入力に含む例外は <code>formatError</code> に渡さない</strong>（一般規則。§8 #48）。外部から与えられた秘密情報（<code>FIREBASE_SERVICE_ACCOUNT</code> のサービスアカウント JSON、git の資格情報）を入力として受け取る処理が失敗したとき、例外の <code>message</code> にはその入力の断片が含まれうる（Node 22 の <code>JSON.parse</code> が投げる <code>SyntaxError</code> は、不正位置の周辺を原文から抜き出して <code>message</code> に載せる）。GitHub Actions の Secret マスクは値の完全一致（複数行の Secret は行単位）でしか働かず、行の途中を切り出した断片はマスクされずにログへ残る。該当する経路は次の 2 つで、いずれも生の <code>message</code> をログに出さない。</p>
+<p><strong>秘密情報を入力に含む例外は <code>formatError</code> に渡さない</strong>（一般規則。§8 #48）。外部から与えられた秘密情報（<code>FIREBASE_SERVICE_ACCOUNT</code> のサービスアカウント JSON、git の資格情報）を入力として受け取る処理が失敗したとき、例外の <code>message</code> にはその入力の断片が含まれうる（Node 22 の <code>JSON.parse</code> が投げる <code>SyntaxError</code> は、不正位置の周辺を原文から抜き出して <code>message</code> に載せる）。GitHub Actions の Secret マスクは値の完全一致（複数行の Secret は行単位）でしか働かず、行の途中を切り出した断片はマスクされずにログへ残る。<code>formatError</code> は <code>cause</code> を再帰的に連結するため、<strong>そのような例外を他の例外の <code>cause</code> に入れることも同じ禁止に含める</strong>。該当する経路は次の 3 つで、いずれも生の <code>message</code> をログに出さない。</p>
 <table>
 <thead>
 <tr>
@@ -550,8 +569,12 @@ export function formatError(e: unknown): string {
 </tr>
 </thead>
 <tbody><tr>
-<td><code>FIREBASE_SERVICE_ACCOUNT</code> の <code>JSON.parse</code> 失敗・サービスアカウントとして不正</td>
-<td>例外の <code>message</code> をログに載せず、固定文言だけを出す（§5.5 <code>main.ts</code> 手順 4）</td>
+<td><code>FIREBASE_SERVICE_ACCOUNT</code> の <code>JSON.parse</code> 失敗（<code>main.ts</code> 手順 4a）</td>
+<td>例外の <code>message</code> をログに載せず、固定文言 <code>FIREBASE_SERVICE_ACCOUNT is not valid JSON</code> だけを出す</td>
+</tr>
+<tr>
+<td>FCM の初期化失敗（<code>cert()</code> / <code>initializeApp</code> が投げた。<code>main.ts</code> 手順 5）</td>
+<td>固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> だけを出す。<code>NotificationSendError.cause</code> にも載せない（§5.4 末尾、§8 #48）</td>
 </tr>
 <tr>
 <td>git の診断出力（stderr）</td>
@@ -565,6 +588,7 @@ export interface Clock {
 <p><code>ConsoleLogger</code> は <code>debug</code> / <code>info</code> を stdout、<code>warn</code> / <code>error</code> を stderr に 1 行 1 イベントで書く。書式は <code>&lt;level&gt; &lt;message&gt; key=value key=value</code>（値に空白・<code>=</code> が含まれる場合は <code>JSON.stringify</code> で囲む）。出力レベルは環境変数 <code>CURTAINCALL_LOG_LEVEL</code>（既定 <code>info</code>）。秘密情報（サービスアカウント JSON、トークン）は一切フィールドに載せない。</p>
 <h3 id="sec-4-8">4.8 実行サマリ（<code>.run-summary.json</code>）<a class="anchor" href="#sec-4-8">#</a></h3>
 <p>collector は Actions 固有の API（<code>$GITHUB_OUTPUT</code> 等）を知らない。代わりに 1 実行の結果を JSON ファイルに書き、ワークフローがそれを読んでジョブの出力・ステップサマリにする（§8 #13）。リポジトリにはコミットしない（<code>.gitignore</code>）。</p>
+<p>本節は <code>run-collection.ts</code> が公開する 3 つの関心（サマリの型・失敗時の組み立て <code>buildFailureSummary</code>・メッセージ無害化）をまとめて扱う。§4 の他節（1 節 1 ファイル）より粒度が粗いが、<code>application/run-summary.ts</code> へのファイル分割は行わない。いずれも <code>RunCollection.execute</code> の返り値（<code>RunSummary</code>）の一部か、その値を組み立てるためだけの処理であり、利用者が <code>RunCollection</code> と <code>main.ts</code> 手順 9・10 に限られて同一だからである（§8 #46）。無害化の <code>sanitizeFailureMessage</code> は公開せず同ファイル内の非公開関数とする（§8 #54）。</p>
 <pre><code class="language-ts">// application/run-collection.ts
 import { toJstDateTime } from &quot;../domain/datetime&quot;;
 import type { Clock } from &quot;../domain/clock&quot;;
@@ -583,7 +607,8 @@ export type PublisherKind = &quot;git&quot; | &quot;noop&quot;;
  * 確定操作の結果（§8 #41・#47）。
  * - &quot;published&quot;  publish が &quot;published&quot; を返した（main へ push 済み）
  * - &quot;no_changes&quot; publish が &quot;no_changes&quot; を返した（差分なし。DRY_RUN の Noop も常にこれ）
- * - &quot;skipped&quot;    publish を呼ばなかったことが確定している（changed === false・SnapshotMissingError）
+ * - &quot;skipped&quot;    publish を呼ばなかったことが確定している
+ *                （changed === false・SnapshotMissingError・ArticlesValidationError。後 2 者は例外の型で確定する）
  * - &quot;unknown&quot;    publish を呼んだかどうか・その結果が確定しない（上記以外の致命的失敗。§8 #47）
  */
 export type PublishOutcomeSummary = &quot;published&quot; | &quot;no_changes&quot; | &quot;skipped&quot; | &quot;unknown&quot;;
@@ -601,6 +626,7 @@ interface RunSummaryBase {
   readonly created: number;
   readonly updated: number;
   readonly dropped: number;
+  readonly survivingChanges: number;     // 切り詰め後の出力配列に残っている新着・更新の件数（§4.6）。changed が偽なら 0 でなければならない（§5.5 手順 7・§5.6・§8 #51）
   readonly sourceFailures: readonly SourceFailure[];
   readonly notificationGateway: NotificationGatewayKind;
   readonly notificationsSent: number;
@@ -625,30 +651,33 @@ export type RunSummary = CompletedRunSummary | FailedRunSummary;
 
 /**
  * 致命的失敗の経路で書く FailedRunSummary を組み立てる（§5.5 main.ts 手順 10）。
- * main.ts は業務規則を持たない（§5.5）ため、確定しない値の既定値も generatedAt の決め方もここに置く。
+ * main.ts は業務規則を持たない（§5.5）ため、確定しない値の既定値も generatedAt の決め方も
+ * error の種類による分岐もすべてここに置く。main.ts は error をそのまま渡すだけで instanceof を書かない（§8 #46）。
  * - generatedAt: toJstDateTime(clock.now())（RunCollection 手順 1 の値は例外経路では渡らないので取り直す）
- * - publishOutcome: error が SnapshotMissingError なら &quot;skipped&quot;（publish を呼ぶ前に抜けたことが確定している）、
- *   それ以外は &quot;unknown&quot;（publish を呼んだ後の失敗かどうかを main.ts からは判別できない。§8 #47）
+ * - publishOutcome: error が SnapshotMissingError または ArticlesValidationError なら &quot;skipped&quot;
+ *   （どちらも publish を呼ぶ前に抜けたことが例外の型で確定している。§5.5 手順 5・§5.3 手順 1）、
+ *   それ以外は &quot;unknown&quot;（publish を呼んだ後の失敗かどうかを判別できない。§8 #47）
  * - publisher / notificationGateway: main.ts が注入した種別（唯一 main.ts しか知らない値なので引数で受ける）
- * - sourceFailures: 分かっていれば（SnapshotMissingError.failures）。無ければ []
+ * - sourceFailures: error instanceof SnapshotMissingError ? error.failures を無害化したもの : []
+ *   （publishOutcome の分岐と同じ 1 か所で判定する。呼び出し側に instanceof を書かせない）
  * - previousSnapshot / durationMs: null
- * - changed: false、collected / discarded / created / updated / dropped / notificationsSent /
- *   notificationsFailed: 0、fullCrawlCompanyIds: []、discardedByCompany: {}（キーを省かない。§5.6 の jq が
- *   to_entries で走査するため、null や欠落にしない）
+ * - changed: false、collected / discarded / created / updated / dropped / survivingChanges /
+ *   notificationsSent / notificationsFailed: 0、fullCrawlCompanyIds: []、discardedByCompany: {}
+ *   （キーを省かない。§5.6 の jq が to_entries で走査するため、null や欠落にしない）
  */
 export function buildFailureSummary(params: {
   readonly clock: Clock;
   readonly error: unknown;
   readonly publisherKind: PublisherKind;
   readonly notificationGatewayKind: NotificationGatewayKind;
-  readonly failures: readonly SourceFailure[];
-}): FailedRunSummary;
+}): FailedRunSummary;</code></pre>
+<p>同じファイル内に、<code>RunSummary</code> に載せる前の <code>SourceFailure.message</code> を無害化する<strong>非公開</strong>関数と定数を置く（ファイル外に利用者がいないため export しない。§8 #54）。</p>
+<pre><code class="language-ts">// application/run-collection.ts（非公開）
+/** sanitizeFailureMessage の上限（コードポイント単位。§4.10 の STDERR_LOG_LIMIT と同じ単位に揃える。§8 #55） */
+const MAX_FAILURE_MESSAGE_LENGTH = 200;
 
 /** RunSummary に載せる前の SourceFailure.message の無害化（下記の規則）。書き手は RunCollection 1 か所 */
-export function sanitizeFailureMessage(message: string): string;
-
-/** sanitizeFailureMessage の上限（UTF-16 コード単位） */
-export const MAX_FAILURE_MESSAGE_LENGTH = 200;</code></pre>
+function sanitizeFailureMessage(message: string): string;</code></pre>
 <p><code>SourceFailure.message</code>（§4.6）は Source が投げた例外の <code>formatError</code> 結果であり（§5.1 手順 4）、サイト改装時には cheerio / rss-parser が数十 KB の HTML 断片を含む多行のメッセージを投げうる。その値は §5.6 の jq で <code>$GITHUB_STEP_SUMMARY</code>（1 MB 上限）へ流れるため、<code>RunSummary</code> に載せる前に次の規則で無害化する（§8 #50）。</p>
 <table>
 <thead>
@@ -667,7 +696,7 @@ export const MAX_FAILURE_MESSAGE_LENGTH = 200;</code></pre>
 </tr>
 <tr>
 <td>3</td>
-<td><code>MAX_FAILURE_MESSAGE_LENGTH</code>（200。UTF-16 コード単位）に切り詰める</td>
+<td><code>MAX_FAILURE_MESSAGE_LENGTH</code>（200）に切り詰める。単位は<strong>コードポイント</strong>（<code>Array.from(...).slice(0, 200).join(&quot;&quot;)</code>）で、<code>sanitizeGitOutput</code>（§4.10）と同じ向きに揃える。サロゲートペアを分割しない（§8 #55）</td>
 </tr>
 </tbody></table>
 <p>適用箇所は <code>RunCollection</code> が <code>RunSummary.sourceFailures</code> を組み立てるところと <code>buildFailureSummary</code> の 2 か所（どちらも <code>run-collection.ts</code> の中で、無害化の呼び出しは非公開関数 1 つに閉じる）。§5.6 の jq にも同じ切り詰めを書く（多層防御。ワークフローが古い形のサマリを読む場合に備える）。</p>
@@ -686,6 +715,7 @@ export const MAX_FAILURE_MESSAGE_LENGTH = 200;</code></pre>
   &quot;created&quot;: 3,
   &quot;updated&quot;: 1,
   &quot;dropped&quot;: 2,
+  &quot;survivingChanges&quot;: 4,
   &quot;sourceFailures&quot;: [{ &quot;companyId&quot;: &quot;toho&quot;, &quot;sourceId&quot;: &quot;toho&quot;, &quot;reason&quot;: &quot;empty&quot;, &quot;message&quot;: &quot;no articles parsed&quot; }],
   &quot;notificationGateway&quot;: &quot;firebase&quot;,
   &quot;notificationsSent&quot;: 1,
@@ -841,7 +871,7 @@ export function sanitizeGitOutput(text: string): string;</code></pre>
 </tr>
 <tr>
 <td><code>http.extraheader</code> に埋め込まれた認証情報</td>
-<td><code>AUTHORIZATION: basic &lt;base64&gt;</code> / <code>AUTHORIZATION: bearer &lt;token&gt;</code>（<code>AUTHORIZATION</code> と <code>basic</code> / <code>bearer</code> は大小文字を区別しない）の<strong>値部分</strong>を <code>***</code> にする。値部分の範囲は「<code>basic</code> / <code>bearer</code> の直後の空白 1 つの後から、<strong>次の空白または行末まで</strong>」とし、それ以降の文字（<code>(see &#39;git help config&#39;)</code> のような診断の続き）は残す（行末まで一律に伏せると原因が読めなくなる）。<code>actions/checkout@v4</code> は既定（<code>persist-credentials: true</code>）でトークンを origin の URL ではなく <code>.git/config</code> の <code>http.https://github.com/.extraheader</code> に保存するため、実運用で git の診断に現れるのはこの形である（§5.6 の表、§8 #40）</td>
+<td><code>AUTHORIZATION: basic &lt;base64&gt;</code> / <code>AUTHORIZATION: bearer &lt;token&gt;</code>（<code>AUTHORIZATION</code> と <code>basic</code> / <code>bearer</code> は大小文字を区別しない）の<strong>値部分</strong>を <code>***</code> にする。値部分の範囲は「<code>basic</code> / <code>bearer</code> の直後の<strong>空白の連続</strong>（1 つ以上。半角スペース・タブを含む）の後から、<strong>次の空白または行末まで</strong>」とし、それ以降の文字（<code>(see &#39;git help config&#39;)</code> のような診断の続き）は残す（行末まで一律に伏せると原因が読めなくなる）。<code>actions/checkout@v4</code> は既定（<code>persist-credentials: true</code>）でトークンを origin の URL ではなく <code>.git/config</code> の <code>http.https://github.com/.extraheader</code> に保存するため、実運用で git の診断に現れるのはこの形である（§5.6 の表、§8 #40）</td>
 </tr>
 <tr>
 <td>対象外</td>
@@ -902,7 +932,7 @@ const settled = await Promise.allSettled(
 </li>
 <li><p>重複 <code>id</code>：走査順に <code>Map&lt;string, CollectedArticle&gt;</code> へ入れ、既にあるキーは捨てて <code>logger.debug(&quot;duplicate id&quot;, { id, companyId })</code>。走査順が「<code>companies.json</code> の配列順 → <code>Company.sources</code> の配列順 → 出現順」になるのは手順 3 と <code>Source</code> の契約（§4.1）による</p>
 </li>
-<li><p><code>logger.info(&quot;collected&quot;, { companies, articles, discarded, failures })</code>（<code>discarded</code> は <code>Object.values(discardedByCompany).reduce((a, b) =&gt; a + b, 0)</code> で導出する。§4.6）。<code>discardedByCompany</code> の値が 1 以上の団体ごとに <code>logger.warn(&quot;articles partially discarded&quot;, { companyId, fetched, discarded })</code> を出す</p>
+<li><p><code>logger.info(&quot;collected&quot;, { companies, articles, discarded, failures })</code>。5 つの値はいずれも<strong>件数</strong>（<code>number</code>）で、<code>failures</code> は <code>failures.length</code>（配列そのものではない。<code>LogFields</code> はスカラーしか受け付けない。§4.7）。<code>discarded</code> は <code>Object.values(discardedByCompany).reduce((a, b) =&gt; a + b, 0)</code> で導出する（§4.6）。<code>discardedByCompany</code> の値が 1 以上の団体ごとに <code>logger.warn(&quot;articles partially discarded&quot;, { companyId, fetched, discarded })</code> を出す</p>
 </li>
 </ol>
 </li>
@@ -921,8 +951,9 @@ const settled = await Promise.allSettled(
 <li>今回に現れなかった <code>previousById</code> の記事をそのまま加える（サイトの一覧から消えても上限まで残す。D-01 #7）。Source が失敗した団体の記事もこの行で保持される</li>
 <li>団体ごとに <code>compareArticles</code>（D-01 §4.5）で並べ、上位 <code>MAX_ARTICLES_PER_COMPANY</code>（100）件を残す。落ちた件数を <code>stats.dropped</code> に数える</li>
 <li>出力の <code>articles</code> は <code>companies</code> の配列順に団体ブロックを連結する（D-01 §4.2）。<code>companies</code> に無い <code>companyId</code> は手順 2 で除いてあるため残らない</li>
-<li>通知対象：手順 3 で「新着」と判定され、<strong>かつ手順 5 の切り詰め後にも残っている</strong>記事だけを <code>companyId</code> ごとに集め、<code>compareArticles</code> 順に並べる（<code>articles.json</code> に無い記事は通知しない）</li>
-<li><code>previous === undefined</code> のとき、手順 7 の結果を空の <code>Map</code> に置き換える（D-01 #15。通知抑止の判定はここ 1 か所だけで行う）</li>
+<li>通知対象：手順 3 で「新着」と判定され、<strong>かつ手順 5 の切り詰め後にも残っている</strong>記事だけを <code>companyId</code> ごとに集め、<code>compareArticles</code> 順に並べる（<code>articles.json</code> に無い記事は通知しない）
+7b. <code>stats.survivingChanges</code>：手順 7 と<strong>同じ走査</strong>で、手順 3 の判定が「新着」**または「更新」**で、かつ切り詰め後にも出力配列に残っている記事の件数を数える（§4.6）。通知対象と違い更新分も含める。手順 5 で落ちた新着・更新は数えない</li>
+<li><code>previous === undefined</code> のとき、手順 7 の結果を空の <code>Map</code> に置き換える（D-01 #15。通知抑止の判定はここ 1 か所だけで行う）。この置き換えは<strong>手順 7b の <code>survivingChanges</code> には影響しない</strong>（<code>previous === undefined</code> の実行は手順 9 で <code>changed</code> が必ず真になるので §5.5 手順 7 の判定は空振りするが、フィールドの意味を「通知対象の件数」とずらさないため）</li>
 <li><code>changed = previous === undefined || !hasSameArticles(previous.articles, articles)</code>（<code>articles</code> は手順 6 で確定した配列）。<code>hasSameArticles</code> は非公開関数で、長さと各要素の 10 フィールドすべて（<code>id</code>・<code>companyId</code>・<code>title</code>・<code>url</code>・<code>category</code>・<code>publishedAt</code>・<code>fetchedAt</code>・<code>thumbnail</code>・<code>contentHash</code>・<code>updatedAt</code>。省略可能な <code>thumbnail</code>・<code>updatedAt</code> はキーの有無と値の両方）を順に比較する。<code>ArticlesFile.generatedAt</code> は比較対象に含めない（§8 #8）</li>
 <li><code>file = { schemaVersion: ARTICLES_SCHEMA_VERSION, generatedAt, articles }</code></li>
 </ol>
@@ -1046,7 +1077,8 @@ const settled = await Promise.allSettled(
 <li><strong>出力</strong>：<code>NotifyNewArticlesResult</code></li>
 <li><strong>失敗時</strong>：例外を外へ出さない（この UseCase の失敗は実行全体を失敗にしない。通知はベストエフォート。要件 §5）</li>
 </ul>
-<p><code>FirebaseNotificationGateway</code> は <code>firebase-admin/app</code> の <code>initializeApp({ credential: cert(JSON.parse(env.FIREBASE_SERVICE_ACCOUNT)) })</code>（<code>getApps().length === 0</code> のときだけ）と <code>getMessaging().send(notification)</code> を呼ぶ。<code>NewArticlesNotification</code>（D-01 §4.8）は <code>firebase-admin</code> の <code>Message</code> と構造的に一致しているためそのまま渡せる。例外は <code>NotificationSendError</code> に包んで投げ、原因は <code>cause</code> に入れる。サービスアカウントの内容はログに出さない。</p>
+<p><code>FirebaseNotificationGateway</code> は<strong>コンストラクタで既にパース済みのサービスアカウントオブジェクトを受け取る</strong>（<code>main.ts</code> 手順 4a が <code>JSON.parse</code> を行う。§5.5）。生の環境変数も生の JSON 文字列も受け取らず、<code>process.env</code> を読まない。コンストラクタで <code>initializeApp({ credential: cert(serviceAccount) })</code>（<code>getApps().length === 0</code> のときだけ）を行い、<code>send()</code> では <code>getMessaging().send(notification)</code> だけを呼ぶ（<strong>初期化を <code>send()</code> へ遅延させない</strong>）。<code>firebase-admin</code> の import はこのファイルに閉じる（§8 #17）。<code>NewArticlesNotification</code>（D-01 §4.8）は <code>firebase-admin</code> の <code>Message</code> と構造的に一致しているためそのまま渡せる。</p>
+<p><code>send()</code> の失敗は <code>NotificationSendError</code> に包んで投げ、原因は <code>cause</code> に入れる。ただし <strong><code>cause</code> に入れてよいのは firebase-admin が送信時に投げた例外だけ</strong>で、サービスアカウント JSON を入力に持つ例外（<code>main.ts</code> 手順 4a の <code>JSON.parse</code> の <code>SyntaxError</code>、コンストラクタの <code>cert()</code> / <code>initializeApp</code> の失敗）は <code>cause</code> に入れない（<code>formatError</code> が <code>cause</code> を再帰連結してサービスアカウントの断片を Actions のログへ出すため。§4.7、§8 #48）。コンストラクタの失敗は <code>main.ts</code> 手順 5 が捕まえ、固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> だけを出して終了コード 1 にする。サービスアカウントの内容はいかなる経路でもログに出さない。</p>
 <h3 id="sec-5-5">5.5 run-collection と main.ts<a class="anchor" href="#sec-5-5">#</a></h3>
 <p><strong><code>decideFullCrawlCompanyIds</code></strong>（<code>application/full-crawl-policy.ts</code>。純粋関数。§8 #27）</p>
 <pre><code class="language-ts">import type { ArticlesFile } from &quot;../domain/article&quot;;
@@ -1096,12 +1128,12 @@ export class SnapshotMissingError extends Error {
 <li><code>const previous = await reader.readPrevious()</code>（この実行で <code>readPrevious()</code> を呼ぶのはここ 1 回だけ。<code>undefined</code> なら <code>logger.warn(&quot;no previous snapshot; notifications suppressed&quot;)</code>）</li>
 <li><code>const fullCrawlCompanyIds = decideFullCrawlCompanyIds({ previous, companies, forceAll: input.forceFullCrawl })</code>。空でなければ <code>logger.info(&quot;full crawl&quot;, { companyIds })</code>。<code>previous</code> があり、<code>previous.articles</code> に記事が 1 件も無い団体があれば <code>logger.warn(&quot;company has no articles in previous snapshot; run workflow_dispatch with full_crawl to backfill&quot;, { companyId })</code>（自動では遡らない。§8 #27）</li>
 <li><code>const collect = await collectArticles.execute({ fullCrawlCompanyIds })</code></li>
-<li><strong>書き出しの安全条件</strong>（§8 #29）：<code>previous === undefined &amp;&amp; collect.failures.length &gt; 0</code> → <code>logger.error(&quot;refusing to publish&quot;, { failures })</code> を出し <code>SnapshotMissingError(collect.failures)</code> を投げる。書き出し・コミット・通知のいずれも行わず、既存の <code>data/articles.json</code>（壊れているか無い）をそのまま残す。前回を引き継げない実行で欠損した記事一覧を配信しないため</li>
+<li><strong>書き出しの安全条件</strong>（§8 #29）：<code>previous === undefined &amp;&amp; collect.failures.length &gt; 0</code> → <code>logger.error(&quot;refusing to publish&quot;, { failures: collect.failures.length })</code> を出し（<code>LogFields</code> はスカラーしか受け付けないので配列ではなく件数を載せる。§4.7。失敗の内訳は手順 4 までの <code>logger.warn(&quot;source failed&quot;)</code> と <code>RunSummary.sourceFailures</code> に残る）<code>SnapshotMissingError(collect.failures)</code> を投げる。書き出し・コミット・通知のいずれも行わず、既存の <code>data/articles.json</code>（壊れているか無い）をそのまま残す。前回を引き継げない実行で欠損した記事一覧を配信しないため</li>
 <li><code>const diff = detectDiff.execute({ previous, collected: collect.articles, companies, generatedAt })</code></li>
-<li><code>diff.changed === false</code> → 書き出さず、コミットもせず、通知もしない。<code>logger.info(&quot;no changes&quot;)</code> → 手順 10（新着があれば必ず <code>changed</code> が真になるため、通知の取りこぼしは起きない）。ただし<strong>差分判定側の誤り</strong>を検知するため、抜ける前に矛盾を 1 つ調べる：<code>diff.stats.dropped === 0 &amp;&amp; diff.stats.created + diff.stats.updated &gt; 0</code> なら、切り詰めで落ちた記事が 1 件も無いのに新着・更新があることになり <code>changed</code> が真でなければならない（<code>detect-diff</code> 手順 9 の <code>hasSameArticles</code> のバグ）。このとき <code>logger.error(&quot;no changes but stats are non-zero&quot;, { created, updated })</code> を出し、<code>RunSummary</code>（手順 10）の値からワークフローが同じ条件を判定する（§5.6 の <code>no_changes_but_stats</code>）。例外にはしない。<code>dropped &gt; 0</code> を条件から外すのは、切り詰めで落ちた新着（§5.2 手順 5・7）がある実行では <code>created &gt; 0</code> と <code>changed === false</code> が正常に両立しうるためである（§8 #51）</li>
+<li><code>diff.changed === false</code> → 書き出さず、コミットもせず、通知もしない。<code>logger.info(&quot;no changes&quot;)</code> → 手順 10（新着があれば必ず <code>changed</code> が真になるため、通知の取りこぼしは起きない）。ただし<strong>差分判定側の誤り</strong>を検知するため、抜ける前に矛盾を 1 つ調べる：<code>diff.stats.survivingChanges &gt; 0</code>（§4.6・§5.2 手順 7b）なら <code>changed</code> が真でなければならない（<code>detect-diff</code> 手順 9 の <code>hasSameArticles</code> のバグ）。<code>changed === false</code> は「出力配列が前回配列と全フィールド一致」を意味するので、そこに新着（前回に <code>id</code> が無い）や更新（<code>contentHash</code> と <code>updatedAt</code> が前回と異なる）が 1 件でも<strong>残っている</strong>ことは定義上ありえない。このとき <code>logger.error(&quot;no changes but stats are non-zero&quot;, { created, updated, survivingChanges })</code> を出し、<code>RunSummary</code>（手順 10）の値からワークフローが同じ条件を判定する（§5.6 の <code>no_changes_but_stats</code>）。例外にはしない。<code>dropped</code> は条件に入れない（100 件溜まった団体では新着 1 件につき末尾 1 件が必ず落ちるので <code>dropped === 0</code> は定常運用で成り立たず、<code>created</code>・<code>updated</code> は切り詰めで落ちた新着を含むので単体では誤検知になる。§8 #51）</li>
 <li><code>const outcome = await publishArticles.execute({ file: diff.file, note: buildCommitMessage(generatedAt) })</code>。例外はそのまま上位（<code>main.ts</code>）へ伝える＝<strong>通知しない</strong>。<code>diff.changed === true</code> なのに <code>outcome === &quot;no_changes&quot;</code> が返った場合（差分判定を §5.3 手順 3-2 と逆向きに誤る実装・<code>git add</code> のパス指定の誤りなど）は、記事が変わったのに配信も通知も起きていないので、<code>input.dryRun === false</code> のときだけ <code>logger.error(&quot;changed but nothing staged&quot;, { articles: diff.file.articles.length })</code> を出す（<code>dryRun === true</code> は <code>NoopArticlesPublisher</code> が常に <code>&quot;no_changes&quot;</code> を返す正常な経路なので出さない。判定に <code>publisherKind</code> は使わない。§8 #41・#45）。例外にはせず手順 10 へ進み、検知はサマリを読むワークフロー（§5.6）が行う</li>
 <li><code>outcome === &quot;published&quot;</code> のときだけ <code>await notify.execute({ newArticlesByCompany: diff.newArticlesByCompany, companies })</code></li>
-<li><code>RunSummary</code>（§4.8）を組み立てて返す（<code>kind: &quot;completed&quot;</code>、<code>publishOutcome</code>: 手順 8 の <code>outcome</code>（手順 7 で publish を呼ばずに抜けた経路は <code>&quot;skipped&quot;</code>。手順 5 は例外を投げるのでここに到達せず、そのサマリは <code>main.ts</code> 手順 10 の <code>buildFailureSummary</code> が書く）、<code>sourceFailures</code>: <code>collect.failures</code> の各 <code>message</code> を <code>sanitizeFailureMessage</code> に通したもの（§4.8）、<code>publisher: publisherKind</code>、<code>previousSnapshot: previous !== undefined</code>、<code>fullCrawlCompanyIds: [...fullCrawlCompanyIds]</code>、<code>discardedByCompany: collect.discardedByCompany</code> をそのまま、<code>discarded: Object.values(collect.discardedByCompany).reduce((a, b) =&gt; a + b, 0)</code>（§4.6・§8 #36）、<code>notificationGateway: notificationGatewayKind</code>、<code>notificationsSent</code> / <code>notificationsFailed</code>: 手順 9 の結果。手順 9 を通らなかったときは 0 / 0、<code>durationMs: clock.now().getTime() - startedAt.getTime()</code>（手順 1 の <code>startedAt</code> から、サマリを組み立てる直前までの経過ミリ秒。<code>clock.now()</code> を呼ぶのは手順 1 とここの 2 回））</li>
+<li><code>RunSummary</code>（§4.8）を組み立てて返す（<code>kind: &quot;completed&quot;</code>、<code>publishOutcome</code>: 手順 8 の <code>outcome</code>（手順 7 で publish を呼ばずに抜けた経路は <code>&quot;skipped&quot;</code>。手順 5 は例外を投げるのでここに到達せず、そのサマリは <code>main.ts</code> 手順 10 の <code>buildFailureSummary</code> が書く）、<code>sourceFailures</code>: <code>collect.failures</code> の各 <code>message</code> を <code>sanitizeFailureMessage</code> に通したもの（§4.8）、<code>created</code> / <code>updated</code> / <code>dropped</code> / <code>survivingChanges</code>: <code>diff.stats</code> の同名の値をそのまま（手順 7 で抜けた経路も含む。手順 5・6 を通っていない経路はここに到達しない）、<code>publisher: publisherKind</code>、<code>previousSnapshot: previous !== undefined</code>、<code>fullCrawlCompanyIds: [...fullCrawlCompanyIds]</code>、<code>discardedByCompany: collect.discardedByCompany</code> をそのまま、<code>discarded: Object.values(collect.discardedByCompany).reduce((a, b) =&gt; a + b, 0)</code>（§4.6・§8 #36）、<code>notificationGateway: notificationGatewayKind</code>、<code>notificationsSent</code> / <code>notificationsFailed</code>: 手順 9 の結果。手順 9 を通らなかったときは 0 / 0、<code>durationMs: clock.now().getTime() - startedAt.getTime()</code>（手順 1 の <code>startedAt</code> から、サマリを組み立てる直前までの経過ミリ秒。<code>clock.now()</code> を呼ぶのは手順 1 とここの 2 回））</li>
 </ol>
 </li>
 <li><strong>出力</strong>：<code>RunSummary</code></li>
@@ -1114,17 +1146,18 @@ export class SnapshotMissingError extends Error {
 <li><code>repoRoot</code> を決める（<code>CURTAINCALL_REPO_ROOT</code> → 無ければ <code>path.resolve(path.dirname(fileURLToPath(import.meta.url)), &quot;..&quot;, &quot;..&quot;)</code>。<code>collector/dist/main.js</code> から見て <code>collector/dist</code> → <code>collector</code> → リポジトリ直下。§4.9）</li>
 <li><strong>起動時検証</strong>：<code>CompaniesFileStore(repoRoot).load()</code> が <code>data/companies.json</code> を読み <code>CompaniesFileSchema</code>（strict）で検証する。失敗したら <code>error</code> ログを出して終了コード 1（収集を始めない。D-01 §8.1・§6）</li>
 <li><strong>環境変数の起動時検証</strong>（いずれも失敗したら収集を始めず終了コード 1。相手サイトへのリクエストを 1 件も出さないうちに止める）<ul>
-<li><strong>通知設定</strong>（§8 #32）：<code>FIREBASE_SERVICE_ACCOUNT</code> が未設定または空文字で <code>CURTAINCALL_REQUIRE_NOTIFICATIONS === &quot;1&quot;</code> なら <code>logger.error(&quot;FIREBASE_SERVICE_ACCOUNT is required&quot;)</code>。設定されていて <code>JSON.parse</code>（またはサービスアカウントとしての初期化）に失敗したら <code>logger.error(&quot;FIREBASE_SERVICE_ACCOUNT is not valid JSON&quot;)</code>（§6）。このとき<strong>例外の <code>message</code> をログに出さない</strong>：<code>JSON.parse</code> の <code>SyntaxError</code> は不正位置周辺の原文（＝サービスアカウント JSON の断片。<code>private_key</code> を含みうる）を <code>message</code> に載せ、Actions の Secret マスクは行の途中を切り出した断片には効かないため、<code>formatError(e)</code> を渡さず固定文言だけを出す（§4.7、§8 #48）</li>
-<li><strong>DRY_RUN の誤設定</strong>（§8 #44）：<code>process.env.GITHUB_ACTIONS === &quot;true&quot;</code> かつ <code>process.env.CURTAINCALL_DRY_RUN === &quot;1&quot;</code> なら <code>logger.error(&quot;CURTAINCALL_DRY_RUN must not be set on GitHub Actions&quot;)</code>。ワークフローは DRY_RUN を使わない（§5.6）ため、Actions 上でこの値が <code>1</code> なのは設定の誤りだけである。デバッグで足した <code>CURTAINCALL_DRY_RUN: &quot;1&quot;</code> を消し忘れると、書き出し・push・通知がすべて Noop に縮退したままジョブが緑で通り、配信も通知も静かに止まる（§6）</li>
+<li><strong>4a. 通知設定</strong>（§8 #32）：<code>FIREBASE_SERVICE_ACCOUNT</code> が未設定または空文字で <code>CURTAINCALL_REQUIRE_NOTIFICATIONS === &quot;1&quot;</code> なら <code>logger.error(&quot;FIREBASE_SERVICE_ACCOUNT is required&quot;)</code>。設定されていたら <strong><code>main.ts</code> がここで <code>JSON.parse</code> を 1 回だけ行い</strong>、失敗したら <code>logger.error(&quot;FIREBASE_SERVICE_ACCOUNT is not valid JSON&quot;)</code>（§6）。成功した<strong>オブジェクト</strong>を手順 5 の <code>FirebaseNotificationGateway</code> のコンストラクタへ渡す（ゲートウェイは環境変数も生の JSON 文字列も受け取らず、<code>firebase-admin</code> の import は <code>infrastructure/fcm</code> の 1 ファイルに閉じたまま。§5.4、§8 #17）。サービスアカウントを入力とするパースをここ 1 か所に限ることで、検証の時点が実装の裁量で送信時へずれる余地を無くす（遅延初期化にすると <code>send()</code> の失敗経路で <code>formatError</code> に乗り、§4.7 の禁止を迂回する。§8 #48）。このとき<strong>例外の <code>message</code> をログに出さない</strong>：<code>JSON.parse</code> の <code>SyntaxError</code> は不正位置周辺の原文（＝サービスアカウント JSON の断片。<code>private_key</code> を含みうる）を <code>message</code> に載せ、Actions の Secret マスクは行の途中を切り出した断片には効かないため、<code>formatError(e)</code> を渡さず固定文言だけを出す（§4.7、§8 #48）</li>
+<li><strong>4b. DRY_RUN の誤設定</strong>（§8 #44）：<code>process.env.GITHUB_ACTIONS === &quot;true&quot;</code> かつ <code>process.env.CURTAINCALL_DRY_RUN === &quot;1&quot;</code> なら <code>logger.error(&quot;CURTAINCALL_DRY_RUN must not be set on GitHub Actions&quot;)</code>。ワークフローは DRY_RUN を使わない（§5.6）ため、Actions 上でこの値が <code>1</code> なのは設定の誤りだけである。デバッグで足した <code>CURTAINCALL_DRY_RUN: &quot;1&quot;</code> を消し忘れると、書き出し・push・通知がすべて Noop に縮退したままジョブが緑で通り、配信も通知も静かに止まる（§6）</li>
 </ul>
 </li>
-<li>具象を生成する：<code>SystemClock</code>・<code>Sha256Hasher</code>・<code>FetchHttpClient</code>（§5.7 の設定）・<code>ArticlesFileStore(repoRoot, logger)</code>・<code>GitArticlesPublisher(repoRoot, logger)</code>・通知ゲートウェイ（<code>FIREBASE_SERVICE_ACCOUNT</code> があれば <code>FirebaseNotificationGateway</code> と <code>kind = &quot;firebase&quot;</code>、無ければ <code>NoopNotificationGateway</code> と <code>kind = &quot;noop&quot;</code>。§8 #16）</li>
+<li>具象を生成する：<code>SystemClock</code>・<code>Sha256Hasher</code>・<code>FetchHttpClient</code>（§5.7 の設定）・<code>ArticlesFileStore(repoRoot, logger)</code>・<code>GitArticlesPublisher(repoRoot, logger)</code>・通知ゲートウェイ（手順 4a でパース済みのオブジェクトがあれば <code>new FirebaseNotificationGateway(serviceAccount, logger)</code> と <code>kind = &quot;firebase&quot;</code>、無ければ <code>NoopNotificationGateway</code> と <code>kind = &quot;noop&quot;</code>。§8 #16）。<code>new FirebaseNotificationGateway(...)</code> は <code>try</code> で囲み、<code>cert()</code> / <code>initializeApp</code> が投げたら固定文言 <code>logger.error(&quot;failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT&quot;)</code> だけを出して終了コード 1（例外の <code>message</code> も <code>cause</code> もログに出さない。§4.7、§5.4、§8 #48）</li>
 <li><code>buildSourceBindings(companies, { http, logger })</code>：<code>companyId → Source 生成関数</code> の表（<code>SOURCE_FACTORIES: Readonly&lt;Record&lt;string, (company: Company, deps: { http: HttpClient; logger: Logger }, options: SourceOptions) =&gt; Source&gt;&gt;</code>）を引いて <code>SourceBinding[]</code> を <code>companies</code> の配列順に組む。表にある <code>id</code> は <code>createSource: (options) =&gt; factory(company, { http, logger }, options)</code>、表に無い <code>id</code> は <code>createSource: undefined</code>（未実装として <code>collect-articles</code> が <code>failures</code> に数える。§5.1 手順 1、§6）。<code>fullCrawl</code> の判定は <code>main.ts</code> では行わない（<code>RunCollection</code> 手順 3）。団体の追加はこの表への 1 行と <code>companies.json</code> への 1 要素だけで済む（CLAUDE.md 開放閉鎖）</li>
 <li><code>CURTAINCALL_DRY_RUN=1</code> のときは、手順 5 で生成した <code>ArticlesFileStore</code>（<code>ArticleWriter</code> として）・<code>GitArticlesPublisher</code>・通知ゲートウェイを <code>NoopArticleWriter</code>（<code>storage/noop-article-writer.ts</code>。<code>write</code> は書かずに <code>logger.info(&quot;dry run: skip writing articles.json&quot;, { articles })</code>）・<code>NoopArticlesPublisher</code>（<code>storage/noop-articles-publisher.ts</code>。<code>publish</code> は常に <code>&quot;no_changes&quot;</code> を返し <code>logger.info(&quot;dry run: skip publish&quot;, { note })</code>）・<code>NoopNotificationGateway</code>（<code>fcm/noop-notification-gateway.ts</code>）に差し替える（§3.2）。<code>ArticleReader</code> は <code>ArticlesFileStore</code> のまま（前回の読み込みは行う）。<code>notificationGatewayKind</code> は差し替え前の値を保ち、<code>publisherKind</code> は差し替えの有無に従って <code>&quot;noop&quot;</code>（DRY_RUN）/ <code>&quot;git&quot;</code> を渡す（§4.8。サマリへの記録専用で、判定には使わない。§8 #45）</li>
 <li>4 つの UseCase と <code>RunCollection</code> を組み立てて <code>execute({ forceFullCrawl: process.env.CURTAINCALL_FULL_CRAWL === &quot;1&quot;, dryRun: process.env.CURTAINCALL_DRY_RUN === &quot;1&quot; })</code> を呼ぶ（<code>dryRun</code> は手順 7 と同じ式で、実行の意図として <code>RunCollection</code> に渡す。§8 #45）</li>
 <li><code>RunSummaryStore</code> で <code>.run-summary.json</code> を書き、<code>logger.info(&quot;done&quot;, { ... })</code>、終了コード 0</li>
-<li>例外を捕まえたら <code>logger.error</code> を出し、<code>buildFailureSummary({ clock, error: e, publisherKind, notificationGatewayKind, failures })</code>（§4.8。<code>failures</code> は <code>e instanceof SnapshotMissingError ? e.failures : []</code>）の結果を <code>RunSummaryStore</code> で書いて終了コード 1。<code>FailedRunSummary</code> の全フィールドの値は <code>buildFailureSummary</code>（application）が決め、<code>main.ts</code> は固定値を 1 つも書かない（<code>main.ts</code> は業務規則を持たない。§8 #46）。サマリの書き出し自体が失敗しても終了コードは 1 のまま（<code>warn</code> を出して続行。§6）</li>
+<li>例外を捕まえたら <code>logger.error</code> を出し、<code>buildFailureSummary({ clock, error: e, publisherKind, notificationGatewayKind })</code>（§4.8）の結果を <code>RunSummaryStore</code> で書いて終了コード 1。<code>FailedRunSummary</code> の全フィールドの値と <code>error</code> の種類による分岐（<code>publishOutcome</code> と <code>sourceFailures</code>）は <code>buildFailureSummary</code>（application）が決め、<code>main.ts</code> は固定値も <code>instanceof</code> も 1 つも書かない（<code>main.ts</code> は業務規則を持たない。§8 #11・#46）。サマリの書き出し自体が失敗しても終了コードは 1 のまま（<code>warn</code> を出して続行。§6）。</li>
 </ol>
+<p>   <strong>手順 3・4 の起動時検証の失敗はこの経路に入れない。</strong> <code>clock</code>・<code>publisherKind</code>・<code>notificationGatewayKind</code> は手順 5・7 で初めて確定するため、<code>buildFailureSummary</code> を呼べる状態にない（嘘の既定値を入れると <code>publisher</code> / <code>notificationGateway</code> が「注入された事実の記録」でなくなる。§8 #45）。手順 3・4 の失敗は <code>error</code> ログと終了コード 1 だけで終え、<code>.run-summary.json</code> を書かない。ワークフローはファイル不在の経路（§5.6 の先頭の <code>if [ ! -f ... ]</code>）に入り、<code>published=unknown</code> / <code>failed_sources=unknown</code> として扱う（§6 の「<code>.run-summary.json</code> が無い」に相当する行）</p>
 <p>終了コードは 0（正常終了。Source の部分失敗を含む）と 1（致命的失敗）の 2 値だけにし、詳細はサマリに載せる（§8 #13）。<code>process.exit()</code> は呼ばず <code>process.exitCode</code> を設定して自然終了させる（stdout のフラッシュを待つため）。</p>
 <h3 id="sec-5-6">5.6 GitHub Actions ワークフロー<a class="anchor" href="#sec-5-6">#</a></h3>
 <p><strong><code>.github/workflows/collect.yml</code></strong>（収集 → push → 通知 → Pages デプロイ）</p>
@@ -1209,9 +1242,9 @@ jobs:
           echo &quot;changed_but_not_published=$(jq -r 'if type == &quot;object&quot; and has(&quot;publishOutcome&quot;) and has(&quot;changed&quot;)
                                                    then (.changed == true and .publishOutcome == &quot;no_changes&quot;)
                                                    else false end' &quot;$S&quot; 2&gt;/dev/null || echo false)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
-          # 逆向きの静かな停止：切り詰めが無い（dropped == 0）のに新着・更新があり、changed が偽（§5.5 手順 7、§8 #51）
-          echo &quot;no_changes_but_stats=$(jq -r 'if type == &quot;object&quot; and has(&quot;changed&quot;) and has(&quot;created&quot;) and has(&quot;updated&quot;) and has(&quot;dropped&quot;)
-                                              then (.changed == false and .dropped == 0 and (.created + .updated) &gt; 0)
+          # 逆向きの静かな停止：切り詰め後の出力配列に新着・更新が残っているのに changed が偽（§5.5 手順 7、§8 #51）
+          echo &quot;no_changes_but_stats=$(jq -r 'if type == &quot;object&quot; and has(&quot;changed&quot;) and (.survivingChanges | type) == &quot;number&quot;
+                                              then (.changed == false and .survivingChanges &gt; 0)
                                               else false end' &quot;$S&quot; 2&gt;/dev/null || echo false)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
           # sourceFailures が配列でない（キー欠落・形式違い）なら 0 ではなく unknown（0 は「失敗なし」と読まれる）
           echo &quot;failed_sources=$(jq -r 'if type == &quot;object&quot;
@@ -1220,13 +1253,19 @@ jobs:
           echo &quot;notifications_all_failed=$(jq -r 'if type == &quot;object&quot; and (.notificationsSent | type) == &quot;number&quot; and (.notificationsFailed | type) == &quot;number&quot;
                                                   then (.notificationsSent == 0 and .notificationsFailed &gt; 0)
                                                   else false end' &quot;$S&quot; 2&gt;/dev/null || echo false)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
-          # 以降はステップサマリの本文。join・to_entries は null で落ちるため // [] ・ // {} を付ける
-          jq -r '&quot;収集 \(.collected) 件 / 破棄 \(.discarded) / 新着 \(.created) / 更新 \(.updated) / 通知 \(.notificationsSent) 失敗 \(.notificationsFailed)（\(.notificationGateway)）/ 失敗した情報源 \((.sourceFailures // []) | length) / fullCrawl \((.fullCrawlCompanyIds // []) | join(&quot;,&quot;))&quot;' \
-            &quot;$S&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
+          # 以降はステップサマリの本文。出力用の jq と同じく型ガードを付ける（§8 #53）。
+          # 既定シェルは bash -e -o pipefail なので、ガードが無いとここで jq が非 0 終了したときサマリ
+          # ステップ自体が失敗し、後続の検知ステップ（暗黙の success() 条件）がスキップされて理由が出ない
+          jq -r 'if type != &quot;object&quot; then &quot;サマリの形が想定外（.run-summary.json を確認する）&quot;
+                 else &quot;収集 \(.collected) 件 / 破棄 \(.discarded) / 新着 \(.created) / 更新 \(.updated) / 残存 \(.survivingChanges) / 通知 \(.notificationsSent) 失敗 \(.notificationsFailed)（\(.notificationGateway)）/ 失敗した情報源 \((.sourceFailures // []) | length) / fullCrawl \((.fullCrawlCompanyIds // []) | join(&quot;,&quot;))&quot; end' \
+            &quot;$S&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || echo &quot;サマリ本文の整形に失敗した&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
           # message は collector 側で sanitizeFailureMessage 済み（§4.8）。古い形式のサマリに備えた多層防御として同じ処理を掛ける
-          jq -r '(.sourceFailures // [])[] | &quot;- \(.companyId): \(.reason) \(.message | gsub(&quot;[\\r\\n]&quot;; &quot; &quot;) | .[0:200])&quot;' \
-            &quot;$S&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
-          jq -r '(.discardedByCompany // {}) | to_entries[] | select(.value &gt; 0) | &quot;- \(.key): 破棄 \(.value) 件（部分破棄。D-03 のセレクタを確認）&quot;' &quot;$S&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
+          jq -r 'if type != &quot;object&quot; then empty
+                 else (.sourceFailures // [])[] | &quot;- \(.companyId): \(.reason) \(.message | tostring | gsub(&quot;[\\r\\n]&quot;; &quot; &quot;) | .[0:200])&quot; end' \
+            &quot;$S&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true
+          jq -r 'if type != &quot;object&quot; then empty
+                 else (.discardedByCompany // {}) | to_entries[] | select((.value | type) == &quot;number&quot; and .value &gt; 0) | &quot;- \(.key): 破棄 \(.value) 件（部分破棄。D-03 のセレクタを確認）&quot; end' \
+            &quot;$S&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true
       - name: Pages 用にアップロード
         if: ${{ !cancelled() &amp;&amp; steps.summary.outputs.published != 'false' }}   # true と unknown で行う（安全側。前回と同じ内容の再デプロイは無害）
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa   # v3.0.1
@@ -1298,15 +1337,15 @@ jobs:
 </tr>
 <tr>
 <td>配信と通知の静かな停止の検知（publish 側）</td>
-<td><code>changed_but_not_published</code>（<code>changed == true &amp;&amp; publishOutcome == &quot;no_changes&quot;</code>）が真なら専用ステップがジョブを失敗させる。この経路は <code>failed_sources</code> が 0 で通知も 0 通のため、ほかのどの検知にも掛からず<strong>ジョブが緑のまま配信が止まる</strong>（§8 #41）。判定に <code>publisher == &quot;git&quot;</code> の条件は付けない（付けると <code>CURTAINCALL_DRY_RUN=1</code> を env に足すだけで検知を無効化できてしまう。Actions 上の DRY_RUN は collector の起動時検証が拒否する。§5.5 <code>main.ts</code> 手順 4、§8 #44）</td>
+<td><code>changed_but_not_published</code>（<code>changed == true &amp;&amp; publishOutcome == &quot;no_changes&quot;</code>）が真なら専用ステップがジョブを失敗させる。この経路は <code>failed_sources</code> が 0 で通知も 0 通のため、ほかのどの検知にも掛からず<strong>ジョブが緑のまま配信が止まる</strong>（§8 #41）。判定に <code>publisher == &quot;git&quot;</code> の条件は付けない（付けると <code>CURTAINCALL_DRY_RUN=1</code> を env に足すだけで検知を無効化できてしまう。Actions 上の DRY_RUN は collector の起動時検証が拒否する。§5.5 <code>main.ts</code> 手順 4b、§8 #44）</td>
 </tr>
 <tr>
 <td>配信と通知の静かな停止の検知（差分判定側）</td>
-<td><code>no_changes_but_stats</code>（<code>changed == false &amp;&amp; dropped == 0 &amp;&amp; created + updated &gt; 0</code>）が真なら専用ステップがジョブを失敗させる。<code>hasSameArticles</code>（§5.2 手順 9）が常に「同じ」と判定するバグで、書き出し・publish・通知のいずれも起きず記事が二度と更新されない経路を塞ぐ（上の行と対称。§5.5 手順 7、§8 #51）</td>
+<td><code>no_changes_but_stats</code>（<code>changed == false &amp;&amp; survivingChanges &gt; 0</code>）が真なら専用ステップがジョブを失敗させる。<code>hasSameArticles</code>（§5.2 手順 9）が常に「同じ」と判定するバグで、書き出し・publish・通知のいずれも起きず記事が二度と更新されない経路を塞ぐ（上の行と対称。§5.5 手順 7、§8 #51）。<code>dropped == 0</code> は条件に使わない：100 件溜まった団体では新着 1 件につき末尾 1 件が必ず落ちるため、定常運用に入ると <code>dropped == 0</code> は成立せず判定が空振りする</td>
 </tr>
 <tr>
 <td>ワークフローが <code>CURTAINCALL_DRY_RUN</code> を使わない理由</td>
-<td>使うと <code>ArticleWriter</code>・<code>ArticlesPublisher</code>・<code>NotificationGateway</code> がすべて Noop になり、<code>publishOutcome</code> は毎回 <code>&quot;no_changes&quot;</code>、<code>failed_sources</code> は 0、通知は 0 通で、<strong>ジョブが緑のまま配信も通知も完全に止まる</strong>。デバッグで足した env を消し忘れる事故を塞ぐため、collector が起動時に <code>GITHUB_ACTIONS === &quot;true&quot; &amp;&amp; CURTAINCALL_DRY_RUN === &quot;1&quot;</code> を拒否する（§5.5 <code>main.ts</code> 手順 4、§8 #44）。ワークフロー側にこの値を書かない</td>
+<td>使うと <code>ArticleWriter</code>・<code>ArticlesPublisher</code>・<code>NotificationGateway</code> がすべて Noop になり、<code>publishOutcome</code> は毎回 <code>&quot;no_changes&quot;</code>、<code>failed_sources</code> は 0、通知は 0 通で、<strong>ジョブが緑のまま配信も通知も完全に止まる</strong>。デバッグで足した env を消し忘れる事故を塞ぐため、collector が起動時に <code>GITHUB_ACTIONS === &quot;true&quot; &amp;&amp; CURTAINCALL_DRY_RUN === &quot;1&quot;</code> を拒否する（§5.5 <code>main.ts</code> 手順 4b、§8 #44）。ワークフロー側にこの値を書かない</td>
 </tr>
 <tr>
 <td>通知の全滅の検知</td>
@@ -1384,15 +1423,64 @@ jobs:
   readonly maxRetries: number;     // 既定 1。対象は 429 / 5xx / ネットワーク失敗・タイムアウトのみ（§8 #26）
   readonly retryDelayMs: number;   // 既定 1000（§8 #26）
   readonly maxRequestsPerRun: number;   // 1 プロセスが発行するリクエストの上限（リトライを含む）。既定 30（§8 #31）
-}</code></pre>
+}
+
+/** userAgent を除く既定値。実装とテストが同じ値を読むための単一情報源（§8 #26・#31） */
+export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, &quot;userAgent&quot;&gt; = {
+  timeoutMs: 15_000,
+  minIntervalMs: 1_000,
+  maxRetries: 1,
+  retryDelayMs: 1_000,
+  maxRequestsPerRun: 30,
+};</code></pre>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>既定値</th>
+<th>出典</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>timeoutMs</code></td>
+<td><code>15_000</code></td>
+<td>§8 #26</td>
+</tr>
+<tr>
+<td><code>minIntervalMs</code></td>
+<td><code>1_000</code></td>
+<td>§8 #26</td>
+</tr>
+<tr>
+<td><code>maxRetries</code></td>
+<td><code>1</code></td>
+<td>§8 #26</td>
+</tr>
+<tr>
+<td><code>retryDelayMs</code></td>
+<td><code>1_000</code></td>
+<td>§8 #26</td>
+</tr>
+<tr>
+<td><code>maxRequestsPerRun</code></td>
+<td><code>30</code></td>
+<td>§8 #31</td>
+</tr>
+</tbody></table>
+<p><code>userAgent</code> に既定値を置かないのは、D-01 §4.7 の実値を <code>main.ts</code> が明示的に渡す形を崩さないためである。待機（リトライ間隔・ホスト間隔）は <code>infrastructure/http/sleep.ts</code> の <code>sleep(ms)</code> を <code>fetch-http-client.ts</code> と <code>host-scheduler.ts</code> が共有する（§3.2）。</p>
 <ul>
 <li><strong>手順</strong>：<ol start="0">
 <li>リクエスト数の上限：<code>getText</code> の呼び出し回数（リトライも 1 回に数える）がプロセス内で <code>maxRequestsPerRun</code> に達していたら、送信せず <code>HttpError(&quot;request budget exhausted&quot;, url)</code> を投げる（<code>status</code> 無し。リトライしない）。ページ送りの終端判定が改装で効かなくなり無限に辿る事故の上限（§8 #31）</li>
 <li><code>new URL(url).host</code> でホストを取り、<code>HostScheduler</code> に入れる。同一ホストのリクエストは<strong>直列</strong>に実行し、直前のリクエスト完了から <code>minIntervalMs</code> 経過するまで待つ（要件 §5「リクエスト間隔を空ける」）。異なるホストは並行（Source 同士は別ホストなので <code>Promise.allSettled</code> の並行度を損なわない）</li>
-<li><code>fetch(url, { method: &quot;GET&quot;, redirect: &quot;follow&quot;, signal: AbortSignal.timeout(timeoutMs), headers })</code>。<code>headers</code> は <code>User-Agent</code>（固定値）、<code>Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8</code>、<code>Accept-Language: ja</code></li>
+<li><code>fetch(url, { method: &quot;GET&quot;, redirect: &quot;follow&quot;, signal: AbortSignal.timeout(timeoutMs), headers })</code>。<code>headers</code> は <code>User-Agent</code>（固定値）、<code>Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8</code>、<code>Accept-Language: ja</code>
+2b. <strong>リダイレクトの検査</strong>：<code>res.url</code>（最終 URL）を要求 URL と比べる。<code>res.url</code> が空文字または要求 URL と同じなら何もしない。どちらかが <code>new URL()</code> で解釈できない場合も何もしない。<ul>
+<li><strong><code>https:</code> で要求したのに最終 URL が <code>https:</code> でない</strong>（平文への降格）→ 本文を読まずに <code>HttpError(&quot;redirected to insecure scheme&quot;, url)</code>（<code>status</code> は持たない）。<strong>この失敗はリトライしない</strong>（同じ降格が繰り返されるだけで、平文で取得する結果にもならない）。<code>status</code> の有無だけでリトライ可否を決めると（手順 4 の既定は「<code>status</code> が無ければリトライ対象」）誤ってリトライされるため、実装はこの失敗を他の <code>HttpError</code> と区別できる専用のサブクラスで表す</li>
+<li><strong>ホストが変わった</strong>（スキームの降格ではない）→ 追う。<code>logger.warn(&quot;redirected&quot;, { url, finalUrl })</code> を 1 件出す。<code>finalUrl</code> は 200 文字に切り詰めてログに載せる（異常に長い URL がログへ丸ごと出るのを防ぐ）。転送先ホストは <code>HostScheduler</code> の間隔制御と <code>maxRequestsPerRun</code> の計上の対象外（リダイレクトは <code>fetch</code> 内部で完結するため collector から観測できない）</li>
+</ul>
+</li>
 <li><code>res.ok</code> でなければ <code>HttpError(status)</code>。<code>429</code> と <code>5xx</code> はリトライ対象、その他の <code>4xx</code> はリトライしない</li>
 <li>ネットワーク失敗・タイムアウト（<code>AbortError</code>）はリトライ対象</li>
-<li>リトライは <code>maxRetries</code> 回まで、<code>retryDelayMs</code> 待ってから。使い切ったら <code>HttpError</code></li>
+<li>リトライは <code>maxRetries</code> 回まで、<code>retryDelayMs</code>（<code>sleep</code>）待ってから。手順 2b の降格拒否は常に対象外。使い切ったら <code>HttpError</code></li>
 <li><code>const buffer = await res.arrayBuffer()</code> → 文字コードを決めて <code>new TextDecoder(label).decode(buffer)</code></li>
 </ol>
 </li>
@@ -1412,7 +1500,7 @@ jobs:
 </thead>
 <tbody><tr>
 <td><code>data/companies.json</code> が無い・スキーマ不一致・<code>id</code> / <code>fcmTopic</code> 重複</td>
-<td>収集を始めず終了コード 1。<code>articles.json</code> は触らない（前回の内容が残る）</td>
+<td>収集を始めず <code>error</code> ログと終了コード 1。<code>articles.json</code> は触らない（前回の内容が残る）。<strong><code>.run-summary.json</code> は書かれない</strong>（<code>clock</code> と注入した種別が未確定のため <code>buildFailureSummary</code> を呼べない。§5.5 <code>main.ts</code> 手順 10）。ワークフローはファイル不在の経路に入り <code>published=unknown</code> / <code>failed_sources=unknown</code> として扱う（Pages は再デプロイされ、ジョブは赤くなる）</td>
 <td><code>main.ts</code> / <code>CompaniesFileStore</code></td>
 </tr>
 <tr>
@@ -1427,7 +1515,7 @@ jobs:
 </tr>
 <tr>
 <td>Source の例外メッセージが巨大・多行（改装で cheerio / rss-parser が数十 KB の HTML 断片を含む多行のメッセージを投げた）</td>
-<td><code>RunCollection</code> が <code>RunSummary.sourceFailures</code> に載せる前に <code>sanitizeFailureMessage</code> で制御文字を半角スペースに潰し 200 文字（UTF-16 コード単位）へ切り詰める（§4.8）。ステップサマリの箇条書きが崩れず、<code>$GITHUB_STEP_SUMMARY</code> の 1 MB 上限でサマリのステップごと失敗することも防ぐ。§5.6 の jq にも同じ処理を書く（多層防御。§8 #50）</td>
+<td><code>RunCollection</code> が <code>RunSummary.sourceFailures</code> に載せる前に <code>sanitizeFailureMessage</code> で制御文字を半角スペースに潰し 200 コードポイントへ切り詰める（§4.8、§8 #55）。ステップサマリの箇条書きが崩れず、<code>$GITHUB_STEP_SUMMARY</code> の 1 MB 上限でサマリのステップごと失敗することも防ぐ。§5.6 の jq にも同じ処理を書く（多層防御。§8 #50）</td>
 <td><code>run-collection</code> / ワークフロー</td>
 </tr>
 <tr>
@@ -1458,6 +1546,16 @@ jobs:
 <tr>
 <td>1 プロセスのリクエスト数が <code>maxRequestsPerRun</code>（30）に達した</td>
 <td>以降の <code>getText</code> は送信せず <code>HttpError</code>。ページ送りの終端判定が壊れた Source はその時点で失敗になり、他の Source も残りのリクエストを発行できないので、その実行は失敗が並ぶ（ジョブ失敗で検知。§8 #31）</td>
+<td><code>http</code></td>
+</tr>
+<tr>
+<td><code>https</code> で要求したリクエストが <code>http</code> へリダイレクトされた（サイト側の設定ミス・経路上の介入）</td>
+<td>本文を読まず <code>HttpError(&quot;redirected to insecure scheme&quot;)</code>。<strong>リトライしない</strong>。その Source は失敗として数えられ、記事は前回の値のまま（§5.7 手順 2b、§8 #58）</td>
+<td><code>http</code></td>
+</tr>
+<tr>
+<td>リダイレクトでホストが変わった（旧ドメインから新ドメインへの転送。東宝の <code>tohostage.com</code> 等）</td>
+<td>追って取得し、<code>warn(&quot;redirected&quot;)</code> を 1 件出す（<code>finalUrl</code> は 200 文字で切り詰め）。転送先は <code>HostScheduler</code> の間隔制御と <code>maxRequestsPerRun</code> の計上の対象外（§5.7 手順 2b）。恒常化したら <code>companies.json</code> の URL を新ドメインへ直す</td>
 <td><code>http</code></td>
 </tr>
 <tr>
@@ -1522,8 +1620,8 @@ jobs:
 </tr>
 <tr>
 <td>書き出し前の検証に失敗（100 件超・<code>id</code> 重複・未知の <code>companyId</code>）</td>
-<td><code>ArticlesValidationError</code>。<code>writer.write</code> を呼ばないので <code>data/articles.json</code> は書き換わらず、通知も送らず終了コード 1（§8 #29）</td>
-<td><code>publish-articles</code></td>
+<td><code>ArticlesValidationError</code>。<code>writer.write</code> を呼ばないので <code>data/articles.json</code> は書き換わらず、通知も送らず終了コード 1（§8 #29）。publish を呼んでいないことが<strong>例外の型で確定する</strong>ので、<code>buildFailureSummary</code> は <code>publishOutcome: &quot;skipped&quot;</code> にする（<code>&quot;unknown&quot;</code> に倒すと、検証が恒常的に失敗する間ずっと毎時 Pages が再デプロイされる。§4.8、§8 #47）</td>
+<td><code>publish-articles</code> / <code>main.ts</code></td>
 </tr>
 <tr>
 <td><code>.tmp</code> への書き込み中に失敗</td>
@@ -1587,27 +1685,32 @@ jobs:
 </tr>
 <tr>
 <td><code>FIREBASE_SERVICE_ACCOUNT</code> が未設定・空文字で <code>CURTAINCALL_REQUIRE_NOTIFICATIONS=1</code>（フェーズ 5 以降に Secret 名をタイポした）</td>
-<td>起動時に <code>error</code> ログを出して終了コード 1（収集を始めない）。通知が黙って Noop に縮退して「新着 0 件」と区別がつかなくなるのを防ぐ（§8 #32）</td>
+<td>起動時に <code>error</code> ログを出して終了コード 1（収集を始めない）。通知が黙って Noop に縮退して「新着 0 件」と区別がつかなくなるのを防ぐ（§8 #32）。<strong>サマリは書かれない</strong>（<code>published=unknown</code> で Pages は再デプロイ、ジョブは赤。§5.5 <code>main.ts</code> 手順 10）</td>
 <td><code>main.ts</code></td>
 </tr>
 <tr>
 <td><code>FIREBASE_SERVICE_ACCOUNT</code> が JSON として壊れている（Secret に貼った JSON が途中で切れている・余計な引用符が付いている）</td>
-<td>起動時に固定文言 <code>FIREBASE_SERVICE_ACCOUNT is not valid JSON</code> の <code>error</code> ログを出して終了コード 1（収集を始めない。設定ミスを黙って握りつぶさない）。<strong>例外の <code>message</code> はログに出さない</strong>（<code>JSON.parse</code> の <code>SyntaxError</code> がサービスアカウント JSON の断片を含み、Actions の Secret マスクが断片には効かないため。§4.7、§5.5 <code>main.ts</code> 手順 4、§8 #48）</td>
+<td><code>main.ts</code> 手順 4a の <code>JSON.parse</code> が起動時に失敗し、固定文言 <code>FIREBASE_SERVICE_ACCOUNT is not valid JSON</code> の <code>error</code> ログを出して終了コード 1（収集を始めない。設定ミスを黙って握りつぶさない）。<strong>例外の <code>message</code> はログに出さない</strong>（<code>JSON.parse</code> の <code>SyntaxError</code> がサービスアカウント JSON の断片を含み、Actions の Secret マスクが断片には効かないため。§4.7、§8 #48）。<strong>サマリは書かれない</strong>（<code>published=unknown</code> で Pages は再デプロイ、ジョブは赤）</td>
 <td><code>main.ts</code></td>
 </tr>
 <tr>
+<td><code>FIREBASE_SERVICE_ACCOUNT</code> は JSON として妥当だがサービスアカウントとして不正（鍵の欠落・<code>private_key</code> の改行が壊れている）</td>
+<td><code>main.ts</code> 手順 5 の <code>new FirebaseNotificationGateway(...)</code> が <code>cert()</code> / <code>initializeApp</code> の例外で失敗し、固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> の <code>error</code> ログを出して終了コード 1。例外の <code>message</code> も <code>cause</code> もログに出さない。初期化を <code>send()</code> へ遅延させないことで、この失敗が <code>notify-new-articles</code> 手順 6 の <code>formatError</code> 経由でログに出る経路を作らない（§4.7、§5.4、§8 #48）</td>
+<td><code>main.ts</code> / <code>FirebaseNotificationGateway</code></td>
+</tr>
+<tr>
 <td>Actions の env に <code>CURTAINCALL_DRY_RUN: &quot;1&quot;</code> が残っている（デバッグの消し忘れ）</td>
-<td>起動時に <code>error</code> ログを出して終了コード 1（収集を始めない）。放置すると書き出し・push・通知がすべて Noop に縮退し、<code>publishOutcome</code> は毎回 <code>&quot;no_changes&quot;</code>・<code>failed_sources</code> は 0・通知は 0 通で、<strong>ジョブが緑のまま配信も通知も完全に止まる</strong>（§5.5 <code>main.ts</code> 手順 4、§5.6、§8 #44）</td>
+<td>起動時（<code>main.ts</code> 手順 4b）に <code>error</code> ログを出して終了コード 1（収集を始めない。サマリは書かれない）。放置すると書き出し・push・通知がすべて Noop に縮退し、<code>publishOutcome</code> は毎回 <code>&quot;no_changes&quot;</code>・<code>failed_sources</code> は 0・通知は 0 通で、<strong>ジョブが緑のまま配信も通知も完全に止まる</strong>（§5.5 <code>main.ts</code> 手順 4b、§5.6、§8 #44）</td>
 <td><code>main.ts</code></td>
 </tr>
 <tr>
 <td><code>.run-summary.json</code> の形が想定外（キー欠落・旧形式・JSON として読めない）</td>
-<td>§5.6 の jq がすべて型ガード付きで、<code>published</code> は <code>false</code> ではなく <code>unknown</code> に倒す（Pages のアップロードと deploy は行う。安全側）。<code>failed_sources</code> も <code>0</code> ではなく <code>unknown</code> に倒し、「情報源の失敗を検知」ステップがジョブを失敗させる。<code>changed_but_not_published</code> / <code>no_changes_but_stats</code> は <code>false</code>（誤検知でジョブを赤くしない。形の異常は <code>failed_sources=unknown</code> 側で届く）（§8 #53）</td>
+<td>§5.6 の jq がすべて型ガード付きで、<code>published</code> は <code>false</code> ではなく <code>unknown</code> に倒す（Pages のアップロードと deploy は行う。安全側）。<code>failed_sources</code> も <code>0</code> ではなく <code>unknown</code> に倒し、「情報源の失敗を検知」ステップがジョブを失敗させる。<code>changed_but_not_published</code> / <code>no_changes_but_stats</code> は <code>false</code>（誤検知でジョブを赤くしない。形の異常は <code>failed_sources=unknown</code> 側で届く）。ステップサマリの<strong>本文</strong>を出す 3 本の jq にも型ガードと <code>|| true</code> を付け、サマリステップ自体が失敗しないようにする（既定シェルは <code>bash -e -o pipefail</code>。失敗すると後続の検知ステップが暗黙の <code>success()</code> 条件でスキップされ、理由のメッセージが出ない）。それでもサマリステップが失敗した場合は、<code>published</code> が空文字になるのでアップロードは <code>!cancelled() &amp;&amp; published != &#39;false&#39;</code> により<strong>行われる</strong>が、<code>deploy-pages</code> は <code>published != &#39;&#39;</code> を満たさず走らない（次に記事が変わる実行で再デプロイされる）（§8 #53）</td>
 <td>ワークフロー</td>
 </tr>
 <tr>
 <td><code>detect-diff</code> の <code>changed</code> が偽なのに新着・更新がある（<code>hasSameArticles</code> のバグで常に「同じ」と判定する）</td>
-<td><code>RunCollection</code> 手順 7 が <code>dropped === 0 &amp;&amp; created + updated &gt; 0</code> の矛盾を検知して <code>logger.error(&quot;no changes but stats are non-zero&quot;)</code> を出し、ワークフローの「差分判定が変化を見落としたことを検知」ステップがジョブを失敗させる。この経路は書き出し・publish・通知のいずれも起きず、<code>failed_sources</code> も 0 のため、放置すると記事が二度と更新されないまま毎時ジョブが緑になる（§5.5 手順 7、§5.6、§8 #51）</td>
+<td><code>RunCollection</code> 手順 7 が <code>survivingChanges &gt; 0</code>（切り詰め後の出力配列に新着・更新が残っている）の矛盾を検知して <code>logger.error(&quot;no changes but stats are non-zero&quot;)</code> を出し、ワークフローの「差分判定が変化を見落としたことを検知」ステップがジョブを失敗させる。この経路は書き出し・publish・通知のいずれも起きず、<code>failed_sources</code> も 0 のため、放置すると記事が二度と更新されないまま毎時ジョブが緑になる。判定に <code>dropped == 0</code> を使わないのは、100 件溜まった団体では新着 1 件につき末尾 1 件が必ず落ちるため、<strong>定常運用ではその条件が一度も真にならず検知が空振りする</strong>からである（§5.5 手順 7、§5.6、§8 #51）</td>
 <td><code>run-collection</code> / ワークフロー</td>
 </tr>
 <tr>
@@ -1667,7 +1770,8 @@ jobs:
 </tr>
 </tbody></table>
 <h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
-<p>テストの単位は UseCase（CLAUDE.md）。Source・HTTP・storage・git・FCM・時計はすべて差し替える。ネットワークへは一切アクセスしない。パーサーのフィクスチャテスト（実サイトの HTML / RSS）は D-03 が <code>test/infrastructure/sources/</code> に置く。<code>main.ts</code>・<code>ConsoleLogger</code>・<code>SystemClock</code>・<code>FirebaseNotificationGateway</code> の単体テストは書かない。例外として <code>FetchHttpClient</code>・<code>ArticlesFileStore</code>・<code>GitArticlesPublisher</code> の 3 クラスは §7.3 の infrastructure テストを持つ（判定条件は §7.3 冒頭。§8 #30・#37）。加えて <code>infrastructure/storage/sanitize-git-output.ts</code> の 2 つの<strong>純粋関数</strong>（<code>maskCredentials</code>・<code>sanitizeGitOutput</code>）は、CLAUDE.md「テスト方針」の純粋関数の例外としてテーブル駆動テストを直接書く（§7.3、§8 #38）。</p>
+<p>テストの単位は UseCase（CLAUDE.md）。Source・HTTP・storage・git・FCM・時計はすべて差し替える。ネットワークへは一切アクセスしない。パーサーのフィクスチャテスト（実サイトの HTML / RSS）は D-03 が <code>test/infrastructure/sources/</code> に置く。<code>main.ts</code>・<code>ConsoleLogger</code>・<code>SystemClock</code>・<code>FirebaseNotificationGateway</code> の単体テストは書かない。</p>
+<p><strong><code>main.ts</code> の起動時検証（§5.5 手順 3・4a・4b）はテストを持たない。</strong> <code>companies.json</code> の検証・<code>CURTAINCALL_REQUIRE_NOTIFICATIONS</code>・<code>FIREBASE_SERVICE_ACCOUNT</code> の <code>JSON.parse</code>・Actions 上の <code>CURTAINCALL_DRY_RUN</code> 拒否の 4 つは §6 に振る舞いを定めているが、DI 組み立てのみの entry に置く方針（§8 #11・#30）を優先し、<code>startup-policy.ts</code> のような application への切り出しは行わない。回帰（歯止めが消えて配信・通知が静かに止まる）は §5.5 の記述と PR レビューで担保する。これは意識した上での設計上の決定であり、無検証であることを承知で残す（§8 #56）。例外として <code>FetchHttpClient</code>・<code>ArticlesFileStore</code>・<code>GitArticlesPublisher</code> の 3 クラスは §7.3 の infrastructure テストを持つ（判定条件は §7.3 冒頭。§8 #30・#37）。加えて <code>infrastructure/storage/sanitize-git-output.ts</code> の 2 つの<strong>純粋関数</strong>（<code>maskCredentials</code>・<code>sanitizeGitOutput</code>）は、CLAUDE.md「テスト方針」の純粋関数の例外としてテーブル駆動テストを直接書く（§7.3、§8 #38）。</p>
 <p><code>GitArticlesPublisher</code> を例外とする条件（§7.3・§8 #37 と同じ文言）：<strong>原則</strong>として被験クラスが呼ぶ <code>node:child_process</code> の <code>execFile</code> を実物を通さないスタブに差し替え、実 git を一度も起動しない（モジュールモックの既定実装は必ず例外を投げる）。<strong>唯一の carve-out</strong> は、実行時の <code>code=1</code> / <code>signal=null</code> を実測で固定する 1 ケースに限り、<code>vi.importActual</code> の <code>execFile</code> で <strong>git ではない・ネットワークにもファイルシステムにも触れない・即座に終了する <code>process.execPath</code> の子プロセス</strong>を起動してよいこと。この経路も被験クラス（<code>GitArticlesPublisher</code>）は通らない。</p>
 <h3 id="sec-7-1">7.1 UseCase ごとのケース<a class="anchor" href="#sec-7-1">#</a></h3>
 <p>「D-01」列は D-01 §7.2 の申し送り行との対応（行 4 の category ケースだけは Source 内の判定なので D-03 へ移管し、それ以外はすべて本書が含める。§8.1）。</p>
@@ -1767,7 +1871,7 @@ jobs:
 </tr>
 <tr>
 <td><code>detect-diff</code></td>
-<td>切り詰めと通知対象：切り詰めで落ちた新着は <code>newArticlesByCompany</code> に入らない</td>
+<td>切り詰めと通知対象：切り詰めで落ちた新着は <code>newArticlesByCompany</code> に入らない／<code>stats.survivingChanges</code> は切り詰めで落ちた新着を数えず、切り詰め後に残った更新は数える（100 件の団体に新着 1 件 → <code>created: 1</code>・<code>dropped: 1</code>・<code>survivingChanges: 1</code>／新着が <code>compareArticles</code> 順の 101 番目 → <code>created: 1</code>・<code>dropped: 1</code>・<code>survivingChanges: 0</code>／前回と同一 → すべて 0）</td>
 <td>同上</td>
 <td>追加</td>
 </tr>
@@ -1791,7 +1895,7 @@ jobs:
 </tr>
 <tr>
 <td><code>notify-new-articles</code></td>
-<td>全団体が reject（鍵失効。§8 #34）：例外は出ず <code>sent: 0</code>・<code>failed</code> が送信対象の団体数（新着のある団体数）と一致／<code>error</code> ログが団体数分出る／新着 0 件の団体は <code>failed</code> に数えない</td>
+<td>全団体が reject（鍵失効。§8 #34）：例外は出ず <code>sent: 0</code>・<code>failed</code> が送信対象の団体数（新着のある団体数）と一致／<code>error</code> ログが団体数分出る／新着 0 件の団体は <code>failed</code> に数えない／<strong><code>cause</code> に秘密情報らしき文字列（<code>&quot;private_key&quot;: &quot;-----BEGIN PRIVATE KEY-----…&quot;</code>）を持つ例外で reject させても、<code>error</code> ログの <code>error</code> フィールドにその文字列が現れない</strong>（ゲートウェイが秘密情報を入力とする例外を <code>cause</code> に入れない契約の検証。§4.7、§5.4、§8 #48）</td>
 <td>全トピックを reject する <code>FakeNotificationGateway</code>、<code>RecordingLogger</code></td>
 <td>追加（M-3）</td>
 </tr>
@@ -1803,25 +1907,25 @@ jobs:
 </tr>
 <tr>
 <td><code>run-collection</code></td>
-<td>順序の不変条件と <code>RunSummary</code>：<br>- publish が <code>&quot;published&quot;</code> → その後に notify が 1 回呼ばれる（記録された呼び出し順が publish → notify）<br>- publish が例外 → notify は呼ばれず、例外がそのまま伝わる<br>- <code>changed</code> が偽 → write・publish・notify のいずれも呼ばれない<br>- 前回 <code>undefined</code> + 全 Source 成功 → publish は呼ばれ、notify に渡る <code>newArticlesByCompany</code> は空<br>- 正常経路 → <code>RunSummary</code> の <code>previousSnapshot</code>・<code>notificationGateway</code>・<code>fullCrawlCompanyIds</code>・<code>discardedByCompany</code>・<code>created</code> / <code>updated</code> / <code>dropped</code>・<code>notificationsSent</code> / <code>notificationsFailed</code> が各依存の結果と一致<br>- 2 団体の <code>discardedByCompany</code> が 3 と 4 → <code>RunSummary.discarded</code> が 7<br>- notify を通らない経路 → <code>notificationsSent</code> / <code>notificationsFailed</code> が 0 / 0<br>- <code>FixedClock</code> に開始 10:00:00.000・終了 10:00:08.421 の列 → <code>durationMs</code> が 8421<br>- 任意の経路 → <code>readPrevious</code> が 1 回だけ呼ばれる<br>- <code>changed</code> が真で publish が <code>&quot;no_changes&quot;</code> を返し <code>dryRun: false</code> → notify は呼ばれず、<code>error(&quot;changed but nothing staged&quot;)</code> が 1 件出て、<code>RunSummary</code> が <code>changed: true</code> + <code>publishOutcome: &quot;no_changes&quot;</code> + <code>publisher: &quot;git&quot;</code>（§8 #41）<br>- 同じ状況で <code>dryRun: true</code>（<code>publisherKind: &quot;noop&quot;</code>） → <code>error</code> は出ず、<code>RunSummary</code> の <code>publisher</code> が <code>&quot;noop&quot;</code><br>- <code>dryRun: true</code> でも <code>publisherKind: &quot;git&quot;</code> を渡した場合（種別は判定に使わない） → <code>error</code> は出ない（§8 #45）<br>- publish を呼ばずに抜ける経路（<code>changed</code> が偽） → <code>publishOutcome</code> が <code>&quot;skipped&quot;</code></td>
+<td>順序の不変条件と <code>RunSummary</code>：<br>- publish が <code>&quot;published&quot;</code> → その後に notify が 1 回呼ばれる（記録された呼び出し順が publish → notify）<br>- publish が例外 → notify は呼ばれず、例外がそのまま伝わる<br>- <code>changed</code> が偽 → write・publish・notify のいずれも呼ばれない<br>- 前回 <code>undefined</code> + 全 Source 成功 → publish は呼ばれ、notify に渡る <code>newArticlesByCompany</code> は空<br>- 正常経路 → <code>RunSummary</code> の <code>previousSnapshot</code>・<code>notificationGateway</code>・<code>fullCrawlCompanyIds</code>・<code>discardedByCompany</code>・<code>created</code> / <code>updated</code> / <code>dropped</code> / <code>survivingChanges</code>・<code>notificationsSent</code> / <code>notificationsFailed</code> が各依存の結果と一致<br>- 2 団体の <code>discardedByCompany</code> が 3 と 4 → <code>RunSummary.discarded</code> が 7<br>- notify を通らない経路 → <code>notificationsSent</code> / <code>notificationsFailed</code> が 0 / 0<br>- <code>FixedClock</code> に開始 10:00:00.000・終了 10:00:08.421 の列 → <code>durationMs</code> が 8421<br>- 任意の経路 → <code>readPrevious</code> が 1 回だけ呼ばれる<br>- <code>changed</code> が真で publish が <code>&quot;no_changes&quot;</code> を返し <code>dryRun: false</code> → notify は呼ばれず、<code>error(&quot;changed but nothing staged&quot;)</code> が 1 件出て、<code>RunSummary</code> が <code>changed: true</code> + <code>publishOutcome: &quot;no_changes&quot;</code> + <code>publisher: &quot;git&quot;</code>（§8 #41）<br>- 同じ状況で <code>dryRun: true</code>（<code>publisherKind: &quot;noop&quot;</code>） → <code>error</code> は出ず、<code>RunSummary</code> の <code>publisher</code> が <code>&quot;noop&quot;</code><br>- <code>dryRun: true</code> でも <code>publisherKind: &quot;git&quot;</code> を渡した場合（種別は判定に使わない） → <code>error</code> は出ない（§8 #45）<br>- publish を呼ばずに抜ける経路（<code>changed</code> が偽） → <code>publishOutcome</code> が <code>&quot;skipped&quot;</code></td>
 <td>全依存をスタブ、<code>FixedClock</code>、呼び出し順を記録</td>
 <td>§7.2 行 13（後半）</td>
 </tr>
 <tr>
 <td><code>run-collection</code></td>
-<td>差分判定側の静かな停止の検知（§8 #51）：<br>- <code>changed</code> が偽・<code>dropped: 0</code>・<code>created: 1</code> → <code>error(&quot;no changes but stats are non-zero&quot;)</code> が 1 件出て、<code>RunSummary</code> が <code>changed: false</code> + <code>created: 1</code> + <code>dropped: 0</code>（例外にはならず終了コードは変わらない）<br>- <code>changed</code> が偽・<code>dropped: 1</code>・<code>created: 1</code>（切り詰めで新着が落ちた正常な実行） → <code>error</code> は出ない<br>- <code>changed</code> が偽・<code>created: 0</code>・<code>updated: 0</code>・<code>dropped: 0</code>（毎時の通常ケース） → <code>error</code> は出ない</td>
+<td>差分判定側の静かな停止の検知（§8 #51）：<br>- <code>changed</code> が偽・<code>survivingChanges: 1</code>・<code>dropped: 1</code>（<strong>100 件の上限に達した団体に新着が 1 件出た定常ケース</strong>。新着が出力配列に残り、末尾の 1 件が切り詰めで落ちる） → <code>error(&quot;no changes but stats are non-zero&quot;)</code> が 1 件出て、<code>RunSummary</code> が <code>changed: false</code> + <code>survivingChanges: 1</code> + <code>dropped: 1</code>（例外にはならず終了コードは変わらない）<br>- <code>changed</code> が偽・<code>survivingChanges: 0</code>・<code>created: 1</code>・<code>dropped: 1</code>（新着が 101 番目に沈んで切り詰めで落ちた正常な実行） → <code>error</code> は出ない<br>- <code>changed</code> が偽・<code>created: 0</code>・<code>updated: 0</code>・<code>dropped: 0</code>・<code>survivingChanges: 0</code>（毎時の通常ケース） → <code>error</code> は出ない</td>
 <td>同上</td>
 <td>追加（M-9）</td>
 </tr>
 <tr>
 <td><code>run-collection</code></td>
-<td><code>sourceFailures</code> の無害化（§8 #50）：改行・タブを含む 500 文字の <code>message</code> を返す Source 失敗 → <code>RunSummary.sourceFailures[0].message</code> が 1 行（制御文字なし）・200 文字（UTF-16 コード単位）／200 文字以下の <code>message</code> はそのまま</td>
+<td><code>sourceFailures</code> の無害化（§8 #50）：改行・タブを含む 500 文字の <code>message</code> を返す Source 失敗 → <code>RunSummary.sourceFailures[0].message</code> が 1 行（制御文字なし）で <code>Array.from(message).length</code> が 200／200 コードポイント以下の <code>message</code> はそのまま／200 コードポイント目がサロゲートペアの <code>message</code> → ペアが分割されない（§8 #55）</td>
 <td>同上</td>
 <td>追加（M-7）</td>
 </tr>
 <tr>
 <td><code>run-collection</code></td>
-<td><code>buildFailureSummary</code>（§4.8。純粋関数に近い組み立て。<code>FixedClock</code> だけを渡す）：<br>- <code>SnapshotMissingError</code> を渡す → <code>kind: &quot;failed&quot;</code>・<code>publishOutcome: &quot;skipped&quot;</code>・<code>previousSnapshot: null</code>・<code>durationMs: null</code>・<code>changed: false</code>・<code>collected</code> / <code>discarded</code> / <code>created</code> / <code>updated</code> / <code>dropped</code> / <code>notificationsSent</code> / <code>notificationsFailed</code> が 0・<code>fullCrawlCompanyIds</code> が <code>[]</code>・<code>discardedByCompany</code> が <code>{}</code>・<code>sourceFailures</code> が <code>error.failures</code> と同じ件数<br>- それ以外の例外を渡す → <code>publishOutcome: &quot;unknown&quot;</code>・<code>sourceFailures</code> が <code>[]</code>（§8 #47）<br>- <code>generatedAt</code> が <code>FixedClock</code> の時刻を <code>toJstDateTime</code> した値<br>- 改行を含む <code>failures[].message</code> → 無害化済み（§8 #50）</td>
+<td><code>buildFailureSummary</code>（§4.8。純粋関数に近い組み立て。<code>FixedClock</code> だけを渡す）：<br>- <code>SnapshotMissingError</code> を渡す → <code>kind: &quot;failed&quot;</code>・<code>publishOutcome: &quot;skipped&quot;</code>・<code>previousSnapshot: null</code>・<code>durationMs: null</code>・<code>changed: false</code>・<code>collected</code> / <code>discarded</code> / <code>created</code> / <code>updated</code> / <code>dropped</code> / <code>survivingChanges</code> / <code>notificationsSent</code> / <code>notificationsFailed</code> が 0・<code>fullCrawlCompanyIds</code> が <code>[]</code>・<code>discardedByCompany</code> が <code>{}</code>・<code>sourceFailures</code> が <code>error.failures</code> と同じ件数（呼び出し側は <code>failures</code> を渡さない。§8 #46）<br>- <code>ArticlesValidationError</code> を渡す → <code>publishOutcome: &quot;skipped&quot;</code>・<code>sourceFailures</code> が <code>[]</code>（publish を呼んでいないことが型で確定する。§8 #47）<br>- それ以外の例外を渡す → <code>publishOutcome: &quot;unknown&quot;</code>・<code>sourceFailures</code> が <code>[]</code>（§8 #47）<br>- <code>generatedAt</code> が <code>FixedClock</code> の時刻を <code>toJstDateTime</code> した値<br>- 改行を含む <code>failures[].message</code> → 無害化済み（§8 #50）</td>
 <td><code>FixedClock</code></td>
 <td>追加（M-2）</td>
 </tr>
@@ -1907,8 +2011,8 @@ jobs:
 </thead>
 <tbody><tr>
 <td><code>FetchHttpClient</code></td>
-<td>404 はリトライせず <code>HttpError</code>（<code>status: 404</code>、<code>fetch</code> 呼び出し 1 回）／503 は <code>retryDelayMs</code> 後に 1 回リトライし、2 回目が 200 なら本文を返す・2 回目も 503 なら <code>HttpError</code>（呼び出し 2 回）／429 も同じ／<code>AbortError</code>（タイムアウト）と <code>TypeError</code>（ネットワーク失敗）はリトライ対象／すべてのリクエストに <code>User-Agent</code>（D-01 §4.7 の実値）・<code>Accept</code>・<code>Accept-Language: ja</code> が付く</td>
-<td><code>stubFetch()</code>、<code>vi.useFakeTimers()</code></td>
+<td>404 はリトライせず <code>HttpError</code>（<code>status: 404</code>、<code>fetch</code> 呼び出し 1 回）／503 は <code>retryDelayMs</code> 後に 1 回リトライし、2 回目が 200 なら本文を返す・2 回目も 503 なら <code>HttpError</code>（呼び出し 2 回）／429 も同じ／<code>AbortError</code>（タイムアウト）と <code>TypeError</code>（ネットワーク失敗）はリトライ対象／すべてのリクエストに <code>User-Agent</code>（D-01 §4.7 の実値）・<code>Accept</code>・<code>Accept-Language: ja</code> が付く／<code>https</code> の要求に対し <code>res.url</code> が <code>http:</code> の 200 応答（平文への降格）→ 本文を返さず <code>HttpError</code>・<strong>リトライせず <code>fetch</code> 呼び出しは 1 回</strong>（§5.7 手順 2b、§8 #58）／<code>res.url</code> のホストだけが変わった 200 応答 → 本文を返し <code>warn(&quot;redirected&quot;)</code> が 1 件／<code>res.url</code> が空文字・要求 URL と同一 → <code>warn</code> は出ない</td>
+<td><code>stubFetch()</code>、<code>vi.useFakeTimers()</code>、<code>RecordingLogger</code></td>
 </tr>
 <tr>
 <td><code>FetchHttpClient</code></td>
@@ -1942,7 +2046,7 @@ jobs:
 </tr>
 <tr>
 <td><code>maskCredentials</code>（純粋関数）</td>
-<td>伏せ字化（テーブル駆動。入力 → 期待値の組）：<br>- <code>https://user:pass@host/x</code> → <code>https://***@host/x</code><br>- <code>https://x-access-token:ghs_abc@github.com/o/r.git</code> → <code>https://***@github.com/o/r.git</code>（手動で remote に埋め込んだ形。§8 #40）<br>- <code>https://x-access-token:gh@s_abc@github.com/o/r.git</code> → <code>https://***@github.com/o/r.git</code>（トークン自体が <code>@</code> を含む＝<strong>最後の</strong> <code>@</code> までを認証情報とみなす境界）<br>- <code>fatal: ... http.https://github.com/.extraheader: AUTHORIZATION: basic eHktdG9rZW4=</code> → <code>AUTHORIZATION: basic ***</code>（<code>actions/checkout</code> が既定で保存する形。§5.6 の表）<br>- <code>AUTHORIZATION: Bearer ghs_abc</code>（大小文字違い・bearer 形式）→ <code>AUTHORIZATION: Bearer ***</code><br>- <code>fatal: ... AUTHORIZATION: basic eHk= (code=128)</code>（トークンの<strong>後ろにも文字列が続く</strong>境界）→ <code>AUTHORIZATION: basic *** (code=128)</code>（次の空白までを伏せ、以降の診断は残す。§4.10）<br>- <code>HTTPS://user:pass@host/x</code> → <code>HTTPS://***@host/x</code>（スキームの大文字も一致する）<br>- <code>git@github.com:o/r.git</code> → 変化しない（scp 形式は対象外）<br>- 認証情報を含まない <code>fatal: unable to access &#39;https://github.com/o/r.git/&#39;</code> → 変化しない<br>- 1 行に認証情報つき URL が 2 つ（<code>https://a:b@host1/x https://c:d@host2/y</code>）→ それぞれ独立にマスクされる</td>
+<td>伏せ字化（テーブル駆動。入力 → 期待値の組）：<br>- <code>https://user:pass@host/x</code> → <code>https://***@host/x</code><br>- <code>https://x-access-token:ghs_abc@github.com/o/r.git</code> → <code>https://***@github.com/o/r.git</code>（手動で remote に埋め込んだ形。§8 #40）<br>- <code>https://x-access-token:gh@s_abc@github.com/o/r.git</code> → <code>https://***@github.com/o/r.git</code>（トークン自体が <code>@</code> を含む＝<strong>最後の</strong> <code>@</code> までを認証情報とみなす境界）<br>- <code>fatal: ... http.https://github.com/.extraheader: AUTHORIZATION: basic eHktdG9rZW4=</code> → <code>AUTHORIZATION: basic ***</code>（<code>actions/checkout</code> が既定で保存する形。§5.6 の表）<br>- <code>AUTHORIZATION: Bearer ghs_abc</code>（大小文字違い・bearer 形式）→ <code>AUTHORIZATION: Bearer ***</code><br>- <code>AUTHORIZATION: basic\t eHk=</code>（<code>basic</code> の直後がタブ + 半角スペースの<strong>空白 2 文字</strong>）→ <code>AUTHORIZATION: basic\t ***</code>（空白の連続をすべて区切りとみなす境界。空白 1 つ固定の規則では 1 つ目と 2 つ目の空白の間を伏せて base64 が素通りする。§4.10）<br>- <code>fatal: ... AUTHORIZATION: basic eHk= (code=128)</code>（トークンの<strong>後ろにも文字列が続く</strong>境界）→ <code>AUTHORIZATION: basic *** (code=128)</code>（次の空白までを伏せ、以降の診断は残す。§4.10）<br>- <code>HTTPS://user:pass@host/x</code> → <code>HTTPS://***@host/x</code>（スキームの大文字も一致する）<br>- <code>git@github.com:o/r.git</code> → 変化しない（scp 形式は対象外）<br>- 認証情報を含まない <code>fatal: unable to access &#39;https://github.com/o/r.git/&#39;</code> → 変化しない<br>- 1 行に認証情報つき URL が 2 つ（<code>https://a:b@host1/x https://c:d@host2/y</code>）→ それぞれ独立にマスクされる</td>
 <td>なし（入力は値のみ。差し替え不要）</td>
 </tr>
 <tr>
@@ -1952,6 +2056,15 @@ jobs:
 </tr>
 </tbody></table>
 <h2 id="sec-8">8. 決定事項と根拠<a class="anchor" href="#sec-8">#</a></h2>
+<p>決定が 58 件になったため、主題ごとの索引を置く。後の決定に上書きされた行は「決定」欄の末尾に <code>→ #nn で改訂</code> を付けてある（番号は振り直さない。承認済みの参照を壊さないため）。</p>
+<ul>
+<li><strong>層と契約</strong>（Source・ポート・UseCase の責務）：#1・#2・#4・#11・#12・#17・#19・#24・#43・#45・#57</li>
+<li><strong>収集と差分</strong>（取得・正規化・突合・切り詰め）：#3・#5・#6・#7・#8・#26・#27・#31・#33・#36・#58</li>
+<li><strong>git と配信</strong>（書き出し・コミット・push・Pages）：#9・#10・#14・#20・#21・#22・#35・#39・#40・#49</li>
+<li><strong>サマリと静かな停止の検知</strong>：#13・#32・#34・#41・#44・#46・#47・#50・#51・#53・#54・#55</li>
+<li><strong>秘密情報</strong>：#40・#48・#55（切り詰め単位）</li>
+<li><strong>運用と CI・テスト方針</strong>：#15・#16・#18・#23・#25・#28・#29・#30・#37・#38・#42・#52・#56</li>
+</ul>
 <table>
 <thead>
 <tr>
@@ -2203,7 +2316,7 @@ jobs:
 </tr>
 <tr>
 <td>41</td>
-<td><code>RunSummary</code> は <code>published: boolean</code> をやめ、<code>publishOutcome: &quot;published&quot; | &quot;no_changes&quot; | &quot;skipped&quot;</code> と <code>publisher: &quot;git&quot; | &quot;noop&quot;</code> を持つ。<code>diff.changed === true</code> なのに <code>publishOutcome === &quot;no_changes&quot;</code> になった実行は <code>RunCollection</code> が <code>error</code> ログを出し（<code>RunCollectionInput.dryRun === false</code> のときだけ。#45）、ワークフローの専用ステップ（<code>changed_but_not_published</code>）がジョブを失敗させる</td>
+<td><code>RunSummary</code> は <code>published: boolean</code> をやめ、<code>publishOutcome: &quot;published&quot; | &quot;no_changes&quot; | &quot;skipped&quot;</code> と <code>publisher: &quot;git&quot; | &quot;noop&quot;</code> を持つ（<strong>→ #47 で 4 値目 <code>&quot;unknown&quot;</code> を追加。現行の定義は §4.8 の <code>PublishOutcomeSummary</code> を正とする</strong>）。<code>diff.changed === true</code> なのに <code>publishOutcome === &quot;no_changes&quot;</code> になった実行は <code>RunCollection</code> が <code>error</code> ログを出し（<code>RunCollectionInput.dryRun === false</code> のときだけ。#45）、ワークフローの専用ステップ（<code>changed_but_not_published</code>）がジョブを失敗させる</td>
 <td>現状どおり <code>published: boolean</code> だけを持ち、この経路を検知しない／collector 側で例外にして終了コード 1 にする／<code>published</code> と <code>publishOutcome</code> の両方を持つ</td>
 <td>差分判定を #39 と<strong>逆向き</strong>に誤る実装（終了コード 1 を「差分なし」と解釈する、<code>git add</code> のパス指定を誤る等）では、<code>changed === true</code>・<code>write</code> 成功なのに publish が <code>&quot;no_changes&quot;</code> を返し、通知は送られず（§5.5 手順 9）、<code>published=false</code> で Pages アップロードもスキップされ、<code>failed_sources</code> は 0 なので<strong>ジョブは緑のまま配信と通知が静かに止まる</strong>。#39 の障害は毎時ジョブが赤くなるので気付けるが、その鏡像はどの検知手段にも掛からず、#34（通知の静かな停止を検知する）と同じ穴になる。collector 側で例外にする案は、収集・書き出しは成功している実行を致命的失敗として扱うことになり、終了コード 2 値（#13）の意味付けとも合わない。<code>published</code> と <code>publishOutcome</code> を併存させる案は同じ事実を 2 か所に持つ（#36）ので、ワークフローの <code>published</code> 出力は <code>publishOutcome == &quot;published&quot;</code> の jq で導出する（ワークフロー側の出力名と <code>true</code> / <code>false</code> / <code>unknown</code> の意味は変えない）。<code>publisher</code> を持つのは、<code>CURTAINCALL_DRY_RUN=1</code> の <code>NoopArticlesPublisher</code> が常に <code>&quot;no_changes&quot;</code> を返す縮退実行を<strong>後から見分ける</strong>ためで、判定には使わない（判定は <code>RunCollectionInput.dryRun</code>。#45。ワークフローの検知条件からも <code>publisher</code> を外した。#44）。design-review 第 1 周（再開後）で追加、第 2 周（再開後）で判定条件を <code>dryRun</code> に移動</td>
 </tr>
@@ -2221,7 +2334,7 @@ jobs:
 </tr>
 <tr>
 <td>44</td>
-<td><code>CURTAINCALL_DRY_RUN=1</code> が GitHub Actions 上で設定されていたら、<code>main.ts</code> が起動時に <code>error</code> を出して終了コード 1 にする（§5.5 手順 4）。あわせてワークフローの <code>changed_but_not_published</code> の判定から <code>publisher == &quot;git&quot;</code> の条件を外す（§5.6）</td>
+<td><code>CURTAINCALL_DRY_RUN=1</code> が GitHub Actions 上で設定されていたら、<code>main.ts</code> が起動時に <code>error</code> を出して終了コード 1 にする（§5.5 手順 4b）。あわせてワークフローの <code>changed_but_not_published</code> の判定から <code>publisher == &quot;git&quot;</code> の条件を外す（§5.6）</td>
 <td>ワークフローの summary ステップで <code>dry_run=$(jq -r &#39;.publisher != &quot;git&quot;&#39;)</code> を読み、真ならジョブを失敗させる専用ステップを置く／どちらも置かず <code>changed_but_not_published</code> の <code>publisher == &quot;git&quot;</code> 条件だけで除外し続ける（第 1 周（再開後）の記述）</td>
 <td><code>publisher == &quot;git&quot;</code> を検知条件に入れた結果、<code>collect.yml</code> の env に <code>CURTAINCALL_DRY_RUN: &quot;1&quot;</code> を足すだけで #41 の検知が無効化される状態になっていた。その実行は <code>publishOutcome</code> が毎回 <code>&quot;no_changes&quot;</code>・<code>published=false</code>・<code>failed_sources</code> 0・通知 0 通で、<strong>ジョブが緑のまま配信と通知が完全に止まる</strong>（#41 が塞いだはずの経路が、1 つの環境変数で復活する）。通知側の同じ縮退（Noop への差し替え）には <code>CURTAINCALL_REQUIRE_NOTIFICATIONS</code> という起動時の歯止めがある（#32）のに、publisher 側には無かった。起動時に拒否する案を採るのは、(1) 相手サイトへのリクエストを 1 件も出さないうちに止められる（要件 §5）、(2) 検知がサマリの形や jq の正しさに依存しない、(3) ワークフロー側に新しい出力とステップを増やさない、ため。ワークフロー側で検知する案は、サマリが書けなかった実行（<code>published=unknown</code> の経路）では判定できず、collector が Actions を知らないという方針（#13）にも影響しない代わりに検知が 1 段遅れる。DRY_RUN はローカル実行のための仕組み（#10）なので、Actions 上で真になるのは設定の誤りだけであり、拒否して失う正常な用途は無い。design-review 第 2 周（再開後）で追加</td>
 </tr>
@@ -2229,7 +2342,7 @@ jobs:
 <td>45</td>
 <td><code>RunCollection</code> 手順 8 の検知は <code>RunCollectionInput.dryRun</code>（<strong>実行の意図</strong>。<code>main.ts</code> が <code>CURTAINCALL_DRY_RUN</code> から決める）で抑止する。<code>publisherKind</code> / <code>notificationGatewayKind</code> はサマリに残す<strong>記録専用</strong>とし、UseCase の判定には使わない</td>
 <td><code>publisherKind === &quot;git&quot;</code> で分岐する（第 1 周（再開後）の記述）／<code>RunCollection</code> は事実を記録するだけにして <code>error</code> ログを出さない（検知を §5.6 に一本化）／<code>NoopArticlesPublisher</code> の戻り値を <code>&quot;published&quot;</code> に変える</td>
-<td>注入された具象の種別で UseCase の振る舞いを変えるのは、application が DI の事情を知る形（CLAUDE.md 依存性逆転）で、<code>ArticlesPublisher</code> の契約（変更があれば <code>&quot;published&quot;</code>）を <code>NoopArticlesPublisher</code> が満たさないことの回避策でもある。実行の意図を入力として受け取れば、application は「どの具象が来たか」を知らないまま同じ抑止ができ、テストも <code>publisherKind</code> と独立に書ける（§7.1）。<code>error</code> ログを出さない案は、ローカル実行（DRY_RUN でないローカル起動）で同じ不具合を踏んだときに手掛かりが残らない。<code>NoopArticlesPublisher</code> の戻り値を <code>&quot;published&quot;</code> に変える案は、「push していないのに published」というサマリの嘘を生み、<code>published=true</code> の意味（#41）が壊れる。記録専用のフィールドを残すのは #32 と同じ診断目的。design-review 第 2 周（再開後）で追加</td>
+<td>注入された具象の種別で UseCase の振る舞いを変えるのは、application が DI の事情を知る形（CLAUDE.md 依存性逆転）である。実行の意図を入力として受け取れば、application は「どの具象が来たか」を知らないまま同じ抑止ができ、テストも <code>publisherKind</code> と独立に書ける（§7.1）。<strong>あわせて契約側（§4.4・§4.5）を弱め、3 つの Noop 実装が契約を文字どおり満たすようにする</strong>（第 3 周）：<code>ArticlesPublisher.publish</code> は「確定操作を行わなかった場合（差分が無い、または確定を行わない試走用の実装である）は <code>&quot;no_changes&quot;</code>。<code>&quot;published&quot;</code> は配信元へ確定できたときだけ」、<code>ArticleWriter.write</code> / <code>NotificationGateway.send</code> も「試走用実装は書かず・送らずログだけを残してよい」とする。第 2 周の時点では <code>dryRun</code> という<strong>呼び出し側の補償</strong>だけを入れて契約文を据え置いたため、§4.4 だけを読んだ実装者が「<code>NoopArticlesPublisher</code> が契約違反だから <code>&quot;published&quot;</code> を返すよう直す」判断に至りうる状態が残っていた（下の却下案が復活する）。契約を弱めれば LSP（CLAUDE.md リスコフ置換）が契約側で回復し、<code>dryRun</code> は検知の抑止という 1 つの役目だけを持つ。<code>error</code> ログを出さない案は、ローカル実行（DRY_RUN でないローカル起動）で同じ不具合を踏んだときに手掛かりが残らない。<code>NoopArticlesPublisher</code> の戻り値を <code>&quot;published&quot;</code> に変える案は、「push していないのに published」というサマリの嘘を生み、<code>published=true</code> の意味（#41）が壊れる。記録専用のフィールドを残すのは #32 と同じ診断目的。design-review 第 2 周（再開後）で追加</td>
 </tr>
 <tr>
 <td>46</td>
@@ -2239,15 +2352,15 @@ jobs:
 </tr>
 <tr>
 <td>47</td>
-<td><code>PublishOutcomeSummary</code> に 4 値目 <code>&quot;unknown&quot;</code>（publish を呼んだかどうか・結果が確定しない）を足し、致命的失敗のうち <code>SnapshotMissingError</code> 以外は <code>&quot;unknown&quot;</code> にする。ワークフローの <code>published</code> 出力は <code>&quot;unknown&quot;</code> をそのまま <code>unknown</code> に写して、アップロードと deploy を<strong>行う</strong>（安全側）</td>
+<td><code>PublishOutcomeSummary</code> に 4 値目 <code>&quot;unknown&quot;</code>（publish を呼んだかどうか・結果が確定しない）を足し、致命的失敗のうち <strong><code>SnapshotMissingError</code> と <code>ArticlesValidationError</code> は <code>&quot;skipped&quot;</code>、それ以外は <code>&quot;unknown&quot;</code></strong> にする（第 3 周で <code>ArticlesValidationError</code> を追加）。ワークフローの <code>published</code> 出力は <code>&quot;unknown&quot;</code> をそのまま <code>unknown</code> に写して、アップロードと deploy を<strong>行う</strong>（安全側）</td>
 <td>例外経路を一律 <code>&quot;skipped&quot;</code> にする（第 1 周（再開後）の記述）／§5.6 のアップロード・deploy 条件を「サマリが読めたら常に行う」に変える</td>
-<td>一律 <code>&quot;skipped&quot;</code> は「publish を呼ぶ前に抜けた」という定義と矛盾し、push 成功後の失敗で <code>published=false</code> → Pages スキップ → 次の実行は <code>changed === false</code> で再び <code>&quot;skipped&quot;</code> → <strong>記事が次に変わるまで Pages が古いまま固定</strong>される（通知だけ先に飛んでいる）。<code>main.ts</code> は publish の呼び出し前後を判別できないので、正直な値は「不明」であり、不明なら安全側（配信する）に倒すのが §5.6 の既存の方針（<code>published != &#39;false&#39;</code>）と一致する。常にデプロイする案は、記事に変化が無い毎時の実行でも Pages のデプロイを起こし、#8（変化が無ければ書き出さず ETag も変えない）の狙いを部分的に打ち消す。<code>SnapshotMissingError</code> だけを <code>&quot;skipped&quot;</code> に残すのは、その経路では publish を呼んでいないことが型（例外の種類）で確定しているため。design-review 第 2 周（再開後）で追加</td>
+<td>一律 <code>&quot;skipped&quot;</code> は「publish を呼ぶ前に抜けた」という定義と矛盾し、push 成功後の失敗で <code>published=false</code> → Pages スキップ → 次の実行は <code>changed === false</code> で再び <code>&quot;skipped&quot;</code> → <strong>記事が次に変わるまで Pages が古いまま固定</strong>される（通知だけ先に飛んでいる）。<code>main.ts</code> は publish の呼び出し前後を判別できないので、正直な値は「不明」であり、不明なら安全側（配信する）に倒すのが §5.6 の既存の方針（<code>published != &#39;false&#39;</code>）と一致する。常にデプロイする案は、記事に変化が無い毎時の実行でも Pages のデプロイを起こし、#8（変化が無ければ書き出さず ETag も変えない）の狙いを部分的に打ち消す。<code>&quot;skipped&quot;</code> に残すのは、<strong>publish を呼んでいないことが例外の型で確定する 2 種類</strong>：<code>SnapshotMissingError</code>（§5.5 手順 5 が publish の前に投げる）と <code>ArticlesValidationError</code>（§5.3 手順 1 が <code>writer.write</code> も <code>publisher.publish</code> も呼ばずに投げる）。第 2 周では後者を取りこぼして <code>&quot;unknown&quot;</code> に倒していたが、<code>companies.json</code> の変更ミス等で検証が恒常的に失敗する間ずっと毎時 Pages が再デプロイされ、上の却下案（常にデプロイする）と同じ状態になる。design-review 第 2 周（再開後）で追加、第 3 周で <code>ArticlesValidationError</code> を追加</td>
 </tr>
 <tr>
 <td>48</td>
-<td>外部から与えられた<strong>秘密情報を入力に含む例外</strong>は <code>formatError</code> に渡さず、固定文言だけをログに出す（一般規則。§4.7）。<code>FIREBASE_SERVICE_ACCOUNT</code> の <code>JSON.parse</code> 失敗は <code>FIREBASE_SERVICE_ACCOUNT is not valid JSON</code> だけを出す（§5.5 手順 4）</td>
-<td>例外の <code>message</code> を <code>formatError</code> でログに出す（第 1 周（再開後）までの §5.5 手順 4 の書き方）</td>
-<td>Node 22 の <code>JSON.parse</code> が投げる <code>SyntaxError</code> は不正位置周辺の原文を <code>message</code> に含めるため、<code>&quot;private_key&quot;:&quot;-----BEGIN …</code> のような断片が Actions のログに残る。GitHub の Secret マスクは値の完全一致（複数行の Secret は行単位）でしか働かず、行の途中を切り出した断片はマスクされない。#40 で git の出力は無害化したが、<strong>秘密情報そのものを入力として受け取る唯一の場所</strong>が無規定のままで、§4.7「秘密情報は一切フィールドに載せない」と §5.5 手順 4 が実装レベルで衝突していた。固定文言でも「JSON として不正」という原因は伝わり、切り分けには Secret を貼り直す以外の手掛かりが要らない。design-review 第 2 周（再開後）で追加</td>
+<td>外部から与えられた<strong>秘密情報を入力に含む例外</strong>は <code>formatError</code> に渡さず、また<strong>他の例外の <code>cause</code> にも入れず</strong>、固定文言だけをログに出す（一般規則。§4.7）。対象は起動時の設定検証だけでなく<strong>通知送信経路も含む</strong>。具体的には (i) <code>FIREBASE_SERVICE_ACCOUNT</code> の <code>JSON.parse</code> 失敗は <code>main.ts</code> 手順 4a が <code>FIREBASE_SERVICE_ACCOUNT is not valid JSON</code> だけを出す、(ii) <code>cert()</code> / <code>initializeApp</code> の失敗は <code>main.ts</code> 手順 5 が <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> だけを出す、(iii) <code>FirebaseNotificationGateway</code> は<strong>パース済みのオブジェクト</strong>をコンストラクタで受け取り初期化もそこで済ませる（<code>send()</code> へ遅延させない）、(iv) <code>NotificationSendError.cause</code> に入れてよいのは firebase-admin が送信時に投げた例外だけ（§5.4）</td>
+<td>例外の <code>message</code> を <code>formatError</code> でログに出す（第 1 周（再開後）までの §5.5 手順 4 の書き方）／検証の時点（起動時か送信時か）を実装の裁量に委ねる（第 2 周までの「<code>JSON.parse</code>（またはサービスアカウントとしての初期化）に失敗したら」という書き方）／<code>main.ts</code> が <code>firebase-admin</code> の <code>cert()</code> まで呼ぶ</td>
+<td>Node 22 の <code>JSON.parse</code> が投げる <code>SyntaxError</code> は不正位置周辺の原文を <code>message</code> に含めるため、<code>&quot;private_key&quot;:&quot;-----BEGIN …</code> のような断片が Actions のログに残る。GitHub の Secret マスクは値の完全一致（複数行の Secret は行単位）でしか働かず、行の途中を切り出した断片はマスクされない。#40 で git の出力は無害化したが、<strong>秘密情報そのものを入力として受け取る唯一の場所</strong>が無規定のままで、§4.7「秘密情報は一切フィールドに載せない」と §5.5 手順 4 が実装レベルで衝突していた。固定文言でも「JSON として不正」という原因は伝わり、切り分けには Secret を貼り直す以外の手掛かりが要らない。第 2 周の書き方は検証を「<code>JSON.parse</code> <strong>または</strong>初期化」と選択肢にしていたため、firebase-admin の一般的な遅延初期化（最初の <code>send()</code> で <code>initializeApp</code>）で実装すると起動時に検証されず、新着が出た最初の実行で <code>SyntaxError</code> が <code>NotificationSendError.cause</code> に包まれて §5.4 手順 6 の <code>formatError</code> からサービスアカウントの断片が Actions のログへ出る（§4.7 の <code>cause</code> 再帰連結）。<code>main.ts</code> が 1 回だけパースしてオブジェクトを渡す形に確定すれば、秘密情報を入力とする処理が 1 か所に閉じ、<code>firebase-admin</code> の import も <code>infrastructure/fcm</code> のまま（#17 を維持）。<code>main.ts</code> が <code>cert()</code> まで呼ぶ案は <code>firebase-admin</code> の import が entry に出て #17 に反する。design-review 第 2 周（再開後）で追加、第 3 周で検証の時点と通知送信経路を確定</td>
 </tr>
 <tr>
 <td>49</td>
@@ -2257,15 +2370,15 @@ jobs:
 </tr>
 <tr>
 <td>50</td>
-<td><code>SourceFailure.message</code> は <code>RunSummary</code> に載せる前に <code>sanitizeFailureMessage</code>（制御文字を半角スペースへ → <code>trim</code> → 200 文字（UTF-16 コード単位）に切り詰め。§4.8）を通す。書き手は <code>run-collection.ts</code> の 1 か所。§5.6 の jq にも同じ切り詰めを書く</td>
+<td><code>SourceFailure.message</code> は <code>RunSummary</code> に載せる前に <code>sanitizeFailureMessage</code>（制御文字を半角スペースへ → <code>trim</code> → 200 に切り詰め。§4.8。<strong>→ #55 で切り詰めの単位をコードポイントに改訂</strong>）を通す。書き手は <code>run-collection.ts</code> の 1 か所。§5.6 の jq にも同じ切り詰めを書く</td>
 <td>長さ・制御文字を規定しない（第 1 周（再開後）までの §4.6・§4.8）／ワークフローの jq だけで整える</td>
 <td>サイト改装時に cheerio / rss-parser が数十 KB の HTML 断片を含む多行の例外メッセージを投げると、その値が <code>$GITHUB_STEP_SUMMARY</code>（1 MB 上限）へ無加工で流れ、箇条書きが崩れ、上限超過なら summary ステップ自体が失敗する（失敗した情報源の内訳が読めなくなる）。jq だけで整える案は、サマリ JSON 自体が肥大したままでローカル実行や他の読み手に同じ問題が残る。書き手を 1 か所に限るのは #36 と同じ理由。200 字は「団体名・理由・例外の先頭 1 文」が読める長さで、原因の特定には <code>logger.warn(&quot;source failed&quot;)</code> の全文（Actions のログ）を使う。design-review 第 2 周（再開後）で追加（実装は T-07 で先行しており、本書がそれに追随する）</td>
 </tr>
 <tr>
 <td>51</td>
-<td>逆向きの静かな停止（<code>changed === false</code> なのに記事は変わっている）を、<code>RunCollection</code> 手順 7 の矛盾判定 <code>dropped === 0 &amp;&amp; created + updated &gt; 0</code> と、ワークフローの <code>no_changes_but_stats</code> ステップで検知する</td>
-<td>検知しない（第 1 周（再開後）までの記述）／条件に <code>dropped</code> を含めて <code>created + updated + dropped &gt; 0</code> とする</td>
-<td><code>detect-diff</code> の <code>hasSameArticles</code>（§5.2 手順 9）が常に「同じ」と判定するバグでは、書き出し・publish・通知のいずれも起きず、<code>publishOutcome: &quot;skipped&quot;</code>・<code>failed_sources</code> 0・通知 0 通・<code>changed_but_not_published</code> も偽で、<strong>毎時ジョブが緑のまま記事が二度と更新されない</strong>。#41 が塞いだ経路と対称で結果も同じ。<code>dropped</code> を条件に含めない理由は、切り詰め（§5.2 手順 5）で新着が 100 件の外へ落ちる実行では <code>created &gt; 0</code> と <code>changed === false</code> が<strong>正常に</strong>両立しうるため（誤検知でジョブが毎時赤くなる）。<code>dropped === 0</code> を条件に加えると、新着・更新の記事が必ず出力配列に残る場合だけを見ることになり、矛盾が定義上ありえないものに絞られる。design-review 第 2 周（再開後）で追加</td>
+<td>逆向きの静かな停止（<code>changed === false</code> なのに記事は変わっている）を、<code>DetectDiffResult.stats.survivingChanges</code>（切り詰め後の出力配列に残っている新着・更新の件数。§4.6・§5.2 手順 7b）を使い、<code>RunCollection</code> 手順 7 の矛盾判定 <code>survivingChanges &gt; 0</code> とワークフローの <code>no_changes_but_stats</code> ステップで検知する（<strong>→ 第 3 周で改訂。第 2 周の <code>dropped === 0 &amp;&amp; created + updated &gt; 0</code> は定常状態で発火しないため置き換えた</strong>）</td>
+<td>検知しない（第 1 周（再開後）までの記述）／<code>created + updated + dropped &gt; 0</code>／<code>dropped === 0 &amp;&amp; created + updated &gt; 0</code>（第 2 周）／<code>created + updated &gt; dropped</code></td>
+<td><code>detect-diff</code> の <code>hasSameArticles</code>（§5.2 手順 9）が常に「同じ」と判定するバグでは、書き出し・publish・通知のいずれも起きず、<code>publishOutcome: &quot;skipped&quot;</code>・<code>failed_sources</code> 0・通知 0 通・<code>changed_but_not_published</code> も偽で、<strong>毎時ジョブが緑のまま記事が二度と更新されない</strong>。#41 が塞いだ経路と対称で結果も同じ。<code>created + updated + dropped &gt; 0</code> を採らないのは、切り詰め（§5.2 手順 5）で新着が 100 件の外へ落ちる実行では <code>created &gt; 0</code> と <code>changed === false</code> が<strong>正常に</strong>両立しうるため（誤検知でジョブが毎時赤くなる）。第 2 周で採った <code>dropped === 0</code> はその誤検知は避けるが、§5.2 手順 4 が「今回現れなかった前回記事をそのまま加える」と定めているので、100 件溜まった団体に新着が 1 件出ると候補が 101 件になり手順 5 の切り詰めで<strong>必ず <code>dropped &gt;= 1</code></strong> になる。つまり定常運用に入った後は <code>dropped === 0</code> が一度も真にならず、塞いだはずの経路（毎時緑のまま記事が二度と更新されない）がそのまま残っていた。一度この状態に入ると <code>articles.json</code> が 100 件で凍結されるので翌時以降も毎時 <code>dropped &gt;= 1</code> になり、永久に検知されない。<code>created + updated &gt; dropped</code> へ緩めても最頻ケース（<code>created = 1, dropped = 1</code>）は偽のままで改善しない。団体別に分けない合計値の <code>stats</code> では原理的に「落ちたのは新着か既存か」を区別できないため、<strong>切り詰め後の出力配列に何が残ったか</strong>で判定する。<code>changed === false</code> は「出力配列が前回配列と全フィールド一致」を意味するので、そこに新着（前回に <code>id</code> が無い）や更新（<code>contentHash</code> と <code>updatedAt</code> が前回と異なる）が残ることは定義上ありえず、誤検知ゼロ・見逃しゼロで成立する。<code>survivingChanges</code> は §5.2 手順 7（通知対象の算出）と同じ走査で数えられるので追加コストも無い。design-review 第 2 周（再開後）で追加、第 3 周で判定式を <code>survivingChanges</code> に置き換え</td>
 </tr>
 <tr>
 <td>52</td>
@@ -2277,7 +2390,37 @@ jobs:
 <td>53</td>
 <td>§5.6 の jq はすべて型ガード付きにし、サマリの形が想定外のとき <code>published</code> は <code>false</code> ではなく <code>unknown</code>、<code>failed_sources</code> は <code>0</code> ではなく <code>unknown</code> に倒す。<code>fullCrawlCompanyIds</code> / <code>discardedByCompany</code> / <code>sourceFailures</code> は <code>// []</code>・<code>// {}</code> を付ける</td>
 <td>素の <code>jq -r &#39;.publishOutcome == &quot;published&quot;&#39;</code> / <code>jq -r &#39;.sourceFailures | length&#39;</code>（第 1 周（再開後）の記述）</td>
-<td><code>jq -r &#39;.publishOutcome == &quot;published&quot;&#39;</code> はキーが無ければ <code>false</code> を返す。旧記述 <code>jq -r &#39;.published&#39;</code> は <code>null</code> → <code>!= &#39;false&#39;</code> を満たしてアップロードと deploy が動いていたので、第 1 周（再開後）の書き換えは<strong>安全側の挙動を壊す退行</strong>だった（push・通知済みの内容が配信されないまま両方スキップされる）。同様に <code>.sourceFailures | length</code> は <code>null</code> に対して <code>0</code> を返すため、キー名がずれると「失敗 0 件」と読まれてジョブが緑になる。型ガードは、キー欠落・旧形式・JSON として読めない場合のいずれも <code>unknown</code> に倒して「配信は続け、ジョブは赤くする」に寄せる。<code>changed_but_not_published</code> / <code>no_changes_but_stats</code> だけは <code>false</code> に倒す（形の異常は <code>failed_sources=unknown</code> 側で必ず届くため、誤検知を増やさない）。design-review 第 2 周（再開後）で追加</td>
+<td><code>jq -r &#39;.publishOutcome == &quot;published&quot;&#39;</code> はキーが無ければ <code>false</code> を返す。旧記述 <code>jq -r &#39;.published&#39;</code> は <code>null</code> → <code>!= &#39;false&#39;</code> を満たしてアップロードと deploy が動いていたので、第 1 周（再開後）の書き換えは<strong>安全側の挙動を壊す退行</strong>だった（push・通知済みの内容が配信されないまま両方スキップされる）。同様に <code>.sourceFailures | length</code> は <code>null</code> に対して <code>0</code> を返すため、キー名がずれると「失敗 0 件」と読まれてジョブが緑になる。型ガードは、キー欠落・旧形式・JSON として読めない場合のいずれも <code>unknown</code> に倒して「配信は続け、ジョブは赤くする」に寄せる。<code>changed_but_not_published</code> / <code>no_changes_but_stats</code> だけは <code>false</code> に倒す（形の異常は <code>failed_sources=unknown</code> 側で必ず届くため、誤検知を増やさない）。ステップサマリの<strong>本文</strong>を出す 3 本の jq にも同じ型ガードと <code>|| true</code> を付ける（第 3 周）：Actions の既定シェルは <code>bash -e -o pipefail</code> なので、ガードの無い jq が非 0 終了するとサマリステップ自体が失敗し、そのステップより後に置かれた「情報源の失敗を検知」（暗黙の <code>success()</code> 条件）がスキップされて理由のメッセージが出ない。design-review 第 2 周（再開後）で追加、第 3 周で本文の 3 行に適用</td>
+</tr>
+<tr>
+<td>54</td>
+<td><code>sanitizeFailureMessage</code> と <code>MAX_FAILURE_MESSAGE_LENGTH</code> は <code>export</code> せず <code>run-collection.ts</code> 内の非公開にする</td>
+<td><code>export</code> したまま残す（第 2 周の §4.8 のコード片）</td>
+<td>適用箇所は <code>RunCollection</code> が <code>RunSummary.sourceFailures</code> を組み立てるところと <code>buildFailureSummary</code> の 2 か所だけで、どちらも同じファイルの中にある。§7.1 も直接テストではなく <code>run-collection</code> 経由でしか検証しない。ファイル外に利用者がいない以上、<code>export</code> は「他所から呼んでよい」という誤った合図になり、<code>run-collection.ts</code> の公開物を 5 つに増やす。#49（<code>PUBLISH_BRANCH</code> を利用者の中の非公開定数へ移す）と同じ基準を適用する。design-review 第 3 周で追加</td>
+</tr>
+<tr>
+<td>55</td>
+<td>文字列の切り詰めの単位は<strong>コードポイント</strong>（<code>Array.from(...).slice(...)</code>）に統一する。対象は <code>sanitizeFailureMessage</code>（<code>MAX_FAILURE_MESSAGE_LENGTH</code> = 200。§4.8）と <code>sanitizeGitOutput</code>（<code>STDERR_LOG_LIMIT</code> = 500。§4.10）</td>
+<td><code>sanitizeFailureMessage</code> は UTF-16 コード単位、<code>sanitizeGitOutput</code> はコードポイント単位のまま（第 2 周の記述）／両方を UTF-16 コード単位にする</td>
+<td>同じ目的（ログ・サマリへ出す前に長さを抑える）の 2 つの関数で単位が逆向きだと、実装者がどちらかを取り違える。UTF-16 コード単位はサロゲートペア（絵文字・一部の漢字）を途中で割り、壊れた文字がステップサマリに出る。§7.3 が <code>sanitizeGitOutput</code> のサロゲートペア境界を既にテストしているので、そちら（コードポイント）に揃えるほうが変更が小さい。制御文字の潰し方・<code>trim</code> の有無という他の差分は目的が違う（git の stderr は認証情報のマスクが主目的）ため統一しない。design-review 第 3 周で追加</td>
+</tr>
+<tr>
+<td>56</td>
+<td><code>main.ts</code> の起動時検証（§5.5 手順 3・4a・4b）はテストを持たない。無検証であることを設計上の決定として明記する（§7 冒頭）</td>
+<td>判定部分を <code>application/startup-policy.ts</code> へ切り出して UseCase テストの対象にする／何も書かずに暗黙のまま残す</td>
+<td>切り出し案は、#44 が「検知がサマリの形や jq の正しさに依存しない」ことを理由に歯止めを起動時へ置いた設計そのものを動かし、実装済みの <code>main.ts</code> の再変更を伴う。得られるのは 4 つの分岐（ファイル検証・<code>REQUIRE_NOTIFICATIONS</code>・<code>JSON.parse</code>・<code>GITHUB_ACTIONS</code> × <code>DRY_RUN</code>）のテストだけで、いずれも <code>process.env</code> の読み取りと固定文言の出力という entry の責務（#11・#30 の「判断ロジックを持たない」側）に属する。暗黙のまま残す案は、後のレビューで同じ指摘が繰り返される。回帰（歯止めが消えて配信・通知が静かに止まる）は §5.5 の記述と PR レビューで担保し、リスクを承知で受け入れる。design-review 第 3 周で追加</td>
+</tr>
+<tr>
+<td>57</td>
+<td>記録専用の <code>publisherKind</code> / <code>notificationGatewayKind</code> は <code>RunCollection</code> の<strong>コンストラクタ注入</strong>のまま残す（<code>RunCollectionInput</code> へ移さない）</td>
+<td><code>dryRun</code> と同じく <code>RunCollectionInput</code> に移して配置を揃える</td>
+<td><code>dryRun</code> の移動（#45）で狙ったのは UseCase の<strong>振る舞い</strong>が DI の事情から独立することで、それは達成済み。残るのは「記録専用のフィールドを入力に置くか依存に置くか」という様式の問題で、<code>publisherKind</code> は実行ごとに変わらない注入時点の事実（どの具象を注入したか）なのでコンストラクタ側にある方が意味に合う。移すと <code>run-collection.ts</code>・<code>main.ts</code>・§7.1 のテストを再変更することになり、得られる一貫性に見合わない。design-review 第 3 周で指摘を受けて見送りを決定（後続のレビューで同じ指摘を繰り返さないための記録）</td>
+</tr>
+<tr>
+<td>58</td>
+<td><code>FetchHttpClient</code> は、<code>https</code> で要求したリクエストの最終 URL が <code>https</code> でない（平文への降格）ときリダイレクトを追わずに失敗させ、この失敗はリトライしない。ホストだけが変わるリダイレクトは追って <code>warn(&quot;redirected&quot;)</code> を 1 件出す（§5.7 手順 2b）</td>
+<td>すべてのリダイレクトをそのまま追う（§4.3「リダイレクトは追う」の文面どおり）／ホスト変更も拒否する</td>
+<td>降格を追うと、収集した見出し・URL が平文経路で取得したものになり、経路上の改変を検知できない。相手サイトの設定ミスと経路上の介入を区別できない以上、失敗させて Source 失敗（#3 の検知経路）に載せる方が安全で、記事は前回値が保持されるので損失も無い。リトライ対象から外すのは、同じ降格が繰り返されるだけで結果が変わらないため。この失敗は <code>status</code> を持たないので、<code>status</code> の有無でリトライ可否を決める既定（§5.7 手順 3・4）では誤ってリトライされる。専用のサブクラスで区別する。ホスト変更まで拒否すると、旧ドメインから新ドメインへの正当な転送（東宝の <code>tohostage.com</code> 等。調査レポート §5）で収集が止まるので <code>warn</code> に留める。<strong>実装（<code>fetch-http-client.ts</code> の <code>checkRedirect</code>）が先行しており本書がそれに追随する</strong>（§8.1 の実装追随行 (g)）。design-review 第 3 周で追加</td>
 </tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
@@ -2321,8 +2464,8 @@ jobs:
 </tr>
 <tr>
 <td>実装（T-37 の後続タスク。司令塔が別タスクで扱う）</td>
-<td>本改訂で正の記述を足した箇所のうち、現行の実装が満たしていないものが 6 件ある。(a) <code>maskCredentials</code> が URL 形式（<code>/(https?:\/\/)[^/\s]+@/gi</code>）しか見ておらず、実運用で現れる <code>http.extraheader</code> の <code>AUTHORIZATION: basic &lt;base64&gt;</code> をマスクしない。値部分の終端（次の空白または行末まで）も §4.10 のとおりにする（§4.10・§8 #40・M-15）。(b) <code>RunSummary</code> が <code>published: boolean</code> のままで <code>publishOutcome</code>（<code>&quot;unknown&quot;</code> を含む 4 値）/ <code>publisher</code> を持たず、<code>RunCollection</code> 手順 7・8 の 2 つの検知（<code>no changes but stats are non-zero</code> / <code>changed but nothing staged</code>）と <code>collect.yml</code> の <code>changed_but_not_published</code> / <code>no_changes_but_stats</code> ステップ、<code>RunCollectionInput.dryRun</code>、<code>main.ts</code> 手順 4 の DRY_RUN 拒否、<code>buildFailureSummary</code> の <code>error</code> 引数が無い（§4.8・§5.5・§5.6・§8 #41・#44〜#47・#51）。<strong><code>RunSummary</code> の型変更（§4.8）と <code>collect.yml</code> の jq の書き換え（§5.6）は必ず同一コミットで入れる</strong>（片方だけ先に入ると <code>published</code> の判定が噛み合わず、Pages が更新されない、または毎時無駄にデプロイされる）。(c) 実装側の <code>// D-02 追随: …に無い</code> コメント（<code>git-articles-publisher.ts</code>・<code>sanitize-git-output.ts</code>・<code>paths.ts</code>・<code>articles-file-store.ts</code>・<code>run-summary-store.ts</code>・<code>run-collection.ts</code> の 6 か所）は、本改訂で §4.8・§4.10・§5.3・§8 #39〜#43・#50 に規定が入ったので削除または通常の参照コメントに置き換える（<code>run-collection.ts</code> の <code>sanitizeFailureMessage</code> の「§4.8 には字数上限の明記が無い」は §4.8 の規定で解消される）。(d) <code>main.ts</code> 手順 4 の通知ゲートウェイ生成失敗が <code>logger.error(..., { error: formatError(e) })</code> になっており、<code>JSON.parse</code> の <code>SyntaxError</code> 経由でサービスアカウント JSON の断片が Actions のログに残りうる。固定文言だけを出す形に直す（§4.7・§5.5 手順 4・§8 #48）。(e) <code>PUBLISH_BRANCH</code> を <code>paths.ts</code> から <code>git-articles-publisher.ts</code> の非公開定数へ移す（§4.10・§8 #49）。(f) §7.3 に追加した 3 ケース（<code>execFile</code> の第 3 引数の固定・<code>git commit</code> 失敗・extraheader の後続文字列）と §7.1 に追加した 4 行のテストを書く</td>
-<td>§4.7、§4.8、§4.10、§5.3、§5.5、§5.6、§7.1、§7.3、§8 #39〜#51</td>
+<td>本改訂で正の記述を足した箇所のうち、現行の実装が満たしていないものが 7 件ある（(a)〜(g)）。(a) <code>maskCredentials</code> が URL 形式（<code>/(https?:\/\/)[^/\s]+@/gi</code>）しか見ておらず、実運用で現れる <code>http.extraheader</code> の <code>AUTHORIZATION: basic &lt;base64&gt;</code> をマスクしない。値部分の終端（次の空白または行末まで）も §4.10 のとおりにする（§4.10・§8 #40・M-15）。(b) <code>RunSummary</code> が <code>published: boolean</code> のままで <code>publishOutcome</code>（<code>&quot;unknown&quot;</code> を含む 4 値）/ <code>publisher</code> を持たず、<code>RunCollection</code> 手順 7・8 の 2 つの検知（<code>no changes but stats are non-zero</code> / <code>changed but nothing staged</code>）と <code>collect.yml</code> の <code>changed_but_not_published</code> / <code>no_changes_but_stats</code> ステップ、<code>RunCollectionInput.dryRun</code>、<code>main.ts</code> 手順 4b の DRY_RUN 拒否、<code>buildFailureSummary</code> の <code>error</code> 引数が無い（§4.8・§5.5・§5.6・§8 #41・#44〜#47・#51）。あわせて <strong><code>DetectDiffResult.stats.survivingChanges</code>（§4.6・§5.2 手順 7b）と <code>RunSummaryBase.survivingChanges</code>（§4.8）を追加</strong>し、手順 7 の判定を <code>survivingChanges &gt; 0</code> にする（現行実装にこのフィールドは無く、<code>dropped === 0</code> 条件では定常状態で一度も発火しない。§8 #51）。<code>buildFailureSummary</code> からは <code>failures</code> 引数を落として 4 引数にし、<code>sourceFailures</code> の導出（<code>error instanceof SnapshotMissingError</code>）を関数の中へ寄せる（§8 #46）。<code>ArticlesValidationError</code> を <code>&quot;skipped&quot;</code> に含める（§8 #47）。<code>sanitizeFailureMessage</code> / <code>MAX_FAILURE_MESSAGE_LENGTH</code> の <code>export</code> を外し、切り詰めをコードポイント単位にする（§8 #54・#55）。<code>logger.error(&quot;refusing to publish&quot;, ...)</code> は <code>{ failures: &lt;件数&gt; }</code>（§5.5 手順 5）。<code>main.ts</code> 手順 3・4 の失敗ではサマリを書かない（§5.5 手順 10）。<strong><code>RunSummary</code> の型変更（§4.8）と <code>collect.yml</code> の jq の書き換え（§5.6）は必ず同一コミットで入れる</strong>（片方だけ先に入ると <code>published</code> の判定が噛み合わず、Pages が更新されない、または毎時無駄にデプロイされる）。(c) 実装側の <code>// D-02 追随: …に無い</code> コメント（<code>git-articles-publisher.ts</code>・<code>sanitize-git-output.ts</code>・<code>paths.ts</code>・<code>articles-file-store.ts</code>・<code>run-summary-store.ts</code>・<code>run-collection.ts</code> の 6 か所）は、本改訂で §4.8・§4.10・§5.3・§8 #39〜#43・#50 に規定が入ったので削除または通常の参照コメントに置き換える（<code>run-collection.ts</code> の <code>sanitizeFailureMessage</code> の「§4.8 には字数上限の明記が無い」は §4.8 の規定で解消される）。(d) <code>main.ts</code> 手順 4 の通知ゲートウェイ生成失敗が <code>logger.error(..., { error: formatError(e) })</code> になっており、<code>JSON.parse</code> の <code>SyntaxError</code> 経由でサービスアカウント JSON の断片が Actions のログに残りうる。固定文言だけを出す形に直す。あわせて <strong><code>FirebaseNotificationGateway</code> は <code>main.ts</code> 手順 4a がパースしたオブジェクトをコンストラクタで受け取り、初期化もコンストラクタで済ませる形にする</strong>（環境変数も生の JSON 文字列も受け取らず、<code>send()</code> へ遅延初期化しない）。初期化失敗は <code>main.ts</code> 手順 5 が固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> で捕まえ、<code>NotificationSendError.cause</code> には firebase-admin が送信時に投げた例外だけを入れる（§4.7・§5.4・§5.5 手順 4a・5・§8 #48）。(e) <code>PUBLISH_BRANCH</code> を <code>paths.ts</code> から <code>git-articles-publisher.ts</code> の非公開定数へ移す（§4.10・§8 #49）。(f) §7.3 に追加した 4 ケース（<code>execFile</code> の第 3 引数の固定・<code>git commit</code> 失敗・extraheader の後続文字列・extraheader の空白 2 文字）と §7.1 に追加した行のテストを書く。(g) <code>fetch-http-client.ts:222</code> の <code>// TODO(D-02 §8.1 申し送り)</code> コメントを削除する（リダイレクトの https→http 降格拒否とホスト変更時の <code>warn</code> は §5.7 手順 2b と §8 #58 に規定が入った）。あわせて <code>sleep.ts</code>（§3.2）と <code>DEFAULT_FETCH_HTTP_CLIENT_OPTIONS</code>（§5.7）も本書に規定が入ったので、これらを指す「§5.7 のコード片には無い export だが」等の但し書きコメントを通常の参照コメントに直す。第 2 周までこの 3 件が本行の列挙から漏れており、「6 件ある」という件数の記述が「http 層には乖離が無い」と誤読されうる状態だった（§8 #58）</td>
+<td>§4.7、§4.8、§4.10、§5.3、§5.5、§5.6、§5.7、§7.1、§7.3、§8 #39〜#58</td>
 </tr>
 <tr>
 <td>D-03</td>
@@ -2366,7 +2509,7 @@ jobs:
 </tr>
 </tbody></table>
 <h2 id="sec-9">9. 未決定事項<a class="anchor" href="#sec-9">#</a></h2>
-<p>該当なし。初稿の 3 件（情報源の失敗の通知手段・http の既定値・四季の初回判定）は §8 #25〜#27 に、design-review 第 1 周の 2 件（CLAUDE.md のディレクトリ節・テスト方針の例外の更新）は §8 #28・#30 と §8.1 に、いずれも開発者の回答を得て移した（2026-09-19）。T-37 で挙げた 1 件（<code>sanitize-git-output.ts</code> の純粋関数テストの扱い）は A 案の採用を得て §8 #38 と §8.1 に移した（2026-09-25）。design-review 第 1 周（再開後）の修正で生じた判断は、設計上の判断（差分判定の 3 分岐・診断の無害化・<code>RunSummary</code> の形・<code>ENOENT</code> のログレベル・<code>RunSummary</code> 型の置き場）はすべて §8 #39〜#43 に決定として記し、開発者の承認が要るもの（要件書 §5 への秘密情報の 1 行追加、CLAUDE.md 65 行への carve-out 追記）と実装側の追随作業は §8.1 の申し送りに置いた（2026-09-25）。design-review 第 2 周（再開後）の 20 件も同様で、設計上の判断（Actions 上の DRY_RUN の拒否・<code>dryRun</code> を実行の意図として渡す・<code>buildFailureSummary</code>・<code>publishOutcome: &quot;unknown&quot;</code>・秘密情報を含む例外の扱い・<code>paths.ts</code> の責務・<code>SourceFailure.message</code> の無害化・差分判定側の静かな停止の検知・ワークフローの最小権限と SHA 固定・jq の型ガード）はすべて §8 #44〜#53 に決定として記し、開発者の承認が要る新しい事項は生じなかった（既出の 2 件は §8.1 のまま）。実装側の追随作業は §8.1 の「実装」行に (a)〜(f) として集約した（2026-09-25）。</p>
+<p>該当なし。初稿の 3 件（情報源の失敗の通知手段・http の既定値・四季の初回判定）は §8 #25〜#27 に、design-review 第 1 周の 2 件（CLAUDE.md のディレクトリ節・テスト方針の例外の更新）は §8 #28・#30 と §8.1 に、いずれも開発者の回答を得て移した（2026-09-19）。T-37 で挙げた 1 件（<code>sanitize-git-output.ts</code> の純粋関数テストの扱い）は A 案の採用を得て §8 #38 と §8.1 に移した（2026-09-25）。design-review 第 1 周（再開後）の修正で生じた判断は、設計上の判断（差分判定の 3 分岐・診断の無害化・<code>RunSummary</code> の形・<code>ENOENT</code> のログレベル・<code>RunSummary</code> 型の置き場）はすべて §8 #39〜#43 に決定として記し、開発者の承認が要るもの（要件書 §5 への秘密情報の 1 行追加、CLAUDE.md 65 行への carve-out 追記）と実装側の追随作業は §8.1 の申し送りに置いた（2026-09-25）。design-review 第 2 周（再開後）の 20 件も同様で、設計上の判断（Actions 上の DRY_RUN の拒否・<code>dryRun</code> を実行の意図として渡す・<code>buildFailureSummary</code>・<code>publishOutcome: &quot;unknown&quot;</code>・秘密情報を含む例外の扱い・<code>paths.ts</code> の責務・<code>SourceFailure.message</code> の無害化・差分判定側の静かな停止の検知・ワークフローの最小権限と SHA 固定・jq の型ガード）はすべて §8 #44〜#53 に決定として記し、開発者の承認が要る新しい事項は生じなかった（既出の 2 件は §8.1 のまま）。実装側の追随作業は §8.1 の「実装」行に (a)〜(f) として集約した（2026-09-25）。design-review 第 3 周（再開後）の 12 件も同様で、設計上の判断（<code>survivingChanges</code> による矛盾判定・<code>buildFailureSummary</code> の引数・Noop を含む契約の弱め方・起動時検証失敗時のサマリ不在・FCM 初期化の時点・リダイレクトの降格拒否・<code>sanitizeFailureMessage</code> の非公開化・切り詰め単位の統一・起動時検証を無検証で残すこと・記録専用フィールドの置き場）はすべて §8 #45・#47・#48・#51・#53・#54〜#58 に決定として記し、開発者の承認が要る新しい事項は生じなかった。実装側の追随作業は §8.1 の「実装」行に (g) を加え (b)・(d) を拡張して集約した（2026-09-25）。</p>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
 <p>D-01 §10 の Task A（契約スキーマ・契約データ）・Task B（純粋関数群）と合わせた順序で並べる。Task S は D-01 Task A の前提（D-01 §10 の「collector 側は D-02 のスキャフォールドが先」）。各タスクは単独で品質ゲート <code>npm run lint &amp;&amp; npx tsc --noEmit &amp;&amp; npx vitest run</code> を通す。</p>
 <table>
@@ -2415,10 +2558,10 @@ jobs:
 <tr>
 <td>E</td>
 <td>http ラッパー</td>
-<td><code>src/infrastructure/http/fetch-http-client.ts</code>・<code>host-scheduler.ts</code>（§5.7）、<code>test/helpers/stub-fetch.ts</code>・<code>recording-logger.ts</code>、<code>test/infrastructure/http/fetch-http-client.test.ts</code>（§7.3 の 3 行）。計 5</td>
+<td><code>src/infrastructure/http/fetch-http-client.ts</code>・<code>host-scheduler.ts</code>・<code>sleep.ts</code>（§5.7・§3.2）、<code>test/helpers/stub-fetch.ts</code>・<code>recording-logger.ts</code>、<code>test/infrastructure/http/fetch-http-client.test.ts</code>（§7.3 の 3 行）。計 6</td>
 <td><code>src/infrastructure/http/</code>、<code>test/</code></td>
 <td>D</td>
-<td>品質ゲート通過。§7.3 の <code>FetchHttpClient</code> 3 行（リトライ／文字コード／ホスト間隔と上限）をすべて含む。実ネットワークへアクセスしない</td>
+<td>品質ゲート通過。§7.3 の <code>FetchHttpClient</code> 3 行（リトライとリダイレクトの検査／文字コード／ホスト間隔と上限）をすべて含む。実ネットワークへアクセスしない</td>
 </tr>
 <tr>
 <td>F</td>
@@ -2547,6 +2690,10 @@ jobs:
 <tr>
 <td>2026-09-25</td>
 <td>design-review 第 2 周（再開後）の指摘 20 件（M-1〜M-16）を修正。(A) 前周の退行 4 件：Actions 上の <code>CURTAINCALL_DRY_RUN</code> を起動時に拒否して検知条件から <code>publisher == &quot;git&quot;</code> を外し（§5.5 <code>main.ts</code> 手順 4・§5.6）、<code>FailedRunSummary</code> の組み立てを application の <code>buildFailureSummary</code> に移し（§4.8・§5.5）、§5.6 の jq をすべて型ガード付きにして欠損キーを <code>unknown</code> に倒し（§5.6）、手順 8 の判定を <code>RunCollectionInput.dryRun</code> に移した（§4.8・§5.5）。(B) 既存の穴 12 件：<code>FIREBASE_SERVICE_ACCOUNT</code> の <code>JSON.parse</code> 失敗で例外メッセージを出さない規則（§4.7・§5.5）、<code>publishOutcome: &quot;unknown&quot;</code> の追加（§4.8・§5.6・§6）、<code>SourceFailure.message</code> の無害化（§4.8）、<code>execFile</code> のオプションと <code>git commit</code> 失敗のテスト（§7.3）、差分判定側の静かな停止の検知（§5.5 手順 7・§5.6・§6・§7.1）、§5.6 の YAML を現行ファイル（ジョブ単位の最小権限・SHA 固定・<code>node-version-file</code>）へ同期、§7.3 の判定条件の除外基準と carve-out の歯止め、<code>PUBLISH_BRANCH</code> の移動（§4.10）、<code>GitCommandError</code> の置き場（§3.2・§5.3）、extraheader のマスク範囲（§4.10・§7.3）、§4.9・§3.2・§10 Task S をスキャフォールドの現状へ同期。§8 #41 を改訂し #44〜#53 を追加、§8.1 の実装追随行を (a)〜(f) に拡張</td>
+</tr>
+<tr>
+<td>2026-09-25</td>
+<td>design-review 第 3 周（再開後）の指摘 17 件（M-1〜M-17）を修正。(A) 差分判定側の静かな停止の検知を <code>dropped === 0 &amp;&amp; created + updated &gt; 0</code> から <code>DetectDiffResult.stats.survivingChanges &gt; 0</code> に置き換え（100 件の上限に達した定常状態では前者が一度も真にならず検知が空振りしていた）、§4.6・§4.8・§5.2 手順 7b・§5.5 手順 7・10・§5.6・§6・§7.1・§8 #51・§8.1 (b) を連動して改訂。(B) <code>buildFailureSummary</code> から <code>failures</code> 引数を落として <code>sourceFailures</code> の導出を関数内へ寄せ（§4.8・§5.5 手順 10）、<code>ArticlesValidationError</code> を <code>&quot;skipped&quot;</code> に加えた（§4.8・§6・§7.1・§8 #47）。(C) §4.4・§4.5 の契約を 3 つの Noop 実装が満たす形へ弱めて LSP を契約側で回復（§8 #45）。(D) 秘密情報：<code>main.ts</code> 手順 4a が <code>JSON.parse</code> を行いパース済みオブジェクトを <code>FirebaseNotificationGateway</code> に渡す形に確定し、遅延初期化と <code>cause</code> 経由の漏洩経路を塞いだ（§4.7・§5.4・§5.5 手順 4a・5・§6・§7.1・§8 #48）。extraheader のマスク終端を空白の連続に拡張（§4.10・§7.3）。(E) 起動時検証の失敗ではサマリを書かないことを明記（§5.5 手順 10・§6）。(F) §5.7 にリダイレクトの https→http 降格拒否・ホスト変更時の <code>warn</code>・<code>DEFAULT_FETCH_HTTP_CLIENT_OPTIONS</code> を規定し、§3.2 に <code>sleep.ts</code> を追加、§8.1 に実装追随 (g) を起票（§8 #58）。(G) §5.6 のステップサマリ本文の jq 3 行に型ガードを追加（§8 #53）。(H) §5.5 手順 5 と §5.1 手順 9 のログフィールドを件数に訂正（§4.7）。(I) 節番号の整合：<code>main.ts</code> 手順 4 に 4a / 4b の採番を与え、§4.9 の参照を実在させた。(J) §8 に索引を追加し #41 に改訂注記、#54〜#58 を追加（<code>sanitizeFailureMessage</code> の非公開化・切り詰め単位のコードポイント統一・起動時検証を無検証で残す決定・<code>*Kind</code> をコンストラクタ注入のまま残す決定・リダイレクトの扱い）。§4.8 冒頭と §7 冒頭に粒度・無検証の理由を明記</td>
 </tr>
 </tbody></table>
 

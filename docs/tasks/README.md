@@ -2,6 +2,8 @@
 
 承認済み設計書の §10 を通し番号に写像したもの。運用は `/pm`。状態は各 `T-xx.md` の frontmatter が正。
 
+**[FOLLOWUPS.md](FOLLOWUPS.md)** — dev-loop・design-review で見つかったが、そのタスクでは直せなかった事項の記録。承認済みの設計書は単独で編集しないため、`/design-doc reopen` の機会にまとめて反映する。**`/pm plan` と `/design-doc reopen` の前に必ず読むこと。**
+
 ## 対応表
 
 | ID | 設計書 | §10 | タスク | stack | depends_on | status |

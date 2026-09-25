@@ -27,6 +27,12 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 | 1-11 | §7.3 | **`PUBLISH_BRANCH` / `ARTICLES_JSON_RELATIVE_PATH` が git の引数として渡ることを固定するテスト**を carve-out に追加するか。現在は §7.3 に列挙が無いため足せない |
 | 1-12 | §8.1 | **✅ 反映済みの 2 行を「反映済み」に更新する。** 「CLAUDE.md（司令塔。D-02 承認後に更新）」と「要件書（開発者の承認事項）」は 2026-09-25 の commit `f890477` で反映済みで、残作業が無い |
 
+| 1-14 | §5.6（jq） | **ステップサマリの `gsub("[\\r\\n]"; " ")` が CR/LF しか潰しておらず、直前のコメントの「古い形式のサマリに備えた多層防御として**同じ処理**を掛ける」が事実と異なる。** collector 側 `sanitizeFailureMessage` は C0/C1（ESC = U+001B を含む）・U+2028/U+2029 をすべて潰す。ESC が残ると Actions のログ／サマリで ANSI エスケープとして解釈されうる。同一実行では collector 側が必ず先に通るため実害は無いが、多層防御として穴がある。jq の Oniguruma は POSIX ブラケット式を解釈するので `gsub("[[:cntrl:]\u2028\u2029]"; " ")` に揃える（T-46 security [R-2]。司令塔が両実装を突き合わせて確認） |
+| 1-15 | §5.6・§8 #53 | **`.run-summary.json` が 0 バイトのとき jq は終了コード 0・出力なしで終わるため `\|\| echo unknown` が発火せず、5 つの出力がすべて空文字になる**（jq 1.7.1 で実測）。結果 `deploy-pages` が `!= ''` の条件でスキップされ、#53 が決めた「想定外の形 → `unknown` → 配信は続ける」と逆に倒れる。ジョブは `failed_sources=''` により赤くなるので静かな停止にはならない。`if [ ! -f .run-summary.json ]` を `if [ ! -s ... ]` にすれば 1 文字で解消する（T-46 adversarial [R-3]・typescript-expert [R-5]） |
+| 1-16 | §5.6（jq） | **`echo "published=$(jq ...)" >> "$GITHUB_OUTPUT"` は、jq がトップレベル JSON 文書を複数出力すると偽の `key=value` 行を差し込める構造。** 現実には書き手が `RunSummaryStore`（`JSON.stringify` で単一オブジェクト）だけなので到達経路は無い。`head -n 1` で 1 行に固定するか delimiter 形式にする（T-46 security [R-1]） |
+| 1-17 | §5.6（jq） | **外部サイト由来の `message` を `$GITHUB_STEP_SUMMARY` に地の文として埋めている。** Markdown としてレンダリングされるため、`#` 見出し・リンクを含むと読み手を誤誘導する体裁を作れる（raw HTML と `javascript:` は GitHub 側でサニタイズされるので影響は表示上のみ）。可変部分をコードスパンで囲む（T-46 security [R-3]） |
+| 1-18 | §4.8・D-01 §3.2 | **コードポイント単位の切り詰めが `run-collection.ts` と `sanitize-git-output.ts` に素の式で重複している。** §8 #55 は「単位を揃える」決定であって実装の複写までは求めていない。片方だけ将来書き換えられると #55 が守ろうとした一致が崩れる。`domain/text.ts` に `truncateCodePoints(s, max)` を追加して両方から呼ぶ。**D-01 §3.2 が `text.ts` の公開物を `normalizeTitle` / `foldText` / `truncateUtf16` と列挙しているため、D-01 側への 1 行追随が要る**（T-46 architecture [R-2]） |
+
 ### 開発者の承認が要る（CLAUDE.md / 要件書の変更を伴う）
 
 | # | 内容 |

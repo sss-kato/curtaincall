@@ -1,7 +1,39 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-25T16:37:31+09:00",
+  "generatedAt": "2026-09-25T22:36:45+09:00",
   "articles": [
+    {
+      "id": "6ab10ee3740f1e6d",
+      "companyId": "takarazuka",
+      "title": "（再）宝塚大劇場 西駐車場9月26日（土）および9月27日（日）の営業について",
+      "url": "https://kageki.hankyu.co.jp/news/20260919_002.html",
+      "category": "other",
+      "publishedAt": "2026-09-25T00:00:00+09:00",
+      "contentHash": "4bc573bf6f07ec45",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-09-25T22:36:45+09:00"
+    },
+    {
+      "id": "eb7cea1f140fc51a",
+      "companyId": "takarazuka",
+      "title": "（追）＜TAKARAZUKA REVUE MUSIC＞9月配信のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20260915_004.html",
+      "category": "streaming",
+      "publishedAt": "2026-09-25T00:00:00+09:00",
+      "contentHash": "f96fdc2c341e708a",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-09-25T22:36:45+09:00"
+    },
+    {
+      "id": "a451b26a23226c75",
+      "companyId": "takarazuka",
+      "title": "＜一般前売＞花組 宝塚大劇場公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20260925_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-09-25T00:00:00+09:00",
+      "contentHash": "b6cf1a8d2545ef96",
+      "fetchedAt": "2026-09-25T22:36:45+09:00"
+    },
     {
       "id": "161877df0658421f",
       "companyId": "takarazuka",
@@ -134,16 +166,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "6ab10ee3740f1e6d",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場 西駐車場9月26日（土）および9月27日（日）の営業について",
-      "url": "https://kageki.hankyu.co.jp/news/20260919_002.html",
-      "category": "other",
-      "publishedAt": "2026-09-19T00:00:00+09:00",
-      "contentHash": "805313dec3926e55",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "ed19e8acf7bdf7f8",
       "companyId": "takarazuka",
       "title": "＜ライブ中継・ライブ配信＞花組公演『エリザベート－愛と死の輪舞－』",
@@ -231,16 +253,6 @@
       "category": "other",
       "publishedAt": "2026-09-15T00:00:00+09:00",
       "contentHash": "bc1a37e9a1bbfe74",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "eb7cea1f140fc51a",
-      "companyId": "takarazuka",
-      "title": "＜TAKARAZUKA REVUE MUSIC＞9月配信のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260915_004.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-15T00:00:00+09:00",
-      "contentHash": "9b89b2bef7c14649",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -994,14 +1006,15 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "fe70d9ff9acdd063",
-      "companyId": "takarazuka",
-      "title": "宝塚友の会 会員証カードデザイン リニューアルについて",
-      "url": "https://kageki.hankyu.co.jp/news/20260325_003.html",
-      "category": "ticket",
-      "publishedAt": "2026-03-25T00:00:00+09:00",
-      "contentHash": "5ce03068a5cbf9f6",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "id": "96f632b0ac849e4e",
+      "companyId": "shiki",
+      "title": "アンドリュー・ロイド＝ウェバー氏が四季芸術センターに来団！ 『オペラ座の怪人』稽古を見学されました",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038001.html",
+      "category": "other",
+      "publishedAt": "2026-09-25T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260925_ALW_news00-thumb-500x373-41580.jpg",
+      "contentHash": "b6243213fbbd0cde",
+      "fetchedAt": "2026-09-25T22:36:45+09:00"
     },
     {
       "id": "6a2f18026cd04e0b",
@@ -1120,9 +1133,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037980.html",
       "category": "other",
       "publishedAt": "2026-09-10T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260910_mm_hiroshima_thum-thumb-500x373-41538.jpg",
-      "contentHash": "e85c2c0ddc8d0e19",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "e85c2c0ddc8d0e19"
     },
     {
       "id": "b5e502341c3bd97e",

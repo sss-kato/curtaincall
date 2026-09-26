@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-25T22:36:45+09:00",
+  "generatedAt": "2026-09-26T21:58:37+09:00",
   "articles": [
+    {
+      "id": "530fb01c36eeec52",
+      "companyId": "takarazuka",
+      "title": "＜一般前売＞星組 東京宝塚劇場公演『RRR × TAKA”R”AZUKA ～√Rama～』",
+      "url": "https://kageki.hankyu.co.jp/news/20260926_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-09-26T00:00:00+09:00",
+      "contentHash": "30af22900ca983de",
+      "fetchedAt": "2026-09-26T21:58:37+09:00"
+    },
     {
       "id": "6ab10ee3740f1e6d",
       "companyId": "takarazuka",
@@ -996,14 +1006,15 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "77f54113214242af",
-      "companyId": "takarazuka",
-      "title": "チケット不正転売禁止法違反による検挙事案について（2026年3月26日）",
-      "url": "https://kageki.hankyu.co.jp/news/20260326_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-03-26T00:00:00+09:00",
-      "contentHash": "1372db4f3a054c18",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "id": "e7fb49f7fd664a6d",
+      "companyId": "shiki",
+      "title": "有明四季劇場が開場5周年を迎えました！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/037994.html",
+      "category": "other",
+      "publishedAt": "2026-09-26T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260926LK5th_thmb-thumb-500x373-41585.jpg",
+      "contentHash": "b9ba72a5021dbb86",
+      "fetchedAt": "2026-09-26T21:58:37+09:00"
     },
     {
       "id": "96f632b0ac849e4e",
@@ -1111,9 +1122,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037983.html",
       "category": "ticket",
       "publishedAt": "2026-09-11T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/05/3bf0bab97df29e1ca6a2c710cebc0f5a1fb42520-thumb-500x373-40769.jpg",
-      "contentHash": "c8e92cd305c75657",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "c8e92cd305c75657"
     },
     {
       "id": "2d2c65d8f41462aa",

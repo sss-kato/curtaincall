@@ -37,7 +37,7 @@ jobs:
       no_changes_but_stats: ${{ steps.summary.outputs.no_changes_but_stats }}
     steps:
       # 既定（persist-credentials: true）で GITHUB_TOKEN を .git/config の http.extraheader に保存 → git push に使える（§4.10 のマスク対象）。fetch-depth は既定の 1（shallow）
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: collector/.node-version

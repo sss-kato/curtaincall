@@ -88,6 +88,9 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 | 3-21 | §3.1 | **依存表の `settings/presentation` 行に `notifications/domain`（`PushPermissionStatus`）が無い。** §3.1 は「表に無い組み合わせは import しない」と宣言しているが、**§4.6 が委譲 Provider を `Future<PushPermissionStatus>` と定義し（711 行）、§5.9 が E-09 の表示条件を「`authorized` 以外」と定めている**（1509 行）ため、`settings/presentation` が enum を名指しすることは設計上避けられない。表の記載漏れとして 1 行追記する。**真偽値の委譲 Provider を足して回避する案は §4.6 の戻り値の型と矛盾するので採らない**（T-35 architecture [R-1]。司令塔が §4.6・§5.9 を直接読んで確認） |
 | 3-22 | §5.9・§5.10 | **コード例が `logger.w(..., stackTrace: s)` になっており、上位方針の D-04 §4.9（release ではスタックトレースを出さない）を取りこぼしている。** 実装側の慣行は `releaseSafeStackTrace(s)` で、既存 3 箇所（`app_lifecycle_sync.dart` ×2・`notification_tap_providers.dart`）がこれを通している。**コード例をそのまま写すと後続タスクが同じ差分を再生産する**（T-35 は実際に 6 箇所で再生産した）。コード例を `releaseSafeStackTrace(s)` に直す（T-35 security [R-1]） |
 | 3-23 | §5.9 | **`CupertinoListTile` の指定が S-03 §7.6「省略はしない・折り返す」と両立しない。** Flutter SDK の `list_tile.dart`（292-293・351-352・360 行）は `title` / `subtitle` / `additionalInfo` に `maxLines: 1, overflow: TextOverflow.ellipsis` を**ハードコード**しており、渡した `Text` は必ず 1 行に省略される。**E-09 の 2 行目は既定の文字サイズでも末尾が切れ、通知許可の手順が読めない**。§5.9 に「`title` / `subtitle` は `maxLines` をリセットする `DefaultTextStyle` でくるむ」と明記する（T-35 spec [R-1]。司令塔が Flutter SDK を直接読んで確認） |
+| 3-24 | §10（新設 §10.3） | **T-O（設定画面）の目視項目が無い。** T-M には §10.1、T-N には §10.2 があり完了条件がそこを参照しているのに、T-O の完了条件は 1 行だけ。**本画面は §7 により自動テストを持たない**ため、目視でしか確認できない振る舞い 4 件がどこにも記録されていない（担保は実装コメントのみ）。§10.3 を新設して次を列挙し、§10 T-O の完了条件を §10.3 への参照に差し替える：1 初回表示でセクションヘッダがナビゲーションバーに隠れない（**第 2 周に実際に退行した経路**）／2 通知トグルの連続タップが無反応にならず最後の状態に落ち着く（S-03 §7.2・§8 #4）／3 Dynamic Type 最大でラベル・補足行が省略されず折り返す（バージョン行の `additionalInfo` はオーバーフローする既知の申し送り＝3-23）／4 一括クリアの確認〜完了の間 E-15 の押下ハイライトが保持され再タップできない／5 Chrome を削除した状態で復帰すると E-13 が非活性表示になる（T-35 maintainability [R-2]） |
+| 3-25 | §6・§5.9 | **§6 の異常系・競合の表に「ブラウザ選択（S-03/A-03）を連打した」の行が無い**（「通知トグルを連打」の行はある＝記録漏れ）。`SelectBrowserUseCase` は `isChromeAvailable()`（platform channel）の往復を挟むため、`await` せずに 2 回呼ぶと**後発のタップが先に確定しうる**。実装（`settings_screen.dart` の `_selectingBrowser`・`_queuedBrowserChoice`）は実行中の最新の意図だけを保持し完了後に 1 回再実行する（latest-wins）。§5.9 の E-11〜E-13 の記述にもこの形を 1 文足す。担保は 3-24 の §10.3 の目視項目（T-35 maintainability [R-3]） |
+
 
 ---
 
@@ -104,6 +107,8 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 | 4-7 | app | **`FullView`（6 値）→ `FullErrorKind`（3 値）の写像が `HomeScreen` と `SavedScreen` に複製される見込み**（T-33・T-34 の実装時）。`core/ui/status/` に `FullErrorKind? fullErrorKindOf(FullView full)` を 1 つ置いて 2 画面から呼ぶ形を検討 |
 | 4-8 | app | **`db_rows.dart` のヘルパーを使っているのは saved の 2 テストのみ。** `clear_read_states_use_case_test.dart` など他 feature のテストは同種のクエリを直書きしているので、articles 側のテストを触るタスクで寄せる |
 | 4-9 | app | **`commit_saved_changes_use_case_test.dart` に `CommitSavedChangesUseCase(DriftSavedArticleRepository(db))` が 13 箇所重複している。** UseCase が依存を 1 つ増やすと 13 箇所の機械的修正が要る。ファイル末尾に `_useCase(AppDatabase db)` を置き、ラッパを使う 4 テストだけ明示構築する形にする |
+| 4-10 | app | **`AsyncValue` の「エラーでなかった → エラーになった」判定の写しが 2 箇所にある**（`features/articles/presentation/list_status.dart` の `shouldLogCountError`・`features/settings/presentation/settings_screen.dart` の `_logIfNewlyErrored`）。**3 例目が現れた時点で `core/ui/status/` にジェネリック版（`AsyncValue<T>`）を置き、D-04 §7 / D-05 §7 の直接テスト列挙に追加する。** 2 例では移さない理由：既存関数が `AsyncValue<int>` に型固定でジェネリック化が D-04 §7 のテスト一覧に波及する／D-05 §3.2 が `core/ui/` を Widget の置き場（`status/`・`article/`・`list/`）に限定している／新しい共有純粋関数の直接テストは「対象は設計書 §7 に列挙したものに限る」に触れる。**現状この判断は複製側のコメントにしか無く、`list_status.dart` 側からは写しの存在が見えない**（T-35 maintainability [R-4]。3-12 と同型） |
+
 
 ---
 

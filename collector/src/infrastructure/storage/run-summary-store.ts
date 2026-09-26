@@ -4,10 +4,10 @@ import { formatJson } from "./json-format.js";
 
 /**
  * 実行サマリ（§4.8）を CURTAINCALL_SUMMARY_PATH（既定 collector/.run-summary.json。§4.9）へ書き出す。
- * D-02 追随: RunSummary 型は application/run-collection.ts（T-09。本タスク T-07 の依存に含まれず、
- * このリポジトリにまだ存在しない）が定義する。infrastructure/storage は application に依存しない
- * （§3.2 の依存の方向）ため、このクラスは書き出す値の型を持たず、呼び出し側（T-09）が RunSummary を
- * そのまま渡せるようにする。
+ * RunSummary 型は application/run-collection.ts が定義する。infrastructure/storage は application に
+ * 依存しない（§3.2 の依存の方向）ため、このクラスは書き出す値の型を持たず、呼び出し側（main.ts）が
+ * RunSummary をそのまま渡せるようにする（§4.8「`RunSummaryStore.write` の引数は
+ * `Readonly<Record<string, unknown>>`」）。
  */
 export class RunSummaryStore {
   constructor(private readonly summaryPath: string) {}

@@ -174,6 +174,25 @@ describe("突合の確定規則", () => {
       ),
     ).toBe(true);
   });
+
+  it("collected に companies に無い companyId の新着が混じる → 出力配列に残らず survivingChanges・通知対象に数えないが、stats.created には数える", () => {
+    const uc = newUseCase();
+    const input: DetectDiffInput = {
+      previous: buildArticlesFile([]),
+      collected: [
+        buildCollectedArticle({ id: hex(4242), contentHash: hex(4243), companyId: "co_ghost" }),
+      ],
+      companies: COMPANIES, // co_a のみ。co_ghost は含まない
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(result.file.articles).toHaveLength(0);
+    expect(result.stats.survivingChanges).toBe(0);
+    expect(result.newArticlesByCompany.size).toBe(0);
+    // stats.created は kindById の全件（手順 3・4 の確定結果そのもの）を数えるため、手順 6 の連結で
+    // articles に載らない companyId（co_ghost）でも created には数えられる（§8 #51）
+    expect(result.stats.created).toBe(1);
+  });
 });
 
 describe("切り詰めと並び順", () => {
@@ -199,6 +218,10 @@ describe("切り詰めと並び順", () => {
     // i=0（最古の publishedAt）が落ち、i=100（最新）が先頭になる
     expect(at(result.file.articles, 0).id).toBe(hex(2100));
     expect(result.file.articles.some((a) => a.id === hex(2000))).toBe(false);
+    // 手順 8 の置き換え（previous === undefined → 通知対象は空 Map）は手順 7b の survivingChanges
+    // には影響しない（D-02 §5.2 手順 8）。切り詰め後に残った 100 件が新着として数えられる
+    expect(result.newArticlesByCompany.size).toBe(0);
+    expect(result.stats.survivingChanges).toBe(100);
   });
 
   it("1 団体ちょうど 100 件 → 全件残り dropped が 0", () => {
@@ -495,6 +518,90 @@ describe("changed", () => {
 });
 
 describe("切り詰めと通知対象", () => {
+  it("2 団体・複数種別が混在 → newArticlesByCompany は companies 順のキーで、値が compareArticles 順の新着のみ（更新・継続は含まない）", () => {
+    const uc = newUseCase();
+    const companyA = company("co_a");
+    const companyB = company("co_b");
+
+    // co_a の前回記事：更新される 1 件と継続する 1 件
+    const updatedPrev = buildArticle({
+      id: hex(100),
+      companyId: "co_a",
+      url: "https://example.com/a-updated",
+      contentHash: hex(9100),
+      publishedAt: isoAt(50),
+    });
+    const carriedPrev = buildArticle({
+      id: hex(101),
+      companyId: "co_a",
+      url: "https://example.com/a-carried",
+      contentHash: hex(9101),
+      publishedAt: isoAt(60),
+    });
+    const previous = buildArticlesFile([updatedPrev, carriedPrev]);
+
+    const collected = [
+      // co_a 新着（古い方）。collected 上は新しい方より先に置く
+      // （compareArticles でソートし直す前提を踏むため、collected の出現順とは別にする）
+      buildCollectedArticle({
+        id: hex(103),
+        companyId: "co_a",
+        url: "https://example.com/a-new-older",
+        contentHash: hex(9103),
+        publishedAt: isoAt(100),
+      }),
+      // co_a 新着（新しい方。publishedAt が最も新しいので compareArticles 順では先頭に来る）
+      buildCollectedArticle({
+        id: hex(102),
+        companyId: "co_a",
+        url: "https://example.com/a-new-newer",
+        contentHash: hex(9102),
+        publishedAt: isoAt(200),
+      }),
+      // co_a 更新（contentHash が変わる）→ newArticlesByCompany には含まれない
+      buildCollectedArticle({
+        id: hex(100),
+        companyId: "co_a",
+        url: updatedPrev.url,
+        contentHash: hex(9199),
+        publishedAt: isoAt(50),
+      }),
+      // co_a 継続（contentHash 同一）→ newArticlesByCompany には含まれない
+      buildCollectedArticle({
+        id: hex(101),
+        companyId: "co_a",
+        url: carriedPrev.url,
+        contentHash: hex(9101),
+        publishedAt: isoAt(60),
+      }),
+      // co_b 新着 1 件
+      buildCollectedArticle({
+        id: hex(104),
+        companyId: "co_b",
+        url: "https://example.com/b-new",
+        contentHash: hex(9104),
+        publishedAt: isoAt(10),
+      }),
+    ];
+    const input: DetectDiffInput = {
+      previous,
+      collected,
+      // companies は co_b → co_a の順にする。collected 上は co_a が先に出現するため、
+      // 「companies 順」と「collected の出現順」が別物であることを踏める
+      companies: [companyB, companyA],
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+
+    // キーの並びが companies.json 順（手順 6 の連結順に依存）。collected の出現順（co_a 先）とは逆
+    expect([...result.newArticlesByCompany.keys()]).toEqual(["co_b", "co_a"]);
+    // co_a の値は新着のみ・compareArticles 順（新しい方が先）。更新・継続の id を含まない。
+    // collected 上は co_a の新着を古い方（hex(103)）→ 新しい方（hex(102)）の順に並べているため、
+    // ここで compareArticles によるソートが効いていることも踏める
+    expect(result.newArticlesByCompany.get("co_a")?.map((a) => a.id)).toEqual([hex(102), hex(103)]);
+    expect(result.newArticlesByCompany.get("co_b")?.map((a) => a.id)).toEqual([hex(104)]);
+  });
+
   it("切り詰めで落ちた新着は newArticlesByCompany に入らない", () => {
     const uc = newUseCase();
     const existing: Article[] = Array.from({ length: 100 }, (_, i) =>
@@ -524,5 +631,129 @@ describe("切り詰めと通知対象", () => {
     const result = uc.execute(input);
     expect(result.stats.dropped).toBe(1);
     expect(result.newArticlesByCompany.get("co_a")).toBeUndefined();
+  });
+
+  it("100 件の団体に新着 1 件 → created: 1・dropped: 1・survivingChanges: 1", () => {
+    const uc = newUseCase();
+    const existing: Article[] = Array.from({ length: 100 }, (_, i) =>
+      buildArticle({
+        id: hex(8000 + i),
+        contentHash: hex(8100 + i),
+        url: `https://example.com/existing2-${i.toString()}`,
+        publishedAt: isoAt(1000 + i),
+        fetchedAt: isoAt(1000 + i),
+      }),
+    );
+    const previous = buildArticlesFile(existing, "2026-01-01T00:00:00+09:00");
+    const collected = [
+      buildCollectedArticle({
+        id: hex(8999),
+        contentHash: hex(8998),
+        url: "https://example.com/new2",
+        publishedAt: isoAt(2000), // 既存 100 件より新しいので先頭に来る
+      }),
+    ];
+    const input: DetectDiffInput = {
+      previous,
+      collected,
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(result.stats.created).toBe(1);
+    expect(result.stats.dropped).toBe(1);
+    expect(result.stats.survivingChanges).toBe(1);
+  });
+
+  it("新着が compareArticles 順の 101 番目 → created: 1・dropped: 1・survivingChanges: 0", () => {
+    const uc = newUseCase();
+    const existing: Article[] = Array.from({ length: 100 }, (_, i) =>
+      buildArticle({
+        id: hex(7000 + i),
+        contentHash: hex(7100 + i),
+        url: `https://example.com/existing-${i.toString()}`,
+        publishedAt: isoAt(1000 + i),
+        fetchedAt: isoAt(1000 + i),
+      }),
+    );
+    const previous = buildArticlesFile(existing, "2026-01-01T00:00:00+09:00");
+    const collected = [
+      buildCollectedArticle({
+        id: hex(9999),
+        contentHash: hex(9998),
+        url: "https://example.com/new",
+        publishedAt: isoAt(0), // 既存 100 件より古いので切り詰めで落ちる
+      }),
+    ];
+    const input: DetectDiffInput = {
+      previous,
+      collected,
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(result.stats.created).toBe(1);
+    expect(result.stats.dropped).toBe(1);
+    expect(result.stats.survivingChanges).toBe(0);
+  });
+
+  it(
+    "100 件の団体で既存 1 件の contentHash が変わった（F-11 の再浮上）→ created: 0・updated: 1・dropped: 0・" +
+      "survivingChanges: 1 で、通知対象（newArticlesByCompany）は 0 件のまま＝survivingChanges を" +
+      "「通知対象の件数」と同義に実装すると落ちる",
+    () => {
+      const uc = newUseCase();
+      const existing: Article[] = Array.from({ length: 100 }, (_, i) =>
+        buildArticle({
+          id: hex(6000 + i),
+          contentHash: hex(6100 + i),
+          url: `https://example.com/existing3-${i.toString()}`,
+          publishedAt: isoAt(1000 + i),
+          fetchedAt: isoAt(1000 + i),
+        }),
+      );
+      const previous = buildArticlesFile(existing, "2026-01-01T00:00:00+09:00");
+      // 既存の 1 件（i=50）だけ contentHash を変えて collected に含める（他の 99 件は collected に含めず carried）
+      const collected = [
+        buildCollectedArticle({
+          id: hex(6050),
+          url: "https://example.com/existing3-50",
+          publishedAt: isoAt(1050),
+          contentHash: hex(9999),
+        }),
+      ];
+      const input: DetectDiffInput = {
+        previous,
+        collected,
+        companies: COMPANIES,
+        generatedAt: GENERATED_AT,
+      };
+      const result = uc.execute(input);
+      expect(result.stats.created).toBe(0);
+      expect(result.stats.updated).toBe(1);
+      expect(result.stats.dropped).toBe(0);
+      expect(result.stats.survivingChanges).toBe(1);
+      expect(result.newArticlesByCompany.get("co_a")).toBeUndefined();
+    },
+  );
+
+  it("前回と同一 → すべて 0", () => {
+    const uc = newUseCase();
+    const existing: Article[] = [
+      buildArticle({ id: hex(5000), contentHash: hex(5100), publishedAt: isoAt(0) }),
+    ];
+    const previous = buildArticlesFile(existing, "2026-01-01T00:00:00+09:00");
+    const collected = [buildCollectedArticle({ id: hex(5000), contentHash: hex(5100) })];
+    const input: DetectDiffInput = {
+      previous,
+      collected,
+      companies: COMPANIES,
+      generatedAt: GENERATED_AT,
+    };
+    const result = uc.execute(input);
+    expect(result.stats.created).toBe(0);
+    expect(result.stats.updated).toBe(0);
+    expect(result.stats.dropped).toBe(0);
+    expect(result.stats.survivingChanges).toBe(0);
   });
 });

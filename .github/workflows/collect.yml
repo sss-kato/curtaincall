@@ -33,8 +33,10 @@ jobs:
       published: ${{ steps.summary.outputs.published }}
       failed_sources: ${{ steps.summary.outputs.failed_sources }}
       notifications_all_failed: ${{ steps.summary.outputs.notifications_all_failed }}
+      changed_but_not_published: ${{ steps.summary.outputs.changed_but_not_published }}
+      no_changes_but_stats: ${{ steps.summary.outputs.no_changes_but_stats }}
     steps:
-      # 既定で GITHUB_TOKEN を remote に保存 → git push に使える。fetch-depth は既定の 1（shallow）
+      # 既定（persist-credentials: true）で GITHUB_TOKEN を .git/config の http.extraheader に保存 → git push に使える（§4.10 のマスク対象）。fetch-depth は既定の 1（shallow）
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -61,20 +63,46 @@ jobs:
             echo "published=unknown" >> "$GITHUB_OUTPUT"
             echo "failed_sources=unknown" >> "$GITHUB_OUTPUT"
             echo "notifications_all_failed=false" >> "$GITHUB_OUTPUT"
+            echo "changed_but_not_published=false" >> "$GITHUB_OUTPUT"
+            echo "no_changes_but_stats=false" >> "$GITHUB_OUTPUT"
             echo "実行サマリ .run-summary.json が無い（collector が書けなかった）" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          echo "published=$(jq -r '.published' .run-summary.json)" >> "$GITHUB_OUTPUT"
-          # sourceFailures キー自体が欠けている（想定外の形）場合を「失敗 0 件」と誤解釈しないよう unknown に倒す
-          echo "failed_sources=$(jq -r '.sourceFailures | if type == "array" then length else "unknown" end' .run-summary.json)" >> "$GITHUB_OUTPUT"
-          echo "notifications_all_failed=$(jq -r '.notificationsSent == 0 and .notificationsFailed > 0' .run-summary.json)" >> "$GITHUB_OUTPUT"
-          # length は null でも 0 を返すため sourceFailures は無ガードで良い。join・to_entries は null で落ちるため // []・// {} を付ける
-          jq -r '"収集 \(.collected) 件 / 破棄 \(.discarded) / 新着 \(.created) / 更新 \(.updated) / 通知 \(.notificationsSent) 失敗 \(.notificationsFailed)（\(.notificationGateway)）/ 失敗した情報源 \(.sourceFailures | length) / fullCrawl \((.fullCrawlCompanyIds // []) | join(","))"' \
-            .run-summary.json >> "$GITHUB_STEP_SUMMARY"
-          # message は改行・制御文字を含み得る（collector 側で sanitizeFailureMessage 済みだが多層防御。§4.8）
-          jq -r '(.sourceFailures // [])[] | "- \(.companyId): \(.reason) \(.message | gsub("[\\r\\n]"; " ") | .[0:200])"' \
-            .run-summary.json >> "$GITHUB_STEP_SUMMARY"
-          jq -r '(.discardedByCompany // {}) | to_entries[] | select(.value > 0) | "- \(.key): 破棄 \(.value) 件（部分破棄。D-03 のセレクタを確認）"' .run-summary.json >> "$GITHUB_STEP_SUMMARY"
+          # すべての jq に型ガードを付ける（§8 #53）。サマリの形が想定外（キー欠落・旧形式・JSON でない）のとき、
+          # published は false ではなく unknown に倒す（false は「配信しない」という積極的な指示になり、
+          # push・通知済みの内容が Pages に出ないまま止まるため）。数を読む出力も 0 に倒さない
+          S=.run-summary.json
+          echo "published=$(jq -r 'if type == "object" and has("publishOutcome")
+                                   then (if .publishOutcome == "unknown" then "unknown" else (.publishOutcome == "published") end)
+                                   else "unknown" end' "$S" 2>/dev/null || echo unknown)" >> "$GITHUB_OUTPUT"
+          # 記事は変わったのに何も確定されなかった（配信と通知の静かな停止。§8 #41）
+          echo "changed_but_not_published=$(jq -r 'if type == "object" and has("publishOutcome") and has("changed")
+                                                   then (.changed == true and .publishOutcome == "no_changes")
+                                                   else false end' "$S" 2>/dev/null || echo false)" >> "$GITHUB_OUTPUT"
+          # 逆向きの静かな停止：切り詰め後の出力配列に新着・更新が残っているのに changed が偽（§5.5 手順 7、§8 #51）
+          echo "no_changes_but_stats=$(jq -r 'if type == "object" and has("changed") and (.survivingChanges | type) == "number"
+                                              then (.changed == false and .survivingChanges > 0)
+                                              else false end' "$S" 2>/dev/null || echo false)" >> "$GITHUB_OUTPUT"
+          # sourceFailures が配列でない（キー欠落・形式違い）なら 0 ではなく unknown（0 は「失敗なし」と読まれる）
+          echo "failed_sources=$(jq -r 'if type == "object"
+                                        then (.sourceFailures | if type == "array" then length else "unknown" end)
+                                        else "unknown" end' "$S" 2>/dev/null || echo unknown)" >> "$GITHUB_OUTPUT"
+          echo "notifications_all_failed=$(jq -r 'if type == "object" and (.notificationsSent | type) == "number" and (.notificationsFailed | type) == "number"
+                                                  then (.notificationsSent == 0 and .notificationsFailed > 0)
+                                                  else false end' "$S" 2>/dev/null || echo false)" >> "$GITHUB_OUTPUT"
+          # 以降はステップサマリの本文。出力用の jq と同じく型ガードを付ける（§8 #53）。
+          # 既定シェルは bash -e -o pipefail なので、ガードが無いとここで jq が非 0 終了したときサマリ
+          # ステップ自体が失敗し、後続の検知ステップ（暗黙の success() 条件）がスキップされて理由が出ない
+          jq -r 'if type != "object" then "サマリの形が想定外（.run-summary.json を確認する）"
+                 else "収集 \(.collected) 件 / 破棄 \(.discarded) / 新着 \(.created) / 更新 \(.updated) / 残存 \(.survivingChanges) / 通知 \(.notificationsSent) 失敗 \(.notificationsFailed)（\(.notificationGateway)）/ 失敗した情報源 \((.sourceFailures // []) | length) / fullCrawl \((.fullCrawlCompanyIds // []) | join(","))" end' \
+            "$S" >> "$GITHUB_STEP_SUMMARY" || echo "サマリ本文の整形に失敗した" >> "$GITHUB_STEP_SUMMARY"
+          # message は collector 側で sanitizeFailureMessage 済み（§4.8）。古い形式のサマリに備えた多層防御として同じ処理を掛ける
+          jq -r 'if type != "object" then empty
+                 else (.sourceFailures // [])[] | "- \(.companyId): \(.reason) \(.message | tostring | gsub("[\\r\\n]"; " ") | .[0:200])" end' \
+            "$S" >> "$GITHUB_STEP_SUMMARY" || true
+          jq -r 'if type != "object" then empty
+                 else (.discardedByCompany // {}) | to_entries[] | select((.value | type) == "number" and .value > 0) | "- \(.key): 破棄 \(.value) 件（部分破棄。D-03 のセレクタを確認）" end' \
+            "$S" >> "$GITHUB_STEP_SUMMARY" || true
       - name: Pages 用にアップロード
         if: ${{ !cancelled() && steps.summary.outputs.published != 'false' }} # true と unknown で行う（安全側。前回と同じ内容の再デプロイは無害）
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
@@ -85,9 +113,19 @@ jobs:
         run: |
           echo "失敗した情報源がある。ログとステップサマリを確認する" >&2
           exit 1 # ジョブ失敗 → GitHub の既定のワークフロー失敗通知が届く（§8 #25）
+      - name: 記事が変わったのに確定されなかったことを検知（§8 #41）
+        if: ${{ !cancelled() && steps.summary.outputs.changed_but_not_published == 'true' }}
+        run: |
+          echo "記事配列は変化したのに publish が no_changes を返した。差分判定（D-02 §5.3 手順 3-2）を確認する" >&2
+          exit 1 # 配信も通知も静かに止まる経路。ジョブを赤くして開発者に届ける
+      - name: 差分判定が変化を見落としたことを検知（§8 #51）
+        if: ${{ !cancelled() && steps.summary.outputs.no_changes_but_stats == 'true' }}
+        run: |
+          echo "新着・更新があるのに changed が偽だった。detect-diff の hasSameArticles（D-02 §5.2 手順 9）を確認する" >&2
+          exit 1 # 上と対称の静かな停止（記事が二度と更新されない）。ジョブを赤くする
       - name: 通知の全滅を検知（F-07）
-        # sent == 0 かつ failed > 0（FCM 鍵の失効・権限剥奪。§8 #34）。!cancelled() が無いと直前の
-        # 「情報源の失敗を検知」が exit 1 したときにスキップされ、鍵失効のメッセージが出ない
+        # sent == 0 かつ failed > 0（FCM 鍵の失効・権限剥奪。§8 #34）。!cancelled() が無いと先行する検知ステップ
+        # （情報源の失敗・静かな停止）が exit 1 したときにスキップされ、鍵失効のメッセージが出ない
         if: ${{ !cancelled() && steps.summary.outputs.notifications_all_failed == 'true' }}
         run: |
           echo "新着があったが FCM 送信がすべて失敗した。FIREBASE_SERVICE_ACCOUNT の鍵と権限を確認する" >&2

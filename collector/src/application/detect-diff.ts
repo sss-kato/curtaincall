@@ -31,6 +31,14 @@ export interface DetectDiffResult {
     readonly updated: number; // 更新
     readonly carried: number; // 継続（今回も取れた + 一覧から消えたが保持）
     readonly dropped: number; // 100 件上限で落ちた
+    /**
+     * 手順 3 で「新着」または「更新」と判定され、かつ手順 5 の切り詰め後にも出力配列（file.articles）に
+     * 残っている記事の件数。changed === false なら 0 でなければならない（survivingChanges > 0 かつ
+     * changed === false は定義上ありえない）。この不変条件が run-collection 手順 7 の矛盾検知の唯一の
+     * 根拠になる（§5.2 手順 7b、§5.5 手順 7、§8 #51）。
+     * created / updated と違い、切り詰めで落ちた新着を数えないので誤検知が出ない。
+     */
+    readonly survivingChanges: number;
   };
 }
 
@@ -104,19 +112,40 @@ interface KindCounts {
   readonly carried: number;
 }
 
-/** 確定後の articles を kindById で分類し、新着・更新・継続の件数を数える */
-function countKinds(
-  articles: readonly Article[],
-  kindById: ReadonlyMap<string, ArticleKind>,
-): KindCounts {
+/**
+ * 判別可能 union の網羅性チェック用ヘルパ。switch の default 節から呼ぶ（現在の呼び出しは ArticleKind の
+ * countKinds と手順 7/7b の 2 か所。種別が増えたときにコンパイルエラーで気づける）。同じ throw を
+ * 2 か所に書かず、網羅性チェックの実装を 1 つに集約する
+ */
+function assertNever(value: never): never {
+  throw new Error(`unexpected value: ${String(value)}`);
+}
+
+/**
+ * kindById（手順 3・4 で resolvedById と対で設定されるため、鍵集合は常に resolvedById と同一）を
+ * 種別ごとに分類し、新着・更新・継続の件数を数える。渡すのは切り詰め前の全件（kindById そのもの）で、
+ * 切り詰め後に出力配列へ残った件数は survivingChanges が別に表す（§5.2 手順 7b）。
+ * 引数を kindById 1 つに絞るのは、切り詰め後の配列や使い捨ての反復子を渡せる形にしないため
+ * （§7.1 の created: 1・dropped: 1・survivingChanges: 0 が崩れる）。
+ */
+function countKinds(kindById: ReadonlyMap<string, ArticleKind>): KindCounts {
   let created = 0;
   let updated = 0;
   let carried = 0;
-  for (const article of articles) {
-    const kind = kindById.get(article.id);
-    if (kind === "created") created += 1;
-    else if (kind === "updated") updated += 1;
-    else if (kind === "carried") carried += 1;
+  for (const kind of kindById.values()) {
+    switch (kind) {
+      case "created":
+        created += 1;
+        break;
+      case "updated":
+        updated += 1;
+        break;
+      case "carried":
+        carried += 1;
+        break;
+      default:
+        assertNever(kind);
+    }
   }
   return { created, updated, carried };
 }
@@ -192,15 +221,43 @@ export class DetectDiff implements DetectDiffUseCase {
     }
 
     // 手順 7: 新着 かつ 切り詰め後も残っている記事を companyId ごとに集める
-    const newArticlesByCompanyRaw = new Map<string, Article[]>();
-    for (const [companyId, kept] of keptByCompany) {
-      const newOnes = kept.filter((a) => kindById.get(a.id) === "created");
-      if (newOnes.length > 0) newArticlesByCompanyRaw.set(companyId, newOnes);
+    // 手順 7b: 手順 7 と同じ走査で、新着または更新かつ切り詰め後にも残っている件数を数える（survivingChanges）。
+    // previous === undefined による手順 8 の置き換えの影響を受けない値にするため、ここで確定させる
+    // 走査は手順 6 で確定した出力配列 articles を一巡する（companies 順 × ブロック内 compareArticles 順という
+    // 「出力配列の構成規則」を手順 6 の 1 か所だけに置き、ここでは再定義しない。companies に無い companyId は
+    // 手順 6 の時点で articles に含まれないため、ここでも survivingChanges には数えない。
+    // stats.created は kindById 全件を数えるのでこの記事も含む）
+    const newArticlesBeforeSuppression = new Map<string, Article[]>();
+    let survivingChanges = 0;
+    for (const article of articles) {
+      const kind = kindById.get(article.id);
+      switch (kind) {
+        case "created": {
+          const list = newArticlesBeforeSuppression.get(article.companyId);
+          if (list === undefined) {
+            newArticlesBeforeSuppression.set(article.companyId, [article]);
+          } else {
+            list.push(article);
+          }
+          survivingChanges += 1;
+          break;
+        }
+        case "updated":
+          survivingChanges += 1;
+          break;
+        case "carried":
+          break;
+        case undefined:
+          // 手順 3・4 で resolvedById の全 id に対して必ず kindById が対で設定されるため到達しない
+          break;
+        default:
+          assertNever(kind);
+      }
     }
 
     // 手順 8: 前回が無ければ通知対象は空
     const newArticlesByCompany: ReadonlyMap<string, readonly Article[]> =
-      previous === undefined ? new Map() : newArticlesByCompanyRaw;
+      previous === undefined ? new Map() : newArticlesBeforeSuppression;
 
     // 手順 9
     const changed = previous === undefined || !hasSameArticles(previous.articles, articles);
@@ -208,13 +265,17 @@ export class DetectDiff implements DetectDiffUseCase {
     // 手順 10
     const file: ArticlesFile = { schemaVersion: ARTICLES_SCHEMA_VERSION, generatedAt, articles };
 
-    const { created, updated, carried } = countKinds(articles, kindById);
+    // created / updated / carried / dropped は突合の結果全体（切り詰め前）を数える。切り詰めで落ちた
+    // 新着・更新も created / updated に数え、dropped と重複して数える（§5.2 手順 7b の survivingChanges
+    // だけが「切り詰め後に残った」件数を表す。D-02 §7.1「新着が compareArticles 順の 101 番目 →
+    // created: 1・dropped: 1・survivingChanges: 0」）
+    const { created, updated, carried } = countKinds(kindById);
 
     return {
       file,
       changed,
       newArticlesByCompany,
-      stats: { created, updated, carried, dropped },
+      stats: { created, updated, carried, dropped, survivingChanges },
     };
   }
 }

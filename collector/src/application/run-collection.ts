@@ -6,7 +6,6 @@ import type { Clock } from "../domain/clock.js";
 import type { Company } from "../domain/company.js";
 import { toJstDateTime } from "../domain/datetime.js";
 import type { Logger } from "../domain/logger.js";
-import { truncateUtf16 } from "../domain/text.js";
 import type {
   CollectArticlesResult,
   CollectArticlesUseCase,
@@ -15,17 +14,35 @@ import type {
 import type { DetectDiffResult, DetectDiffUseCase } from "./detect-diff.js";
 import { decideFullCrawlCompanyIds } from "./full-crawl-policy.js";
 import type { NotifyNewArticlesResult, NotifyNewArticlesUseCase } from "./notify-new-articles.js";
-import type { PublishArticlesUseCase } from "./publish-articles.js";
+import { ArticlesValidationError, type PublishArticlesUseCase } from "./publish-articles.js";
 
 /** main.ts が注入した通知ゲートウェイの種別。Secret の未設定・タイポで noop に縮退したことをサマリで見えるようにする（§8 #32） */
 export type NotificationGatewayKind = "firebase" | "noop";
 
-/** RunSummary（判別可能ユニオン。§8 #36 追随）の両ケースに共通するフィールド */
+/**
+ * main.ts が注入した ArticlesPublisher の種別。CURTAINCALL_DRY_RUN=1 の Noop 実行を後から見分けるための
+ * 記録専用のフィールドで、RunCollection の判定には使わない（判定は RunCollectionInput.dryRun。§8 #45）
+ */
+export type PublisherKind = "git" | "noop";
+
+/**
+ * 確定操作の結果（§8 #41・#47）。
+ * - "published"  publish が "published" を返した（main へ push 済み）
+ * - "no_changes" publish が "no_changes" を返した（差分なし。DRY_RUN の Noop も常にこれ）
+ * - "skipped"    publish を呼ばなかったことが確定している
+ *                （changed === false・SnapshotMissingError・ArticlesValidationError。後 2 者は例外の型で確定する）
+ * - "unknown"    publish を呼んだかどうか・その結果が確定しない（上記以外の致命的失敗。§8 #47）
+ */
+export type PublishOutcomeSummary = "published" | "no_changes" | "skipped" | "unknown";
+
+/** RunSummary の両ケースに共通するフィールド */
 interface RunSummaryBase {
   /** この実行の基準時刻 */
   readonly generatedAt: string;
-  /** articles.json を main へ push したか */
-  readonly published: boolean;
+  /** 確定操作の結果（boolean の published は持たない。§8 #41） */
+  readonly publishOutcome: PublishOutcomeSummary;
+  /** 注入された ArticlesPublisher の種別（§5.5 手順 7） */
+  readonly publisher: PublisherKind;
   /** 記事配列に変化があったか */
   readonly changed: boolean;
   /** fullCrawl: true で生成した団体（§5.5） */
@@ -45,6 +62,11 @@ interface RunSummaryBase {
   readonly updated: number;
   /** 100 件上限で落ちた件数 */
   readonly dropped: number;
+  /**
+   * 切り詰め後の出力配列に残っている新着・更新の件数（§4.6）。changed が偽なら 0 でなければならない
+   * （§5.5 手順 7・§5.6・§8 #51）
+   */
+  readonly survivingChanges: number;
   readonly sourceFailures: readonly SourceFailure[];
   readonly notificationGateway: NotificationGatewayKind;
   readonly notificationsSent: number;
@@ -77,6 +99,12 @@ export type RunSummary = CompletedRunSummary | FailedRunSummary;
 export interface RunCollectionInput {
   /** CURTAINCALL_FULL_CRAWL === "1" */
   readonly forceFullCrawl: boolean;
+  /**
+   * この実行が「書き出し・確定・通知を行わない試走」であるという実行の意図（CURTAINCALL_DRY_RUN === "1"）。
+   * main.ts が環境変数から決める。RunCollection は手順 8 の検知をこの値で抑止する。
+   * 注入された具象の種別（PublisherKind）では判定しない（application が DI の事情を知らないため。§8 #45）
+   */
+  readonly dryRun: boolean;
 }
 
 /** 前回スナップショットが無い実行で情報源の失敗があった（§8 #29）。書き出し・確定・通知を行わない */
@@ -91,21 +119,22 @@ export class SnapshotMissingError extends Error {
 }
 
 /**
- * SourceFailure.message の上限（コードポイントではなく UTF-16 コード単位）。
- * D-02 追随: §4.8 には字数上限の明記が無い。「1 行・200 字」は T-07 申し送りに基づく実装側の決定。
- * $GITHUB_STEP_SUMMARY に Markdown として流すため、改行・制御文字で書式が壊れないようにする。
+ * SourceFailure.message の上限（コードポイント単位。§4.10 の STDERR_LOG_LIMIT と同じ単位に揃える。§8 #55）
  */
-export const MAX_FAILURE_MESSAGE_LENGTH = 200;
+const MAX_FAILURE_MESSAGE_LENGTH = 200;
 
 /**
  * SourceFailure.message を RunSummary へ載せる前の無害化（§4.8）。C0/C1 制御文字（改行・タブ含む）と
- * Unicode の行区切り・段落区切りを半角スペースに潰し、前後の空白を除去したうえで 200 字
- * （UTF-16 コード単位）に切り詰める。ワークフロー側の jq でも同様の処理を行う多層防御（collect.yml）。
+ * Unicode の行区切り・段落区切りの連続を半角スペース 1 つに潰す（正規表現に通常の空白を含めないため、
+ * 制御文字を伴わない半角スペースの連続はそのまま残る）。そのうえで前後の空白を除去し、
+ * MAX_FAILURE_MESSAGE_LENGTH（200）コードポイントに切り詰める（サロゲートペアを分割しない。§8 #55）。
+ * ワークフロー側の jq でも同様の処理を行う多層防御（collect.yml）。ファイル外に利用者がいないため
+ * export しない（§8 #54）。
  */
-export function sanitizeFailureMessage(message: string): string {
+function sanitizeFailureMessage(message: string): string {
   // eslint-disable-next-line no-control-regex -- C0/C1 制御文字（改行含む）を空白へ潰すために意図的に使用
   const collapsed = message.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ").trim();
-  return truncateUtf16(collapsed, MAX_FAILURE_MESSAGE_LENGTH);
+  return Array.from(collapsed).slice(0, MAX_FAILURE_MESSAGE_LENGTH).join("");
 }
 
 /** failures 各件の message を sanitizeFailureMessage で無害化する（§4.8。buildSummary と buildFailureSummary の共通処理） */
@@ -119,23 +148,34 @@ export function buildCommitMessage(generatedAt: string): string {
 }
 
 /**
- * 致命的失敗（execute() が例外を投げた経路）でサマリへ書ける範囲だけを詰めた FailedRunSummary（§5.5 手順 10）。
- * SnapshotMissingError など、分かっている sourceFailures があれば載せる。message は sanitizeFailureMessage
- * で無害化してから載せる（§4.8）。この経路では previousSnapshot・durationMs が確定しないため null 固定
- * とする（JSON の形を completed と揃え、jq 側の分岐を不要にする。main.ts に固定値を書かせない。
- * §5.5「main.ts は業務規則を持たない」・§8 #36「サマリの書き手は
- * RunCollection 1 か所」）。generatedAt は clock.now() から自前で導出する（main.ts に toJstDateTime を
- * 呼ばせない。§5.5「main.ts は業務規則を持たない」）。
+ * 致命的失敗の経路（execute() が例外を投げた。main.ts 手順 10）で書ける範囲だけを詰めた FailedRunSummary
+ * を組み立てる（§4.8）。main.ts は業務規則を持たないため、確定しない値の既定値・generatedAt の決め方・
+ * error の種類による分岐はすべてここに置く。main.ts は error をそのまま渡すだけで instanceof を書かない
+ * （§8 #46）。
+ * - generatedAt: toJstDateTime(clock.now())
+ * - publishOutcome: error が SnapshotMissingError または ArticlesValidationError なら "skipped"
+ *   （どちらも publish を呼ぶ前に抜けたことが例外の型で確定している）、それ以外は "unknown"（§8 #47）
+ * - sourceFailures: error instanceof SnapshotMissingError ? error.failures を無害化したもの : []
+ *   （publishOutcome の分岐と同じ 1 か所で判定する）
  */
 export function buildFailureSummary(params: {
   readonly clock: Clock;
+  readonly error: unknown;
+  readonly publisherKind: PublisherKind;
   readonly notificationGatewayKind: NotificationGatewayKind;
-  readonly failures: readonly SourceFailure[];
 }): FailedRunSummary {
+  const { error } = params;
+  const sourceFailures =
+    error instanceof SnapshotMissingError ? sanitizeFailures(error.failures) : [];
+  const publishOutcome: PublishOutcomeSummary =
+    error instanceof SnapshotMissingError || error instanceof ArticlesValidationError
+      ? "skipped"
+      : "unknown";
   return {
     kind: "failed",
     generatedAt: toJstDateTime(params.clock.now()),
-    published: false,
+    publishOutcome,
+    publisher: params.publisherKind,
     changed: false,
     previousSnapshot: null,
     fullCrawlCompanyIds: [],
@@ -145,7 +185,8 @@ export function buildFailureSummary(params: {
     created: 0,
     updated: 0,
     dropped: 0,
-    sourceFailures: sanitizeFailures(params.failures),
+    survivingChanges: 0,
+    sourceFailures,
     notificationGateway: params.notificationGatewayKind,
     notificationsSent: 0,
     notificationsFailed: 0,
@@ -164,6 +205,8 @@ export interface RunCollectionDeps {
   readonly companies: readonly Company[];
   /** main.ts が注入した通知ゲートウェイの種別（§4.8。RunSummary.notificationGateway にそのまま載る） */
   readonly notificationGatewayKind: NotificationGatewayKind;
+  /** main.ts が注入した ArticlesPublisher の種別（§4.8。サマリに記録するためだけに使う。§8 #45） */
+  readonly publisherKind: PublisherKind;
   readonly logger: Logger;
 }
 
@@ -180,6 +223,7 @@ export class RunCollection {
   private readonly clock: Clock;
   private readonly companies: readonly Company[];
   private readonly notificationGatewayKind: NotificationGatewayKind;
+  private readonly publisherKind: PublisherKind;
   private readonly logger: Logger;
 
   constructor(deps: RunCollectionDeps) {
@@ -191,6 +235,7 @@ export class RunCollection {
     this.clock = deps.clock;
     this.companies = deps.companies;
     this.notificationGatewayKind = deps.notificationGatewayKind;
+    this.publisherKind = deps.publisherKind;
     this.logger = deps.logger;
   }
 
@@ -224,7 +269,7 @@ export class RunCollection {
     // 手順 4
     const collect = await this.collectArticles.execute({ fullCrawlCompanyIds });
 
-    // 手順 5: 書き出しの安全条件（§8 #29）
+    // 手順 5: 書き出しの安全条件（§8 #29）。LogFields はスカラーのみ（§4.7）なので件数だけ載せる
     if (previous === undefined && collect.failures.length > 0) {
       this.logger.error("refusing to publish", { failures: collect.failures.length });
       throw new SnapshotMissingError(collect.failures);
@@ -238,13 +283,20 @@ export class RunCollection {
       generatedAt,
     });
 
-    // 手順 7: 変化が無ければ書き出さない
+    // 手順 7: 変化が無ければ書き出さない。抜ける前に差分判定側の矛盾（survivingChanges > 0）を検知する（§8 #51）
     if (!diff.changed) {
       this.logger.info("no changes");
+      if (diff.stats.survivingChanges > 0) {
+        this.logger.error("no changes but stats are non-zero", {
+          created: diff.stats.created,
+          updated: diff.stats.updated,
+          survivingChanges: diff.stats.survivingChanges,
+        });
+      }
       return this.buildSummary({
         startedAt,
         generatedAt,
-        published: false,
+        publishOutcome: "skipped",
         previous,
         fullCrawlCompanyIds,
         collect,
@@ -259,6 +311,11 @@ export class RunCollection {
       file: diff.file,
       note: buildCommitMessage(generatedAt),
     });
+    // changed が真なのに publish が no_changes を返した（配信・通知の静かな停止。§8 #41）。dryRun の
+    // Noop は常に no_changes を返す正常経路なので出さない（判定に publisherKind は使わない。§8 #45）
+    if (outcome === "no_changes" && !input.dryRun) {
+      this.logger.error("changed but nothing staged", { articles: diff.file.articles.length });
+    }
 
     // 手順 9: published のときだけ通知する
     const { sent: notificationsSent, failed: notificationsFailed } = await this.notifyIfPublished(
@@ -270,7 +327,7 @@ export class RunCollection {
     return this.buildSummary({
       startedAt,
       generatedAt,
-      published: outcome === "published",
+      publishOutcome: outcome,
       previous,
       fullCrawlCompanyIds,
       collect,
@@ -318,7 +375,7 @@ export class RunCollection {
   private buildSummary(params: {
     readonly startedAt: Date;
     readonly generatedAt: string;
-    readonly published: boolean;
+    readonly publishOutcome: PublishOutcomeSummary;
     readonly previous: ArticlesFile | undefined;
     readonly fullCrawlCompanyIds: ReadonlySet<string>;
     readonly collect: CollectArticlesResult;
@@ -331,7 +388,8 @@ export class RunCollection {
     return {
       kind: "completed",
       generatedAt: params.generatedAt,
-      published: params.published,
+      publishOutcome: params.publishOutcome,
+      publisher: this.publisherKind,
       changed: params.diff.changed,
       previousSnapshot: params.previous !== undefined,
       fullCrawlCompanyIds: [...params.fullCrawlCompanyIds],
@@ -341,6 +399,7 @@ export class RunCollection {
       created: params.diff.stats.created,
       updated: params.diff.stats.updated,
       dropped: params.diff.stats.dropped,
+      survivingChanges: params.diff.stats.survivingChanges,
       sourceFailures: sanitizeFailures(params.collect.failures),
       notificationGateway: this.notificationGatewayKind,
       notificationsSent: params.notificationsSent,

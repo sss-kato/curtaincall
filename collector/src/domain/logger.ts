@@ -1,3 +1,5 @@
+// 参照する § は特記なき限り docs/design/D-02.md
+
 /** ログレベルの並び（重要度の昇順）。ConsoleLogger の出力可否の判定・parseLogLevel の検証元 */
 export const LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -26,9 +28,12 @@ const FORMAT_ERROR_MAX_DEPTH = 5;
  * Error 以外は String(e)。
  * 例: "SourceError: parse failed <- HttpError: 503 https://example.com/news"
  *
- * D-02 §4.7 のコード片への意図的な追加：cause が循環参照・異常に深い連鎖・String() できない値であっても
- * 例外を投げず 1 行に収める（ログ整形自体が失敗して元のエラーが握りつぶされる事態を避けるため）。
- * D-02 側の追随が必要。
+ * §4.7 の formatError（コード片）のとおり：cause が循環参照・異常に深い連鎖・String() できない値
+ * であっても例外を投げず 1 行に収める（連鎖の深さは FORMAT_ERROR_MAX_DEPTH、循環は訪問済み Error の
+ * seen で打ち切り、String() が投げたら "[unprintable]" にする。ログ整形自体が失敗して元のエラーが
+ * 握りつぶされる事態を避けるため）。
+ * D-02 追随: コード片は MAX_CAUSE_DEPTH のみで深さを打ち切り、seen（循環参照対策）を持たない。
+ * 名前と循環対策の差は D-02 側の追随が必要。
  */
 export function formatError(e: unknown): string {
   return formatErrorChain(e, new Set(), 0);
@@ -59,8 +64,8 @@ function isLogLevel(raw: string): raw is LogLevel {
  * undefined）は undefined を返す。main.ts が CURTAINCALL_LOG_LEVEL の検証に使う
  * （`parseLogLevel(process.env.CURTAINCALL_LOG_LEVEL) ?? "info"` の 1 段で済むよう raw は
  * string | undefined を受け付ける）。
- * D-02 §4.9 のコード片への意図的な追加：環境変数の値をそのまま LogLevel として扱わず、ここで検証してから
- * 渡す。D-02 側の追随が必要。
+ * §4.7 の parseLogLevel（コード片）・§4.9 の CURTAINCALL_LOG_LEVEL 行のとおり：環境変数の値を
+ * そのまま LogLevel として扱わず、ここで検証してから渡す。
  */
 export function parseLogLevel(raw: string | undefined): LogLevel | undefined {
   return raw !== undefined && isLogLevel(raw) ? raw : undefined;

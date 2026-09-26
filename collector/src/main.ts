@@ -10,9 +10,9 @@ import { PublishArticles } from "./application/publish-articles.js";
 import {
   buildFailureSummary,
   RunCollection,
-  SnapshotMissingError,
   type CompletedRunSummary,
   type NotificationGatewayKind,
+  type PublisherKind,
   type RunSummary,
 } from "./application/run-collection.js";
 import type { ArticleWriter } from "./domain/article-store.js";
@@ -197,6 +197,19 @@ async function main(): Promise<void> {
     serviceAccount = parsed;
   }
 
+  // CURTAINCALL_DRY_RUN の解釈はここ 1 回だけ行う（§8 #44・#45）。手順 4b の拒否判定と手順 7 の
+  // Noop 差し替えの両方がこの値を参照する（実行の意図は 1 つ。二重解釈を避ける）
+  const isDryRun = process.env.CURTAINCALL_DRY_RUN === "1";
+
+  // 手順 4b：Actions 上での DRY_RUN の誤設定を起動時に拒否する（§8 #44）。ワークフローは DRY_RUN を
+  // 使わないため、Actions 上でこの値が "1" なのは設定の誤りだけである。放置すると書き出し・push・
+  // 通知がすべて Noop に縮退したままジョブが緑で通り、配信も通知も静かに止まる（§6）。
+  if (process.env.GITHUB_ACTIONS === "true" && isDryRun) {
+    logger.error("CURTAINCALL_DRY_RUN must not be set on GitHub Actions");
+    process.exitCode = 1;
+    return;
+  }
+
   // 手順 5（の一部）：通知ゲートウェイの生成。serviceAccount が無ければ Noop（FCM 初期化とは無関係の
   // 経路なので try の外で生成する）。ある場合だけ FirebaseNotificationGateway の生成を try で囲み、
   // cert() / initializeApp の失敗も固定文言だけを出す（message も cause もログに出さない。
@@ -240,13 +253,14 @@ async function main(): Promise<void> {
   const knownCompanyIds = new Set(companies.map((c) => c.id));
 
   // 手順 7：CURTAINCALL_DRY_RUN=1 のときは書き出し・確定・通知を Noop に差し替える
-  // （ArticleReader は ArticlesFileStore のまま。kind は差し替え前の値を保つ）
-  const isDryRun = process.env.CURTAINCALL_DRY_RUN === "1";
+  // （ArticleReader は ArticlesFileStore のまま。kind は差し替え前の値を保つ。isDryRun は手順 4b で求めた値を使う）
   const writer: ArticleWriter = isDryRun ? new NoopArticleWriter(logger) : articlesFileStore;
   const publisher: ArticlesPublisher = isDryRun ? new NoopArticlesPublisher(logger) : gitPublisher;
   const notificationGateway: NotificationGateway = isDryRun
     ? new NoopNotificationGateway(logger)
     : notificationSetup.gateway;
+  // publisherKind はサマリへの記録専用（§4.8。判定には使わない。§8 #45）。差し替えの有無に従う
+  const publisherKind: PublisherKind = isDryRun ? "noop" : "git";
 
   // 手順 8：UseCase と RunCollection の組み立て
   const runCollection = new RunCollection({
@@ -258,6 +272,7 @@ async function main(): Promise<void> {
     clock,
     companies,
     notificationGatewayKind: notificationSetup.kind,
+    publisherKind,
     logger,
   });
 
@@ -267,18 +282,20 @@ async function main(): Promise<void> {
   try {
     summary = await runCollection.execute({
       forceFullCrawl: process.env.CURTAINCALL_FULL_CRAWL === "1",
+      dryRun: isDryRun,
     });
   } catch (e) {
-    // 手順 10（catch のため手順 9 より先に書く）：致命的失敗。サマリに書ける範囲だけを書き、終了コード 1
+    // 手順 10（catch のため手順 9 より先に書く）：致命的失敗。サマリに書ける範囲だけを書き、終了コード 1。
+    // FailedRunSummary の全フィールドの値と error の種類による分岐は buildFailureSummary（application）
+    // が決める。main.ts は error をそのまま渡すだけで instanceof を書かない（§8 #46）
     logger.error("collection failed", { error: formatError(e) });
-    // 分かっている sourceFailures があれば載せる（D-02 §5.5 手順 10）
-    const knownFailures = e instanceof SnapshotMissingError ? e.failures : [];
     await writeSummary(
       summaryStore,
       buildFailureSummary({
         clock,
+        error: e,
+        publisherKind,
         notificationGatewayKind: notificationSetup.kind,
-        failures: knownFailures,
       }),
       logger,
     );
@@ -291,13 +308,14 @@ async function main(): Promise<void> {
   logger.info("done", {
     // 意図的な固定サブセット（§4.8 の RunSummary 全フィールドではなく、運用で確認する頻度が高いものだけを
     // 列挙する。フィールド追加のたびに追随する必要はない）
-    published: summary.published,
+    publishOutcome: summary.publishOutcome,
     changed: summary.changed,
     collected: summary.collected,
     discarded: summary.discarded,
     created: summary.created,
     updated: summary.updated,
     dropped: summary.dropped,
+    survivingChanges: summary.survivingChanges,
     sourceFailures: summary.sourceFailures.length,
     notificationsSent: summary.notificationsSent,
     notificationsFailed: summary.notificationsFailed,

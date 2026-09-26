@@ -115,6 +115,8 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 
 | 4-11 | collector | **`RawArticleShapeSchema`（`application/collect-articles.ts`）を `domain/source.ts` へ寄せるかを検討する。** `RawArticle` の契約をコードで表明できる一方、§5.1 手順 6 は「形の実行時検査は application に置く」と確定している（Source は infrastructure なので型契約を信用しない、という趣旨）。T-47 で当該の自己申告コメントを削除した際、この整理案だけが記録から落ちたため起票する。**採らない判断でもよい**（その場合はこの行に理由を書いて閉じる）（T-47 readability [R-6]） |
 
+| 4-12 | app | **`CupertinoListTile` の 1 行省略を解除する `DefaultTextStyle` 包み（`settings_screen.dart` の `_wrappableText`）を、2 ファイル目が使い始めた時点で `core/ui/` へ寄せる。** 現在 `CupertinoListTile` を使うのは `app/lib` 全体で `settings_screen.dart` だけ（実測）で、S-01・S-02 は `core/ui/article/` の記事セルを使う設計なので 1 例に留まっている。**寄せるときは D-05 §3.2 の `core/ui/` の区分（`status/`・`article/`・`list/`）を増やす必要があるため D-05 の reopen が要る。** 次に `CupertinoListTile` を使う人は別ファイルを書くので `settings_screen.dart` のコメントを読まない＝閾値に達したことに気づく仕組みが無い（T-35 maintainability [R-4]。4-10 と同型） |
+
 
 ---
 

@@ -113,6 +113,8 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 | 4-9 | app | **`commit_saved_changes_use_case_test.dart` に `CommitSavedChangesUseCase(DriftSavedArticleRepository(db))` が 13 箇所重複している。** UseCase が依存を 1 つ増やすと 13 箇所の機械的修正が要る。ファイル末尾に `_useCase(AppDatabase db)` を置き、ラッパを使う 4 テストだけ明示構築する形にする |
 | 4-10 | app | **`AsyncValue` の「エラーでなかった → エラーになった」判定の写しが 2 箇所にある**（`features/articles/presentation/list_status.dart` の `shouldLogCountError`・`features/settings/presentation/settings_screen.dart` の `_logIfNewlyErrored`）。**3 例目が現れた時点で `core/ui/status/` にジェネリック版（`AsyncValue<T>`）を置き、D-04 §7 / D-05 §7 の直接テスト列挙に追加する。** 2 例では移さない理由：既存関数が `AsyncValue<int>` に型固定でジェネリック化が D-04 §7 のテスト一覧に波及する／D-05 §3.2 が `core/ui/` を Widget の置き場（`status/`・`article/`・`list/`）に限定している／新しい共有純粋関数の直接テストは「対象は設計書 §7 に列挙したものに限る」に触れる。**現状この判断は複製側のコメントにしか無く、`list_status.dart` 側からは写しの存在が見えない**（T-35 maintainability [R-4]。3-12 と同型） |
 
+| 4-11 | collector | **`RawArticleShapeSchema`（`application/collect-articles.ts`）を `domain/source.ts` へ寄せるかを検討する。** `RawArticle` の契約をコードで表明できる一方、§5.1 手順 6 は「形の実行時検査は application に置く」と確定している（Source は infrastructure なので型契約を信用しない、という趣旨）。T-47 で当該の自己申告コメントを削除した際、この整理案だけが記録から落ちたため起票する。**採らない判断でもよい**（その場合はこの行に理由を書いて閉じる）（T-47 readability [R-6]） |
+
 
 ---
 

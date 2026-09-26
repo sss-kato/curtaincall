@@ -37,6 +37,8 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 
 | 1-20 | §5.5 手順 5・§6 | **`main.ts` 手順 5 の `logger.error("failed to initialize FCM ...", { errorName })` の `errorName` フィールドが §5.5 手順 5・§6 に無い。** 直前に出るゲートウェイ側の 3 つの `warn` が切り分け用の一次情報で、`warn` が無ければ想定外の例外という読み方になる（実装のコメントがこの読み方を記録している）。フィールドを経路表に加える（T-47 で実装側の自己申告コメントを外せなかった 4 件のうちの 1 件。残り 3 件は 1-1・1-2・1-4） |
 
+| 1-21 | §4.7・§5.1 手順 6・§4.2 | **設計書のコード片・文言と実装の文字列が食い違っている箇所が 3 件。** いずれも挙動・分岐は一致しており、文言だけの差。(a) §4.7 のコード片は `const MAX_CAUSE_DEPTH = 5;` だが実装は **`FORMAT_ERROR_MAX_DEPTH`**（値 5・挙動同一）。(b) §5.1 手順 6 は `message: "source did not return an array"` だが実装は `"fetch() did not return an array"`。非配列時の `warn` 文言（実装は `"source returned non-array"`）は §5.1 に規定が無い。(c) §4.2 のコード片は `` `year out of range: ${year}` `` だが実装は `` `out of range: ${instant.toISOString()}` ``。**`ISO8601` を含む実装側の文言は診断上有用なので、設計書を実装に合わせる方向を推奨**（T-47 spec [R-2][R-3]） |
+
 ### 開発者の承認が要る（CLAUDE.md / 要件書の変更を伴う）
 
 | # | 内容 |

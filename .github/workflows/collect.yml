@@ -105,7 +105,7 @@ jobs:
             "$S" >> "$GITHUB_STEP_SUMMARY" || true
       - name: Pages 用にアップロード
         if: ${{ !cancelled() && steps.summary.outputs.published != 'false' }} # true と unknown で行う（安全側。前回と同じ内容の再デプロイは無害）
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: data # data/ をサイトのルートとして公開（D-01 §4.7）
       - name: 情報源の失敗を検知（R-2）

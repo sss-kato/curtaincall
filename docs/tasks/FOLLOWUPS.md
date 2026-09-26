@@ -33,6 +33,8 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 | 1-17 | §5.6（jq） | **外部サイト由来の `message` を `$GITHUB_STEP_SUMMARY` に地の文として埋めている。** Markdown としてレンダリングされるため、`#` 見出し・リンクを含むと読み手を誤誘導する体裁を作れる（raw HTML と `javascript:` は GitHub 側でサニタイズされるので影響は表示上のみ）。可変部分をコードスパンで囲む（T-46 security [R-3]） |
 | 1-18 | §4.8・D-01 §3.2 | **コードポイント単位の切り詰めが `run-collection.ts` と `sanitize-git-output.ts` に素の式で重複している。** §8 #55 は「単位を揃える」決定であって実装の複写までは求めていない。片方だけ将来書き換えられると #55 が守ろうとした一致が崩れる。`domain/text.ts` に `truncateCodePoints(s, max)` を追加して両方から呼ぶ。**D-01 §3.2 が `text.ts` の公開物を `normalizeTitle` / `foldText` / `truncateUtf16` と列挙しているため、D-01 側への 1 行追随が要る**（T-46 architecture [R-2]） |
 
+| 1-19 | §5.6（jq） | **`S=.run-summary.json` の 1 文字変数名を `SUMMARY_JSON` にする。** 40 行超の `run:` ブロックで `"$S"` が 8 回出るのに名前から対象が読めない。§5.6 の YAML にそのまま書かれているため実装側の裁量では直せない（T-46 readability [R-8]） |
+
 ### 開発者の承認が要る（CLAUDE.md / 要件書の変更を伴う）
 
 | # | 内容 |

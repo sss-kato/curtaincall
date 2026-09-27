@@ -77,33 +77,44 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 
 ## 3. D-05（app 機能設計）reopen 時
 
+**3-1〜3-25 のうち 22 件は 2026-09-27 に D-05 へ反映済み**（`✅` 印）。§9 に **Q-1 が 1 件**残る（S-03 §7.6 と E-18 の両立。**画面定義書の判断が要るため開発者確認待ち**）。§10 に新タスク **T-S**（URL 検証の `userInfo`）を追加。
+
+**誤配の訂正（2026-09-27）**：**3-13・3-14・3-16 は D-05 ではなく D-04 の節を指していました**（§5.4.1・§5.3・§5.4.3）。本来 §2 に置くべき項目です（`⚠` 印）。D-05 の reflection では編集できないため、**D-05 §8.1 の D-04 宛の申し送りに変換済み**。次に D-04 を reopen するときに処理します。3-15 も本体は D-04（§8 #66・§5.3）で、D-05 側で書ける範囲（§6 の経路と切り分け手段）だけ反映しました。
+
+**記述の誤りの訂正（2026-09-27。いずれも司令塔が Flutter 3.47.4 の SDK で実測）**：
+
+- **3-19 の「`_maxLayoutCycles`（10）で `FlutterError`」は不正確**。実際は `_maxLayoutCyclesPerChild = 10`（`rendering/viewport.dart`:1685）**× Sliver の個数**（同 1719）。**D-05 §5.11.5・§6・§7 の 3 箇所が同じ誤りを持っていた**ので訂正済み
+- **3-19 の「§7 に無い `RenderProxySliver` のレイアウト契約が 1 項目混入している」は逆で、§7 側の欠落**。`_ExtentCompensatingSliver` は `RenderProxySliver` を継承し子が nullable なので、この契約は実装が実際に依存している（`rendering/proxy_sliver.dart`:61-64）。**8 項目 → 9 項目**になった（`assert(scrollOffsetCorrection != 0.0)` も 8 項目目として追加）
+- **3-22 は `stackTrace` 側だけを挙げていたが、`error` 側も同じ機会に直す必要があった**（D-04 §8 #75 で `releaseSafeError` が規定された）。§4.6（2 箇所）・§5.1.4・§5.5・§5.8・§5.9（3 箇所）・§5.10 の**計 8 箇所**を修正
+- **3-12 の前提（D-04 2-6 の分離後は `DelegatingArticleSyncRepository` が不要になる）は不正確**。同ヘルパは `SyncArticlesUseCase` の `group('保存の失敗')` でも使うため分離後も残る
+
 | # | 節 | 内容 |
 |---|---|---|
-| 3-1 | §7 | 擬似コード `expect(() => …)` は async で成立しない。`await expectLater(...)` に直す |
-| 3-2 | §8 #36 | 「12 経路」と §7 の 7 行の粒度が合わない |
-| 3-3 | §7 `group('URL 検証')` | **入力列挙を更新する。** `javascript://example.com/…`（host あり非 http）と `ftp://example.com/a` を足す。**この 2 件が無いとスキーム判定を削除してもテストが全緑**（既存 5 件はすべて `host` が空で弾かれるため） |
-| 3-4 | §5.3 手順 1 | `OpenArticleUseCase` の URL 検証が `userInfo` を見ていないため、改竄された `articles.json` の `https://takarazuka.jp@evil.com/x` が検証を通る。`SFSafariViewController` は実ドメインを表示するので詐称の実効性は低く、リポジトリ侵害が前提。`uri.userInfo.isNotEmpty` を足すかを検討 |
-| 3-5 | §5.7 / `article_opener.dart` | `ArticleOpener.closeInAppBrowser` の「例外を投げない」契約が IF の doc に無い。§5.7 はこの契約を前提にしている（`_handle` に try が無い）ので、将来の実装が投げると**通知タップが無言で失われる** |
-| 3-6 | §5.8・§6 | `ToggleUnreadFilterUseCase` の read-modify-write が非アトミック。手順どおりだが連打で取りこぼす窓（drift の 1 往復）がある。§6 に「未読フィルタの連打 → 最後のタップが反映される」を追記するか、`SettingsRepository` に反転メソッドを足す |
-| 3-7 | §5.5 | `ToggleSavedUseCase` も `isSaved` → `remove`/`save` が非原子。§6 の「2 回目は元に戻る」は**呼び出し側が逐次化している前提でのみ成立する**。→ T-33 の注意（§5 参照） |
-| 3-8 | §5.5 | 「`unsave` と `resaveAt` の排他は `SavedListController` が保証する不変条件」であることを明記し、重複時の解消規則も 1 文加える（「同じ id が両方に入った場合は手順 1 の対象から除き（再保存を優先）、`committed` にも載せない」）。**実装は既にこの規則を持っているが、設計書側に記述が無くコードだけが規則を持つ状態** |
-| 3-9 | §5.5 か §8 | 「`await` を跨いで反復するコレクション引数はコピーする」という規則を残す（現在 `Set.of`/`Map.of` の防御的コピーを行うのは `CommitSavedChangesUseCase` だけで、意図的な差であることが示されていない） |
-| 3-10 | §7 | 「application 層のテストが具象例外型（`SqliteException`）を見てよい根拠」を 1 行足す。CLAUDE.md が個別クラスのユニットテストを禁じているため、「drift の例外を包まずに投げる」という事実を infrastructure のテストに置く逃げ道が無い |
-| 3-11 | §7 | テストヘルパの表に **`db_rows.dart`** を足す（T-30 で新設、T-32 で `readStateRow` を追加） |
-| 3-12 | §7 | テストヘルパの表に「**失敗注入ラッパは対象 IF ごとにテストファイル内に置く。同じ IF で 2 ファイル目が現れたら `test/helpers/` に寄せる**」の 1 行を足す。Dart には委譲を自動生成する仕組みが無く、共通化すると `noSuchMethod` か mockito 依存を招くため。現状 3 つ（`_ConflictInjectingApplyFeedRepository` / `_ThrowingSettingsRepository` / `_FailingSavedArticleRepository`）が並存しており、**この判断が差分にもドキュメントにも残っていないため 4 つ目が現れても誰も気付かない** |
-| 3-13 | §5.4.1 | 「状態表示の型（`ListStatus`・`FullView`）は **3 画面**が使うため」は実態と食い違う。使うのは記事一覧を持つ **2 画面（S-01・S-02）**だけ |
-| 3-14 | §5.3 | 起動時手順の分割基準が無い。`AppLifecycleSync` が起動時取得・通知許可・購読同期・件数監視の 4 系統を 1 State に抱えている。「5 系統目に増える／`initState` の try が 2 つ目の副作用を持つ場合は分割する」といった閾値を足す |
-| 3-15 | §8 #66 | 滞留ログが「初回読み出し」だけを対象にしている。A-12（再試行）後の再購読が値もエラーも返さずに止まると、`retryRequested == true` × `isLoading` で pending が続き、**E-20（再試行ボタンの無い状態）から抜けられずログも残らない**（回復手段はアプリ再起動のみ）。「再購読の滞留も同じ遅延でログする」を検討 |
-| 3-16 | §5.4.3 | 判定表に行 ID 列（L-1〜L-10。廃止時は行を残す＝画面定義書の ID 運用と同じ）を足す。現在は行番号が「表の位置」「実装コメント 4 箇所」「テスト名 13 個」の 3 か所に**位置依存**で写されており、表の中ほどに 1 行増えると番号の付け替えが広範に及ぶ。**付け替え漏れがあってもテストは通るため対応づけが静かに壊れる** |
-| 3-17 | §8.1 | `resolveAnchorId` の行が実態と違う。「走査を『直後の 1 件』から『後方へ順に走査』に直す分だけ変わる」と書かれているが、**T-28 の実装は最初から後方走査だった**（`5413106:app/lib/core/ui/list/anchored_list_view.dart`）。T-41 の切り出しは振る舞い等価。当該記述を削るか「既に後方走査で実装済み」に直す |
-| 3-18 | §3.1 | 依存表の `core/ui/list`（`AnchoredListView`・`AnchoredListController`）の行が「Flutter SDK と `dart:async` のみ」のままで、T-Q で追加された `anchor_resolution.dart` の import が文言上含まれていない |
-| 3-19 | §5.11.6 | **`anchored_list_view.dart` の library doc が §7 の 8 項目のうち 6 項目しか列挙していない。** 欠落は (1) `Scrollable._shouldUpdatePosition` は `ScrollController` 同士の差し替えで false を返し `ScrollPosition` を再利用する、(2) `scrollOffsetCorrection` を返すと `RenderViewport` が同一フレームで再レイアウトし、繰り返すと `_maxLayoutCycles`(10) で `FlutterError`、(3) `SchedulerBinding.addPostFrameCallback` は自分ではフレームを要求しない。逆に §7 に無い `RenderProxySliver` のレイアウト契約が 1 項目混入している。**§5.11.6 はこの library doc を「自動テストが無いため唯一の手掛かり」と定めている**ので実質的な欠落。**追記する前に必ず Flutter SDK の一次資料で各項目を確認すること** |
-| 3-20 | §5.11.4 手順 0・§6 | **「据え置きと再試行」が未実装。** `_pendingItemsChanged`・`_pendingFrames`・`_maxPendingFrames`(2)・`_requestScrollToTopOnLayout()` が実装に無く、`_updateAnchor` は `_laidOutPosition == null` で早期 return するだけ。`addPostFrameCallback` による次フレームのやり直しも、諦め時の `_resetAnchorToFirst()` + `jumpTo(0)` も無い。**§6 の「`items` の変更と `ScrollController` の差し替えが同一フレームで起きた」行が未充足。** T-33 の完了条件に含めるか独立タスクを起こす |
-| 3-21 | §3.1 | **依存表の `settings/presentation` 行に `notifications/domain`（`PushPermissionStatus`）が無い。** §3.1 は「表に無い組み合わせは import しない」と宣言しているが、**§4.6 が委譲 Provider を `Future<PushPermissionStatus>` と定義し（711 行）、§5.9 が E-09 の表示条件を「`authorized` 以外」と定めている**（1509 行）ため、`settings/presentation` が enum を名指しすることは設計上避けられない。表の記載漏れとして 1 行追記する。**真偽値の委譲 Provider を足して回避する案は §4.6 の戻り値の型と矛盾するので採らない**（T-35 architecture [R-1]。司令塔が §4.6・§5.9 を直接読んで確認） |
-| 3-22 | §5.9・§5.10 | **コード例が `logger.w(..., stackTrace: s)` になっており、上位方針の D-04 §4.9（release ではスタックトレースを出さない）を取りこぼしている。** 実装側の慣行は `releaseSafeStackTrace(s)` で、既存 3 箇所（`app_lifecycle_sync.dart` ×2・`notification_tap_providers.dart`）がこれを通している。**コード例をそのまま写すと後続タスクが同じ差分を再生産する**（T-35 は実際に 6 箇所で再生産した）。コード例を `releaseSafeStackTrace(s)` に直す（T-35 security [R-1]） |
-| 3-23 | §5.9 | **`CupertinoListTile` の指定が S-03 §7.6「省略はしない・折り返す」と両立しない。** Flutter SDK の `list_tile.dart`（292-293・351-352・360 行）は `title` / `subtitle` / `additionalInfo` に `maxLines: 1, overflow: TextOverflow.ellipsis` を**ハードコード**しており、渡した `Text` は必ず 1 行に省略される。**E-09 の 2 行目は既定の文字サイズでも末尾が切れ、通知許可の手順が読めない**。§5.9 に「`title` / `subtitle` は `maxLines` をリセットする `DefaultTextStyle` でくるむ」と明記する（T-35 spec [R-1]。司令塔が Flutter SDK を直接読んで確認） |
-| 3-24 | §10（新設 §10.3） | **T-O（設定画面）の目視項目が無い。** T-M には §10.1、T-N には §10.2 があり完了条件がそこを参照しているのに、T-O の完了条件は 1 行だけ。**本画面は §7 により自動テストを持たない**ため、目視でしか確認できない振る舞い 4 件がどこにも記録されていない（担保は実装コメントのみ）。§10.3 を新設して次を列挙し、§10 T-O の完了条件を §10.3 への参照に差し替える：1 初回表示でセクションヘッダがナビゲーションバーに隠れない（**第 2 周に実際に退行した経路**）／2 通知トグルの連続タップが無反応にならず最後の状態に落ち着く（S-03 §7.2・§8 #4）／3 Dynamic Type 最大でラベル・補足行が省略されず折り返す（バージョン行の `additionalInfo` はオーバーフローする既知の申し送り＝3-23）／4 一括クリアの確認〜完了の間 E-15 の押下ハイライトが保持され再タップできない／5 Chrome を削除した状態で復帰すると E-13 が非活性表示になる（T-35 maintainability [R-2]） |
-| 3-25 | §6・§5.9 | **§6 の異常系・競合の表に「ブラウザ選択（S-03/A-03）を連打した」の行が無い**（「通知トグルを連打」の行はある＝記録漏れ）。`SelectBrowserUseCase` は `isChromeAvailable()`（platform channel）の往復を挟むため、`await` せずに 2 回呼ぶと**後発のタップが先に確定しうる**。実装（`settings_screen.dart` の `_selectingBrowser`・`_queuedBrowserChoice`）は実行中の最新の意図だけを保持し完了後に 1 回再実行する（latest-wins）。§5.9 の E-11〜E-13 の記述にもこの形を 1 文足す。担保は 3-24 の §10.3 の目視項目（T-35 maintainability [R-3]） |
+| ✅ 3-1 | §7 | 擬似コード `expect(() => …)` は async で成立しない。`await expectLater(...)` に直す |
+| ✅ 3-2 | §8 #36 | 「12 経路」と §7 の 7 行の粒度が合わない |
+| ✅ 3-3 | §7 `group('URL 検証')` | **入力列挙を更新する。** `javascript://example.com/…`（host あり非 http）と `ftp://example.com/a` を足す。**この 2 件が無いとスキーム判定を削除してもテストが全緑**（既存 5 件はすべて `host` が空で弾かれるため） |
+| ✅ 3-4 | §5.3 手順 1 | `OpenArticleUseCase` の URL 検証が `userInfo` を見ていないため、改竄された `articles.json` の `https://takarazuka.jp@evil.com/x` が検証を通る。`SFSafariViewController` は実ドメインを表示するので詐称の実効性は低く、リポジトリ侵害が前提。`uri.userInfo.isNotEmpty` を足すかを検討 |
+| ✅ 3-5 | §5.7 / `article_opener.dart` | `ArticleOpener.closeInAppBrowser` の「例外を投げない」契約が IF の doc に無い。§5.7 はこの契約を前提にしている（`_handle` に try が無い）ので、将来の実装が投げると**通知タップが無言で失われる** |
+| ✅ 3-6 | §5.8・§6 | `ToggleUnreadFilterUseCase` の read-modify-write が非アトミック。手順どおりだが連打で取りこぼす窓（drift の 1 往復）がある。§6 に「未読フィルタの連打 → 最後のタップが反映される」を追記するか、`SettingsRepository` に反転メソッドを足す |
+| ✅ 3-7 | §5.5 | `ToggleSavedUseCase` も `isSaved` → `remove`/`save` が非原子。§6 の「2 回目は元に戻る」は**呼び出し側が逐次化している前提でのみ成立する**。→ T-33 の注意（§5 参照） |
+| ✅ 3-8 | §5.5 | 「`unsave` と `resaveAt` の排他は `SavedListController` が保証する不変条件」であることを明記し、重複時の解消規則も 1 文加える（「同じ id が両方に入った場合は手順 1 の対象から除き（再保存を優先）、`committed` にも載せない」）。**実装は既にこの規則を持っているが、設計書側に記述が無くコードだけが規則を持つ状態** |
+| ✅ 3-9 | §5.5 か §8 | 「`await` を跨いで反復するコレクション引数はコピーする」という規則を残す（現在 `Set.of`/`Map.of` の防御的コピーを行うのは `CommitSavedChangesUseCase` だけで、意図的な差であることが示されていない） |
+| ✅ 3-10 | §7 | 「application 層のテストが具象例外型（`SqliteException`）を見てよい根拠」を 1 行足す。CLAUDE.md が個別クラスのユニットテストを禁じているため、「drift の例外を包まずに投げる」という事実を infrastructure のテストに置く逃げ道が無い |
+| ✅ 3-11 | §7 | テストヘルパの表に **`db_rows.dart`** を足す（T-30 で新設、T-32 で `readStateRow` を追加） |
+| ✅ 3-12 | §7 | テストヘルパの表に「**失敗注入ラッパは対象 IF ごとにテストファイル内に置く。同じ IF で 2 ファイル目が現れたら `test/helpers/` に寄せる**」の 1 行を足す。Dart には委譲を自動生成する仕組みが無く、共通化すると `noSuchMethod` か mockito 依存を招くため。現状 3 つ（`_ConflictInjectingApplyFeedRepository` / `_ThrowingSettingsRepository` / `_FailingSavedArticleRepository`）が並存しており、**この判断が差分にもドキュメントにも残っていないため 4 つ目が現れても誰も気付かない** |
+| ⚠ 3-13 → D-04 | §5.4.1 | 「状態表示の型（`ListStatus`・`FullView`）は **3 画面**が使うため」は実態と食い違う。使うのは記事一覧を持つ **2 画面（S-01・S-02）**だけ |
+| ⚠ 3-14 → D-04 | §5.3 | 起動時手順の分割基準が無い。`AppLifecycleSync` が起動時取得・通知許可・購読同期・件数監視の 4 系統を 1 State に抱えている。「5 系統目に増える／`initState` の try が 2 つ目の副作用を持つ場合は分割する」といった閾値を足す |
+| ✅ 3-15 | §8 #66 | 滞留ログが「初回読み出し」だけを対象にしている。A-12（再試行）後の再購読が値もエラーも返さずに止まると、`retryRequested == true` × `isLoading` で pending が続き、**E-20（再試行ボタンの無い状態）から抜けられずログも残らない**（回復手段はアプリ再起動のみ）。「再購読の滞留も同じ遅延でログする」を検討 |
+| ⚠ 3-16 → D-04 | §5.4.3 | 判定表に行 ID 列（L-1〜L-10。廃止時は行を残す＝画面定義書の ID 運用と同じ）を足す。現在は行番号が「表の位置」「実装コメント 4 箇所」「テスト名 13 個」の 3 か所に**位置依存**で写されており、表の中ほどに 1 行増えると番号の付け替えが広範に及ぶ。**付け替え漏れがあってもテストは通るため対応づけが静かに壊れる** |
+| ✅ 3-17 | §8.1 | `resolveAnchorId` の行が実態と違う。「走査を『直後の 1 件』から『後方へ順に走査』に直す分だけ変わる」と書かれているが、**T-28 の実装は最初から後方走査だった**（`5413106:app/lib/core/ui/list/anchored_list_view.dart`）。T-41 の切り出しは振る舞い等価。当該記述を削るか「既に後方走査で実装済み」に直す |
+| ✅ 3-18 | §3.1 | 依存表の `core/ui/list`（`AnchoredListView`・`AnchoredListController`）の行が「Flutter SDK と `dart:async` のみ」のままで、T-Q で追加された `anchor_resolution.dart` の import が文言上含まれていない |
+| ✅ 3-19 | §5.11.6 | **`anchored_list_view.dart` の library doc が §7 の 8 項目のうち 6 項目しか列挙していない。** 欠落は (1) `Scrollable._shouldUpdatePosition` は `ScrollController` 同士の差し替えで false を返し `ScrollPosition` を再利用する、(2) `scrollOffsetCorrection` を返すと `RenderViewport` が同一フレームで再レイアウトし、繰り返すと `_maxLayoutCycles`(10) で `FlutterError`、(3) `SchedulerBinding.addPostFrameCallback` は自分ではフレームを要求しない。逆に §7 に無い `RenderProxySliver` のレイアウト契約が 1 項目混入している。**§5.11.6 はこの library doc を「自動テストが無いため唯一の手掛かり」と定めている**ので実質的な欠落。**追記する前に必ず Flutter SDK の一次資料で各項目を確認すること** |
+| ✅ 3-20 | §5.11.4 手順 0・§6 | **「据え置きと再試行」が未実装。** `_pendingItemsChanged`・`_pendingFrames`・`_maxPendingFrames`(2)・`_requestScrollToTopOnLayout()` が実装に無く、`_updateAnchor` は `_laidOutPosition == null` で早期 return するだけ。`addPostFrameCallback` による次フレームのやり直しも、諦め時の `_resetAnchorToFirst()` + `jumpTo(0)` も無い。**§6 の「`items` の変更と `ScrollController` の差し替えが同一フレームで起きた」行が未充足。** T-33 の完了条件に含めるか独立タスクを起こす |
+| ✅ 3-21 | §3.1 | **依存表の `settings/presentation` 行に `notifications/domain`（`PushPermissionStatus`）が無い。** §3.1 は「表に無い組み合わせは import しない」と宣言しているが、**§4.6 が委譲 Provider を `Future<PushPermissionStatus>` と定義し（711 行）、§5.9 が E-09 の表示条件を「`authorized` 以外」と定めている**（1509 行）ため、`settings/presentation` が enum を名指しすることは設計上避けられない。表の記載漏れとして 1 行追記する。**真偽値の委譲 Provider を足して回避する案は §4.6 の戻り値の型と矛盾するので採らない**（T-35 architecture [R-1]。司令塔が §4.6・§5.9 を直接読んで確認） |
+| ✅ 3-22 | §5.9・§5.10 | **コード例が `logger.w(..., stackTrace: s)` になっており、上位方針の D-04 §4.9（release ではスタックトレースを出さない）を取りこぼしている。** 実装側の慣行は `releaseSafeStackTrace(s)` で、既存 3 箇所（`app_lifecycle_sync.dart` ×2・`notification_tap_providers.dart`）がこれを通している。**コード例をそのまま写すと後続タスクが同じ差分を再生産する**（T-35 は実際に 6 箇所で再生産した）。コード例を `releaseSafeStackTrace(s)` に直す（T-35 security [R-1]） |
+| ✅ 3-23 | §5.9 | **`CupertinoListTile` の指定が S-03 §7.6「省略はしない・折り返す」と両立しない。** Flutter SDK の `list_tile.dart`（292-293・351-352・360 行）は `title` / `subtitle` / `additionalInfo` に `maxLines: 1, overflow: TextOverflow.ellipsis` を**ハードコード**しており、渡した `Text` は必ず 1 行に省略される。**E-09 の 2 行目は既定の文字サイズでも末尾が切れ、通知許可の手順が読めない**。§5.9 に「`title` / `subtitle` は `maxLines` をリセットする `DefaultTextStyle` でくるむ」と明記する（T-35 spec [R-1]。司令塔が Flutter SDK を直接読んで確認） |
+| ✅ 3-24 | §10（新設 §10.3） | **T-O（設定画面）の目視項目が無い。** T-M には §10.1、T-N には §10.2 があり完了条件がそこを参照しているのに、T-O の完了条件は 1 行だけ。**本画面は §7 により自動テストを持たない**ため、目視でしか確認できない振る舞い 4 件がどこにも記録されていない（担保は実装コメントのみ）。§10.3 を新設して次を列挙し、§10 T-O の完了条件を §10.3 への参照に差し替える：1 初回表示でセクションヘッダがナビゲーションバーに隠れない（**第 2 周に実際に退行した経路**）／2 通知トグルの連続タップが無反応にならず最後の状態に落ち着く（S-03 §7.2・§8 #4）／3 Dynamic Type 最大でラベル・補足行が省略されず折り返す（バージョン行の `additionalInfo` はオーバーフローする既知の申し送り＝3-23）／4 一括クリアの確認〜完了の間 E-15 の押下ハイライトが保持され再タップできない／5 Chrome を削除した状態で復帰すると E-13 が非活性表示になる（T-35 maintainability [R-2]） |
+| ✅ 3-25 | §6・§5.9 | **§6 の異常系・競合の表に「ブラウザ選択（S-03/A-03）を連打した」の行が無い**（「通知トグルを連打」の行はある＝記録漏れ）。`SelectBrowserUseCase` は `isChromeAvailable()`（platform channel）の往復を挟むため、`await` せずに 2 回呼ぶと**後発のタップが先に確定しうる**。実装（`settings_screen.dart` の `_selectingBrowser`・`_queuedBrowserChoice`）は実行中の最新の意図だけを保持し完了後に 1 回再実行する（latest-wins）。§5.9 の E-11〜E-13 の記述にもこの形を 1 文足す。担保は 3-24 の §10.3 の目視項目（T-35 maintainability [R-3]） |
 
 
 ---
@@ -131,6 +142,9 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 
 | 4-14 | collector | **`sanitize-git-output.ts` を D-02 §4.10 の改訂（#62）に追随させる。** マスク対象を `AUTH_SCHEMES = ["basic", "bearer", "token"] as const` として定数化し、`AUTH_SCHEMES.join("\|")` を `(?:…)` に埋めて `EXTRAHEADER_AUTH_PATTERN` を組み立てる。**`SEP` と tempered greedy token（`(?!authorization${SEP}*:)`）は一字も変えないこと**（崩すと #59 が塞いだ漏洩が再発する）。§7.3 の 3 ケース（`token` スキーム／大小文字 `TOKEN`／スキーム語なしの `AUTHORIZATION: <値>` は変化しない）も同時に追加し、**規則表とテストを同じコミットに入れる**（D-02 §8.1 実装行 (iv)） |
 | 4-15 | app | **新タスク T-F5 の起票が必要**（D-04 §10 に追加された）。`NotificationTap` の identity 化（#70）・`UnsupportedSchemaReader` の切り出し（#71）・`SyncSuppressionCheck` の移動（#72）・`SyncSuppressionCheckFailed` イベント（#73）・`releaseSafeError` の一括適用（#75）。**T-33 の着手前提**で、T-40（`done`）の後・T-33 / T-34 の前。`app_lifecycle_sync.dart`・`notification_tap_providers.dart` を改修するため **T-F3 とは並行不可**。**D-04 が `approved` になってから `/pm plan` で起票する** |
+
+| 4-16 | app | **新タスク T-S の起票が必要**（D-05 §10 に追加された）。`OpenArticleUseCase` の URL 検証に `uri.userInfo.isNotEmpty` の条件 (d) を足し、`https://takarazuka.jp@evil.com/x` の回帰テストを追加する（D-05 §5.3 手順 1・§8 #48）。`browser/application` とテストのみで **T-M / T-N と並行可**。**D-05 が `approved` になってから `/pm plan` で起票する** |
+| 4-17 | app | **T-33.md・T-35.md の完了条件の追補が必要**（D-05 §8.1 の pm 宛）。T-33 には (a) §5.11.4 手順 0「据え置きと再試行」の実装、(b) `anchored_list_view.dart` の library doc を §7 の **9 項目**に揃える、(c) `_togglingFilter`（未読フィルタ）と `Set<String> _togglingIds`（星）の連打ガードを足す。**T-35 は `done` なので §10.3 の目視 6 項目は後追い確認**になる（§10.3 は D-05 で新設済み） |
 
 
 ---

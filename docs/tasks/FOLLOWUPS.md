@@ -53,19 +53,25 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 
 ## 2. D-04（app 基盤設計）reopen 時
 
+**2-1〜2-11 は 2026-09-27 に D-04 へ反映済み**（`✅` 印）。§9 の未決定事項は 0 件。新設された決定は §8 **#70〜#75**。
+
+- **2-1 は案 (b)（`NotificationTap.==` を identity に戻す）を採用**（#70）。欠陥の原因は「1 回のタップ（出来事）に値としての等価性を与えたこと」そのもので、型を直せば `NotificationTap` を運ぶあらゆる経路で再発しない。案 (a)（連番）は `notificationTapStreamProvider` の型が変わり D-05 §4.6・§5.7 の連動改訂が要るため却下、案 (c) は画面定義書の所有権の越境のため却下
+- 2-6（ISP 分離）・2-7（typedef の置き場）・2-9（抑止判定の失敗を `events` で通知）・2-11（`releaseSafeError`）は**採用**（#71〜#73・#75）
+- **2-8（`Future<SyncResult?>` への改訂）は採らず**、条件付きで先送り（#74。抑止理由が 2 つ目になった時点で広げる）
+
 | # | 節 | 内容 |
 |---|---|---|
-| 2-1 | §5.3 / `NotificationTap` | **【最優先・T-33 の着手前に決着が必要】`NotificationTap.==` が `companyId` だけなので、同じ団体の通知を続けてタップすると 2 回目以降が Riverpod の `updateShouldNotify`（`previous != next`）に握りつぶされる。** **Riverpod 3.0.3 で再現確認済み**（`toho, toho, shiki, shiki, toho` を流すと `[toho, shiki, toho]` しか届かない）。D-05 §6 は「通知が連続して届き連打された → **各回**タブ選択・先頭スクロール」と定めており食い違う。対処案：(a) 連番を持たせる（`(int seq, NotificationTap tap)` を流す）、(b) `==` を identity に戻す、(c) §6 を「同一団体の連続タップは 1 回に畳む」と改める |
-| 2-2 | §5.3 | `events` 契約文「SyncStarted が流れた実行には必ず SyncCompleted が 1 回流れる」は dispose 中の実行で成立しない。「dispose() されていない限り」を足す |
-| 2-3 | §5.2.1 | 「失敗時」の「例外」に **`Error` も含む**ことを明記する。drift は close 済み DB に `StateError` を投げるため、実装は `on Object` で受けている |
-| 2-4 | §6 | 「抑止判定の完了前に dispose()」の行は false 解決時（`SyncFailed(timeout)`）しか書いていない。true 解決時は手順 3 (a) が先に `SyncFailed(unsupportedSchema, suppressed: true)` を返す。両方を書き分け、§7 `group('dispose')` に 1 ケース追記 |
-| 2-5 | §3.2・§7 | `test/helpers/` の表に 2 行を追記（T-40 で新設したが未記載）：`settle.dart` / `delegating_article_sync_repository.dart` |
-| 2-6 | §5.2.1 | **ISP 違反。** `SyncSuppressionPolicy` は `unsupportedSchemaVersion()` の 1 メソッドしか使わないのに 6 メソッドの `ArticleSyncRepository` に依存している。`UnsupportedSchemaReader` 等への分離を検討（分離できればテストの `DelegatingArticleSyncRepository` も不要になる） |
-| 2-7 | §8 #33 | `SyncSuppressionCheck` typedef の置き場が `sync_suppression_policy.dart`（具象と同居）で、`SyncExecutor`（coordinator 側に定義）と非対称 |
-| 2-8 | §5.2.1 | 抑止理由が 2 つ目になると `Future<bool>` の契約・Coordinator の固定リテラル・DI・全テストに波及する。`Future<SyncResult?>`（null = 抑止しない）への改訂を検討 |
-| 2-9 | §5.3 | `SyncCoordinator` が Logger を持たないため、**抑止判定ロジック自身の欠陥（TypeError 等）では `execute` が正常成功し、抑止が恒久的に効かない状態がログにも結果にも現れない**（無症状）。診断を残すには D-04 の改訂が要る |
-| 2-11 | §4.9 | **`logger.w(..., error: e)` の `error` 側に DB ファイルの絶対パス（iOS サンドボックスの UUID）が載りうる。** §4.9 は「例外の型とメッセージのみ」として `error:` の出力を許容しているが、drift の `SqliteException.toString()` は失敗した DB ファイルの絶対パスを含むことがある。release でも `Level.warning` は出力されるため `os_log`（Console.app / sysdiagnose）から読める。`releaseSafeStackTrace()` はスタックトレース側しか止めないので、これは消えない。全画面共通の設計事項なので D-04 側で一括方針を決める（案：release では `error` を `e.runtimeType` だけにする／`createAppLogger()` の printer でサニタイズする）。**端末ローカルに閉じるため優先度は低**（T-35 security [R-2]） |
-| 2-10 | §5.4.4・§8 #63・#69 | riverpod を「3.4.3 のソースで確認済み」と 3 箇所で書いているが、`app/pubspec.lock` の pin は **3.0.3**。`copyWithPrevious` と `asyncTransition` の該当箇所に限れば両版で同一（確認済み）なので結論に影響は無い。版表記を 3.0.3 に直すか、「pin は 3.0.3。3.4.3 でも該当箇所は同一」と両立する書き方にする |
+| ✅ 2-1 | §5.3 / `NotificationTap` | **【最優先・T-33 の着手前に決着が必要】`NotificationTap.==` が `companyId` だけなので、同じ団体の通知を続けてタップすると 2 回目以降が Riverpod の `updateShouldNotify`（`previous != next`）に握りつぶされる。** **Riverpod 3.0.3 で再現確認済み**（`toho, toho, shiki, shiki, toho` を流すと `[toho, shiki, toho]` しか届かない）。D-05 §6 は「通知が連続して届き連打された → **各回**タブ選択・先頭スクロール」と定めており食い違う。対処案：(a) 連番を持たせる（`(int seq, NotificationTap tap)` を流す）、(b) `==` を identity に戻す、(c) §6 を「同一団体の連続タップは 1 回に畳む」と改める |
+| ✅ 2-2 | §5.3 | `events` 契約文「SyncStarted が流れた実行には必ず SyncCompleted が 1 回流れる」は dispose 中の実行で成立しない。「dispose() されていない限り」を足す |
+| ✅ 2-3 | §5.2.1 | 「失敗時」の「例外」に **`Error` も含む**ことを明記する。drift は close 済み DB に `StateError` を投げるため、実装は `on Object` で受けている |
+| ✅ 2-4 | §6 | 「抑止判定の完了前に dispose()」の行は false 解決時（`SyncFailed(timeout)`）しか書いていない。true 解決時は手順 3 (a) が先に `SyncFailed(unsupportedSchema, suppressed: true)` を返す。両方を書き分け、§7 `group('dispose')` に 1 ケース追記 |
+| ✅ 2-5 | §3.2・§7 | `test/helpers/` の表に 2 行を追記（T-40 で新設したが未記載）：`settle.dart` / `delegating_article_sync_repository.dart` |
+| ✅ 2-6 | §5.2.1 | **ISP 違反。** `SyncSuppressionPolicy` は `unsupportedSchemaVersion()` の 1 メソッドしか使わないのに 6 メソッドの `ArticleSyncRepository` に依存している。`UnsupportedSchemaReader` 等への分離を検討（分離できればテストの `DelegatingArticleSyncRepository` も不要になる） |
+| ✅ 2-7 | §8 #33 | `SyncSuppressionCheck` typedef の置き場が `sync_suppression_policy.dart`（具象と同居）で、`SyncExecutor`（coordinator 側に定義）と非対称 |
+| ✅ 2-8 | §5.2.1 | 抑止理由が 2 つ目になると `Future<bool>` の契約・Coordinator の固定リテラル・DI・全テストに波及する。`Future<SyncResult?>`（null = 抑止しない）への改訂を検討 |
+| ✅ 2-9 | §5.3 | `SyncCoordinator` が Logger を持たないため、**抑止判定ロジック自身の欠陥（TypeError 等）では `execute` が正常成功し、抑止が恒久的に効かない状態がログにも結果にも現れない**（無症状）。診断を残すには D-04 の改訂が要る |
+| ✅ 2-11 | §4.9 | **`logger.w(..., error: e)` の `error` 側に DB ファイルの絶対パス（iOS サンドボックスの UUID）が載りうる。** §4.9 は「例外の型とメッセージのみ」として `error:` の出力を許容しているが、drift の `SqliteException.toString()` は失敗した DB ファイルの絶対パスを含むことがある。release でも `Level.warning` は出力されるため `os_log`（Console.app / sysdiagnose）から読める。`releaseSafeStackTrace()` はスタックトレース側しか止めないので、これは消えない。全画面共通の設計事項なので D-04 側で一括方針を決める（案：release では `error` を `e.runtimeType` だけにする／`createAppLogger()` の printer でサニタイズする）。**端末ローカルに閉じるため優先度は低**（T-35 security [R-2]） |
+| ✅ 2-10 | §5.4.4・§8 #63・#69 | riverpod を「3.4.3 のソースで確認済み」と 3 箇所で書いているが、`app/pubspec.lock` の pin は **3.0.3**。`copyWithPrevious` と `asyncTransition` の該当箇所に限れば両版で同一（確認済み）なので結論に影響は無い。版表記を 3.0.3 に直すか、「pin は 3.0.3。3.4.3 でも該当箇所は同一」と両立する書き方にする |
 
 ---
 
@@ -108,7 +114,7 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 |---|---|---|
 | 4-1 | app | **`app/lib/app/minute_clock.g.dart` の source hash が現在のソースと一致しない**（T-28 の `build_runner` 再実行漏れ）。`app_database.g.dart` の相違は formatter スタイル差で内容同一のため対象外 |
 | 4-2 | ci | **CI に生成物の鮮度検査が無い。** `build_runner` の実行漏れは `flutter analyze` も `dart format` も通るため、人が再生成して比較しない限り見つからない（T-39 で 1 回すり抜けた）。`.github/workflows/app-ci.yml` に `dart run build_runner build --delete-conflicting-outputs` + `git diff --exit-code app/lib` を足す。ただし下記 §6 の整形差でそのままでは落ちるため、**drift_dev の更新とセットで**検討する |
-| 4-3 | app | **release ビルドのログに例外オブジェクトをそのまま渡している。** drift の例外に含まれる DB ファイルの絶対パス（サンドボックス UUID を含む）が `os_log` に出うる。`core/logging/app_logger.dart` に `releaseSafeError(Object)`（release では `runtimeType` のみ）を足し、`app_lifecycle_sync.dart` の 6 経路・`notification_tap_providers.dart`・`sync_controller.dart`・`http_articles_feed.dart`・**`features/settings/presentation/settings_screen.dart` は `_logWarn` の 1 箇所だけ**（`error:` を渡す 5 経路が集約済み。`error:` を渡さない 1 箇所は整形対象外。T-35 maintainability [R-2]） を一括で通す。**外部送信は無く端末ローカルに閉じるため優先度は低** |
+| ✅ 4-3 | app | **release ビルドのログに例外オブジェクトをそのまま渡している。** drift の例外に含まれる DB ファイルの絶対パス（サンドボックス UUID を含む）が `os_log` に出うる。`core/logging/app_logger.dart` に `releaseSafeError(Object)`（release では `runtimeType` のみ）を足し、`app_lifecycle_sync.dart` の 6 経路・`notification_tap_providers.dart`・`sync_controller.dart`・`http_articles_feed.dart`・**`features/settings/presentation/settings_screen.dart` は `_logWarn` の 1 箇所だけ**（`error:` を渡す 5 経路が集約済み。`error:` を渡さない 1 箇所は整形対象外。T-35 maintainability [R-2]） を一括で通す。**外部送信は無く端末ローカルに閉じるため優先度は低**。**✅ D-04 §8 #75 と §10 T-F5 に吸収（2026-09-27）。T-F5 が `app_lifecycle_sync.dart`・`notification_tap_providers.dart`・`http_articles_feed.dart`・`sync_controller.dart`・`settings_screen.dart` を一括で通す** |
 | 4-4 | collector | **`git-articles-publisher.ts` が git の子プロセスに `{ ...process.env }` を丸ごと渡している。** `FIREBASE_SERVICE_ACCOUNT` を含む全環境変数が git に渡る。git は環境変数を出力せず stderr も `sanitizeGitOutput` で無害化済みなので**現実の漏洩リスクはほぼ無い**が、伝播範囲としては不要に広い。直すなら git が必要とする変数（`PATH`・`HOME`・`GIT_*`・`GITHUB_*` 等）だけを列挙する。**D-02 §5.3 に規定が無いので設計書の reopen が先** |
 | 4-5 | app | **`SettingsRepository` の転送ダブルを `test/helpers/delegating_settings_repository.dart` に一本化する。** T-31 と T-32 の maintainability が独立に同じ指摘を出した。ヘルパは T-32 で新設済み。**置き換えるべき残り 2 箇所**：`test/features/notifications/application/update_notification_setting_use_case_test.dart`（T-31 の `_ThrowingSetSettingsRepository`）と `test/features/notifications/application/sync_push_subscriptions_use_case_test.dart`（既存の `_ThrowingSettingsRepository`）。`SettingsRepository` は 9 メソッドあるので、放置するとメソッド追加のたびに 3 ファイルを直すことになる |
 | 4-6 | app | **既存テストファイルに D-05 §7 への library doc を付ける。** T-31（4 ファイル）・T-32（2 ファイル）の maintainability が独立に指摘。先例は `test/core/ui/list/anchor_resolution_test.dart`。**§7 の表を改訂した人がどのテストを直すか辿れるようにする**ため。T-31・T-32 では対応済みだが、既存の他テストにも同じ欠落がある |
@@ -122,6 +128,9 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 | 4-12 | app | **`CupertinoListTile` の 1 行省略を解除する `DefaultTextStyle` 包み（`settings_screen.dart` の `_wrappableText`）を、2 ファイル目が使い始めた時点で `core/ui/` へ寄せる。** 現在 `CupertinoListTile` を使うのは `app/lib` 全体で `settings_screen.dart` だけ（実測）で、S-01・S-02 は `core/ui/article/` の記事セルを使う設計なので 1 例に留まっている。**寄せるときは D-05 §3.2 の `core/ui/` の区分（`status/`・`article/`・`list/`）を増やす必要があるため D-05 の reopen が要る。** 次に `CupertinoListTile` を使う人は別ファイルを書くので `settings_screen.dart` のコメントを読まない＝閾値に達したことに気づく仕組みが無い（T-35 maintainability [R-4]。4-10 と同型） |
 
 | 4-13 | collector | **`.github/workflows/collect.yml` を D-02 §5.6 の改訂（#61）に追随させる。** 2026-09-27 の D-02 改訂で §5.6 の jq を 4 点直したので、ワークフロー側を合わせる。(1) `gsub("[\\r\\n]"; " ")` を制御文字＋行区切りを覆う形に、(2) `if [ ! -f .run-summary.json ]` を `[ ! -s ... ]` に（0 バイトで jq が終了コード 0・出力なしになり `deploy-pages` がスキップされる）、(3) 出力 5 本に `head -n 1` を足す、(4) `reason` / `message` をコードスパンで囲む、(5) `S=` を `SUMMARY_JSON=` に改名。**(1) は要実測**：design-writer が `gsub("[[:cntrl:][:space:]]"; " ")` を採ったが、**jq の Oniguruma で `[[:space:]]` が U+2028/U+2029 を覆うかは一次資料で未確認**。`printf '{"m":"a\u2028b"}' \| jq -r '.m \| gsub("[[:cntrl:][:space:]]"; "_")'` 相当で確かめ、覆わなければ 2 段の `gsub` に分ける（2 段目はエスケープ列を使う）。**YAML / シェルに U+2028/U+2029 を直書きするとリテラル文字に化けやすい**（反映作業中に実際に 4 か所化けた）ので、エスケープ列で書いて必ず実測すること |
+
+| 4-14 | collector | **`sanitize-git-output.ts` を D-02 §4.10 の改訂（#62）に追随させる。** マスク対象を `AUTH_SCHEMES = ["basic", "bearer", "token"] as const` として定数化し、`AUTH_SCHEMES.join("\|")` を `(?:…)` に埋めて `EXTRAHEADER_AUTH_PATTERN` を組み立てる。**`SEP` と tempered greedy token（`(?!authorization${SEP}*:)`）は一字も変えないこと**（崩すと #59 が塞いだ漏洩が再発する）。§7.3 の 3 ケース（`token` スキーム／大小文字 `TOKEN`／スキーム語なしの `AUTHORIZATION: <値>` は変化しない）も同時に追加し、**規則表とテストを同じコミットに入れる**（D-02 §8.1 実装行 (iv)） |
+| 4-15 | app | **新タスク T-F5 の起票が必要**（D-04 §10 に追加された）。`NotificationTap` の identity 化（#70）・`UnsupportedSchemaReader` の切り出し（#71）・`SyncSuppressionCheck` の移動（#72）・`SyncSuppressionCheckFailed` イベント（#73）・`releaseSafeError` の一括適用（#75）。**T-33 の着手前提**で、T-40（`done`）の後・T-33 / T-34 の前。`app_lifecycle_sync.dart`・`notification_tap_providers.dart` を改修するため **T-F3 とは並行不可**。**D-04 が `approved` になってから `/pm plan` で起票する** |
 
 
 ---

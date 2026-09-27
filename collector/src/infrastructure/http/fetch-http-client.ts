@@ -8,17 +8,17 @@ import { sleep } from "./sleep.js";
 const META_SCAN_BYTES = 2048;
 
 /**
- * D-02 追随: warn ログに載せる finalUrl の最大長。異常に長い URL がログへ丸ごと出るのを避ける任意値
- * （domain/url.ts の ERROR_INPUT_PREVIEW と同じ考え方。src/domain は変更対象外のため import
- * できず、ここに同値をローカルに持つ）
+ * warn ログに載せる finalUrl の最大長。§5.7 手順 2b の 200 文字
+ * （domain/url.ts の ERROR_INPUT_PREVIEW と同値。あちらは url.ts 内の非公開定数で
+ * import できないため、ここに同値を持つ）
  */
 const LOG_URL_PREVIEW = 200;
 
 /**
- * D-02 追随: checkRedirect が https→http への降格を検知したときに投げる（security）。status を
- * 持たない他の HttpError（ネットワーク失敗・タイムアウト等）と区別し、isRetryable が確実に
- * リトライ対象外と判定できるようにする（status の有無だけで判定すると誤ってリトライされる。
- * §5.7 手順 3・4）。
+ * §5.7 手順 2b・§8 #58 のとおり、checkRedirect が https→http への降格を検知したときに投げる
+ * （security）。status を持たない他の HttpError（ネットワーク失敗・タイムアウト等）と区別し、
+ * isRetryable が確実にリトライ対象外と判定できるようにする（status の有無だけで判定すると
+ * 誤ってリトライされる。§5.7 手順 3・4）。
  */
 class NonRetryableHttpError extends HttpError {}
 
@@ -32,8 +32,8 @@ export interface FetchHttpClientOptions {
 }
 
 /**
- * D-02 追随: FetchHttpClientOptions の既定値（userAgent を除く。§5.7 のコード片には無い export だが、
- * 実装とテストで既定値を 1 箇所にまとめるために置く。§8 #26・#31）
+ * FetchHttpClientOptions の既定値（userAgent を除く。実装とテストが同じ値を読む単一情報源。
+ * §5.7 のコード片・§8 #26・#31）
  */
 export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit<FetchHttpClientOptions, "userAgent"> = {
   timeoutMs: 15_000,
@@ -174,9 +174,9 @@ export class FetchHttpClient implements HttpClient {
         },
       });
     } catch (error) {
-      // D-02 追随: ネットワーク失敗（TypeError）・タイムアウト（AbortSignal.timeout が投げる
-      // DOMException。設計書の表記は "AbortError" だが Node 22 の実際の名は "TimeoutError"。
-      // §5.7 手順 4）
+      // §5.7 手順 4 のとおり：ネットワーク失敗（TypeError）・タイムアウトはリトライ対象。
+      // D-02 追随: タイムアウトの例外名は設計書の表記が "AbortError" だが、AbortSignal.timeout が
+      // 投げるのは Node 22 では DOMException "TimeoutError"（実装で確認した表記差）。
       throw new HttpError("request failed", url, undefined, { cause: error });
     }
     const rejection = this.rejectionFor(url, response);
@@ -199,7 +199,7 @@ export class FetchHttpClient implements HttpClient {
   }
 
   /**
-   * D-02 追随: response を「本文を消費せず拒否すべきか」判定し、拒否する場合はその HttpError を
+   * response を「本文を消費せず拒否すべきか」判定し、拒否する場合はその HttpError を
    * 返す（呼び出し側で本文キャンセルと throw を 1 箇所に集約するため。値を返すだけで throw しない）。
    * checkRedirect の拒否（NonRetryableHttpError）と非 2xx（HttpError）のどちらもここで扱う。
    */
@@ -213,13 +213,12 @@ export class FetchHttpClient implements HttpClient {
   }
 
   /**
-   * D-02 追随: §4.3「リダイレクトは追う」の例外として https→http への降格のみ拒否する
+   * §4.3・§5.7 手順 2b の例外規定：https→http への降格のみ拒否する
    * （非リトライ。平文への降格を防ぐため）。ホスト変更は warn のみで、転送先ホストは
    * HostScheduler の間隔制御・maxRequestsPerRun の対象外。
    * - https: で要求したのに http: に落ちていたら NonRetryableHttpError を返す（送信元は throw しない）
    * - ホストが変わっていたら warn で記録する（finalUrl は LOG_URL_PREVIEW 文字で切り詰める）
    */
-  // TODO(D-02 §8.1 申し送り): 上記の https→http 降格拒否とホスト変更時の warn を §5.7 / §8.1 に反映する
   private checkRedirect(requestedUrl: string, finalUrl: string): NonRetryableHttpError | undefined {
     if (finalUrl === "" || finalUrl === requestedUrl) return undefined;
     let requested: URL;

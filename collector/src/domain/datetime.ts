@@ -23,9 +23,8 @@ export function toJstDateTime(instant: Date): string {
   if (!Number.isFinite(ms)) throw new InvalidDateTimeError("invalid Date");
   const shifted = new Date(ms + JST_OFFSET_MS); // UTC のゲッタで JST の壁時計を読む
   const year = shifted.getUTCFullYear();
-  // D-02 §4.2 のコード片への意図的な追加：コード片は年範囲を検証しないが、Date は西暦 -271821..275760 まで保持できるため、
-  // 書式の 4 桁（YYYY）に収まらない年を素通しすると後段（zod の regex 等）で分かりにくいエラーになる。
-  // ここで打ち切る。D-02 側の追随が必要
+  // §4.2 のとおり：Date は西暦 -271821..275760 まで保持できるが、書式の 4 桁（YYYY）に
+  // 収まらない年を素通しすると後段（zod の regex 等）で分かりにくいエラーになる。ここで打ち切る
   if (year < 1 || year > 9999) {
     throw new InvalidDateTimeError(`out of range: ${instant.toISOString()}`);
   }

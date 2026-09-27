@@ -12,9 +12,9 @@ function levelIndex(level: LogLevel): number {
   return LOG_LEVELS.indexOf(level);
 }
 
-// D-02 §4.7 のコード片への意図的な追加：値が空白・`=`・引用符・制御文字を含む場合、または空文字の場合に
-// JSON.stringify で囲む（元は `/[\s=]/` のみで、引用符や制御文字を含む値・空文字がそのまま
-// 1 行のログに混ざるとログインジェクション（偽の key=value の挿入）や行崩れを招くため）。D-02 側の追随が必要
+// §4.7 末尾（ConsoleLogger の書式）のとおり：値が空文字、または空白・`=`・引用符・C0/C1 制御文字を
+// 含む場合に JSON.stringify で囲む（1 行のログに混ざるとログインジェクション（偽の key=value の
+// 挿入）や行崩れを招くため）。
 function needsQuoting(value: string): boolean {
   return value === "" || /[\s="\p{Cc}]/u.test(value);
 }
@@ -40,9 +40,9 @@ export class ConsoleLogger implements Logger {
   private readonly threshold: number;
 
   constructor(level: LogLevel = "info") {
-    // D-02 §4.9 のコード片への意図的な追加：型（LogLevel）を信用せず、main.ts が環境変数由来の文字列を
-    // 検証せずに渡した場合でも parseLogLevel で再検証し、未知のレベルで全レベル出力（debug まで漏れる）
-    // にならないよう "info" へ縮退させる。D-02 側の追随が必要
+    // §4.7 末尾（ConsoleLogger の出力レベル）・§4.9（CURTAINCALL_LOG_LEVEL 行）のとおり：型（LogLevel）を
+    // 信用せず、main.ts が環境変数由来の文字列を検証せずに渡した場合でも parseLogLevel で
+    // 再検証し、未知のレベルで全レベル出力（debug まで漏れる）にならないよう "info" へ縮退させる。
     const resolved = parseLogLevel(level) ?? "info";
     this.threshold = levelIndex(resolved);
     if (resolved !== level) {

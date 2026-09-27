@@ -34,7 +34,6 @@ function previewRawValue(value: unknown): string {
  * §5.1 手順 6 の直前に置く RawArticle の「形」の実行時検査。Source は infrastructure なので
  * TypeScript の型契約（RawArticle）を信用しない。ここでは値の形だけを見る（category の値そのものの
  * 妥当性は buildCollectedArticle 内の CategorySchema.safeParse に委ねる。D-01 §4 の RawArticle と対応）。
- * D-02 追随: このスキーマは domain/source.ts への移設候補（RawArticle の契約をコードで表明するため）
  */
 const RawArticleShapeSchema = z.object({
   companyId: z.string(),
@@ -230,8 +229,8 @@ export class CollectArticles implements CollectArticlesUseCase {
     }
 
     const raws = result.value;
-    // D-02 追随: Source は infrastructure なので型契約（Promise<readonly RawArticle[]>）に反する値
-    // （配列以外）を返す可能性がある。実行時に検査し、他団体を巻き込まないよう failures に落とす
+    // §5.1 手順 6 のとおり：Source は infrastructure なので型契約（Promise<readonly RawArticle[]>）に
+    // 反する値（配列以外）を返す可能性がある。実行時に検査し、他団体を巻き込まないよう failures に落とす
     if (!Array.isArray(raws)) {
       this.logger.warn("source returned non-array", { companyId: target.company.id, sourceId });
       return failure("error", "fetch() did not return an array");
@@ -274,7 +273,7 @@ export class CollectArticles implements CollectArticlesUseCase {
     let adopted = 0;
     let discarded = 0;
     for (const raw of rawArticles) {
-      // D-02 追随: §5.1 手順 6 の前に RawArticle の形を実行時検査する（Source は infrastructure な
+      // §5.1 手順 6 のとおり：RawArticle の形を実行時検査する（Source は infrastructure な
       // ので型契約を信用しない）。形に反する記事は値として 1 件ずつ落とし、他の記事・他団体には
       // 影響させない。形の契約を満たした後の buildCollectedArticle 内の例外（hasher 等の依存の故障）
       // は記事の不良ではなく依存・application 側の不良なので、ここでは捕捉せず execute() を reject

@@ -339,17 +339,25 @@ final class HandleNotificationTapUseCaseProvider
 }
 
 String _$handleNotificationTapUseCaseHash() =>
-    r'f56d82c91801bc0c10c0a24be84a116b779c578c';
+    r'abad0a0536032f831dc8d156d0f65c0926275836';
 
-/// アプリ未起動から通知タップで起動した場合のタップ情報への委譲
-/// （D-04 §4.6）。
+/// 委譲先は D-04 §4.6 の `initialNotificationTapProvider`（アプリ未起動から
+/// 通知タップで起動した場合のタップ情報）。元の Provider は
+/// `retry: noRetry`（D-04 §8 #67。将来 catch を外したときに自動リトライで
+/// `takeInitialTap()` が 2 回呼ばれ「通知タップ無し」に化ける経路を塞ぐ
+/// 多層防御）。本 Provider は値を素通しするだけでリトライ方針を引き継がない
+/// ため、D-04 側の方針を変えるときはここも見直す。
 
 @ProviderFor(initialNotificationTapForApp)
 const initialNotificationTapForAppProvider =
     InitialNotificationTapForAppProvider._();
 
-/// アプリ未起動から通知タップで起動した場合のタップ情報への委譲
-/// （D-04 §4.6）。
+/// 委譲先は D-04 §4.6 の `initialNotificationTapProvider`（アプリ未起動から
+/// 通知タップで起動した場合のタップ情報）。元の Provider は
+/// `retry: noRetry`（D-04 §8 #67。将来 catch を外したときに自動リトライで
+/// `takeInitialTap()` が 2 回呼ばれ「通知タップ無し」に化ける経路を塞ぐ
+/// 多層防御）。本 Provider は値を素通しするだけでリトライ方針を引き継がない
+/// ため、D-04 側の方針を変えるときはここも見直す。
 
 final class InitialNotificationTapForAppProvider
     extends
@@ -359,8 +367,12 @@ final class InitialNotificationTapForAppProvider
           FutureOr<NotificationTap?>
         >
     with $FutureModifier<NotificationTap?>, $FutureProvider<NotificationTap?> {
-  /// アプリ未起動から通知タップで起動した場合のタップ情報への委譲
-  /// （D-04 §4.6）。
+  /// 委譲先は D-04 §4.6 の `initialNotificationTapProvider`（アプリ未起動から
+  /// 通知タップで起動した場合のタップ情報）。元の Provider は
+  /// `retry: noRetry`（D-04 §8 #67。将来 catch を外したときに自動リトライで
+  /// `takeInitialTap()` が 2 回呼ばれ「通知タップ無し」に化ける経路を塞ぐ
+  /// 多層防御）。本 Provider は値を素通しするだけでリトライ方針を引き継がない
+  /// ため、D-04 側の方針を変えるときはここも見直す。
   const InitialNotificationTapForAppProvider._()
     : super(
         from: null,
@@ -390,12 +402,14 @@ final class InitialNotificationTapForAppProvider
 String _$initialNotificationTapForAppHash() =>
     r'a5f59e8c069e260ebca7c8c575973a6064aef411';
 
-/// 起動中に通知をタップしたときに流れる Stream への委譲（D-04 §4.6）。
+/// 委譲先は D-04 §4.6 の `notificationTapStreamProvider`（起動中に通知を
+/// タップしたときに流れる Stream）。
 
 @ProviderFor(latestNotificationTap)
 const latestNotificationTapProvider = LatestNotificationTapProvider._();
 
-/// 起動中に通知をタップしたときに流れる Stream への委譲（D-04 §4.6）。
+/// 委譲先は D-04 §4.6 の `notificationTapStreamProvider`（起動中に通知を
+/// タップしたときに流れる Stream）。
 
 final class LatestNotificationTapProvider
     extends
@@ -405,7 +419,8 @@ final class LatestNotificationTapProvider
           AsyncValue<NotificationTap>
         >
     with $Provider<AsyncValue<NotificationTap>> {
-  /// 起動中に通知をタップしたときに流れる Stream への委譲（D-04 §4.6）。
+  /// 委譲先は D-04 §4.6 の `notificationTapStreamProvider`（起動中に通知を
+  /// タップしたときに流れる Stream）。
   const LatestNotificationTapProvider._()
     : super(
         from: null,
@@ -443,13 +458,15 @@ final class LatestNotificationTapProvider
 String _$latestNotificationTapHash() =>
     r'b28d6b14813c09321b2f93dc08b4fe4ea306d6c7';
 
-/// S-03/ST-03 の判定入力への委譲（D-04 §4.6）。
+/// 委譲先は D-04 §4.6 の `pushPermissionStatusProvider`（S-03/ST-03 の
+/// 判定入力）。
 
 @ProviderFor(pushPermissionStatusForSettings)
 const pushPermissionStatusForSettingsProvider =
     PushPermissionStatusForSettingsProvider._();
 
-/// S-03/ST-03 の判定入力への委譲（D-04 §4.6）。
+/// 委譲先は D-04 §4.6 の `pushPermissionStatusProvider`（S-03/ST-03 の
+/// 判定入力）。
 
 final class PushPermissionStatusForSettingsProvider
     extends
@@ -461,7 +478,8 @@ final class PushPermissionStatusForSettingsProvider
     with
         $FutureModifier<PushPermissionStatus>,
         $FutureProvider<PushPermissionStatus> {
-  /// S-03/ST-03 の判定入力への委譲（D-04 §4.6）。
+  /// 委譲先は D-04 §4.6 の `pushPermissionStatusProvider`（S-03/ST-03 の
+  /// 判定入力）。
   const PushPermissionStatusForSettingsProvider._()
     : super(
         from: null,

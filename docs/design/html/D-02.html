@@ -306,7 +306,9 @@ import type { Article } from &quot;./article&quot;;
 export type CollectedArticle = Omit&lt;Article, &quot;fetchedAt&quot; | &quot;updatedAt&quot;&gt;;</code></pre>
 <h3 id="sec-4-2">4.2 日時の変換（<code>domain/datetime.ts</code>）<a class="anchor" href="#sec-4-2">#</a></h3>
 <p>D-01 §4.1 の書式への変換は 5 団体すべてで必要になるため、Source 間のコピーを避けて domain に置く（CLAUDE.md「共通処理は domain / application の抽象に寄せる」）。</p>
-<pre><code class="language-ts">export class InvalidDateTimeError extends Error {}
+<pre><code class="language-ts">export class InvalidDateTimeError extends Error {
+  override readonly name = &quot;InvalidDateTimeError&quot;;   // formatError（§4.7）が `${name}: ${message}` を作るため既定の &quot;Error&quot; にしない
+}
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -317,8 +319,9 @@ export function toJstDateTime(instant: Date): string {
   const shifted = new Date(ms + JST_OFFSET_MS);           // UTC のゲッタで JST の壁時計を読む
   const year = shifted.getUTCFullYear();
   // Date は西暦 -271821..275760 を保持できるが D-01 §4.1 の書式は 4 桁固定。
-  // 収まらない年を素通しすると後段（zod・app の日時解釈）で分かりにくいエラーになるのでここで打ち切る
-  if (year &lt; 1 || year &gt; 9999) throw new InvalidDateTimeError(`year out of range: ${year}`);
+  // 収まらない年を素通しすると後段（zod・app の日時解釈）で分かりにくいエラーになるのでここで打ち切る。
+  // message には年ではなく元の瞬間の ISO8601 表記を入れる（JST 換算前の値が分かり診断に使えるため）
+  if (year &lt; 1 || year &gt; 9999) throw new InvalidDateTimeError(`out of range: ${instant.toISOString()}`);
   const p = (n: number, w = 2): string =&gt; String(n).padStart(w, &quot;0&quot;);
   return (
     `${p(year, 4)}-${p(shifted.getUTCMonth() + 1)}-${p(shifted.getUTCDate())}` +
@@ -554,24 +557,32 @@ export interface Logger {
   error(message: string, fields?: LogFields): void;
 }
 
-/** formatError が辿る cause 連鎖の深さの上限。循環参照・異常に深い連鎖を有限で打ち切る */
-const MAX_CAUSE_DEPTH = 5;
+/** formatError が辿る cause 連鎖の深さの上限。異常に深い連鎖を有限で打ち切る */
+const FORMAT_ERROR_MAX_DEPTH = 5;
 
 /**
  * unknown の例外を LogFields に載せられる 1 行の文字列にする（LogFields は unknown を受け付けない）。
- * Error なら `${name}: ${message}`、cause があれば &quot; &lt;- &quot; で再帰的に連結する。Error 以外は String(e)。
+ * Error なら `${name}: ${message}`、cause が null / undefined 以外なら &quot; &lt;- &quot; で再帰的に連結する。
+ * Error 以外は String(e)。
  * 例: &quot;SourceError: parse failed &lt;- HttpError: 503 https://example.com/news&quot;
  * cause が循環参照・異常に深い連鎖・String() できない値（Symbol、toString を持たない
- * null プロトタイプのオブジェクト）であっても安全に扱う：深さが MAX_CAUSE_DEPTH に達したら
- * &quot; &lt;- …&quot; で打ち切り、String(e) が投げたら &quot;[unprintable]&quot; にする。
- * depth は再帰の内部引数で、呼び出し側は常に formatError(e) の 1 引数で使う。
+ * null プロトタイプのオブジェクト）であっても例外を投げず 1 行に収める：深さが
+ * FORMAT_ERROR_MAX_DEPTH に達したら、または既に辿った Error（seen）へ戻ったらその時点で連結をやめ、
+ * String(e) が投げたら &quot;[unprintable]&quot; にする。ログ整形自体が失敗して元の例外が握りつぶされるのを防ぐ。
+ * seen と depth は公開 API に出さない内部状態（呼び出し側は常に formatError(e) の 1 引数で使う）。
  */
-export function formatError(e: unknown, depth = 0): string {
+export function formatError(e: unknown): string {
+  return formatErrorChain(e, new Set(), 0);
+}
+
+/** formatError の再帰本体。seen は訪問済みの Error（循環参照の打ち切り）、depth は連鎖の深さ */
+function formatErrorChain(e: unknown, seen: ReadonlySet&lt;unknown&gt;, depth: number): string {
   if (e instanceof Error) {
     const head = `${e.name}: ${e.message}`;
-    if (e.cause === undefined) return head;
-    if (depth &gt;= MAX_CAUSE_DEPTH) return `${head} &lt;- …`;
-    return `${head} &lt;- ${formatError(e.cause, depth + 1)}`;
+    if (e.cause == null || depth &gt;= FORMAT_ERROR_MAX_DEPTH || seen.has(e)) return head;
+    const nextSeen = new Set(seen);
+    nextSeen.add(e);
+    return `${head} &lt;- ${formatErrorChain(e.cause, nextSeen, depth + 1)}`;
   }
   try {
     return String(e);
@@ -603,7 +614,11 @@ export function parseLogLevel(raw: string | undefined): LogLevel | undefined {
 </tr>
 <tr>
 <td>FCM の初期化失敗（<code>cert()</code> / <code>initializeApp</code> が投げた。<code>main.ts</code> 手順 5）</td>
-<td>固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> だけを出す。<code>NotificationSendError.cause</code> にも載せない（§5.4 末尾、§8 #48）</td>
+<td>固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> と、入力由来の断片を含まない <code>errorName</code>（<code>e instanceof Error ? e.name : &quot;unknown&quot;</code>）だけを出す（§5.5 手順 5）。例外の <code>message</code> も <code>cause</code> も載せず、<code>NotificationSendError.cause</code> にも入れない（§5.4 末尾、§8 #48）</td>
+</tr>
+<tr>
+<td>FCM の初期化失敗の内訳（<code>FirebaseNotificationGateway</code> のコンストラクタが throw する直前）</td>
+<td>段ごとに固定文言だけを <code>warn</code> で出す（§5.4）。<code>FIREBASE_SERVICE_ACCOUNT does not have project_id/client_email/private_key</code>（スキーマ不正）／<code>FIREBASE_SERVICE_ACCOUNT private_key could not be parsed (check newline escaping)</code>（<code>cert()</code> の失敗）／<code>failed to initialize firebase app</code>（<code>initializeApp</code> の失敗）。いずれも入力の断片を含まない。<strong>権威ある <code>error</code> は <code>main.ts</code> 手順 5 の 1 本</strong>（上の行）で、この 3 つはどこまで進んで落ちたかの切り分け用の一次情報。同じ事象を 2 本の <code>error</code> として出さない</td>
 </tr>
 <tr>
 <td>git の診断出力（stderr）</td>
@@ -733,7 +748,7 @@ function sanitizeFailureMessage(message: string): string;</code></pre>
 <td><code>MAX_FAILURE_MESSAGE_LENGTH</code>（200）に切り詰める。単位は<strong>コードポイント</strong>（<code>Array.from(...).slice(0, 200).join(&quot;&quot;)</code>）で、<code>sanitizeGitOutput</code>（§4.10）と同じ向きに揃える。サロゲートペアを分割しない（§8 #55）</td>
 </tr>
 </tbody></table>
-<p>適用箇所は <code>RunCollection</code> が <code>RunSummary.sourceFailures</code> を組み立てるところと <code>buildFailureSummary</code> の 2 か所（どちらも <code>run-collection.ts</code> の中で、無害化の呼び出しは非公開関数 1 つに閉じる）。§5.6 の jq にも同じ切り詰めを書く（多層防御。ワークフローが古い形のサマリを読む場合に備える）。</p>
+<p>適用箇所は <code>RunCollection</code> が <code>RunSummary.sourceFailures</code> を組み立てるところと <code>buildFailureSummary</code> の 2 か所（どちらも <code>run-collection.ts</code> の中で、無害化の呼び出しは非公開関数 1 つに閉じる）。§5.6 の jq にも同じ<strong>文字クラス</strong>（手順 1 の C0/C1・<code>U+2028</code>・<code>U+2029</code>）と同じ上限（200）を書く（多層防御。ワークフローが古い形のサマリを読む場合に備える）。jq 側で C0 を落とすと <code>U+001B</code>（ESC）が残り、Actions のログ・ステップサマリで ANSI エスケープとして解釈されうるので、<code>[\r\n]</code> だけを潰す書き方にしない（§5.6、§8 #61）。</p>
 <p><code>RunSummary</code> を定義するのは application（<code>run-collection.ts</code>）で、書き出す <code>RunSummaryStore</code> は infrastructure なので application を import できない（§3.1 の依存の方向）。そのため <code>RunSummaryStore.write</code> の引数は <code>Readonly&lt;Record&lt;string, unknown&gt;&gt;</code> とし（<code>unknown</code> 1 つでは <code>JSON.stringify</code> できない値を型で弾けない）、<code>RunSummary</code> をそのまま渡せる形にする（§8 #43）。</p>
 <pre><code class="language-json">{
   &quot;kind&quot;: &quot;completed&quot;,
@@ -887,7 +902,26 @@ const PUBLISH_BRANCH = &quot;main&quot;;</code></pre>
 /** ログに含める git 出力の上限文字数（コードポイント単位） */
 export const STDERR_LOG_LIMIT = 500;
 
-/** 認証情報を伏せ字にする（下表の規則） */
+/** origin の URL に埋め込まれた認証情報。ホストの直前（最後の @）まで。限界は下表 */
+const CREDENTIAL_URL_PATTERN = /(https?:\/\/)[^/\s]+@/gi;
+
+/** 正規表現ソースに埋め込む文字クラス断片。垂直方向の空白：\n \r \v(=\u000b) \f U+2028 U+2029 */
+const VERTICAL_WS = &quot;\\n\\r\\u000b\\f\\u2028\\u2029&quot;;
+/** ヘッダの区切りとして認める空白 1 文字（垂直方向の空白以外の \s）。下表「区切りとして認める空白」 */
+const SEP = `[^\\S${VERTICAL_WS}]`;
+
+/**
+ * http.extraheader に埋め込まれた認証情報。グループ 1 に前置き（ヘッダ名・スキーム・区切り）、
+ * グループ 2 に値部分を取り、置換で値だけを *** にする。
+ * 値部分は tempered greedy token（各文字位置で「次のヘッダ名が始まっていないか」を否定先読み）。
+ * この形を崩すと同一行 2 件の入力でトークンが素通りする（下表「値の終端は各文字位置で否定先読みする」）。
+ */
+const EXTRAHEADER_AUTH_PATTERN = new RegExp(
+  `(authorization${SEP}*:${SEP}*(?:basic|bearer)${SEP}+)((?:(?!authorization${SEP}*:)\\S)+)`,
+  &quot;gi&quot;,
+);
+
+/** 認証情報を伏せ字にする（下表の規則）。URL 形式 → extraheader 形式の順に replace する */
 export function maskCredentials(text: string): string;
 
 /** maskCredentials → STDERR_LOG_LIMIT での切り詰め の順に適用する。順序は必ずこの向き */
@@ -901,21 +935,42 @@ export function sanitizeGitOutput(text: string): string;</code></pre>
 </thead>
 <tbody><tr>
 <td>URL に埋め込まれた認証情報</td>
-<td><code>https://&lt;認証情報&gt;@&lt;host&gt;/...</code> の <code>&lt;認証情報&gt;</code> を <code>***</code> にする。スキームの大文字（<code>HTTPS://</code>）にも一致させる。認証情報自体が <code>@</code> を含む場合があるため、ホストの直前（<strong>最後の</strong> <code>@</code>）までを認証情報とみなす。1 行に複数あればそれぞれ独立にマスクする</td>
+<td><code>https://&lt;認証情報&gt;@&lt;host&gt;/...</code> の <code>&lt;認証情報&gt;</code> を <code>***</code> にする（実装は <code>/(https?:\/\/)[^/\s]+@/gi</code>）。スキームの大文字（<code>HTTPS://</code>）にも一致させる。認証情報自体が <code>@</code> を含む場合があるため、ホストの直前（<strong>最後の</strong> <code>@</code>）までを認証情報とみなす。1 行に複数あればそれぞれ独立にマスクする</td>
+</tr>
+<tr>
+<td>URL 形式の限界（過小マスク）</td>
+<td>認証情報の中に <code>/</code> を含む URL（<code>https://x-access-token:SEC/RET@host/</code>）は <code>[^/\s]+@</code> が <code>/</code> を跨げないため<strong>まったくマスクされない</strong>（実測）。URL の認証情報は percent-encode される前提で、GitHub の <code>ghs_</code> / <code>ghp_</code> トークンは <code>[A-Za-z0-9_]</code> のみで構成されるため実害のある経路は無い。より厳密な正規表現に替えるより、限界を記述に残して境界値テスト（§7.3）で固定する方を採る（§8 #59）</td>
 </tr>
 <tr>
 <td><code>http.extraheader</code> に埋め込まれた認証情報</td>
-<td><code>AUTHORIZATION: basic &lt;base64&gt;</code> / <code>AUTHORIZATION: bearer &lt;token&gt;</code>（<code>AUTHORIZATION</code> と <code>basic</code> / <code>bearer</code> は大小文字を区別しない）の<strong>値部分</strong>を <code>***</code> にする。値部分の範囲は「<code>basic</code> / <code>bearer</code> の直後の<strong>空白の連続</strong>（1 つ以上。半角スペース・タブを含む）の後から、<strong>次の空白または行末まで</strong>」とし、それ以降の文字（<code>(see &#39;git help config&#39;)</code> のような診断の続き）は残す（行末まで一律に伏せると原因が読めなくなる）。<code>actions/checkout@v4</code> は既定（<code>persist-credentials: true</code>）でトークンを origin の URL ではなく <code>.git/config</code> の <code>http.https://github.com/.extraheader</code> に保存するため、実運用で git の診断に現れるのはこの形である（§5.6 の表、§8 #40）</td>
+<td><code>AUTHORIZATION: basic &lt;base64&gt;</code> / <code>AUTHORIZATION: bearer &lt;token&gt;</code>（<code>AUTHORIZATION</code> と <code>basic</code> / <code>bearer</code> は大小文字を区別しない）の<strong>値部分</strong>を <code>***</code> にする。値部分は「<code>basic</code> / <code>bearer</code> の直後の<strong>区切りの連続</strong>（1 つ以上）の後から始まり、次の区切りまたは行末、<strong>あるいは次のヘッダ名（<code>authorization</code> + 区切り + <code>:</code>）の手前</strong>まで」。それ以降の文字（<code>(see &#39;git help config&#39;)</code> のような診断の続き）は残す（行末まで一律に伏せると原因が読めなくなる）。<code>actions/checkout@v4</code> は既定（<code>persist-credentials: true</code>）でトークンを origin の URL ではなく <code>.git/config</code> の <code>http.https://github.com/.extraheader</code> に保存するため、実運用で git の診断に現れるのはこの形である（§5.6 の表、§8 #40）</td>
+</tr>
+<tr>
+<td>値の終端は<strong>各文字位置</strong>で否定先読みする（食い潰しの防止）</td>
+<td>値部分は単純な <code>(\S+)</code> にせず、<strong>tempered greedy token</strong> <code>((?:(?!authorization&lt;区切り&gt;*:)\S)+)</code> にする。1 文字進むごとに「この位置から次のヘッダ名が始まっていないか」を判定するため、値は必ず次のヘッダ名の境界で終わる。理由：同一行に 2 件並ぶ入力（<code>AUTHORIZATION: basic AUTHORIZATION: basic SECRET</code>）では、<code>(\S+)</code> だと 1 件目の値が普通の半角スペース区切りのまま 2 件目のヘッダ名を食い潰し、<code>g</code> フラグの走査再開位置が本物のトークンより後ろへ進んで<strong>素通りする</strong>（区切り文字の種類を変えるだけでは防げないことを実測で確認）。また先読みを<strong>値の先頭 1 回だけ</strong>に置く形（<code>(?!authorization…:)(\S+)</code>）は、次のヘッダ名の手前に前置文字が 1 つ挟まる入力（<code>… basic xAUTHORIZATION: basic SECRET</code>）で先読みが外れ、同じ素通りが再現する。<strong>この規則を落とすと GitHub トークンが公開リポジトリの Actions ログに残る</strong>（§8 #59）</td>
+</tr>
+<tr>
+<td>区切りとして認める空白</td>
+<td>ヘッダ名と <code>:</code>、<code>:</code> と <code>basic</code> / <code>bearer</code>、<code>basic</code> / <code>bearer</code> と値の各区切りは、<strong>垂直方向の空白（<code>\n</code> <code>\r</code> <code>\v</code> <code>\f</code> <code>U+2028</code> <code>U+2029</code>）以外のすべての <code>\s</code></strong> を 1 文字として認める（半角スペース・タブ・NBSP・全角空白・<code>U+FEFF</code> を含む）。実装は上のコード片の <code>SEP</code>（<code>[^\S</code> + <code>VERTICAL_WS</code> + <code>]</code> の否定文字クラス）で表す。半角スペースとタブだけに狭めると NBSP・全角空白が区切りの入力でマッチせずトークンが素通りする（漏れる方向）。逆に<strong>改行を区切りに含めない</strong>のは、値が空の <code>AUTHORIZATION: basic</code> 行の次行まで値に取り込み、後続の診断行（別のヘッダ行を含む）を過剰に伏せる／行跨ぎの誤マッチになるため。<code>\s</code> に含まれない文字（<code>NUL</code>・<code>U+0085</code>・<code>U+200B</code>）が<strong>区切り位置</strong>に現れる形はその 1 件がマッチせず素通りする（過小マスク。値の内部に含まれるだけなら否定先読みが位置ごとに効くのでマスクされる）。git の stderr はヘッダ値をそのまま出すため区切りは通常の半角スペースであり、この形が現れる経路は無い（§8 #59）</td>
+</tr>
+<tr>
+<td>ヘッダ名の語頭に単語境界を課さない</td>
+<td><code>\b</code> を付けず、直前が単語文字の形（<code>xauthorization: basic SECRET</code>）もマスクする。過剰に伏せる側へ倒す意図的な選択で、<strong>リファクタで <code>\b</code> を足すと漏れる側へ倒れる</strong>。<code>Proxy-Authorization: Basic …</code> もこの規則で伏せられる（§8 #59）</td>
+</tr>
+<tr>
+<td>値の途中に <code>authorization&lt;区切り&gt;*:</code> を含む形（過小マスク）</td>
+<td>その位置以降はマスク対象外になる。base64（<code>A-Za-z0-9+/=</code>）・Bearer トークン（RFC 6750）・GitHub の <code>ghs_</code> / <code>ghp_</code> トークン（<code>[A-Za-z0-9_]</code>）はいずれも <code>:</code> を含まないため、実トークンがこの形になる経路は無い</td>
 </tr>
 <tr>
 <td>対象外</td>
-<td>scp 形式（<code>git@github.com:o/r.git</code>）は認証情報ではないので変えない</td>
+<td>scp 形式（<code>git@github.com:o/r.git</code>）は認証情報ではないので変えない。スキーム（<code>basic</code> / <code>bearer</code>）を伴わない <code>AUTHORIZATION: &lt;値&gt;</code> と <code>token</code> スキームも現時点では対象外（§9 Q-2）</td>
 </tr>
 <tr>
 <td>切り詰め</td>
 <td>マスク後の文字列を <code>Array.from</code> でコードポイント単位に分け、先頭 <code>STDERR_LOG_LIMIT</code> 個までにする（サロゲートペアを分割しない）。切り詰めを先に行うと、切り詰め位置が認証情報の途中に来たときに生のトークンの断片が残るため、順序を逆にしない</td>
 </tr>
 </tbody></table>
+<p>上記のうち「否定先読み」「区切りの範囲」「語頭に <code>\b</code> を付けない」は、正規表現の見た目を整えるリファクタで最初に失われやすい。<code>sanitize-git-output.ts</code> の該当箇所には本節への参照コメントを置き、回帰は §7.3 の境界値テストで固定する（§8 #59）。</p>
 <h2 id="sec-5">5. 処理フロー（正常系）<a class="anchor" href="#sec-5">#</a></h2>
 <h3 id="sec-5-1">5.1 collect-articles（全 Source の並行実行と正規化）<a class="anchor" href="#sec-5-1">#</a></h3>
 <ul>
@@ -950,7 +1005,7 @@ const settled = await Promise.allSettled(
 </li>
 <li><p><code>result.status === &quot;fulfilled&quot;</code> で <code>result.value</code> が空配列の <code>target</code>：<code>failures</code> に <code>{ companyId: target.company.id, sourceId, reason: &quot;empty&quot;, message: &quot;no articles parsed&quot; }</code> を追加し <code>logger.warn(&quot;source returned no articles&quot;, { companyId, sourceId })</code>。改装でセレクタが一致しなくなった場合は例外ではなく 0 件になるため、0 件も失敗として数える（R-2。§8 #3）</p>
 </li>
-<li><p><strong>形の実行時検査</strong>（Source は infrastructure なので、型契約 <code>Promise&lt;readonly RawArticle[]&gt;</code> に反する値を返しうる）：まず <code>result.value</code> が配列でなければ、その <code>target</code> を <code>failures</code> に <code>{ companyId: target.company.id, sourceId, reason: &quot;error&quot;, message: &quot;source did not return an array&quot; }</code> として追加し（手順 4 と同じ <code>reason: &quot;error&quot;</code> の Source 失敗）、この <code>target</code> の以降の処理を打ち切る。配列であれば、各要素について <code>RawArticle</code> の 6 フィールドの型（<code>companyId</code> / <code>title</code> / <code>url</code> / <code>publishedAt</code> / <code>category</code> が文字列、<code>thumbnail</code> は未設定か文字列）を検査し、外れた要素は<strong>その記事だけ</strong>を捨てて <code>discardedByCompany[target.company.id]</code> を増やし <code>logger.warn(&quot;invalid raw article&quot;, { companyId, sourceId })</code> を出す。残った要素を次の順で確定する。いずれかで失敗した記事は<strong>その記事だけ</strong>を捨て、<code>discardedByCompany[target.company.id]</code> を増やす（D-01 §6。<code>discardedByCompany</code> は手順 1 の前に <code>bindings</code> 全件（未実装団体を含む）の <code>company.id</code> を値 0 で初期化しておく。§8 #33）</p>
+<li><p><strong>形の実行時検査</strong>（Source は infrastructure なので、型契約 <code>Promise&lt;readonly RawArticle[]&gt;</code> に反する値を返しうる）：まず <code>result.value</code> が配列でなければ、その <code>target</code> を <code>failures</code> に <code>{ companyId: target.company.id, sourceId, reason: &quot;error&quot;, message: &quot;fetch() did not return an array&quot; }</code> として追加し（手順 4 と同じ <code>reason: &quot;error&quot;</code> の Source 失敗）、<code>logger.warn(&quot;source returned non-array&quot;, { companyId, sourceId })</code> を出して、この <code>target</code> の以降の処理を打ち切る。配列であれば、各要素について <code>RawArticle</code> の 6 フィールドの型（<code>companyId</code> / <code>title</code> / <code>url</code> / <code>publishedAt</code> / <code>category</code> が文字列、<code>thumbnail</code> は未設定か文字列）を検査し、外れた要素は<strong>その記事だけ</strong>を捨てて <code>discardedByCompany[target.company.id]</code> を増やし <code>logger.warn(&quot;invalid raw article&quot;, { companyId, sourceId })</code> を出す。残った要素を次の順で確定する。いずれかで失敗した記事は<strong>その記事だけ</strong>を捨て、<code>discardedByCompany[target.company.id]</code> を増やす（D-01 §6。<code>discardedByCompany</code> は手順 1 の前に <code>bindings</code> 全件（未実装団体を含む）の <code>company.id</code> を値 0 で初期化しておく。§8 #33）</p>
 <ol>
 <li><code>companyId</code> の突合：<code>raw.companyId !== target.company.id</code> → 捨てて <code>logger.warn(&quot;companyId mismatch&quot;, { sourceId, expected, actual })</code>（D-01 §4.2・#32）</li>
 <li><code>url = normalizeUrl(raw.url)</code>：<code>InvalidArticleUrlError</code> → 捨てて <code>warn</code></li>
@@ -1113,8 +1168,18 @@ const settled = await Promise.allSettled(
 </ul>
 <p><code>FirebaseNotificationGateway</code> は<strong>コンストラクタで既にパース済みのサービスアカウントオブジェクトを受け取る</strong>（<code>main.ts</code> 手順 4a が <code>JSON.parse</code> を行う。§5.5）。生の環境変数も生の JSON 文字列も受け取らず、<code>process.env</code> を読まない。コンストラクタのシグネチャは次で確定する。</p>
 <pre><code class="language-ts">constructor(serviceAccount: Readonly&lt;Record&lt;string, unknown&gt;&gt;, logger: Logger)</code></pre>
-<p>第 1 引数の型を <code>firebase-admin</code> の <code>ServiceAccount</code> にしないのは、そうすると <code>main.ts</code> がその型を import することになり、「<code>firebase-admin</code> の import は <code>infrastructure/fcm</code> の 1 ファイルに閉じたまま」（§5.5 手順 4a、§8 #17）と矛盾するためである。<code>main.ts</code> は <code>JSON.parse</code> の結果を <code>unknown</code> として受け、<code>typeof v === &quot;object&quot; &amp;&amp; v !== null &amp;&amp; !Array.isArray(v)</code> の型ガードで <code>Readonly&lt;Record&lt;string, unknown&gt;&gt;</code> へ絞ってから渡す（<code>any</code> 禁止。CLAUDE.md）。<strong><code>main.ts</code> に <code>firebase-admin</code> の型は 1 つも現れない。</strong> <code>ServiceAccount</code> への絞り込みは<strong>ゲートウェイ側</strong>（<code>firebase-notification-gateway.ts</code>）で行い、絞り込めなければ <code>cert()</code> / <code>initializeApp</code> と同じ扱いで例外にする（§5.5 手順 5 が固定文言で捕まえる）。型は <code>Readonly&lt;Record&lt;string, unknown&gt;&gt;</code> で、<code>RunSummaryStore.write</code>（§4.8、§8 #43）と同じ形にそろえる。コンストラクタで <code>initializeApp({ credential: cert(serviceAccount) })</code>（<code>getApps().length === 0</code> のときだけ）を行い、<code>send()</code> では <code>getMessaging().send(notification)</code> だけを呼ぶ（<strong>初期化を <code>send()</code> へ遅延させない</strong>）。<code>firebase-admin</code> の import はこのファイルに閉じる（§8 #17）。<code>NewArticlesNotification</code>（D-01 §4.8）は <code>firebase-admin</code> の <code>Message</code> と構造的に一致しているためそのまま渡せる。</p>
-<p><code>send()</code> の失敗は <code>NotificationSendError</code> に包んで投げ、原因は <code>cause</code> に入れる。ただし <strong><code>cause</code> に入れてよいのは firebase-admin が送信時に投げた例外だけ</strong>で、サービスアカウント JSON を入力に持つ例外（<code>main.ts</code> 手順 4a の <code>JSON.parse</code> の <code>SyntaxError</code>、コンストラクタの <code>cert()</code> / <code>initializeApp</code> の失敗）は <code>cause</code> に入れない（<code>formatError</code> が <code>cause</code> を再帰連結してサービスアカウントの断片を Actions のログへ出すため。§4.7、§8 #48）。コンストラクタの失敗は <code>main.ts</code> 手順 5 が捕まえ、固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> だけを出して終了コード 1 にする。サービスアカウントの内容はいかなる経路でもログに出さない。</p>
+<p>第 1 引数の型を <code>firebase-admin</code> の <code>ServiceAccount</code> にしないのは、そうすると <code>main.ts</code> がその型を import することになり、「<code>firebase-admin</code> の import は <code>infrastructure/fcm</code> の 1 ファイルに閉じたまま」（§5.5 手順 4a、§8 #17）と矛盾するためである。<code>main.ts</code> は <code>JSON.parse</code> の結果を <code>unknown</code> として受け、<code>typeof v === &quot;object&quot; &amp;&amp; v !== null &amp;&amp; !Array.isArray(v)</code> の型ガードで <code>Readonly&lt;Record&lt;string, unknown&gt;&gt;</code> へ絞ってから渡す（<code>any</code> 禁止。CLAUDE.md）。<strong><code>main.ts</code> に <code>firebase-admin</code> の型は 1 つも現れない。</strong> <code>ServiceAccount</code> への絞り込みは<strong>ゲートウェイ側</strong>（<code>firebase-notification-gateway.ts</code>）で行い、絞り込めなければ <code>cert()</code> / <code>initializeApp</code> と同じ扱いで例外にする（§5.5 手順 5 が固定文言で捕まえる）。型は <code>Readonly&lt;Record&lt;string, unknown&gt;&gt;</code> で、<code>RunSummaryStore.write</code>（§4.8、§8 #43）と同じ形にそろえる。<code>firebase-admin</code> の import はこのファイルに閉じる（§8 #17）。<code>NewArticlesNotification</code>（D-01 §4.8）は <code>firebase-admin</code> の <code>Message</code> と構造的に一致しているためそのまま渡せる。</p>
+<p>初期化はコンストラクタで行い（<strong><code>send()</code> へ遅延させない</strong>）、次の手順で <code>App</code> を確定してフィールドに保持する（§8 #60）。</p>
+<ol>
+<li><code>ServiceAccountSchema</code>（snake_case の <code>project_id</code> / <code>client_email</code> / <code>private_key</code>、または camelCase の <code>projectId</code> / <code>clientEmail</code> / <code>privateKey</code> のいずれかを要求する zod の union。余分なキーは既定の strip で落とす）で絞り込む。失敗したら固定文言 <code>FIREBASE_SERVICE_ACCOUNT does not have project_id/client_email/private_key</code> を <code>warn</code> に出し、同じ文言の <code>Error</code> を投げる</li>
+<li><code>cert(...)</code> で <code>Credential</code> を作る。失敗したら固定文言 <code>FIREBASE_SERVICE_ACCOUNT private_key could not be parsed (check newline escaping)</code> を <code>warn</code> に出し、同じ文言の <code>Error</code> を投げる</li>
+<li>既定アプリを <code>getApps().find((app) =&gt; app.name === DEFAULT_FIREBASE_APP_NAME)</code>（<code>DEFAULT_FIREBASE_APP_NAME = &quot;[DEFAULT]&quot;</code>。<code>firebase-admin</code> が public export しないため同値の定数を置く）で探し、<strong>無いときだけ</strong> <code>initializeApp({ credential })</code> を呼ぶ。得た <code>App</code> を <code>private readonly app: App</code> に保持する。失敗したら固定文言 <code>failed to initialize firebase app</code> を <code>warn</code> に出し、同じ文言の <code>Error</code> を投げる</li>
+<li>既定アプリが既にあって再利用した場合は <code>warn(&quot;fcm gateway reused an existing firebase app&quot;)</code>（注入した <code>credential</code> が使われない異常な状態なので、既定ログレベル <code>info</code> でも見えるレベルにする）。新規生成した通常の経路は <code>debug(&quot;fcm gateway initialized&quot;)</code></li>
+</ol>
+<p><code>getApps().length === 0</code> で初期化済みを判定しない：<code>getApps()</code> は<strong>名前付きアプリも数える</strong>ため、名前付きアプリだけが登録された状態を「初期化済み」と誤判定する。また <code>initializeApp({ credential })</code> は<strong>冪等でない</strong>（既定アプリがあると <code>INVALID_APP_OPTIONS</code> で失敗する）ので、件数ではなく名前で既定アプリを引く。<code>getApp()</code>（名前省略）も使わない：既定アプリが無いと <code>NO_APP</code> を投げ、<code>cert()</code> の失敗と区別できない誤った診断になる。</p>
+<p><code>send()</code> は <code>getMessaging(this.app).send(notification)</code> を呼ぶ（引数なしの <code>getMessaging()</code> は既定アプリを暗黙に解決するため、取り違えを避けて保持した <code>App</code> を明示する）。</p>
+<p>コンストラクタが受け取る <code>logger</code> の用途は上記 4 つのログだけで、投げる <code>Error</code> の <code>message</code> も <code>warn</code> と同じ固定文言にする（万一どこかで <code>message</code> や <code>cause</code> がログへ渡っても入力の断片が出ない多層防御）。3 つの <code>warn</code> はどこまで進んで落ちたかの切り分け用で、<strong>権威ある <code>error</code> は <code>main.ts</code> 手順 5 の 1 本</strong>（§4.7 の経路表）。同じ事象を 2 本の <code>error</code> として出さない。</p>
+<p><code>send()</code> の失敗は <code>NotificationSendError</code> に包んで投げ、原因は <code>cause</code> に入れる。ただし <strong><code>cause</code> に入れてよいのは firebase-admin が送信時に投げた例外だけ</strong>で、サービスアカウント JSON を入力に持つ例外（<code>main.ts</code> 手順 4a の <code>JSON.parse</code> の <code>SyntaxError</code>、コンストラクタの <code>cert()</code> / <code>initializeApp</code> の失敗）は <code>cause</code> に入れない（<code>formatError</code> が <code>cause</code> を再帰連結してサービスアカウントの断片を Actions のログへ出すため。§4.7、§8 #48）。コンストラクタの失敗は <code>main.ts</code> 手順 5 が捕まえ、固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> と <code>errorName</code>（<code>Error.name</code> のみ）だけを出して終了コード 1 にする。サービスアカウントの内容はいかなる経路でもログに出さない。</p>
 <h3 id="sec-5-5">5.5 run-collection と main.ts<a class="anchor" href="#sec-5-5">#</a></h3>
 <p><strong><code>decideFullCrawlCompanyIds</code></strong>（<code>application/full-crawl-policy.ts</code>。純粋関数。§8 #27）</p>
 <pre><code class="language-ts">import type { ArticlesFile } from &quot;../domain/article&quot;;
@@ -1182,18 +1247,18 @@ export class SnapshotMissingError extends Error {
 <li><code>repoRoot</code> を決める（<code>CURTAINCALL_REPO_ROOT</code> → 無ければ <code>path.resolve(path.dirname(fileURLToPath(import.meta.url)), &quot;..&quot;, &quot;..&quot;)</code>。<code>collector/dist/main.js</code> から見て <code>collector/dist</code> → <code>collector</code> → リポジトリ直下。§4.9）</li>
 <li><strong>起動時検証</strong>：<code>CompaniesFileStore(repoRoot).load()</code> が <code>data/companies.json</code> を読み <code>CompaniesFileSchema</code>（strict）で検証する。失敗したら <code>error</code> ログを出して終了コード 1（収集を始めない。D-01 §8.1・§6）</li>
 <li><strong>環境変数の起動時検証</strong>（いずれも失敗したら収集を始めず終了コード 1。相手サイトへのリクエストを 1 件も出さないうちに止める）<ul>
-<li><strong>4a. 通知設定</strong>（§8 #32）：<code>FIREBASE_SERVICE_ACCOUNT</code> が未設定または空文字で <code>CURTAINCALL_REQUIRE_NOTIFICATIONS === &quot;1&quot;</code> なら <code>logger.error(&quot;FIREBASE_SERVICE_ACCOUNT is required&quot;)</code>。設定されていたら <strong><code>main.ts</code> がここで <code>JSON.parse</code> を 1 回だけ行い</strong>、失敗したら <code>logger.error(&quot;FIREBASE_SERVICE_ACCOUNT is not valid JSON&quot;)</code>（§6）。成功した<strong>オブジェクト</strong>を手順 5 の <code>FirebaseNotificationGateway</code> のコンストラクタへ渡す（ゲートウェイは環境変数も生の JSON 文字列も受け取らず、<code>firebase-admin</code> の import は <code>infrastructure/fcm</code> の 1 ファイルに閉じたまま。§5.4、§8 #17）。サービスアカウントを入力とするパースをここ 1 か所に限ることで、検証の時点が実装の裁量で送信時へずれる余地を無くす（遅延初期化にすると <code>send()</code> の失敗経路で <code>formatError</code> に乗り、§4.7 の禁止を迂回する。§8 #48）。このとき<strong>例外の <code>message</code> をログに出さない</strong>：<code>JSON.parse</code> の <code>SyntaxError</code> は不正位置周辺の原文（＝サービスアカウント JSON の断片。<code>private_key</code> を含みうる）を <code>message</code> に載せ、Actions の Secret マスクは行の途中を切り出した断片には効かないため、<code>formatError(e)</code> を渡さず固定文言だけを出す（§4.7、§8 #48）</li>
+<li><strong>4a. 通知設定</strong>（§8 #32）：<code>FIREBASE_SERVICE_ACCOUNT</code> が未設定または空文字で <code>CURTAINCALL_REQUIRE_NOTIFICATIONS === &quot;1&quot;</code> なら <code>logger.error(&quot;FIREBASE_SERVICE_ACCOUNT is required&quot;)</code>。設定されていたら <strong><code>main.ts</code> がここで <code>JSON.parse</code> を 1 回だけ行い</strong>、失敗したら <code>logger.error(&quot;FIREBASE_SERVICE_ACCOUNT is not valid JSON&quot;)</code>（§6）。<code>JSON.parse</code> は成功したが型ガード（<code>typeof v === &quot;object&quot; &amp;&amp; v !== null &amp;&amp; !Array.isArray(v)</code>。下記）に落ちた場合（配列・数値・文字列・<code>null</code> の JSON）も<strong>同じ固定文言</strong>を出して同じ終了コードにする（どちらも「サービスアカウントとして妥当な JSON ではない」という同じ結果で、文言と終了コードを二重に管理しない）。成功した<strong>オブジェクト</strong>を手順 5 の <code>FirebaseNotificationGateway</code> のコンストラクタへ渡す（ゲートウェイは環境変数も生の JSON 文字列も受け取らず、<code>firebase-admin</code> の import は <code>infrastructure/fcm</code> の 1 ファイルに閉じたまま。§5.4、§8 #17）。サービスアカウントを入力とするパースをここ 1 か所に限ることで、検証の時点が実装の裁量で送信時へずれる余地を無くす（遅延初期化にすると <code>send()</code> の失敗経路で <code>formatError</code> に乗り、§4.7 の禁止を迂回する。§8 #48）。このとき<strong>例外の <code>message</code> をログに出さない</strong>：<code>JSON.parse</code> の <code>SyntaxError</code> は不正位置周辺の原文（＝サービスアカウント JSON の断片。<code>private_key</code> を含みうる）を <code>message</code> に載せ、Actions の Secret マスクは行の途中を切り出した断片には効かないため、<code>formatError(e)</code> を渡さず固定文言だけを出す（§4.7、§8 #48）</li>
 <li><strong>4b. DRY_RUN の誤設定</strong>（§8 #44）：<code>process.env.GITHUB_ACTIONS === &quot;true&quot;</code> かつ <code>process.env.CURTAINCALL_DRY_RUN === &quot;1&quot;</code> なら <code>logger.error(&quot;CURTAINCALL_DRY_RUN must not be set on GitHub Actions&quot;)</code>。ワークフローは DRY_RUN を使わない（§5.6）ため、Actions 上でこの値が <code>1</code> なのは設定の誤りだけである。デバッグで足した <code>CURTAINCALL_DRY_RUN: &quot;1&quot;</code> を消し忘れると、書き出し・push・通知がすべて Noop に縮退したままジョブが緑で通り、配信も通知も静かに止まる（§6）</li>
 </ul>
 </li>
-<li>具象を生成する：<code>SystemClock</code>・<code>Sha256Hasher</code>・<code>FetchHttpClient</code>（§5.7 の設定）・<code>ArticlesFileStore(repoRoot, logger)</code>・<code>GitArticlesPublisher(repoRoot, logger)</code>・通知ゲートウェイ（手順 4a でパース済みのオブジェクトがあれば <code>new FirebaseNotificationGateway(serviceAccount, logger)</code> と <code>kind = &quot;firebase&quot;</code>、無ければ <code>NoopNotificationGateway</code> と <code>kind = &quot;noop&quot;</code>。§8 #16）。<code>new FirebaseNotificationGateway(...)</code> は <code>try</code> で囲み、<code>cert()</code> / <code>initializeApp</code> が投げたら固定文言 <code>logger.error(&quot;failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT&quot;)</code> だけを出して終了コード 1（例外の <code>message</code> も <code>cause</code> もログに出さない。§4.7、§5.4、§8 #48）</li>
+<li>具象を生成する：<code>SystemClock</code>・<code>Sha256Hasher</code>・<code>FetchHttpClient</code>（§5.7 の設定）・<code>ArticlesFileStore(repoRoot, logger)</code>・<code>GitArticlesPublisher(repoRoot, logger)</code>・通知ゲートウェイ（手順 4a でパース済みのオブジェクトがあれば <code>new FirebaseNotificationGateway(serviceAccount, logger)</code> と <code>kind = &quot;firebase&quot;</code>、無ければ <code>NoopNotificationGateway</code> と <code>kind = &quot;noop&quot;</code>。§8 #16）。<code>new FirebaseNotificationGateway(...)</code> は <code>try</code> で囲み、スキーマ不正・<code>cert()</code> / <code>initializeApp</code> の失敗のいずれで投げても <code>logger.error(&quot;failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT&quot;, { errorName: e instanceof Error ? e.name : &quot;unknown&quot; })</code> だけを出して終了コード 1（例外の <code>message</code> も <code>cause</code> もログに出さない。§4.7、§5.4、§8 #48）。<code>errorName</code> はクラス名だけで入力由来の断片を含まない切り分け用のフィールドで、想定内の失敗（§5.4 の 3 段）はゲートウェイが素の <code>Error</code> を投げるため <code>&quot;Error&quot;</code> になり、想定外（実装の不具合）は <code>TypeError</code> 等の別の名前になって区別できる。内訳はゲートウェイ側が直前に出す 3 つの <code>warn</code>（§4.7 の経路表・§5.4）で、<code>warn</code> が 1 つも無ければ想定外の例外という読み方になる</li>
 <li><code>buildSourceBindings(companies, { http, logger })</code>：<code>companyId → Source 生成関数</code> の表（<code>SOURCE_FACTORIES: Readonly&lt;Record&lt;string, (company: Company, deps: { http: HttpClient; logger: Logger }, options: SourceOptions) =&gt; Source&gt;&gt;</code>）を引いて <code>SourceBinding[]</code> を <code>companies</code> の配列順に組む。表にある <code>id</code> は <code>createSource: (options) =&gt; factory(company, { http, logger }, options)</code>、表に無い <code>id</code> は <code>createSource: undefined</code>（未実装として <code>collect-articles</code> が <code>failures</code> に数える。§5.1 手順 1、§6）。<code>fullCrawl</code> の判定は <code>main.ts</code> では行わない（<code>RunCollection</code> 手順 3）。団体の追加はこの表への 1 行と <code>companies.json</code> への 1 要素だけで済む（CLAUDE.md 開放閉鎖）</li>
 <li><code>CURTAINCALL_DRY_RUN=1</code> のときは、手順 5 で生成した <code>ArticlesFileStore</code>（<code>ArticleWriter</code> として）・<code>GitArticlesPublisher</code>・通知ゲートウェイを <code>NoopArticleWriter</code>（<code>storage/noop-article-writer.ts</code>。<code>write</code> は書かずに <code>logger.info(&quot;dry run: skip writing articles.json&quot;, { articles })</code>）・<code>NoopArticlesPublisher</code>（<code>storage/noop-articles-publisher.ts</code>。<code>publish</code> は常に <code>&quot;no_changes&quot;</code> を返し <code>logger.info(&quot;dry run: skip publish&quot;, { note })</code>）・<code>NoopNotificationGateway</code>（<code>fcm/noop-notification-gateway.ts</code>）に差し替える（§3.2）。<code>ArticleReader</code> は <code>ArticlesFileStore</code> のまま（前回の読み込みは行う）。<code>notificationGatewayKind</code> は差し替え前の値を保ち、<code>publisherKind</code> は差し替えの有無に従って <code>&quot;noop&quot;</code>（DRY_RUN）/ <code>&quot;git&quot;</code> を渡す（§4.8。サマリへの記録専用で、判定には使わない。§8 #45）</li>
 <li>4 つの UseCase と <code>RunCollection</code> を組み立てて <code>execute({ forceFullCrawl: process.env.CURTAINCALL_FULL_CRAWL === &quot;1&quot;, dryRun: process.env.CURTAINCALL_DRY_RUN === &quot;1&quot; })</code> を呼ぶ（<code>dryRun</code> は手順 7 と同じ式で、実行の意図として <code>RunCollection</code> に渡す。§8 #45）</li>
 <li><code>RunSummaryStore</code> で <code>.run-summary.json</code> を書き、<code>logger.info(&quot;done&quot;, { ... })</code>、終了コード 0</li>
 <li>例外を捕まえたら <code>logger.error</code> を出し、<code>buildFailureSummary({ clock, error: e, publisherKind, notificationGatewayKind })</code>（§4.8）の結果を <code>RunSummaryStore</code> で書いて終了コード 1。<code>FailedRunSummary</code> の全フィールドの値と <code>error</code> の種類による分岐（<code>publishOutcome</code> と <code>sourceFailures</code>）は <code>buildFailureSummary</code>（application）が決め、<code>main.ts</code> は固定値も <code>instanceof</code> も 1 つも書かない（<code>main.ts</code> は業務規則を持たない。§8 #11・#46）。サマリの書き出し自体が失敗しても終了コードは 1 のまま（<code>warn</code> を出して続行。§6）。</li>
 </ol>
-<p>   <strong>手順 3〜6 の失敗はこの経路に入れない</strong>（<code>clock</code>・<code>publisherKind</code>・<code>notificationGatewayKind</code> が揃う手順 7 より前）。この 3 つは手順 5・7 で初めて確定するため、<code>buildFailureSummary</code> を呼べる状態にない（嘘の既定値を入れると <code>publisher</code> / <code>notificationGateway</code> が「注入された事実の記録」でなくなる。§8 #45）。手順 3〜6 の失敗は <code>error</code> ログと終了コード 1 だけで終え、<code>.run-summary.json</code> を書かない。ワークフローはファイル不在の経路（§5.6 の先頭の <code>if [ ! -f ... ]</code>）に入り、<code>published=unknown</code> / <code>failed_sources=unknown</code> として扱う（§6 の「<code>.run-summary.json</code> が無い」に相当する行）</p>
+<p>   <strong>手順 3〜6 の失敗はこの経路に入れない</strong>（<code>clock</code>・<code>publisherKind</code>・<code>notificationGatewayKind</code> が揃う手順 7 より前）。この 3 つは手順 5・7 で初めて確定するため、<code>buildFailureSummary</code> を呼べる状態にない（嘘の既定値を入れると <code>publisher</code> / <code>notificationGateway</code> が「注入された事実の記録」でなくなる。§8 #45）。手順 3〜6 の失敗は <code>error</code> ログと終了コード 1 だけで終え、<code>.run-summary.json</code> を書かない。ワークフローはファイル不在の経路（§5.6 の先頭の <code>if [ ! -s ... ]</code>）に入り、<code>published=unknown</code> / <code>failed_sources=unknown</code> として扱う（§6 の「<code>.run-summary.json</code> が無い」に相当する行）</p>
 <p>終了コードは 0（正常終了。Source の部分失敗を含む）と 1（致命的失敗）の 2 値だけにし、詳細はサマリに載せる（§8 #13）。<code>process.exit()</code> は呼ばず <code>process.exitCode</code> を設定して自然終了させる（stdout のフラッシュを待つため）。</p>
 <h3 id="sec-5-6">5.6 GitHub Actions ワークフロー<a class="anchor" href="#sec-5-6">#</a></h3>
 <p><strong><code>.github/workflows/collect.yml</code></strong>（収集 → push → 通知 → Pages デプロイ）</p>
@@ -1258,50 +1323,65 @@ jobs:
         if: ${{ !cancelled() }}            # 前のステップが失敗してもサマリを出す（サマリ欠落で Pages を止めない）
         working-directory: collector
         run: |
-          if [ ! -f .run-summary.json ]; then
+          # -f（存在）ではなく -s（存在しかつ 1 バイト以上）で判定する。0 バイトのファイルに対して
+          # jq は終了コード 0・出力なしで終わるため、後続の `|| echo unknown` が発火せず 5 つの出力が
+          # すべて空文字になり、deploy-pages が `!= ''` を満たさずスキップされる（#53 の「想定外の形は
+          # unknown にして配信は続ける」と逆に倒れる）。jq 1.7.1 で実測（§8 #61）
+          if [ ! -s .run-summary.json ]; then
             echo &quot;published=unknown&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
             echo &quot;failed_sources=unknown&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
             echo &quot;notifications_all_failed=false&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
             echo &quot;changed_but_not_published=false&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
             echo &quot;no_changes_but_stats=false&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
-            echo &quot;実行サマリ .run-summary.json が無い（collector が書けなかった）&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
+            echo &quot;実行サマリ .run-summary.json が無い、または空（collector が書けなかった）&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
             exit 0
           fi
           # すべての jq に型ガードを付ける（§8 #53）。サマリの形が想定外（キー欠落・旧形式・JSON でない）のとき、
           # published は false ではなく unknown に倒す（false は「配信しない」という積極的な指示になり、
-          # push・通知済みの内容が Pages に出ないまま止まるため）。数を読む出力も 0 に倒さない
-          S=.run-summary.json
+          # push・通知済みの内容が Pages に出ないまま止まるため）。数を読む出力も 0 に倒さない。
+          # 出力 5 本はいずれも head -n 1 で 1 行に固定する：jq がトップレベル JSON 文書を複数出力すると
+          # $GITHUB_OUTPUT に 2 行目以降が書かれ、偽の key=value 行を差し込める形になる（現在の書き手は
+          # RunSummaryStore の JSON.stringify（単一オブジェクト）だけなので到達経路は無いが、構造として塞ぐ）。
+          # 複数行が来た場合は head が先に閉じて pipefail によりパイプラインが非 0 になり、|| の
+          # フォールバック（unknown / false）に倒れる＝安全側（§8 #61）
+          SUMMARY_JSON=.run-summary.json
           echo &quot;published=$(jq -r 'if type == &quot;object&quot; and has(&quot;publishOutcome&quot;)
                                    then (if .publishOutcome == &quot;unknown&quot; then &quot;unknown&quot; else (.publishOutcome == &quot;published&quot;) end)
-                                   else &quot;unknown&quot; end' &quot;$S&quot; 2&gt;/dev/null || echo unknown)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
+                                   else &quot;unknown&quot; end' &quot;$SUMMARY_JSON&quot; 2&gt;/dev/null | head -n 1 || echo unknown)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
           # 記事は変わったのに何も確定されなかった（配信と通知の静かな停止。§8 #41）
           echo &quot;changed_but_not_published=$(jq -r 'if type == &quot;object&quot; and has(&quot;publishOutcome&quot;) and has(&quot;changed&quot;)
                                                    then (.changed == true and .publishOutcome == &quot;no_changes&quot;)
-                                                   else false end' &quot;$S&quot; 2&gt;/dev/null || echo false)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
+                                                   else false end' &quot;$SUMMARY_JSON&quot; 2&gt;/dev/null | head -n 1 || echo false)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
           # 逆向きの静かな停止：切り詰め後の出力配列に新着・更新が残っているのに changed が偽（§5.5 手順 7、§8 #51）
           echo &quot;no_changes_but_stats=$(jq -r 'if type == &quot;object&quot; and has(&quot;changed&quot;) and (.survivingChanges | type) == &quot;number&quot;
                                               then (.changed == false and .survivingChanges &gt; 0)
-                                              else false end' &quot;$S&quot; 2&gt;/dev/null || echo false)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
+                                              else false end' &quot;$SUMMARY_JSON&quot; 2&gt;/dev/null | head -n 1 || echo false)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
           # sourceFailures が配列でない（キー欠落・形式違い）なら 0 ではなく unknown（0 は「失敗なし」と読まれる）
           echo &quot;failed_sources=$(jq -r 'if type == &quot;object&quot;
                                         then (.sourceFailures | if type == &quot;array&quot; then length else &quot;unknown&quot; end)
-                                        else &quot;unknown&quot; end' &quot;$S&quot; 2&gt;/dev/null || echo unknown)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
+                                        else &quot;unknown&quot; end' &quot;$SUMMARY_JSON&quot; 2&gt;/dev/null | head -n 1 || echo unknown)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
           echo &quot;notifications_all_failed=$(jq -r 'if type == &quot;object&quot; and (.notificationsSent | type) == &quot;number&quot; and (.notificationsFailed | type) == &quot;number&quot;
                                                   then (.notificationsSent == 0 and .notificationsFailed &gt; 0)
-                                                  else false end' &quot;$S&quot; 2&gt;/dev/null || echo false)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
+                                                  else false end' &quot;$SUMMARY_JSON&quot; 2&gt;/dev/null | head -n 1 || echo false)&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
           # 以降はステップサマリの本文。出力用の jq と同じく型ガードを付ける（§8 #53）。
           # 既定シェルは bash -e -o pipefail なので、ガードが無いとここで jq が非 0 終了したときサマリ
           # ステップ自体が失敗し、後続の検知ステップ（暗黙の success() 条件）がスキップされて理由が出ない
           jq -r 'if type != &quot;object&quot; then &quot;サマリの形が想定外（.run-summary.json を確認する）&quot;
                  else &quot;収集 \(.collected) 件 / 破棄 \(.discarded) / 新着 \(.created) / 更新 \(.updated) / 残存 \(.survivingChanges) / 通知 \(.notificationsSent) 失敗 \(.notificationsFailed)（\(.notificationGateway)）/ 失敗した情報源 \((.sourceFailures // []) | length) / fullCrawl \((.fullCrawlCompanyIds // []) | join(&quot;,&quot;))&quot; end' \
-            &quot;$S&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || echo &quot;サマリ本文の整形に失敗した&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
-          # message は collector 側で sanitizeFailureMessage 済み（§4.8）。古い形式のサマリに備えた多層防御として同じ処理を掛ける
+            &quot;$SUMMARY_JSON&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || echo &quot;サマリ本文の整形に失敗した&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
+          # message は collector 側で sanitizeFailureMessage 済み（§4.8）。古い形式のサマリに備えた多層防御として
+          # 制御文字と空白をまとめて潰す。[\r\n] だけでは ESC（U+001B）が残り、Actions のログ・サマリで ANSI
+          # エスケープとして解釈されうる。[[:cntrl:]] が C0/C1 を、[[:space:]] が U+2028 / U+2029 を含む
+          # （jq の Oniguruma は UTF-8 で POSIX ブラケット式を Unicode 対応として解釈する）。YAML に
+          # U+2028 / U+2029 を直書きしない（パーサによって改行として扱われうる）ため文字クラスで表す。
+          # 外部サイト由来の可変部分（reason・message）はコードスパンで囲み、`#` 見出しやリンクとして
+          # レンダリングされて読み手を誤誘導する体裁を作れないようにする（§8 #61）
           jq -r 'if type != &quot;object&quot; then empty
-                 else (.sourceFailures // [])[] | &quot;- \(.companyId): \(.reason) \(.message | tostring | gsub(&quot;[\\r\\n]&quot;; &quot; &quot;) | .[0:200])&quot; end' \
-            &quot;$S&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true
+                 else (.sourceFailures // [])[] | &quot;- \(.companyId): `\(.reason | tostring)` `\(.message | tostring | gsub(&quot;[[:cntrl:][:space:]]&quot;; &quot; &quot;) | .[0:200])`&quot; end' \
+            &quot;$SUMMARY_JSON&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true
           jq -r 'if type != &quot;object&quot; then empty
                  else (.discardedByCompany // {}) | to_entries[] | select((.value | type) == &quot;number&quot; and .value &gt; 0) | &quot;- \(.key): 破棄 \(.value) 件（部分破棄。D-03 のセレクタを確認）&quot; end' \
-            &quot;$S&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true
+            &quot;$SUMMARY_JSON&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true
       - name: Pages 用にアップロード
         if: ${{ !cancelled() &amp;&amp; steps.summary.outputs.published != 'false' }}   # true と unknown で行う（安全側。前回と同じ内容の再デプロイは無害）
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa   # v3.0.1
@@ -1418,6 +1498,10 @@ jobs:
 <tr>
 <td>前提</td>
 <td><code>main</code> にブランチ保護（push 制限・必須レビュー）をかけない。かける場合は <code>github-actions[bot]</code> を例外にする。かかっていると毎時 push が失敗し、通知も出ない</td>
+</tr>
+<tr>
+<td>実行サマリステップの堅牢化</td>
+<td>次の 4 点を YAML の一部として固定する（§8 #61）。(1) サマリの有無は <code>[ ! -s ... ]</code>（存在しかつ 1 バイト以上）で判定する。0 バイトのファイルに jq は終了コード 0・出力なしで応じるため、<code>-f</code> だと <code>|| echo unknown</code> が発火せず 5 つの出力が空文字になり、<code>deploy-pages</code> の <code>!= &#39;&#39;</code> を満たさず配信が止まる（#53 の方針と逆向き）。(2) <code>$GITHUB_OUTPUT</code> へ書く 5 本はいずれも <code>head -n 1</code> で 1 行に固定する（jq がトップレベル文書を複数出力すると偽の <code>key=value</code> 行を差し込める構造になる）。(3) ステップサマリ本文の <code>message</code> は <code>gsub(&quot;[[:cntrl:][:space:]]&quot;; &quot; &quot;)</code> で潰す（<code>[\r\n]</code> だけでは ESC が残り ANSI エスケープとして解釈されうる。<code>[[:cntrl:]]</code> が C0/C1、<code>[[:space:]]</code> が <code>U+2028</code> / <code>U+2029</code> を覆い、collector 側 <code>sanitizeFailureMessage</code>（§4.8）と同じ範囲になる。YAML に <code>U+2028</code> / <code>U+2029</code> を直書きしない）。(4) 外部サイト由来の可変部分（<code>reason</code>・<code>message</code>）はコードスパンで囲む（Markdown としてレンダリングされるため、見出し・リンクを含む体裁で読み手を誤誘導できる）。変数名は <code>SUMMARY_JSON</code>（1 文字の <code>S</code> にしない）</td>
 </tr>
 <tr>
 <td><code>jq</code></td>
@@ -1725,13 +1809,13 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <td><code>main.ts</code></td>
 </tr>
 <tr>
-<td><code>FIREBASE_SERVICE_ACCOUNT</code> が JSON として壊れている（Secret に貼った JSON が途中で切れている・余計な引用符が付いている）</td>
-<td><code>main.ts</code> 手順 4a の <code>JSON.parse</code> が起動時に失敗し、固定文言 <code>FIREBASE_SERVICE_ACCOUNT is not valid JSON</code> の <code>error</code> ログを出して終了コード 1（収集を始めない。設定ミスを黙って握りつぶさない）。<strong>例外の <code>message</code> はログに出さない</strong>（<code>JSON.parse</code> の <code>SyntaxError</code> がサービスアカウント JSON の断片を含み、Actions の Secret マスクが断片には効かないため。§4.7、§8 #48）。<strong>サマリは書かれない</strong>（<code>published=unknown</code> で Pages は再デプロイ、ジョブは赤）</td>
+<td><code>FIREBASE_SERVICE_ACCOUNT</code> が JSON として壊れている（Secret に貼った JSON が途中で切れている・余計な引用符が付いている）、または JSON としては妥当だがオブジェクトでない（配列・数値・文字列・<code>null</code>）</td>
+<td><code>main.ts</code> 手順 4a の <code>JSON.parse</code> または型ガードが起動時に失敗し、固定文言 <code>FIREBASE_SERVICE_ACCOUNT is not valid JSON</code> の <code>error</code> ログを出して終了コード 1（収集を始めない。設定ミスを黙って握りつぶさない）。<strong>例外の <code>message</code> はログに出さない</strong>（<code>JSON.parse</code> の <code>SyntaxError</code> がサービスアカウント JSON の断片を含み、Actions の Secret マスクが断片には効かないため。§4.7、§8 #48）。<strong>サマリは書かれない</strong>（<code>published=unknown</code> で Pages は再デプロイ、ジョブは赤）</td>
 <td><code>main.ts</code></td>
 </tr>
 <tr>
 <td><code>FIREBASE_SERVICE_ACCOUNT</code> は JSON として妥当だがサービスアカウントとして不正（鍵の欠落・<code>private_key</code> の改行が壊れている）</td>
-<td><code>main.ts</code> 手順 5 の <code>new FirebaseNotificationGateway(...)</code> が <code>cert()</code> / <code>initializeApp</code> の例外で失敗し、固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> の <code>error</code> ログを出して終了コード 1。例外の <code>message</code> も <code>cause</code> もログに出さない。初期化を <code>send()</code> へ遅延させないことで、この失敗が <code>notify-new-articles</code> 手順 6 の <code>formatError</code> 経由でログに出る経路を作らない（§4.7、§5.4、§8 #48）。<strong>サマリは書かれない</strong>（<code>published=unknown</code> で Pages は再デプロイ、ジョブは赤。§5.5 <code>main.ts</code> 手順 10 の carve-out は手順 3〜6 が対象）</td>
+<td><code>main.ts</code> 手順 5 の <code>new FirebaseNotificationGateway(...)</code> がスキーマ不正・<code>cert()</code> / <code>initializeApp</code> の例外で失敗し、固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> + <code>errorName</code>（<code>Error.name</code> のみ）の <code>error</code> ログを出して終了コード 1。どの段で落ちたかはゲートウェイ側が投げる直前に出す 3 つの <code>warn</code>（<code>... does not have project_id/client_email/private_key</code> / <code>... private_key could not be parsed (check newline escaping)</code> / <code>failed to initialize firebase app</code>。§4.7 の経路表・§5.4）で切り分ける（<code>warn</code> が 1 つも無ければ想定外の例外）。例外の <code>message</code> も <code>cause</code> もログに出さない。初期化を <code>send()</code> へ遅延させないことで、この失敗が <code>notify-new-articles</code> 手順 6 の <code>formatError</code> 経由でログに出る経路を作らない（§4.7、§5.4、§8 #48）。<strong>サマリは書かれない</strong>（<code>published=unknown</code> で Pages は再デプロイ、ジョブは赤。§5.5 <code>main.ts</code> 手順 10 の carve-out は手順 3〜6 が対象）</td>
 <td><code>main.ts</code> / <code>FirebaseNotificationGateway</code></td>
 </tr>
 <tr>
@@ -1753,6 +1837,11 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <td><code>publish</code> が <code>&quot;published&quot;</code> を返した後（push 済み）に致命的失敗が起きた</td>
 <td><code>main.ts</code> 手順 10 は publish の呼び出し前後を判別できないため、サマリの <code>publishOutcome</code> を <code>&quot;skipped&quot;</code> ではなく <code>&quot;unknown&quot;</code> にする（§4.8）。ワークフローは <code>published=unknown</code> と読み、Pages のアップロードと deploy を<strong>行う</strong>（push 済みの内容が配信される）。<code>&quot;skipped&quot;</code> に倒すと <code>published=false</code> でデプロイが飛ばされ、次の実行は <code>changed === false</code> で再び <code>&quot;skipped&quot;</code> になるため、記事が次に変わるまで Pages が古いまま固定される（§8 #47）</td>
 <td><code>main.ts</code> / ワークフロー</td>
+</tr>
+<tr>
+<td><code>FirebaseNotificationGateway</code> のコンストラクタ時点で既定アプリ（<code>&quot;[DEFAULT]&quot;</code>）が既に登録されている（1 プロセスで 2 回生成した・他の初期化経路が混ざった）</td>
+<td>既存の <code>App</code> をそのまま再利用し、注入した <code>credential</code> は使われない。<code>warn(&quot;fcm gateway reused an existing firebase app&quot;)</code> を出す（既定ログレベル <code>info</code> でも見える）。<code>initializeApp({ credential })</code> を重ねて呼ぶと <code>INVALID_APP_OPTIONS</code> で失敗するため、名前で引いた既存アプリを優先する（§5.4、§8 #60）</td>
+<td><code>FirebaseNotificationGateway</code></td>
 </tr>
 <tr>
 <td>1 団体の FCM 送信が失敗した</td>
@@ -1801,14 +1890,14 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td><code>.run-summary.json</code> の書き出しに失敗した</td>
-<td>collector は <code>warn</code> を出して終了コード 0 のまま続行（サマリは副次情報。収集結果は既に確定している）。ワークフローの <code>実行サマリ</code> ステップはファイル無しを検知して <code>published=unknown</code>・<code>failed_sources=unknown</code> を出し、Pages のアップロードと deploy は <code>published != &#39;false&#39;</code> なので<strong>行われる</strong>（push・通知済みの結果が配信されない事態を避ける）。<code>failed_sources</code> が <code>unknown</code> なので失敗検知ステップがジョブを失敗させ、サマリが書けなかったことは開発者に届く</td>
+<td>collector は <code>warn</code> を出して終了コード 0 のまま続行（サマリは副次情報。収集結果は既に確定している）。ワークフローの <code>実行サマリ</code> ステップはファイル無し・空ファイル（<code>[ ! -s ... ]</code>。書き出しが途中で落ちて 0 バイトになった場合を含む。§8 #61）を検知して <code>published=unknown</code>・<code>failed_sources=unknown</code> を出し、Pages のアップロードと deploy は <code>published != &#39;false&#39;</code> なので<strong>行われる</strong>（push・通知済みの結果が配信されない事態を避ける）。<code>failed_sources</code> が <code>unknown</code> なので失敗検知ステップがジョブを失敗させ、サマリが書けなかったことは開発者に届く</td>
 <td><code>main.ts</code> / ワークフロー</td>
 </tr>
 </tbody></table>
 <h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
 <p>テストの単位は UseCase（CLAUDE.md）。Source・HTTP・storage・git・FCM・時計はすべて差し替える。ネットワークへは一切アクセスしない。パーサーのフィクスチャテスト（実サイトの HTML / RSS）は D-03 が <code>test/infrastructure/sources/</code> に置く。<code>main.ts</code>・<code>ConsoleLogger</code>・<code>SystemClock</code>・<code>FirebaseNotificationGateway</code> の単体テストは書かない。</p>
 <p><strong><code>main.ts</code> の起動時検証（§5.5 手順 3・4a・4b）はテストを持たない。</strong> <code>companies.json</code> の検証・<code>CURTAINCALL_REQUIRE_NOTIFICATIONS</code>・<code>FIREBASE_SERVICE_ACCOUNT</code> の <code>JSON.parse</code>・Actions 上の <code>CURTAINCALL_DRY_RUN</code> 拒否の 4 つは §6 に振る舞いを定めているが、DI 組み立てのみの entry に置く方針（§8 #11・#30）を優先し、<code>startup-policy.ts</code> のような application への切り出しは行わない。回帰（歯止めが消えて配信・通知が静かに止まる）は §5.5 の記述と PR レビューで担保する。これは意識した上での設計上の決定であり、無検証であることを承知で残す（§8 #56）。例外として <code>FetchHttpClient</code>・<code>ArticlesFileStore</code>・<code>GitArticlesPublisher</code> の 3 クラスは §7.3 の infrastructure テストを持つ（判定条件は §7.3 冒頭。§8 #30・#37）。加えて <code>infrastructure/storage/sanitize-git-output.ts</code> の 2 つの<strong>純粋関数</strong>（<code>maskCredentials</code>・<code>sanitizeGitOutput</code>）は、CLAUDE.md「テスト方針」の純粋関数の例外としてテーブル駆動テストを直接書く（§7.3、§8 #38）。</p>
-<p><strong>§5.4 末尾の「<code>NotificationSendError.cause</code> に入れてよいのは firebase-admin が送信時に投げた例外だけ」という契約もテストを持たない。</strong> これは <code>FirebaseNotificationGateway</code>（テスト対象外。上記）側の契約であり、<code>notify-new-articles</code> のテストでダブルに契約違反をさせても、§5.4 手順 6 が <code>formatError(e)</code> をログに載せる以上その文字列はログに現れるため、違反を検出できない（<code>formatError</code> は <code>cause</code> を再帰連結する。§4.7）。したがって §7.1 の当該ケースは「契約を守るダブル」を使い、<code>cause</code> 由来の連結が起きないことだけを固定する。契約そのものの回帰は <code>main.ts</code> の起動時検証と同じ扱い（§8 #56）で、§5.4 の記述と PR レビューで担保する。</p>
+<p><strong>§5.4 末尾の「<code>NotificationSendError.cause</code> に入れてよいのは firebase-admin が送信時に投げた例外だけ」という契約もテストを持たない。</strong> これは <code>FirebaseNotificationGateway</code>（テスト対象外。上記）側の契約であり、<code>notify-new-articles</code> のテストでダブルに契約違反をさせても、§5.4 手順 6 が <code>formatError(e)</code> をログに載せる以上その文字列はログに現れるため、違反を検出できない（<code>formatError</code> は <code>cause</code> を再帰連結する。§4.7）。したがって §7.1 の当該ケースは、実ゲートウェイが取りうる<strong>両方の形</strong>（<code>cause</code> 無しで reject する場合と、送信時の例外を <code>cause</code> に持って reject する場合。実ゲートウェイは送信失敗時には必ず <code>cause</code> を付ける。§5.4）をダブルで再現し、いずれも <code>error</code> ログが 1 行に収まることを固定する。契約そのものの回帰は <code>main.ts</code> の起動時検証と同じ扱い（§8 #56）で、§5.4 の記述と PR レビューで担保する。</p>
 <p><code>GitArticlesPublisher</code> を例外とする条件（§7.3・§8 #37 と同じ文言）：<strong>原則</strong>として被験クラスが呼ぶ <code>node:child_process</code> の <code>execFile</code> を実物を通さないスタブに差し替え、実 git を一度も起動しない（モジュールモックの既定実装は必ず例外を投げる）。<strong>唯一の carve-out</strong> は、実行時の <code>code=1</code> / <code>signal=null</code> を実測で固定する 1 ケースに限り、<code>vi.importActual</code> の <code>execFile</code> で <strong>git ではない・ネットワークにもファイルシステムにも触れない・即座に終了する <code>process.execPath</code> の子プロセス</strong>を起動してよいこと。この経路も被験クラス（<code>GitArticlesPublisher</code>）は通らない。</p>
 <h3 id="sec-7-1">7.1 UseCase ごとのケース<a class="anchor" href="#sec-7-1">#</a></h3>
 <p>「D-01」列は D-01 §7.2 の申し送り行との対応（行 4 の category ケースだけは Source 内の判定なので D-03 へ移管し、それ以外はすべて本書が含める。§8.1）。</p>
@@ -1932,8 +2021,8 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td><code>notify-new-articles</code></td>
-<td>全団体が reject（鍵失効。§8 #34）：例外は出ず <code>sent: 0</code>・<code>failed</code> が送信対象の団体数（新着のある団体数）と一致／<code>error</code> ログが団体数分出る／新着 0 件の団体は <code>failed</code> に数えない／<strong><code>FakeNotificationGateway</code> が実ゲートウェイの契約どおり <code>cause</code> を持たない <code>NotificationSendError</code> で reject する → <code>error</code> ログの <code>error</code> フィールドが 1 行で、<code>cause</code> 由来の連結（<code>&quot; &lt;- &quot;</code>）を含まない</strong>（<code>formatError</code> の再帰連結が起きないことの検証。§4.7、§5.4）</td>
-<td>全トピックを reject する <code>FakeNotificationGateway</code>、<code>RecordingLogger</code></td>
+<td>全団体が reject（鍵失効。§8 #34）：例外は出ず <code>sent: 0</code>・<code>failed</code> が送信対象の団体数（新着のある団体数）と一致／<code>error</code> ログが団体数分出る／新着 0 件の団体は <code>failed</code> に数えない／<strong><code>FakeNotificationGateway</code> が <code>cause</code> を持たない <code>NotificationSendError</code> で reject する → <code>error</code> ログの <code>error</code> フィールドが 1 行で、<code>cause</code> 由来の連結（<code>&quot; &lt;- &quot;</code>）を含まない</strong>／<strong><code>mode: &quot;reject-with-cause&quot;</code> で送信時の例外を <code>cause</code> に持つ <code>NotificationSendError</code> で reject する（実ゲートウェイが送信失敗時に取る形。§5.4）→ <code>error</code> フィールドが <code>&quot; &lt;- &quot;</code> で連結された 1 行に収まり、改行を含まない</strong>（<code>formatError</code> の再帰連結の両経路。§4.7、§5.4、§7 冒頭）</td>
+<td>全トピックを reject する <code>FakeNotificationGateway</code>（<code>cause</code> 無し／<code>cause</code> 付きの 2 モード）、<code>RecordingLogger</code></td>
 <td>追加（M-3）</td>
 </tr>
 <tr>
@@ -2007,7 +2096,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <tr>
 <td><code>FakeNotificationGateway</code></td>
 <td><code>fake-notification-gateway.ts</code></td>
-<td><code>NotificationGateway</code>。送信された <code>NewArticlesNotification</code> を順に記録。特定のトピックだけ reject できる</td>
+<td><code>NotificationGateway</code>。送信された <code>NewArticlesNotification</code> を順に記録。特定のトピックだけ reject できる。reject の形は <code>mode</code> で選べる：<code>&quot;reject&quot;</code>（<code>cause</code> を持たない <code>NotificationSendError</code>）と <code>&quot;reject-with-cause&quot;</code>（送信時の例外を <code>cause</code> に持つ <code>NotificationSendError</code>。実ゲートウェイが送信失敗時に取る形。§5.4・§7.1）</td>
 </tr>
 <tr>
 <td><code>RecordingLogger</code></td>
@@ -2073,7 +2162,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td><code>GitArticlesPublisher</code></td>
-<td>差分判定（§5.3 手順 3-2）：<br>- <code>git diff --cached --quiet</code> が<strong>終了コード 1</strong>・<code>signal: null</code> で reject → <strong>差分あり</strong>として commit / push まで進み <code>&quot;published&quot;</code> を返す・<code>error</code> ログ 0 件（障害の再現と修正の証明）<br>- 実プロセス（<code>process.execPath -e &quot;process.exit(1)&quot;</code>）の reject 値を実測して <code>code === 1</code>・<code>signal === null</code> を固定し、同じ値を diff の失敗として流す → <code>&quot;published&quot;</code>（Node の型定義に無い実行時の <code>null</code> を型ガードが受理することの実測）<br>- 終了コード 0（差分なし）→ <code>&quot;no_changes&quot;</code> を返し commit / push を呼ばない<br>- 終了コード 1 以外（128・<code>signal: null</code>）→ 差分ありとみなさず <code>PublishFailedError</code>・commit / push を呼ばない・<code>error</code> ログの診断接尾辞が <code>(code=128, signal=undefined)</code><br>- <code>code: 1</code> と非文字列 <code>signal</code>（数値）の同時発生 → code / signal が独立に検証されて <code>code === 1</code> だけが活き、<code>&quot;published&quot;</code><br>- <strong>呼び出しオプションの固定</strong>（§8 #39）：<code>publish()</code> が成功する経路で記録した <code>execFile</code> の呼び出し 4 件（<code>add</code> / <code>diff</code> / <code>commit</code> / <code>push</code>）すべてについて、第 3 引数が <code>cwd: repoRoot</code>・<code>timeout: 60_000</code>・<code>env.GIT_TERMINAL_PROMPT === &quot;0&quot;</code> を含む（リファクタで <code>timeout</code> や <code>env</code> が落ちると本番では push が <code>timeout-minutes</code> まで固まり、復元に到達しないまま未 push の <code>data/</code> が配信される）</td>
+<td>差分判定（§5.3 手順 3-2）：<br>- <code>git diff --cached --quiet</code> が<strong>終了コード 1</strong>・<code>signal: null</code> で reject → <strong>差分あり</strong>として commit / push まで進み <code>&quot;published&quot;</code> を返す・<code>error</code> ログ 0 件（障害の再現と修正の証明）<br>- 実プロセス（<code>process.execPath -e &quot;process.exit(1)&quot;</code>）の reject 値を実測して <code>code === 1</code>・<code>signal === null</code> を固定し、同じ値を diff の失敗として流す → <code>&quot;published&quot;</code>（Node の型定義に無い実行時の <code>null</code> を型ガードが受理することの実測）<br>- 終了コード 0（差分なし）→ <code>&quot;no_changes&quot;</code> を返し commit / push を呼ばない<br>- 終了コード 1 以外（128・<code>signal: null</code>）→ 差分ありとみなさず <code>PublishFailedError</code>・commit / push を呼ばない・<code>error</code> ログの診断接尾辞が <code>(code=128, signal=undefined)</code><br>- <code>code: 1</code> と非文字列 <code>signal</code>（数値）の同時発生 → code / signal が独立に検証されて <code>code === 1</code> だけが活き、<code>&quot;published&quot;</code><br>- <strong>呼び出しオプションの固定</strong>（§8 #39）：<code>publish()</code> が成功する経路で記録した <code>execFile</code> の呼び出し 4 件（<code>add</code> / <code>diff</code> / <code>commit</code> / <code>push</code>）すべてについて、第 3 引数が <code>cwd: repoRoot</code>・<code>timeout: 60_000</code>・<code>env.GIT_TERMINAL_PROMPT === &quot;0&quot;</code> を含む（リファクタで <code>timeout</code> や <code>env</code> が落ちると本番では push が <code>timeout-minutes</code> まで固まり、復元に到達しないまま未 push の <code>data/</code> が配信される）<br>- <strong>対象とブランチの固定</strong>（§4.10、§8 #59）：同じ経路で記録した引数列について、<code>add</code> と <code>checkout</code>（失敗経路）が <code>ARTICLES_JSON_RELATIVE_PATH</code>（<code>data/articles.json</code>）を <code>--</code> の後に含み、<code>push</code> が <code>origin</code> と <code>HEAD:&lt;PUBLISH_BRANCH&gt;</code>（<code>HEAD:main</code>）を含む（定数が別の値に書き換わると、配信されるファイルや push 先が静かに変わる。<code>PUBLISH_BRANCH</code> は非公開定数なのでテストは引数列でのみ固定できる）</td>
 <td><code>node:child_process</code> を <code>vi.mock</code> で差し替えた <code>execFile</code> スタブ（既定実装は必ず例外を投げ、実 git を起動しない）、<code>RecordingLogger</code></td>
 </tr>
 <tr>
@@ -2083,7 +2172,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td><code>maskCredentials</code>（純粋関数）</td>
-<td>伏せ字化（テーブル駆動。入力 → 期待値の組）：<br>- <code>https://user:pass@host/x</code> → <code>https://***@host/x</code><br>- <code>https://x-access-token:ghs_abc@github.com/o/r.git</code> → <code>https://***@github.com/o/r.git</code>（手動で remote に埋め込んだ形。§8 #40）<br>- <code>https://x-access-token:gh@s_abc@github.com/o/r.git</code> → <code>https://***@github.com/o/r.git</code>（トークン自体が <code>@</code> を含む＝<strong>最後の</strong> <code>@</code> までを認証情報とみなす境界）<br>- <code>fatal: ... http.https://github.com/.extraheader: AUTHORIZATION: basic eHktdG9rZW4=</code> → <code>AUTHORIZATION: basic ***</code>（<code>actions/checkout</code> が既定で保存する形。§5.6 の表）<br>- <code>AUTHORIZATION: Bearer ghs_abc</code>（大小文字違い・bearer 形式）→ <code>AUTHORIZATION: Bearer ***</code><br>- <code>AUTHORIZATION: basic\t eHk=</code>（<code>basic</code> の直後がタブ + 半角スペースの<strong>空白 2 文字</strong>）→ <code>AUTHORIZATION: basic\t ***</code>（空白の連続をすべて区切りとみなす境界。空白 1 つ固定の規則では 1 つ目と 2 つ目の空白の間を伏せて base64 が素通りする。§4.10）<br>- <code>fatal: ... AUTHORIZATION: basic eHk= (code=128)</code>（トークンの<strong>後ろにも文字列が続く</strong>境界）→ <code>AUTHORIZATION: basic *** (code=128)</code>（次の空白までを伏せ、以降の診断は残す。§4.10）<br>- <code>HTTPS://user:pass@host/x</code> → <code>HTTPS://***@host/x</code>（スキームの大文字も一致する）<br>- <code>git@github.com:o/r.git</code> → 変化しない（scp 形式は対象外）<br>- 認証情報を含まない <code>fatal: unable to access &#39;https://github.com/o/r.git/&#39;</code> → 変化しない<br>- 1 行に認証情報つき URL が 2 つ（<code>https://a:b@host1/x https://c:d@host2/y</code>）→ それぞれ独立にマスクされる</td>
+<td>伏せ字化（テーブル駆動。入力 → 期待値の組）：<br>- <code>https://user:pass@host/x</code> → <code>https://***@host/x</code><br>- <code>https://x-access-token:ghs_abc@github.com/o/r.git</code> → <code>https://***@github.com/o/r.git</code>（手動で remote に埋め込んだ形。§8 #40）<br>- <code>https://x-access-token:gh@s_abc@github.com/o/r.git</code> → <code>https://***@github.com/o/r.git</code>（トークン自体が <code>@</code> を含む＝<strong>最後の</strong> <code>@</code> までを認証情報とみなす境界）<br>- <code>fatal: ... http.https://github.com/.extraheader: AUTHORIZATION: basic eHktdG9rZW4=</code> → <code>AUTHORIZATION: basic ***</code>（<code>actions/checkout</code> が既定で保存する形。§5.6 の表）<br>- <code>AUTHORIZATION: Bearer ghs_abc</code>（大小文字違い・bearer 形式）→ <code>AUTHORIZATION: Bearer ***</code><br>- <code>AUTHORIZATION: basic\t eHk=</code>（<code>basic</code> の直後がタブ + 半角スペースの<strong>空白 2 文字</strong>）→ <code>AUTHORIZATION: basic\t ***</code>（空白の連続をすべて区切りとみなす境界。空白 1 つ固定の規則では 1 つ目と 2 つ目の空白の間を伏せて base64 が素通りする。§4.10）<br>- <code>fatal: ... AUTHORIZATION: basic eHk= (code=128)</code>（トークンの<strong>後ろにも文字列が続く</strong>境界）→ <code>AUTHORIZATION: basic *** (code=128)</code>（次の空白までを伏せ、以降の診断は残す。§4.10）<br>- <code>HTTPS://user:pass@host/x</code> → <code>HTTPS://***@host/x</code>（スキームの大文字も一致する）<br>- <code>git@github.com:o/r.git</code> → 変化しない（scp 形式は対象外）<br>- 認証情報を含まない <code>fatal: unable to access &#39;https://github.com/o/r.git/&#39;</code> → 変化しない<br>- 1 行に認証情報つき URL が 2 つ（<code>https://a:b@host1/x https://c:d@host2/y</code>）→ それぞれ独立にマスクされる<br>- <strong>同一行に extraheader が 2 件（<code>AUTHORIZATION: basic AUTHORIZATION: basic SECRET</code>。<code>AUTHORIZATION: basic</code> の行の直後に本物のヘッダ行が続く入力を 1 行に潰した形）→ 2 件目の <code>SECRET</code> がマスクされる</strong>（否定先読みが各文字位置で効くことの回帰。単純な <code>(\S+)</code> では素通りする。§4.10）<br>- <strong>前置文字つき（<code>AUTHORIZATION: basic xAUTHORIZATION: basic SECRET</code>）→ <code>SECRET</code> がマスクされる</strong>（先読みを値の先頭 1 回だけに置くと破れる形の回帰）<br>- <strong>値が空の行の次行が無関係な診断（<code>AUTHORIZATION: basic</code> の改行に続く <code>remote: rejected</code>）→ 2 行目は変化しない</strong>（改行を区切りに含めないことの回帰。過剰マスクの防止）<br>- <strong><code>xauthorization: basic SECRET</code> → マスクされる</strong>（語頭に <code>\b</code> を付けないことの回帰）<br>- <strong><code>Proxy-Authorization: Basic SECRET</code> → マスクされる</strong>（同上）<br>- 区切りが NBSP・全角空白・<code>U+FEFF</code> → マスクされる<br>- 区切りが <code>NUL</code>・<code>U+0085</code>（<code>\s</code> に含まれない）→ その 1 件はマスクされない（過小マスクの限界を明示的に固定する。§4.10）<br>- 認証情報に <code>/</code> を含む URL（<code>https://x-access-token:SEC/RET@host/</code>）→ マスクされない（URL 形式の限界を明示的に固定する。§4.10）</td>
 <td>なし（入力は値のみ。差し替え不要）</td>
 </tr>
 <tr>
@@ -2093,13 +2182,14 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 </tbody></table>
 <h2 id="sec-8">8. 決定事項と根拠<a class="anchor" href="#sec-8">#</a></h2>
-<p>決定が 58 件になったため、主題ごとの索引を置く。後の決定に上書きされた行は「決定」欄の末尾に <code>→ #nn で改訂</code> を付けてある（番号は振り直さない。承認済みの参照を壊さないため）。</p>
+<p>決定が 61 件になったため、主題ごとの索引を置く。後の決定に上書きされた行は「決定」欄の末尾に <code>→ #nn で改訂</code> を付けてある（番号は振り直さない。承認済みの参照を壊さないため）。</p>
 <ul>
 <li><strong>層と契約</strong>（Source・ポート・UseCase の責務）：#1・#2・#4・#11・#12・#17・#19・#24・#43・#45・#57</li>
 <li><strong>収集と差分</strong>（取得・正規化・突合・切り詰め）：#3・#5・#6・#7・#8・#26・#27・#31・#33・#36・#58</li>
 <li><strong>git と配信</strong>（書き出し・コミット・push・Pages）：#9・#10・#14・#20・#21・#22・#35・#39・#40・#49</li>
-<li><strong>サマリと静かな停止の検知</strong>：#13・#32・#34・#41・#44・#46・#47・#50・#51・#53・#54・#55</li>
-<li><strong>秘密情報</strong>：#40・#48・#55（切り詰め単位）</li>
+<li><strong>サマリと静かな停止の検知</strong>：#13・#32・#34・#41・#44・#46・#47・#50・#51・#53・#54・#55・#61</li>
+<li><strong>秘密情報</strong>：#40・#48・#55（切り詰め単位）・#59・#61</li>
+<li><strong>通知の送信経路</strong>：#16・#17・#32・#34・#48・#60</li>
 <li><strong>運用と CI・テスト方針</strong>：#15・#16・#18・#23・#25・#28・#29・#30・#37・#38・#42・#52・#56</li>
 </ul>
 <table>
@@ -2459,6 +2549,24 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <td>すべてのリダイレクトをそのまま追う（§4.3 は本決定に合わせて例外を明記する）／ホスト変更も拒否する</td>
 <td>降格を追うと、収集した見出し・URL が平文経路で取得したものになり、経路上の改変を検知できない。相手サイトの設定ミスと経路上の介入を区別できない以上、失敗させて Source 失敗（#3 の検知経路）に載せる方が安全で、記事は前回値が保持されるので損失も無い。リトライ対象から外すのは、同じ降格が繰り返されるだけで結果が変わらないため。この失敗は <code>status</code> を持たないので、<code>status</code> の有無でリトライ可否を決める既定（§5.7 手順 3・4）では誤ってリトライされる。専用のサブクラスで区別する。ホスト変更まで拒否すると、旧ドメインから新ドメインへの正当な転送（東宝の <code>tohostage.com</code> 等。調査レポート §5）で収集が止まるので <code>warn</code> に留める。<strong>実装（<code>fetch-http-client.ts</code> の <code>checkRedirect</code>）が先行しており本書がそれに追随する</strong>（§8.1 の実装追随行 (g)）。design-review 第 3 周で追加</td>
 </tr>
+<tr>
+<td>59</td>
+<td><code>http.extraheader</code> のマスクは <strong>tempered greedy token</strong>（値の各文字位置で「ここから次のヘッダ名が始まっていないか」を否定先読みする）で値の終端を決め、区切りは<strong>垂直空白以外のすべての <code>\s</code></strong>、ヘッダ名の語頭に <code>\b</code> を付けない（§4.10 の規則表）。URL 形式が <code>/</code> を含む認証情報を拾えないこと・<code>\s</code> に含まれない区切り文字の形が拾えないことは<strong>限界として記述に残し</strong>、§7.3 の境界値テストで固定する</td>
+<td>値部分を <code>(\S+)</code>（次の空白まで）とだけ規定する（第 7 周までの §4.10）／区切りを半角スペース・タブに狭める／区切りに <code>\s*</code>（垂直空白を含む）を使う／語頭に <code>\b</code> を付ける／URL 形式の正規表現を厳密化する</td>
+<td><code>(\S+)</code> では、同一行に extraheader が 2 件並ぶ入力で 1 件目の値が 2 件目のヘッダ名を食い潰し、<code>g</code> フラグの走査再開位置が本物のトークンより後ろへ進んで<strong>素通りする</strong>（普通の半角スペース区切りでも起きることを実測で確認。区切り文字の種類を変えるだけでは防げない）。先読みを値の先頭 1 回だけに置く形も、次のヘッダ名の手前に前置文字が 1 つ挟まると破れる。素通りの結果は <code>GITHUB_TOKEN</code> が公開リポジトリの Actions ログに残ることで、影響は不可逆。区切りを狭めると NBSP・全角空白の入力で漏れ、<code>\s*</code>（改行を許す）にすると値が空の行の次行を取り込んで後続の診断を過剰に伏せる／行跨ぎの誤マッチになる。<code>\b</code> を付けると <code>xauthorization:</code> の形が漏れる（過剰に伏せる側へ倒す方針）。URL 形式の厳密化は、GitHub のトークンが <code>[A-Za-z0-9_]</code> のみで <code>/</code> を含まないため利益が無く、正規表現の複雑化で別の穴を作る。<strong>実装（<code>sanitize-git-output.ts</code> の <code>EXTRAHEADER_AUTH_PATTERN</code>）が先行しており本書がそれに追随する</strong>（T-46・T-47 のレビュー指摘。FOLLOWUPS 1-6〜1-8・1-10）</td>
+</tr>
+<tr>
+<td>60</td>
+<td><code>FirebaseNotificationGateway</code> は既定アプリを <strong><code>getApps().find((app) =&gt; app.name === &quot;[DEFAULT]&quot;)</code></strong> で引き、無いときだけ <code>initializeApp({ credential })</code> を呼び、得た <code>App</code> をフィールドに保持して <code>getMessaging(this.app).send(...)</code> を呼ぶ。スキーマ不正・<code>cert()</code> 失敗・<code>initializeApp</code> 失敗の 3 段はそれぞれ固定文言を <code>warn</code> に出してから同じ文言の <code>Error</code> を投げ、既定アプリを再利用した場合も <code>warn</code> を出す。<strong>権威ある <code>error</code> は <code>main.ts</code> 手順 5 の 1 本</strong>で、そこに入力由来の断片を含まない <code>errorName</code> を添える（§4.7・§5.4・§5.5 手順 5）</td>
+<td><code>getApps().length === 0</code> のときだけ <code>initializeApp</code> を呼ぶ（第 7 周までの §5.4）／<code>getMessaging()</code>（引数なし）で既定アプリを暗黙に解決する／<code>getApp()</code>（名前省略）で既存アプリを引く／ゲートウェイ側でも <code>error</code> を出す</td>
+<td><code>getApps()</code> は<strong>名前付きアプリも数える</strong>ため件数では既定アプリの有無を判定できず、名前付きアプリだけが登録された状態を「初期化済み」と誤判定して <code>initializeApp</code> を呼ばず、<code>getMessaging()</code> が別のアプリを解決する。<code>initializeApp({ credential })</code> は credential 指定時に<strong>冪等でない</strong>（既定アプリがあると <code>INVALID_APP_OPTIONS</code>）ので、件数判定のずれがそのまま初期化失敗になる。<code>getApp()</code>（名前省略）は既定アプリが無いと <code>NO_APP</code> を投げ、<code>cert()</code> の失敗と区別できない誤った診断になる。3 つの <code>warn</code> は「どこまで進んで落ちたか」の一次情報で、同じ事象を 2 本の <code>error</code> として出すと Actions のログで原因が二重に見える。<code>errorName</code> はクラス名だけなので §8 #48 の禁止（入力の断片を出さない）に触れない。<strong>実装（<code>firebase-notification-gateway.ts</code>・<code>main.ts</code> 手順 5）が先行しており本書がそれに追随する</strong>（T-47 の自己申告コメント。FOLLOWUPS 1-1〜1-4・1-20）</td>
+</tr>
+<tr>
+<td>61</td>
+<td>§5.6 の実行サマリステップに 4 つの歯止めを置く：(1) サマリの有無は <code>[ ! -s ... ]</code> で判定する、(2) <code>$GITHUB_OUTPUT</code> へ書く 5 本は <code>head -n 1</code> で 1 行に固定する、(3) ステップサマリ本文の <code>message</code> は <code>gsub(&quot;[[:cntrl:][:space:]]&quot;; &quot; &quot;)</code> で潰す（collector 側 <code>sanitizeFailureMessage</code> と同じ範囲を POSIX ブラケット式だけで表す。§4.8）、(4) 外部サイト由来の可変部分（<code>reason</code>・<code>message</code>）はコードスパンで囲む。変数名は <code>SUMMARY_JSON</code></td>
+<td><code>[ ! -f ... ]</code> のまま（第 7 周までの §5.6）／<code>gsub(&quot;[\\r\\n]&quot;; &quot; &quot;)</code> のまま／<code>echo &quot;key=$(jq …)&quot;</code> のまま／可変部分を地の文のまま埋める／変数名 <code>S</code> のまま</td>
+<td>(1) 0 バイトのサマリに対して jq は終了コード 0・出力なしで終わるため（jq 1.7.1 で実測）、<code>-f</code> では <code>|| echo unknown</code> が発火せず 5 つの出力がすべて空文字になり、<code>deploy-pages</code> が <code>published != &#39;&#39;</code> を満たさずスキップされる。これは #53 が決めた「想定外の形 → <code>unknown</code> → 配信は続ける」と逆向きで、1 文字（<code>-f</code> → <code>-s</code>）で解消する。(2) jq がトップレベル JSON 文書を複数出力すると <code>$GITHUB_OUTPUT</code> に 2 行目以降が書かれ、偽の <code>key=value</code> 行を差し込める構造になる（現在の書き手は <code>RunSummaryStore</code> の <code>JSON.stringify</code> だけなので到達経路は無いが、構造として塞ぐ）。(3) <code>[\r\n]</code> だけでは <code>U+001B</code>（ESC）が残り、Actions のログ・ステップサマリで ANSI エスケープとして解釈されうる。同一実行では collector 側の無害化が必ず先に通るため実害は無いが、多層防御として穴になる（jq の Oniguruma は POSIX ブラケット式を解釈する）。(4) ステップサマリは Markdown としてレンダリングされるため、外部サイト由来の文字列が <code>#</code> 見出し・リンクを含むと読み手を誤誘導する体裁を作れる（raw HTML と <code>javascript:</code> は GitHub 側でサニタイズされるので影響は表示上のみ）。変数名は 40 行超の <code>run:</code> ブロックで 8 回参照されるため、1 文字では対象が読めない。<strong>本決定は §5.6 の YAML を直す必要があり、<code>.github/workflows/collect.yml</code> は本書の改訂に追随する</strong>（§8.1 の実装行。T-46 のレビュー指摘。FOLLOWUPS 1-14〜1-17・1-19）</td>
+</tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
 <table>
@@ -2490,19 +2598,29 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <td>§3.2、§4.1、§7.3、§8 #1・#28・#30・#37・#38</td>
 </tr>
 <tr>
-<td>CLAUDE.md（司令塔。D-02 承認後に更新）</td>
-<td>「テスト方針」の <code>GitArticlesPublisher</code> の例外条件（65 行）に carve-out を追記する。現在は「<code>execFile</code> を実物を通さないスタブに差し替え、実 git を一度も起動しないことが条件」とだけ書かれており、§7.3 が認める 1 ケースの例外（実行時の <code>code=1</code> / <code>signal=null</code> を実測で固定するため、<code>vi.importActual</code> の <code>execFile</code> で git ではない <code>process.execPath</code> の子プロセスを起動する）が無い。条件文だけを読んだ者がこのケースを規約違反として削除でき、#37 が塞いだ盲点（型定義に無い実行時 <code>signal: null</code> の実測）が復活する。追記する文言は §7 冒頭・§7.3・§8 #37 と同じものにする</td>
+<td>CLAUDE.md（<strong>反映済み</strong>。2026-09-25、commit <code>f890477</code>。履歴として残す）</td>
+<td>「テスト方針」の <code>GitArticlesPublisher</code> の例外条件（65 行）に carve-out を追記する。現在は「<code>execFile</code> を実物を通さないスタブに差し替え、実 git を一度も起動しないことが条件」とだけ書かれており、§7.3 が認める 1 ケースの例外（実行時の <code>code=1</code> / <code>signal=null</code> を実測で固定するため、<code>vi.importActual</code> の <code>execFile</code> で git ではない <code>process.execPath</code> の子プロセスを起動する）が無い。条件文だけを読んだ者がこのケースを規約違反として削除でき、#37 が塞いだ盲点（型定義に無い実行時 <code>signal: null</code> の実測）が復活する。追記する文言は §7 冒頭・§7.3・§8 #37 と同じものにする。<strong>この申し送りは完了しており残作業は無い</strong>（CLAUDE.md 65 行に carve-out が入っている）</td>
 <td>§7 冒頭、§7.3、§8 #37</td>
 </tr>
 <tr>
-<td>要件書（開発者の承認事項。司令塔が確認する）</td>
+<td>要件書（<strong>反映済み</strong>。2026-09-25、commit <code>f890477</code>。履歴として残す）</td>
 <td>§5（非機能要件）に「<strong>秘密情報</strong>：Secrets・トークンをログ・成果物に残さない」の 1 行を足すことを提案する。現行の §5 は 8 項目（対応 OS・収集間隔・データ保持・オフライン時・起動速度・通知の到達性・相手サイトへの配慮・運用コスト）で秘密情報・ログの取り扱いに触れておらず、本書 §4.10・§4.7・§8 #38・#40 の根拠は CLAUDE.md「秘密情報」と本書 §4.7 しか無い（要件書に上位の根拠が無い）。採否が決まるまで、本書は要件 §5 を根拠に挙げない</td>
 <td>§4.7、§4.10、§8 #38・#40</td>
 </tr>
 <tr>
 <td>実装（T-37 の後続タスク。司令塔が別タスクで扱う）</td>
-<td>本改訂で正の記述を足した箇所のうち、現行の実装が満たしていないものは、<strong>本改訂時点で判明している範囲で (a)〜(h)</strong> である（網羅ではない。列挙に無い層・ファイルに乖離が無いことを意味しない。追加の乖離は <code>grep -rn &quot;D-02&quot; collector/src</code> で随時洗い出す）。(a) <code>maskCredentials</code> が URL 形式（<code>/(https?:\/\/)[^/\s]+@/gi</code>）しか見ておらず、実運用で現れる <code>http.extraheader</code> の <code>AUTHORIZATION: basic &lt;base64&gt;</code> をマスクしない。値部分の終端（次の空白または行末まで）も §4.10 のとおりにする（§4.10・§8 #40・M-15）。(b) <code>RunSummary</code> が <code>published: boolean</code> のままで <code>publishOutcome</code>（<code>&quot;unknown&quot;</code> を含む 4 値）/ <code>publisher</code> を持たず、<code>RunCollection</code> 手順 7・8 の 2 つの検知（<code>no changes but stats are non-zero</code> / <code>changed but nothing staged</code>）と <code>collect.yml</code> の <code>changed_but_not_published</code> / <code>no_changes_but_stats</code> ステップ、<code>RunCollectionInput.dryRun</code>、<code>main.ts</code> 手順 4b の DRY_RUN 拒否、<code>buildFailureSummary</code> の <code>error</code> 引数が無い（§4.8・§5.5・§5.6・§8 #41・#44〜#47・#51・#53）。あわせて <strong><code>DetectDiffResult.stats.survivingChanges</code>（§4.6・§5.2 手順 7b）と <code>RunSummaryBase.survivingChanges</code>（§4.8）を追加</strong>し、手順 7 の判定を <code>survivingChanges &gt; 0</code> にする（現行実装にこのフィールドは無く、<code>dropped === 0</code> 条件では定常状態で一度も発火しない。§8 #51）。<code>buildFailureSummary</code> からは <code>failures</code> 引数を落として 4 引数にし、<code>sourceFailures</code> の導出（<code>error instanceof SnapshotMissingError</code>）を関数の中へ寄せる（§8 #46）。<code>ArticlesValidationError</code> を <code>&quot;skipped&quot;</code> に含める（§8 #47）。<code>sanitizeFailureMessage</code> / <code>MAX_FAILURE_MESSAGE_LENGTH</code> の <code>export</code> を外し、切り詰めをコードポイント単位にする（§8 #54・#55）。<code>logger.error(&quot;refusing to publish&quot;, ...)</code> は <code>{ failures: &lt;件数&gt; }</code>（§5.5 手順 5）。<code>main.ts</code> 手順 3・4 の失敗ではサマリを書かない（§5.5 手順 10）。<strong><code>RunSummary</code> の型変更（§4.8）と <code>collect.yml</code> の jq の書き換え（§5.6）は必ず同一コミットで入れる</strong>（片方だけ先に入ると <code>published</code> の判定が噛み合わず、Pages が更新されない、または毎時無駄にデプロイされる）。あわせて <code>collect.yml</code> の jq 5 か所（<code>published</code> / <code>failed_sources</code> / <code>notifications_all_failed</code> とステップサマリ本文 3 本）に §5.6 のとおりの型ガードとフォールバック（<code>2&gt;/dev/null || echo unknown</code> / <code>|| true</code>）を入れ、本文サマリに <code>残存 \(.survivingChanges)</code> を加え、<code>discardedByCompany</code> の <code>select</code> に <code>(.value | type) == &quot;number&quot;</code> を足す（§8 #53）。(c) 実装側の <code>// D-02 追随: …に無い</code> コメント 6 か所のうち、本改訂で規定が入って<strong>削除または通常の参照コメントに置き換えられるもの</strong>は <code>git-articles-publisher.ts</code>・<code>sanitize-git-output.ts</code>・<code>paths.ts</code>・<code>articles-file-store.ts</code>・<code>run-summary-store.ts</code>・<code>run-collection.ts</code> の 6 か所すべてである（§4.8・§4.10・§5.3・§8 #39〜#43・#50 に規定が入った。<code>run-collection.ts</code> の <code>sanitizeFailureMessage</code> の「§4.8 には字数上限の明記が無い」は §4.8 の規定で解消される）。これとは別に、実装が「D-02 側の追随が必要」と自己申告している乖離は (h) にまとめる（本改訂までは規定が無かったもの）。(d) <code>main.ts</code> 手順 4 の通知ゲートウェイ生成失敗が <code>logger.error(..., { error: formatError(e) })</code> になっており、<code>JSON.parse</code> の <code>SyntaxError</code> 経由でサービスアカウント JSON の断片が Actions のログに残りうる。固定文言だけを出す形に直す。あわせて <strong><code>FirebaseNotificationGateway</code> は <code>main.ts</code> 手順 4a がパースしたオブジェクトをコンストラクタで受け取り、初期化もコンストラクタで済ませる形にする</strong>（環境変数も生の JSON 文字列も受け取らず、<code>send()</code> へ遅延初期化しない）。初期化失敗は <code>main.ts</code> 手順 5 が固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> で捕まえ、<code>NotificationSendError.cause</code> には firebase-admin が送信時に投げた例外だけを入れる（§4.7・§5.4・§5.5 手順 4a・5・§8 #48）。(e) <code>PUBLISH_BRANCH</code> を <code>paths.ts</code> から <code>git-articles-publisher.ts</code> の非公開定数へ移す（§4.10・§8 #49）。(f) §7.3 に追加した 4 ケース（<code>execFile</code> の第 3 引数の固定・<code>git commit</code> 失敗・extraheader の後続文字列・extraheader の空白 2 文字）と §7.1 に追加した行のテストを書く。(g) <code>fetch-http-client.ts:222</code> の <code>// TODO(D-02 §8.1 申し送り)</code> コメントを削除する（リダイレクトの https→http 降格拒否とホスト変更時の <code>warn</code> は §5.7 手順 2b と §8 #58 に規定が入った）。あわせて <code>sleep.ts</code>（§3.2）と <code>DEFAULT_FETCH_HTTP_CLIENT_OPTIONS</code>（§5.7）も本書に規定が入ったので、これらを指す「§5.7 のコード片には無い export だが」等の但し書きコメントを通常の参照コメントに直す。第 2 周までこの 3 件が本行の列挙から漏れており、「6 件ある」という件数の記述が「http 層には乖離が無い」と誤読されうる状態だった（§8 #58）。(h) 実装が「D-02 側の追随が必要」と自己申告していた次の 5 系統について、本改訂で §4.2・§4.7・§4.9・§5.1 に規定が入ったので、実装側の当該コメントを削除する（実装の挙動はいずれも安全側なので<strong>設計書を実装に合わせた</strong>。実装の変更は不要で、文面と型の追加だけ）。1. <code>infrastructure/logging/console-logger.ts:15-17</code>（値が空白・<code>=</code>・引用符・制御文字を含む場合、または空文字の場合に <code>JSON.stringify</code> で囲む。ログインジェクションと行崩れの防止。§4.7）。2. <code>infrastructure/logging/console-logger.ts:43-45</code> と <code>domain/logger.ts:62-65</code>（<code>parseLogLevel</code> で <code>LogLevel</code> を再検証し、未知のレベルを <code>info</code> へ縮退させる。§4.7・§4.9。<code>parseLogLevel</code> は §3.2 の <code>logger.ts</code> の公開物にも加えた）。3. <code>domain/logger.ts:29-31</code>（<code>formatError</code> の <code>cause</code> が循環参照・異常に深い連鎖・<code>String()</code> できない値でも安全に扱う。§4.7 に深さ上限 <code>MAX_CAUSE_DEPTH</code> と <code>[unprintable]</code> を規定）。4. <code>domain/datetime.ts:26-28</code>（<code>toJstDateTime</code> の年範囲 <code>1..9999</code> の検証。§4.2）。5. <code>application/collect-articles.ts:37</code>・<code>:233</code>・<code>:277</code>（<code>RawArticle</code> の形の実行時検査。配列でなければ <code>reason: &quot;error&quot;</code> の Source 失敗、要素の型が外れれば 1 件ずつ破棄して <code>warn(&quot;invalid raw article&quot;)</code>。§5.1 手順 6）</td>
+<td>本改訂で正の記述を足した箇所のうち、現行の実装が満たしていないものは、<strong>本改訂時点で判明している範囲で (a)〜(h)</strong> である（網羅ではない。列挙に無い層・ファイルに乖離が無いことを意味しない。追加の乖離は <code>grep -rn &quot;D-02&quot; collector/src</code> で随時洗い出す）。(a) <code>maskCredentials</code> が URL 形式（<code>/(https?:\/\/)[^/\s]+@/gi</code>）しか見ておらず、実運用で現れる <code>http.extraheader</code> の <code>AUTHORIZATION: basic &lt;base64&gt;</code> をマスクしない。値部分の終端（次の空白または行末まで）も §4.10 のとおりにする（§4.10・§8 #40・M-15）。(b) <code>RunSummary</code> が <code>published: boolean</code> のままで <code>publishOutcome</code>（<code>&quot;unknown&quot;</code> を含む 4 値）/ <code>publisher</code> を持たず、<code>RunCollection</code> 手順 7・8 の 2 つの検知（<code>no changes but stats are non-zero</code> / <code>changed but nothing staged</code>）と <code>collect.yml</code> の <code>changed_but_not_published</code> / <code>no_changes_but_stats</code> ステップ、<code>RunCollectionInput.dryRun</code>、<code>main.ts</code> 手順 4b の DRY_RUN 拒否、<code>buildFailureSummary</code> の <code>error</code> 引数が無い（§4.8・§5.5・§5.6・§8 #41・#44〜#47・#51・#53）。あわせて <strong><code>DetectDiffResult.stats.survivingChanges</code>（§4.6・§5.2 手順 7b）と <code>RunSummaryBase.survivingChanges</code>（§4.8）を追加</strong>し、手順 7 の判定を <code>survivingChanges &gt; 0</code> にする（現行実装にこのフィールドは無く、<code>dropped === 0</code> 条件では定常状態で一度も発火しない。§8 #51）。<code>buildFailureSummary</code> からは <code>failures</code> 引数を落として 4 引数にし、<code>sourceFailures</code> の導出（<code>error instanceof SnapshotMissingError</code>）を関数の中へ寄せる（§8 #46）。<code>ArticlesValidationError</code> を <code>&quot;skipped&quot;</code> に含める（§8 #47）。<code>sanitizeFailureMessage</code> / <code>MAX_FAILURE_MESSAGE_LENGTH</code> の <code>export</code> を外し、切り詰めをコードポイント単位にする（§8 #54・#55）。<code>logger.error(&quot;refusing to publish&quot;, ...)</code> は <code>{ failures: &lt;件数&gt; }</code>（§5.5 手順 5）。<code>main.ts</code> 手順 3・4 の失敗ではサマリを書かない（§5.5 手順 10）。<strong><code>RunSummary</code> の型変更（§4.8）と <code>collect.yml</code> の jq の書き換え（§5.6）は必ず同一コミットで入れる</strong>（片方だけ先に入ると <code>published</code> の判定が噛み合わず、Pages が更新されない、または毎時無駄にデプロイされる）。あわせて <code>collect.yml</code> の jq 5 か所（<code>published</code> / <code>failed_sources</code> / <code>notifications_all_failed</code> とステップサマリ本文 3 本）に §5.6 のとおりの型ガードとフォールバック（<code>2&gt;/dev/null || echo unknown</code> / <code>|| true</code>）を入れ、本文サマリに <code>残存 \(.survivingChanges)</code> を加え、<code>discardedByCompany</code> の <code>select</code> に <code>(.value | type) == &quot;number&quot;</code> を足す（§8 #53）。(c) 実装側の <code>// D-02 追随: …に無い</code> コメント 6 か所のうち、本改訂で規定が入って<strong>削除または通常の参照コメントに置き換えられるもの</strong>は <code>git-articles-publisher.ts</code>・<code>sanitize-git-output.ts</code>・<code>paths.ts</code>・<code>articles-file-store.ts</code>・<code>run-summary-store.ts</code>・<code>run-collection.ts</code> の 6 か所すべてである（§4.8・§4.10・§5.3・§8 #39〜#43・#50 に規定が入った。<code>run-collection.ts</code> の <code>sanitizeFailureMessage</code> の「§4.8 には字数上限の明記が無い」は §4.8 の規定で解消される）。これとは別に、実装が「D-02 側の追随が必要」と自己申告している乖離は (h) にまとめる（本改訂までは規定が無かったもの）。(d) <code>main.ts</code> 手順 4 の通知ゲートウェイ生成失敗が <code>logger.error(..., { error: formatError(e) })</code> になっており、<code>JSON.parse</code> の <code>SyntaxError</code> 経由でサービスアカウント JSON の断片が Actions のログに残りうる。固定文言だけを出す形に直す。あわせて <strong><code>FirebaseNotificationGateway</code> は <code>main.ts</code> 手順 4a がパースしたオブジェクトをコンストラクタで受け取り、初期化もコンストラクタで済ませる形にする</strong>（環境変数も生の JSON 文字列も受け取らず、<code>send()</code> へ遅延初期化しない）。初期化失敗は <code>main.ts</code> 手順 5 が固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> で捕まえ、<code>NotificationSendError.cause</code> には firebase-admin が送信時に投げた例外だけを入れる（§4.7・§5.4・§5.5 手順 4a・5・§8 #48）。(e) <code>PUBLISH_BRANCH</code> を <code>paths.ts</code> から <code>git-articles-publisher.ts</code> の非公開定数へ移す（§4.10・§8 #49）。(f) §7.3 に追加した 4 ケース（<code>execFile</code> の第 3 引数の固定・<code>git commit</code> 失敗・extraheader の後続文字列・extraheader の空白 2 文字）と §7.1 に追加した行のテストを書く。(g) <code>fetch-http-client.ts:222</code> の <code>// TODO(D-02 §8.1 申し送り)</code> コメントを削除する（リダイレクトの https→http 降格拒否とホスト変更時の <code>warn</code> は §5.7 手順 2b と §8 #58 に規定が入った）。あわせて <code>sleep.ts</code>（§3.2）と <code>DEFAULT_FETCH_HTTP_CLIENT_OPTIONS</code>（§5.7）も本書に規定が入ったので、これらを指す「§5.7 のコード片には無い export だが」等の但し書きコメントを通常の参照コメントに直す。第 2 周までこの 3 件が本行の列挙から漏れており、「6 件ある」という件数の記述が「http 層には乖離が無い」と誤読されうる状態だった（§8 #58）。(h) 実装が「D-02 側の追随が必要」と自己申告していた次の 5 系統について、本改訂で §4.2・§4.7・§4.9・§5.1 に規定が入ったので、実装側の当該コメントを削除する（実装の挙動はいずれも安全側なので<strong>設計書を実装に合わせた</strong>。実装の変更は不要で、文面と型の追加だけ）。1. <code>infrastructure/logging/console-logger.ts:15-17</code>（値が空白・<code>=</code>・引用符・制御文字を含む場合、または空文字の場合に <code>JSON.stringify</code> で囲む。ログインジェクションと行崩れの防止。§4.7）。2. <code>infrastructure/logging/console-logger.ts:43-45</code> と <code>domain/logger.ts:62-65</code>（<code>parseLogLevel</code> で <code>LogLevel</code> を再検証し、未知のレベルを <code>info</code> へ縮退させる。§4.7・§4.9。<code>parseLogLevel</code> は §3.2 の <code>logger.ts</code> の公開物にも加えた）。3. <code>domain/logger.ts:29-31</code>（<code>formatError</code> の <code>cause</code> が循環参照・異常に深い連鎖・<code>String()</code> できない値でも安全に扱う。§4.7 に深さ上限 <code>FORMAT_ERROR_MAX_DEPTH</code>・訪問済み <code>Error</code> の <code>seen</code> による循環の打ち切り・<code>[unprintable]</code> を規定した。コード片の定数名と循環対策は実装に合わせてある）。4. <code>domain/datetime.ts:26-28</code>（<code>toJstDateTime</code> の年範囲 <code>1..9999</code> の検証。§4.2）。5. <code>application/collect-articles.ts:37</code>・<code>:233</code>・<code>:277</code>（<code>RawArticle</code> の形の実行時検査。配列でなければ <code>reason: &quot;error&quot;</code> の Source 失敗、要素の型が外れれば 1 件ずつ破棄して <code>warn(&quot;invalid raw article&quot;)</code>。§5.1 手順 6）</td>
 <td>§4.2、§4.7、§4.8、§4.9、§4.10、§5.1、§5.3、§5.5、§5.6、§5.7、§7.1、§7.3、§8 #39〜#58</td>
+</tr>
+<tr>
+<td>実装（本改訂（FOLLOWUPS §1 の反映）の後続タスク。司令塔が別タスクで扱う）</td>
+<td>本改訂で正の記述が変わった箇所のうち、現行の実装が満たしていないものは次の (i)〜(iv) である。それ以外（§4.2 の <code>InvalidDateTimeError</code> の <code>name</code> と年範囲の文言・§4.7 の <code>formatError</code>／経路表・§5.1 手順 6 の 2 文言・§5.4 の FCM 初期化手順と 4 つのログ・§5.5 手順 4a・5 の文言と <code>errorName</code>・§6 の該当 4 行）は<strong>実装が正で本書が追随した</strong>ものなので実装の変更は不要である。(i) <code>.github/workflows/collect.yml</code> の <code>実行サマリ</code> ステップを §5.6 の YAML に合わせる（<code>[ ! -s ... ]</code>・5 本の <code>head -n 1</code>・<code>gsub(&quot;[[:cntrl:][:space:]]&quot;; &quot; &quot;)</code>・<code>reason</code> / <code>message</code> のコードスパン・変数名 <code>SUMMARY_JSON</code>。§8 #61）。ワークフローだけの変更で collector 側のコードは変わらない。(ii) §7.3 の <code>maskCredentials</code> 行に追加した 9 ケース（同一行 2 件・前置文字・空値行の次行・<code>xauthorization</code>・<code>Proxy-Authorization</code>・NBSP 等の区切り・<code>NUL</code> / <code>U+0085</code> の区切り・<code>/</code> を含む URL）と <code>GitArticlesPublisher</code> 行に追加した「対象とブランチの固定」ケースのテストを書く（実装の挙動は現行のままで通る想定。回帰の歯止めが目的）。(iii) §7.1 の <code>notify-new-articles</code>「全団体が reject」行に追加した <code>mode: &quot;reject-with-cause&quot;</code> のケースと、<code>FakeNotificationGateway</code>（§7.2）の 2 モード化。(iv) §9 Q-2 の回答が「広げる」だった場合は <code>sanitize-git-output.ts</code> を <code>AUTH_SCHEMES</code> 化し、§4.10 の規則表と §7.3 のケースを同時に更新する（回答が「広げない」なら不要）</td>
+<td>§4.10、§5.6、§7.1、§7.2、§7.3、§8 #59・#60・#61、§9 Q-2</td>
+</tr>
+<tr>
+<td>D-01（reopen とセットで行う。単独では着手しない）</td>
+<td>コードポイント単位の切り詰めが <code>application/run-collection.ts</code>（<code>sanitizeFailureMessage</code>）と <code>infrastructure/storage/sanitize-git-output.ts</code>（<code>sanitizeGitOutput</code>）に素の式（<code>Array.from(...).slice(0, n).join(&quot;&quot;)</code>）で重複している。§8 #55 は「単位を揃える」決定であって実装の複写までは求めておらず、片方だけ将来書き換えられると #55 が守ろうとした一致が静かに崩れる。<code>domain/text.ts</code> に <code>truncateCodePoints(s, max)</code> を足して両方から呼ぶ形に寄せる。<strong>D-01 §3.2 が <code>text.ts</code> の公開物を <code>normalizeTitle</code> / <code>foldText</code> / <code>truncateUtf16</code> と列挙しているため、D-01 の改訂（reopen）を伴う。</strong> 本サイクル（D-02 単独の reopen）では扱わない</td>
+<td>§4.8、§4.10、§8 #55、D-01 §3.2</td>
 </tr>
 <tr>
 <td>D-03</td>
@@ -2546,7 +2664,31 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 </tbody></table>
 <h2 id="sec-9">9. 未決定事項<a class="anchor" href="#sec-9">#</a></h2>
-<p>該当なし。初稿の 3 件（情報源の失敗の通知手段・http の既定値・四季の初回判定）は §8 #25〜#27 に、design-review 第 1 周の 2 件（CLAUDE.md のディレクトリ節・テスト方針の例外の更新）は §8 #28・#30 と §8.1 に、いずれも開発者の回答を得て移した（2026-09-19）。T-37 で挙げた 1 件（<code>sanitize-git-output.ts</code> の純粋関数テストの扱い）は A 案の採用を得て §8 #38 と §8.1 に移した（2026-09-25）。design-review 第 1 周（再開後）の修正で生じた判断は、設計上の判断（差分判定の 3 分岐・診断の無害化・<code>RunSummary</code> の形・<code>ENOENT</code> のログレベル・<code>RunSummary</code> 型の置き場）はすべて §8 #39〜#43 に決定として記し、開発者の承認が要るもの（要件書 §5 への秘密情報の 1 行追加、CLAUDE.md 65 行への carve-out 追記）と実装側の追随作業は §8.1 の申し送りに置いた（2026-09-25）。design-review 第 2 周（再開後）の 20 件も同様で、設計上の判断（Actions 上の DRY_RUN の拒否・<code>dryRun</code> を実行の意図として渡す・<code>buildFailureSummary</code>・<code>publishOutcome: &quot;unknown&quot;</code>・秘密情報を含む例外の扱い・<code>paths.ts</code> の責務・<code>SourceFailure.message</code> の無害化・差分判定側の静かな停止の検知・ワークフローの最小権限と SHA 固定・jq の型ガード）はすべて §8 #44〜#53 に決定として記し、開発者の承認が要る新しい事項は生じなかった（既出の 2 件は §8.1 のまま）。実装側の追随作業は §8.1 の「実装」行に (a)〜(f) として集約した（2026-09-25）。design-review 第 3 周（再開後）の 12 件も同様で、設計上の判断（<code>survivingChanges</code> による矛盾判定・<code>buildFailureSummary</code> の引数・Noop を含む契約の弱め方・起動時検証失敗時のサマリ不在・FCM 初期化の時点・リダイレクトの降格拒否・<code>sanitizeFailureMessage</code> の非公開化・切り詰め単位の統一・起動時検証を無検証で残すこと・記録専用フィールドの置き場）はすべて §8 #45・#47・#48・#51・#53・#54〜#58 に決定として記し、開発者の承認が要る新しい事項は生じなかった。実装側の追随作業は §8.1 の「実装」行に (g) を加え (b)・(d) を拡張して集約した（2026-09-25）。</p>
+<p><strong>[Q-1] <code>formatError</code> と <code>FirebaseNotificationGateway</code> の契約テストを置けるようにするか（CLAUDE.md の変更を伴う）</strong></p>
+<ul>
+<li>背景：§8 #48 が「秘密漏洩の経路」として警戒している <code>formatError</code> の <code>cause</code> 再帰連結は、collector 全体で 1 本も直接テストされていない（連結子を変える変異が 486 テスト全通過した実績がある）。§7.1 の <code>notify-new-articles</code> の行で <code>cause</code> 有無の 2 経路は固定したが、<strong>深さ上限（<code>FORMAT_ERROR_MAX_DEPTH</code>）・循環参照（<code>seen</code>）・<code>[unprintable]</code></strong> は依然無検証で、退行しても品質ゲートは緑のまま（静かな失敗）、結果は<strong>公開リポジトリの Actions ログへの秘密鍵流出</strong>という不可逆な形で現れる。<code>FirebaseNotificationGateway</code>（§5.4、§8 #60）も同じ理由で無検証（3 段の固定文言・既定アプリの名前による解決）</li>
+<li>選択肢：<ul>
+<li><strong>A. <code>formatError</code> だけを純粋関数の例外に加える</strong>（<code>test/domain/logger.test.ts</code> にテーブル駆動テスト）。CLAUDE.md「テスト方針」の純粋関数の例外列挙に <code>formatError</code>（<code>domain/logger.ts</code>）を追記し、本書 §7 冒頭・§7.3 の carve-out にも同じ 1 行を加える</li>
+<li><strong>B. A に加えて <code>FirebaseNotificationGateway</code> も §7.3 の infrastructure テストの対象に加える</strong>（<code>firebase-admin</code> の <code>getApps</code> / <code>initializeApp</code> / <code>cert</code> / <code>getMessaging</code> を <code>vi.mock</code> で差し替える）。§8 #30 の排他的条件（「薄い委譲だけで判断を持たない実装は対象外」）に「既定アプリの名前による解決と 3 段の失敗分岐は判断ロジックに数える」という改訂が必要で、CLAUDE.md 側にも 1 クラス追記が要る</li>
+<li><strong>C. どちらも置かず現状のまま</strong>（§8 #56 と同じ「無検証を承知で受け入れる」扱いにする）</li>
+</ul>
+</li>
+<li><strong>推奨：A</strong>。守りたいのは「秘密情報が 1 行に収まり、再帰が有限で止まる」という値だけの契約で、これは入出力が値だけの純粋関数のテーブル駆動テスト（CLAUDE.md が app 側で既に認めている例外と同じ性質）で最も安く固定できる。<code>FirebaseNotificationGateway</code>（B）は firebase-admin のモックの作り込みが大きく、§8 #30 の線引きを緩める副作用があるため、まず A で最も重い経路（秘密漏洩）を塞ぐ</li>
+<li>影響範囲：CLAUDE.md「テスト方針」の純粋関数の例外列挙（+1 行）、本書 §7 冒頭・§7.3（+1 行）、<code>collector/test/domain/logger.test.ts</code>（新規。D-01 の契約テストと同じディレクトリ）。実装コードの変更は無い</li>
+</ul>
+<p><strong>[Q-2] git 出力のマスク対象を <code>basic</code> / <code>bearer</code> 以外へ広げるか（実装の変更を伴う）</strong></p>
+<ul>
+<li>背景：§4.10 のマスクは <code>AUTHORIZATION: basic</code> / <code>bearer</code> の 2 スキームだけを対象にしている。<code>token</code> スキームやスキーム無しの <code>AUTHORIZATION: &lt;値&gt;</code> は素通りする。T-46 のレビュアー 3 人が指摘した一方、<code>actions/checkout@v4</code> が保存するのは <code>basic</code> 形式だけなので<strong>現行の経路では発生しない</strong>（§5.6 の表）</li>
+<li>選択肢：<ul>
+<li><strong>A. 広げない</strong>（現状のまま。§4.10 に「対象外」として記述済み）</li>
+<li><strong>B. スキームの一覧を <code>AUTH_SCHEMES = [&quot;basic&quot;, &quot;bearer&quot;, &quot;token&quot;]</code> として定数化し、正規表現をそこから組み立てる</strong>。<code>token</code> を足すだけで済み、将来のスキーム追加が 1 行になる</li>
+<li><strong>C. スキームを任意（省略可）にし、<code>AUTHORIZATION:</code> の後ろを行末または次のヘッダ名まで一律に伏せる</strong>。どのスキームでも漏れないが、<code>(see &#39;git help config&#39;)</code> のような同一行の診断も伏せるため原因が読みにくくなる</li>
+</ul>
+</li>
+<li><strong>推奨：B</strong>。「漏れない側に倒す」という §4.10 の方針に沿いつつ、診断の可読性（§4.10 が行末まで伏せない理由）を損なわない。実装は <code>AUTH_SCHEMES</code> の定数化と §4.10 の規則表・§7.3 のケース追加を<strong>同時に</strong>行う（片方だけ入ると規則表とテストが食い違う）</li>
+<li>影響範囲：<code>collector/src/infrastructure/storage/sanitize-git-output.ts</code>、<code>collector/test/infrastructure/storage/sanitize-git-output.test.ts</code>、本書 §4.10 の規則表・§7.3 の <code>maskCredentials</code> 行。CLAUDE.md・要件書の変更は不要</li>
+</ul>
+<p>以下は解決済みの記録。初稿の 3 件（情報源の失敗の通知手段・http の既定値・四季の初回判定）は §8 #25〜#27 に、design-review 第 1 周の 2 件（CLAUDE.md のディレクトリ節・テスト方針の例外の更新）は §8 #28・#30 と §8.1 に、いずれも開発者の回答を得て移した（2026-09-19）。T-37 で挙げた 1 件（<code>sanitize-git-output.ts</code> の純粋関数テストの扱い）は A 案の採用を得て §8 #38 と §8.1 に移した（2026-09-25）。design-review 第 1 周（再開後）の修正で生じた判断は、設計上の判断（差分判定の 3 分岐・診断の無害化・<code>RunSummary</code> の形・<code>ENOENT</code> のログレベル・<code>RunSummary</code> 型の置き場）はすべて §8 #39〜#43 に決定として記し、開発者の承認が要るもの（要件書 §5 への秘密情報の 1 行追加、CLAUDE.md 65 行への carve-out 追記）と実装側の追随作業は §8.1 の申し送りに置いた（2026-09-25）。design-review 第 2 周（再開後）の 20 件も同様で、設計上の判断（Actions 上の DRY_RUN の拒否・<code>dryRun</code> を実行の意図として渡す・<code>buildFailureSummary</code>・<code>publishOutcome: &quot;unknown&quot;</code>・秘密情報を含む例外の扱い・<code>paths.ts</code> の責務・<code>SourceFailure.message</code> の無害化・差分判定側の静かな停止の検知・ワークフローの最小権限と SHA 固定・jq の型ガード）はすべて §8 #44〜#53 に決定として記し、開発者の承認が要る新しい事項は生じなかった（既出の 2 件は §8.1 のまま）。実装側の追随作業は §8.1 の「実装」行に (a)〜(f) として集約した（2026-09-25）。design-review 第 3 周（再開後）の 12 件も同様で、設計上の判断（<code>survivingChanges</code> による矛盾判定・<code>buildFailureSummary</code> の引数・Noop を含む契約の弱め方・起動時検証失敗時のサマリ不在・FCM 初期化の時点・リダイレクトの降格拒否・<code>sanitizeFailureMessage</code> の非公開化・切り詰め単位の統一・起動時検証を無検証で残すこと・記録専用フィールドの置き場）はすべて §8 #45・#47・#48・#51・#53・#54〜#58 に決定として記し、開発者の承認が要る新しい事項は生じなかった。実装側の追随作業は §8.1 の「実装」行に (g) を加え (b)・(d) を拡張して集約した（2026-09-25）。</p>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
 <p>D-01 §10 の Task A（契約スキーマ・契約データ）・Task B（純粋関数群）と合わせた順序で並べる。Task S は D-01 Task A の前提（D-01 §10 の「collector 側は D-02 のスキャフォールドが先」）。各タスクは単独で品質ゲート <code>npm run lint &amp;&amp; npx tsc --noEmit &amp;&amp; npx vitest run</code> を通す。</p>
 <table>

@@ -133,6 +133,7 @@ a{color:var(--accent)}
   end
   MAIN --&gt; RUN
   MAIN --&gt; infra
+  MAIN --&gt; dom
   RUN --&gt; COL
   RUN --&gt; DIF
   RUN --&gt; PUB
@@ -157,7 +158,7 @@ a{color:var(--accent)}
   LOG --&gt; PORTS
   CLK --&gt; PORTS
   HSH --&gt; PORTS</pre>
-<p>矢印はすべて外側 → 内側で、逆向きは無い。<code>infrastructure</code> から <code>application</code> への矢印も無い（infrastructure は domain のポートだけを実装する）。具象クラスを import するのは <code>main.ts</code> だけ（CLAUDE.md）。<code>run-collection</code> が他の 4 UseCase を呼ぶのは同一層内の依存で、参照はクラスではなく各 UseCase が公開するインターフェース（§4.6）に対して行う。</p>
+<p>矢印はすべて外側 → 内側で、逆向きは無い。<code>infrastructure</code> から <code>application</code> への矢印も無い（infrastructure は domain のポートだけを実装する）。具象クラスを import するのは <code>main.ts</code> だけ（CLAUDE.md）。<code>main.ts</code> は具象（infrastructure）と domain のポート型の<strong>両方</strong>を import する（<code>NotificationGatewayCloser</code>（§4.5）として <code>close()</code> を呼び、<code>SOURCE_FACTORIES</code> の型に <code>Company</code> / <code>HttpClient</code> / <code>Source</code> / <code>SourceOptions</code> を使う。§5.5 手順 6・11）。図の <code>MAIN --&gt; dom</code> はこの辺で、entry から domain への import は依存の方向（外側 → 内側）に沿うため許される。<code>run-collection</code> が他の 4 UseCase を呼ぶのは同一層内の依存で、参照はクラスではなく各 UseCase が公開するインターフェース（§4.6）に対して行う。</p>
 <h3 id="sec-3-2">3.2 ファイル配置<a class="anchor" href="#sec-3-2">#</a></h3>
 <p><code>（D-01）</code> は D-01 §3.2 が所有し本書では作らないファイル、<code>（D-03）</code> は D-03 が所有するファイル。</p>
 <pre><code>collector/
@@ -433,6 +434,9 @@ export interface NotificationGateway {
  * 送信経路が確保した資源（firebase-admin の App・その配下の HTTP コネクション）を解放する。
  * 呼ぶのは main.ts（entry）だけで、NotifyNewArticles は send しか使わない（CLAUDE.md インターフェース分離）。
  * 何も確保しない実装（NoopNotificationGateway）は何もせず解決してよい。冪等（2 回呼んでも失敗しない）。
+ * **契約：例外を投げず、かつ必ず有限時間で解決する**（解放の待機に上限を持つのは実装側の責務。
+ * FirebaseNotificationGateway は CLOSE_TIMEOUT_MS で打ち切る。§5.4、§8 #68）。
+ * 解決したことは「資源を解放し終えた」ことを意味しない（打ち切りでも解決する）。
  */
 export interface NotificationGatewayCloser {
   close(): Promise&lt;void&gt;;
@@ -440,6 +444,24 @@ export interface NotificationGatewayCloser {
 
 export class NotificationSendError extends Error {}</code></pre>
 <p><code>close()</code> を <code>NotificationGateway</code> に持たせず別のインターフェースにするのは、<code>NotifyNewArticles</code> に使わないメソッドを見せないためである（CLAUDE.md インターフェース分離）。<code>FirebaseNotificationGateway</code> と <code>NoopNotificationGateway</code> は両方を実装し、<code>main.ts</code> は具象を握っているので <code>NotificationGatewayCloser</code> として 1 回だけ呼ぶ（§5.5 <code>main.ts</code> 手順 11、§8 #65）。解放しないと firebase-admin と google-auth が保持するハンドルでプロセスが終了せず、<code>process.exit()</code> を使わない方針（§5.5）のもとで <code>timeout-minutes: 15</code> のキャンセルに落ちる（§6、§8 #64・#65）。</p>
+<p><strong>解放の待機には上限を置く</strong>（§8 #68）。<code>deleteApp</code> は保持中の HTTP コネクションと進行中のトークン更新要求の後片付けを待つため、runner から Google のエンドポイントへの経路が落ちていると reject も resolve もしない（settle しない）ことがある。<code>main.ts</code> 手順 11 は <code>await</code> を必須にしているので、上限が無いとそこで止まり #65 が防ごうとした事象（プロセスが終わらず <code>timeout-minutes: 15</code> でキャンセル）を原因の分かりにくい形で再現する。上限は <code>FirebaseNotificationGateway</code> の非公開定数に置く（利用者が 1 クラスに限られるため export しない。§4.10 の <code>PUBLISH_BRANCH</code> と同じ扱い）。</p>
+<pre><code class="language-ts">// infrastructure/fcm/firebase-notification-gateway.ts（非公開）
+/** deleteApp の待機上限（ミリ秒）。settle しない解放で main.ts 手順 11 が止まるのを防ぐ（§8 #68） */
+const CLOSE_TIMEOUT_MS = 5_000;</code></pre>
+<table>
+<thead>
+<tr>
+<th>定数</th>
+<th>値</th>
+<th>出典</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>CLOSE_TIMEOUT_MS</code></td>
+<td><code>5_000</code></td>
+<td>§8 #68</td>
+</tr>
+</tbody></table>
 <h3 id="sec-4-6">4.6 UseCase の入出力型（<code>application/</code>）<a class="anchor" href="#sec-4-6">#</a></h3>
 <p><code>CollectedArticle</code> は §4.1（<code>domain/collected-article.ts</code>）で定義済み。ここでは各 UseCase が公開する入出力型とインターフェースだけを示す。</p>
 <pre><code class="language-ts">// application/collect-articles.ts
@@ -788,7 +810,7 @@ function sanitizeFailureMessage(message: string): string;</code></pre>
 </tr>
 <tr>
 <td>3</td>
-<td><code>MAX_FAILURE_MESSAGE_LENGTH</code>（200）に切り詰める。単位は<strong>コードポイント</strong>（<code>Array.from(...).slice(0, 200).join(&quot;&quot;)</code>）で、<code>sanitizeGitOutput</code>（§4.10）と同じ向きに揃える。サロゲートペアを分割しない（§8 #55）</td>
+<td><code>MAX_FAILURE_MESSAGE_LENGTH</code>（200）に切り詰める。単位は<strong>コードポイント</strong>（<code>Array.from(...).slice(0, 200).join(&quot;&quot;)</code>）で、<code>sanitizeGitOutput</code>（§4.10）と同じ向きに揃える。サロゲートペアを分割しない（§8 #55）。この式は <code>sanitizeGitOutput</code>（§4.10 の「切り詰め」）と<strong>暫定的に素の式を複写している</strong>。共通化（<code>domain/text.ts</code> の <code>truncateCodePoints</code>）は §8.1 の D-01 宛の行で扱い、D-01 の reopen とセットで行う（単独では着手しない）</td>
 </tr>
 </tbody></table>
 <p>適用箇所は <code>RunCollection</code> が <code>RunSummary.sourceFailures</code> を組み立てるところと <code>buildFailureSummary</code> の 2 か所（どちらも <code>run-collection.ts</code> の中で、無害化の呼び出しは非公開関数 1 つに閉じる）。§5.6 の jq にも、手順 1 の文字集合を<strong>覆う</strong>置換（<code>gsub(&quot;[[:cntrl:][:space:]`]&quot;; &quot; &quot;)</code>。バックティックを文字クラスに含める）と同じ上限（200）を書く（多層防御。ワークフローが古い形のサマリを読む場合に備える）。jq 側は**同一の**文字クラスではない：<code>[[:space:]]</code> は通常の半角スペース・NBSP・全角空白まで含む上位集合で、<code>U+200B</code>（ZWSP）は両側とも対象外、連続の畳み込み（複数文字 → スペース 1 つ）も jq 側では行わない（<code>gsub</code> は 1 文字ずつ置換する）。一致させるのは「制御文字・行分割文字・バックティックがステップサマリに残らない」という結果だけで、文字列の長さは一致しない。<code>[\r\n]</code> だけを潰す書き方にしないのは、jq 側で C0 を落とさないと <code>U+001B</code>（ESC）が残り、Actions のログ・ステップサマリで ANSI エスケープとして解釈されうるためである（§5.6、§8 #61）。</p>
@@ -1027,7 +1049,7 @@ export function sanitizeGitOutput(text: string): string;</code></pre>
 </tr>
 <tr>
 <td>切り詰め</td>
-<td>マスク後の文字列を <code>Array.from</code> でコードポイント単位に分け、先頭 <code>STDERR_LOG_LIMIT</code> 個までにする（サロゲートペアを分割しない）。切り詰めを先に行うと、切り詰め位置が認証情報の途中に来たときに生のトークンの断片が残るため、順序を逆にしない</td>
+<td>マスク後の文字列を <code>Array.from</code> でコードポイント単位に分け、先頭 <code>STDERR_LOG_LIMIT</code> 個までにする（サロゲートペアを分割しない）。切り詰めを先に行うと、切り詰め位置が認証情報の途中に来たときに生のトークンの断片が残るため、順序を逆にしない。この式（<code>Array.from(...).slice(0, n).join(&quot;&quot;)</code>）は <code>sanitizeFailureMessage</code>（§4.8 手順 3）と<strong>暫定的に素の式を複写している</strong>。共通化は §8.1 の D-01 宛の行で扱い、D-01 の reopen とセットで行う（単独では着手しない）</td>
 </tr>
 </tbody></table>
 <p>上記のうち「否定先読み」「区切りの範囲」「語頭に <code>\b</code> を付けない」は、正規表現の見た目を整えるリファクタで最初に失われやすい。<code>sanitize-git-output.ts</code> の該当箇所には本節への参照コメントを置き、回帰は §7.3 の境界値テストで固定する（§8 #59）。スキームの一覧を正規表現リテラルへ直接書き戻す（<code>AUTH_SCHEMES</code> を畳み込む）リファクタも同じ理由で禁じる（§8 #62）。</p>
@@ -1238,7 +1260,13 @@ const settled = await Promise.allSettled(
 </ol>
 <p><code>getApps().length === 0</code> で初期化済みを判定しない：<code>getApps()</code> は<strong>名前付きアプリも数える</strong>ため、名前付きアプリだけが登録された状態を「初期化済み」と誤判定する。また <code>initializeApp({ credential })</code> は<strong>冪等でない</strong>（既定アプリがあると <code>INVALID_APP_OPTIONS</code> で失敗する）ので、件数ではなく名前で既定アプリを引く。<code>getApp()</code>（名前省略）も使わない：既定アプリが無いと <code>NO_APP</code> を投げ、<code>cert()</code> の失敗と区別できない誤った診断になる。</p>
 <p><code>send()</code> は <code>getMessaging(this.app).send(notification)</code> を呼ぶ（引数なしの <code>getMessaging()</code> は既定アプリを暗黙に解決するため、取り違えを避けて保持した <code>App</code> を明示する）。</p>
-<p><code>close()</code>（<code>NotificationGatewayCloser</code>。§4.5）は保持した <code>App</code> を <code>deleteApp(this.app)</code>（<code>firebase-admin/app</code>）で解放する。2 回目以降の呼び出しと、既定アプリを再利用していた場合（上の手順 4）も同じ扱いで、<code>deleteApp</code> が投げた例外は<strong>呑んで <code>warn(&quot;failed to close fcm gateway&quot;)</code> を 1 件出すだけ</strong>にする（解放の失敗で実行の成否を変えない）。フラグで二重呼び出しを防ぐ必要は無い（<code>main.ts</code> が 1 回だけ呼ぶ。§5.5 手順 11）が、<code>deleteApp</code> が 2 回目に投げても上の呑み込みで吸収される。解放が必要なのは、firebase-admin と google-auth が保持する HTTP コネクションが残ると<strong>イベントループが空にならずプロセスが終了しない</strong>ためで、<code>process.exit()</code> を使わない方針（§5.5）のもとでは Actions のジョブが <code>timeout-minutes: 15</code> でキャンセルされ、ステップサマリも検知ステップも Pages 更新も失われる（§6、§8 #64・#65）。<code>NoopNotificationGateway</code> の <code>close()</code> は何もしない。</p>
+<p><code>close()</code>（<code>NotificationGatewayCloser</code>。§4.5）は保持した <code>App</code> を <code>deleteApp(this.app)</code>（<code>firebase-admin/app</code>）で解放する。手順は次の 2 つだけで、<strong>例外も無限の待機も外へ出さない</strong>（§8 #68）。</p>
+<ol>
+<li><code>deleteApp(this.app)</code> と <code>CLOSE_TIMEOUT_MS</code>（5000。§4.5）のタイマーを競わせ、<strong>先に解決した方で終わる</strong>。<code>deleteApp</code> が投げた例外は呑んで <code>warn(&quot;failed to close fcm gateway&quot;)</code> を 1 件出すだけにする（解放の失敗で実行の成否を変えない）</li>
+<li>上限に達したら <code>warn(&quot;fcm gateway close timed out&quot;)</code> を 1 件出して解決する（終了コードは変えない）。<code>deleteApp</code> 自体は取り消せないので背後で続くが、<code>main.ts</code> 手順 11 の <code>await</code> はここで必ず返る</li>
+</ol>
+<p>2 回目以降の呼び出しと、既定アプリを再利用していた場合（上の手順 4）も同じ扱いにする。フラグで二重呼び出しを防ぐ必要は無い（<code>main.ts</code> が 1 回だけ呼ぶ。§5.5 手順 11）が、<code>deleteApp</code> が 2 回目に投げても手順 1 の呑み込みで吸収される。</p>
+<p>解放が必要なのは、firebase-admin と google-auth が保持する HTTP コネクションが残ると<strong>イベントループが空にならずプロセスが終了しない</strong>ためで、<code>process.exit()</code> を使わない方針（§5.5）のもとでは Actions のジョブが <code>timeout-minutes: 15</code> でキャンセルされる。上限打ち切り（手順 2）で救えるのは「<code>close()</code> の <code>await</code> が返らない」ことだけで、<strong>打ち切り後に残るハンドル（背後で続く <code>deleteApp</code> のソケット・将来増える依存の pending timer）でプロセスが終了しない経路は残る</strong>。この残りの経路を強制終了（<code>process.exit()</code>）で塞ぐことはしない：<code>process.exit()</code> は書き込み中の stdout を切り落とすため §5.5 の既定と衝突し、キャンセルの影響は #67（Pages のアップロードを <code>collect</code> ジョブの外へ出し、<code>main</code> を明示的にチェックアウトして配信する）と #64（<code>detect-collect-timeout</code> が実行全体を failure にしてメールを届ける）で「その実行のステップサマリと 4 つの検知ステップが欠ける」ところまで縮んでいる（記事の push・通知・Pages 更新はいずれも失われない。§6、§8 #64・#67・#68）。<code>NoopNotificationGateway</code> の <code>close()</code> は何も確保していないので即座に解決する（タイマーも張らない）。</p>
 <p>コンストラクタが受け取る <code>logger</code> の用途は上記 4 つのログだけで、投げる <code>Error</code> の <code>message</code> も <code>warn</code> と同じ固定文言にする（万一どこかで <code>message</code> や <code>cause</code> がログへ渡っても入力の断片が出ない多層防御）。3 つの <code>warn</code> はどこまで進んで落ちたかの切り分け用で、<strong>権威ある <code>error</code> は <code>main.ts</code> 手順 5 の 1 本</strong>（§4.7 の経路表）。同じ事象を 2 本の <code>error</code> として出さない。</p>
 <p><code>send()</code> の失敗は <code>NotificationSendError</code> に包んで投げ、原因は <code>cause</code> に入れる。ただし <strong><code>cause</code> に入れてよいのは firebase-admin が送信時に投げた例外だけ</strong>で、サービスアカウント JSON を入力に持つ例外（<code>main.ts</code> 手順 4a の <code>JSON.parse</code> の <code>SyntaxError</code>、コンストラクタの <code>cert()</code> / <code>initializeApp</code> の失敗）は <code>cause</code> に入れない（<code>formatError</code> が <code>cause</code> を再帰連結してサービスアカウントの断片を Actions のログへ出すため。§4.7、§8 #48）。コンストラクタの失敗は <code>main.ts</code> 手順 5 が捕まえ、固定文言 <code>failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT</code> と <code>errorName</code>（<code>Error.name</code> のみ）だけを出して終了コード 1 にする。サービスアカウントの内容はいかなる経路でもログに出さない。</p>
 <h3 id="sec-5-5">5.5 run-collection と main.ts<a class="anchor" href="#sec-5-5">#</a></h3>
@@ -1295,7 +1323,7 @@ export class SnapshotMissingError extends Error {
 <li><code>diff.changed === false</code> → 書き出さず、コミットもせず、通知もしない。<code>logger.info(&quot;no changes&quot;)</code> → 手順 10（新着があれば必ず <code>changed</code> が真になるため、通知の取りこぼしは起きない）。ただし<strong>差分判定側の誤り</strong>を検知するため、抜ける前に矛盾を 1 つ調べる：<code>diff.stats.survivingChanges &gt; 0</code>（§4.6・§5.2 手順 7b）なら <code>changed</code> が真でなければならない（<code>detect-diff</code> 手順 9 の <code>hasSameArticles</code> のバグ）。<code>changed === false</code> は「出力配列が前回配列と全フィールド一致」を意味するので、そこに新着（前回に <code>id</code> が無い）や更新（<code>contentHash</code> と <code>updatedAt</code> が前回と異なる）が 1 件でも<strong>残っている</strong>ことは定義上ありえない。このとき <code>logger.error(&quot;no changes but stats are non-zero&quot;, { created, updated, survivingChanges })</code> を出し、<code>RunSummary</code>（手順 10）の値からワークフローが同じ条件を判定する（§5.6 の <code>no_changes_but_stats</code>）。例外にはしない。<code>dropped</code> は条件に入れない（100 件溜まった団体では新着 1 件につき末尾 1 件が必ず落ちるので <code>dropped === 0</code> は定常運用で成り立たず、<code>created</code>・<code>updated</code> は切り詰めで落ちた新着を含むので単体では誤検知になる。§8 #51）。この判定の限界：変化が「継続判定の記事のフィールドだけ」（サムネイル URL・見出しの表記・<code>publishedAt</code> の訂正・<code>category</code> の変更・団体削除）だった実行は <code>survivingChanges === 0</code> になるので見逃す。その場合も新着または更新が切り詰め後に残る次の実行で発火する（§8 #51）</li>
 <li><code>const outcome = await publishArticles.execute({ file: diff.file, note: buildCommitMessage(generatedAt) })</code>。例外はそのまま上位（<code>main.ts</code>）へ伝える＝<strong>通知しない</strong>。<code>diff.changed === true</code> なのに <code>outcome === &quot;no_changes&quot;</code> が返った場合（差分判定を §5.3 手順 3-2 と逆向きに誤る実装・<code>git add</code> のパス指定の誤りなど）は、記事が変わったのに配信も通知も起きていないので、<code>input.dryRun === false</code> のときだけ <code>logger.error(&quot;changed but nothing staged&quot;, { articles: diff.file.articles.length })</code> を出す（<code>dryRun === true</code> は <code>NoopArticlesPublisher</code> が常に <code>&quot;no_changes&quot;</code> を返す正常な経路なので出さない。判定に <code>publisherKind</code> は使わない。§8 #41・#45）。例外にはせず手順 10 へ進み、検知はサマリを読むワークフロー（§5.6）が行う</li>
 <li><code>outcome === &quot;published&quot;</code> のときだけ <code>await notify.execute({ newArticlesByCompany: diff.newArticlesByCompany, companies })</code></li>
-<li><code>RunSummary</code>（§4.8）を組み立てて返す（<code>kind: &quot;completed&quot;</code>、<code>publishOutcome</code>: 手順 8 の <code>outcome</code>（手順 7 で publish を呼ばずに抜けた経路は <code>&quot;skipped&quot;</code>。手順 5 は例外を投げるのでここに到達せず、そのサマリは <code>main.ts</code> 手順 10 の <code>buildFailureSummary</code> が書く）、<code>sourceFailures</code>: <code>collect.failures</code> の各 <code>message</code> を <code>sanitizeFailureMessage</code> に通したもの（§4.8）、<code>created</code> / <code>updated</code> / <code>dropped</code> / <code>survivingChanges</code>: <code>diff.stats</code> の同名の値をそのまま（手順 7 で抜けた経路も含む。手順 5・6 を通っていない経路はここに到達しない）、<code>publisher: publisherKind</code>、<code>previousSnapshot: previous !== undefined</code>、<code>fullCrawlCompanyIds: [...fullCrawlCompanyIds]</code>、<code>discardedByCompany: collect.discardedByCompany</code> をそのまま、<code>discarded: Object.values(collect.discardedByCompany).reduce((a, b) =&gt; a + b, 0)</code>（§4.6・§8 #36）、<code>notificationGateway: notificationGatewayKind</code>、<code>notificationsSent</code> / <code>notificationsFailed</code>: 手順 9 の結果。手順 9 を通らなかったときは 0 / 0、<code>durationMs: clock.now().getTime() - startedAt.getTime()</code>（手順 1 の <code>startedAt</code> から、サマリを組み立てる直前までの経過ミリ秒。<code>clock.now()</code> を呼ぶのは手順 1 とここの 2 回））</li>
+<li><code>RunSummary</code>（§4.8）を組み立てて返す（<code>kind: &quot;completed&quot;</code>、<code>publishOutcome</code>: 手順 8 の <code>outcome</code>（手順 7 で publish を呼ばずに抜けた経路は <code>&quot;skipped&quot;</code>。手順 5 は例外を投げるのでここに到達せず、そのサマリは <code>main.ts</code> 手順 10 の <code>buildFailureSummary</code> が書く）、<code>sourceFailures</code>: <code>collect.failures</code> の各 <code>message</code> を <code>sanitizeFailureMessage</code> に通したもの（§4.8）、<code>created</code> / <code>updated</code> / <code>dropped</code> / <code>survivingChanges</code>: <code>diff.stats</code> の同名の値をそのまま（手順 7 で抜けた経路も含む。手順 5・6 を通っていない経路はここに到達しない）、<code>changed: diff.changed</code>（手順 6 の値。手順 7 で抜けた経路も同じ値＝<code>false</code>）、<code>collected: collect.articles.length</code>（<strong>収集して採用した記事数</strong>。<code>diff.file.articles.length</code> ではない。後者は前回から引き継いだ記事と切り詰め後の件数を含むため、収集の成否を読む値にならない）、<code>publisher: publisherKind</code>、<code>previousSnapshot: previous !== undefined</code>、<code>fullCrawlCompanyIds: [...fullCrawlCompanyIds]</code>、<code>discardedByCompany: collect.discardedByCompany</code> をそのまま、<code>discarded: Object.values(collect.discardedByCompany).reduce((a, b) =&gt; a + b, 0)</code>（§4.6・§8 #36）、<code>notificationGateway: notificationGatewayKind</code>、<code>notificationsSent</code> / <code>notificationsFailed</code>: 手順 9 の結果。手順 9 を通らなかったときは 0 / 0、<code>durationMs: clock.now().getTime() - startedAt.getTime()</code>（手順 1 の <code>startedAt</code> から、サマリを組み立てる直前までの経過ミリ秒。<code>clock.now()</code> を呼ぶのは手順 1 とここの 2 回））</li>
 </ol>
 </li>
 <li><strong>出力</strong>：<code>RunSummary</code></li>
@@ -1304,24 +1332,48 @@ export class SnapshotMissingError extends Error {
 <p>コミットメッセージ（<code>buildCommitMessage</code>）：<code>chore(collector): articles.json を更新 (&lt;generatedAt&gt;)</code>（Conventional Commits。scope は CLAUDE.md の 4 つのうち <code>collector</code>）。</p>
 <p><strong><code>main.ts</code></strong>（entry。具象クラスを import してよい唯一の場所。業務規則を持たない）</p>
 <ol>
-<li><code>ConsoleLogger</code> を作る（<code>CURTAINCALL_LOG_LEVEL</code>）</li>
-<li><code>repoRoot</code> を決める（<code>CURTAINCALL_REPO_ROOT</code> → 無ければ <code>path.resolve(path.dirname(fileURLToPath(import.meta.url)), &quot;..&quot;, &quot;..&quot;)</code>。<code>collector/dist/main.js</code> から見て <code>collector/dist</code> → <code>collector</code> → リポジトリ直下。§4.9）</li>
-<li><strong>起動時検証</strong>：<code>CompaniesFileStore(repoRoot).load()</code> が <code>data/companies.json</code> を読み <code>CompaniesFileSchema</code>（strict）で検証する。失敗したら <code>error</code> ログを出して終了コード 1（収集を始めない。D-01 §8.1・§6）</li>
-<li><strong>環境変数の起動時検証</strong>（いずれも失敗したら収集を始めず終了コード 1。相手サイトへのリクエストを 1 件も出さないうちに止める）<ul>
+<li><p><code>ConsoleLogger</code> を作る（<code>CURTAINCALL_LOG_LEVEL</code>）</p>
+</li>
+<li><p><code>repoRoot</code> を決める（<code>CURTAINCALL_REPO_ROOT</code> → 無ければ <code>path.resolve(path.dirname(fileURLToPath(import.meta.url)), &quot;..&quot;, &quot;..&quot;)</code>。<code>collector/dist/main.js</code> から見て <code>collector/dist</code> → <code>collector</code> → リポジトリ直下。§4.9）</p>
+</li>
+<li><p><strong>起動時検証</strong>：<code>CompaniesFileStore(repoRoot).load()</code> が <code>data/companies.json</code> を読み <code>CompaniesFileSchema</code>（strict）で検証する。失敗したら <code>error</code> ログを出して終了コード 1（収集を始めない。D-01 §8.1・§6）</p>
+</li>
+<li><p><strong>環境変数の起動時検証</strong>（いずれも失敗したら収集を始めず終了コード 1。相手サイトへのリクエストを 1 件も出さないうちに止める）</p>
+<ul>
 <li><strong>4a. 通知設定</strong>（§8 #32）：<code>FIREBASE_SERVICE_ACCOUNT</code> が未設定または空文字で <code>CURTAINCALL_REQUIRE_NOTIFICATIONS === &quot;1&quot;</code> なら <code>logger.error(&quot;FIREBASE_SERVICE_ACCOUNT is required&quot;)</code>。設定されていたら <strong><code>main.ts</code> がここで <code>JSON.parse</code> を 1 回だけ行い</strong>、失敗したら <code>logger.error(&quot;FIREBASE_SERVICE_ACCOUNT is not valid JSON&quot;)</code>（§6）。<code>JSON.parse</code> は成功したが型ガード（<code>typeof v === &quot;object&quot; &amp;&amp; v !== null &amp;&amp; !Array.isArray(v)</code>。下記）に落ちた場合（配列・数値・文字列・<code>null</code> の JSON）も<strong>同じ固定文言</strong>を出して同じ終了コードにする（どちらも「サービスアカウントとして妥当な JSON ではない」という同じ結果で、文言と終了コードを二重に管理しない）。成功した<strong>オブジェクト</strong>を手順 5 の <code>FirebaseNotificationGateway</code> のコンストラクタへ渡す（ゲートウェイは環境変数も生の JSON 文字列も受け取らず、<code>firebase-admin</code> の import は <code>infrastructure/fcm</code> の 1 ファイルに閉じたまま。§5.4、§8 #17）。サービスアカウントを入力とするパースをここ 1 か所に限ることで、検証の時点が実装の裁量で送信時へずれる余地を無くす（遅延初期化にすると <code>send()</code> の失敗経路で <code>formatError</code> に乗り、§4.7 の禁止を迂回する。§8 #48）。このとき<strong>例外の <code>message</code> をログに出さない</strong>：<code>JSON.parse</code> の <code>SyntaxError</code> は不正位置周辺の原文（＝サービスアカウント JSON の断片。<code>private_key</code> を含みうる）を <code>message</code> に載せ、Actions の Secret マスクは行の途中を切り出した断片には効かないため、<code>formatError(e)</code> を渡さず固定文言だけを出す（§4.7、§8 #48）</li>
-<li><strong>4b. DRY_RUN の誤設定</strong>（§8 #44）：<code>process.env.GITHUB_ACTIONS === &quot;true&quot;</code> かつ <code>process.env.CURTAINCALL_DRY_RUN === &quot;1&quot;</code> なら <code>logger.error(&quot;CURTAINCALL_DRY_RUN must not be set on GitHub Actions&quot;)</code>。ワークフローは DRY_RUN を使わない（§5.6）ため、Actions 上でこの値が <code>1</code> なのは設定の誤りだけである。デバッグで足した <code>CURTAINCALL_DRY_RUN: &quot;1&quot;</code> を消し忘れると、書き出し・push・通知がすべて Noop に縮退したままジョブが緑で通り、配信も通知も静かに止まる（§6）</li>
+<li><strong>4b. DRY_RUN の誤設定</strong>（§8 #44）：<code>process.env.GITHUB_ACTIONS === &quot;true&quot;</code> かつ <code>process.env.CURTAINCALL_DRY_RUN === &quot;1&quot;</code> なら <code>logger.error(&quot;CURTAINCALL_DRY_RUN must not be set on GitHub Actions&quot;)</code>。<strong>この判定と同時に <code>const dryRun = process.env.CURTAINCALL_DRY_RUN === &quot;1&quot;</code> を確定させ、以降の手順 5・7・8 はこの 1 つの値だけを読む</strong>（同じ式を 3 か所に書かない。§8 #69）。ワークフローは DRY_RUN を使わない（§5.6）ため、Actions 上でこの値が <code>1</code> なのは設定の誤りだけである。デバッグで足した <code>CURTAINCALL_DRY_RUN: &quot;1&quot;</code> を消し忘れると、書き出し・push・通知がすべて Noop に縮退したままジョブが緑で通り、配信も通知も静かに止まる（§6）</li>
 </ul>
 </li>
-<li>具象を生成する：<code>SystemClock</code>・<code>Sha256Hasher</code>・<code>FetchHttpClient</code>（§5.7 の設定）・<code>ArticlesFileStore(repoRoot, logger)</code>・<code>GitArticlesPublisher(repoRoot, logger)</code>・通知ゲートウェイ（手順 4a でパース済みのオブジェクトがあれば <code>new FirebaseNotificationGateway(serviceAccount, logger)</code> と <code>kind = &quot;firebase&quot;</code>、無ければ <code>NoopNotificationGateway</code> と <code>kind = &quot;noop&quot;</code>。§8 #16）。<code>new FirebaseNotificationGateway(...)</code> は <code>try</code> で囲み、スキーマ不正・<code>cert()</code> / <code>initializeApp</code> の失敗のいずれで投げても <code>logger.error(&quot;failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT&quot;, { errorName: e instanceof Error ? e.name : &quot;unknown&quot; })</code> だけを出して終了コード 1（例外の <code>message</code> も <code>cause</code> もログに出さない。§4.7、§5.4、§8 #48）。<code>errorName</code> はクラス名だけで入力由来の断片を含まない切り分け用のフィールドで、想定内の失敗（§5.4 の 3 段）はゲートウェイが素の <code>Error</code> を投げるため <code>&quot;Error&quot;</code> になり、想定外（実装の不具合）は <code>TypeError</code> 等の別の名前になって区別できる。内訳はゲートウェイ側が直前に出す 3 つの <code>warn</code>（§4.7 の経路表・§5.4）で、<code>warn</code> が 1 つも無ければ想定外の例外という読み方になる</li>
-<li><code>buildSourceBindings(companies, { http, logger })</code>：<code>companyId → Source 生成関数</code> の表（<code>SOURCE_FACTORIES: Readonly&lt;Record&lt;string, (company: Company, deps: { http: HttpClient; logger: Logger }, options: SourceOptions) =&gt; Source&gt;&gt;</code>）を引いて <code>SourceBinding[]</code> を <code>companies</code> の配列順に組む。表にある <code>id</code> は <code>createSource: (options) =&gt; factory(company, { http, logger }, options)</code>、表に無い <code>id</code> は <code>createSource: undefined</code>（未実装として <code>collect-articles</code> が <code>failures</code> に数える。§5.1 手順 1、§6）。<code>fullCrawl</code> の判定は <code>main.ts</code> では行わない（<code>RunCollection</code> 手順 3）。団体の追加はこの表への 1 行と <code>companies.json</code> への 1 要素だけで済む（CLAUDE.md 開放閉鎖）</li>
-<li><code>CURTAINCALL_DRY_RUN=1</code> のときは、手順 5 で生成した <code>ArticlesFileStore</code>（<code>ArticleWriter</code> として）・<code>GitArticlesPublisher</code>・通知ゲートウェイを <code>NoopArticleWriter</code>（<code>storage/noop-article-writer.ts</code>。<code>write</code> は書かずに <code>logger.info(&quot;dry run: skip writing articles.json&quot;, { articles })</code>）・<code>NoopArticlesPublisher</code>（<code>storage/noop-articles-publisher.ts</code>。<code>publish</code> は常に <code>&quot;no_changes&quot;</code> を返し <code>logger.info(&quot;dry run: skip publish&quot;, { note })</code>）・<code>NoopNotificationGateway</code>（<code>fcm/noop-notification-gateway.ts</code>）に差し替える（§3.2）。<code>ArticleReader</code> は <code>ArticlesFileStore</code> のまま（前回の読み込みは行う）。<code>notificationGatewayKind</code> は差し替え前の値を保ち、<code>publisherKind</code> は差し替えの有無に従って <code>&quot;noop&quot;</code>（DRY_RUN）/ <code>&quot;git&quot;</code> を渡す（§4.8。サマリへの記録専用で、判定には使わない。§8 #45）</li>
-<li>4 つの UseCase と <code>RunCollection</code> を組み立てて <code>execute({ forceFullCrawl: process.env.CURTAINCALL_FULL_CRAWL === &quot;1&quot;, dryRun: process.env.CURTAINCALL_DRY_RUN === &quot;1&quot; })</code> を呼ぶ（<code>dryRun</code> は手順 7 と同じ式で、実行の意図として <code>RunCollection</code> に渡す。§8 #45）</li>
-<li><code>RunSummaryStore</code> で <code>.run-summary.json</code> を書き、<code>logger.info(&quot;done&quot;, { ... })</code>、終了コード 0</li>
-<li>例外を捕まえたら <code>logger.error</code> を出し、<code>buildFailureSummary({ clock, error: e, publisherKind, notificationGatewayKind })</code>（§4.8）の結果を <code>RunSummaryStore</code> で書いて終了コード 1。<code>FailedRunSummary</code> の全フィールドの値と <code>error</code> の種類による分岐（<code>publishOutcome</code> と <code>sourceFailures</code>）は <code>buildFailureSummary</code>（application）が決め、<strong>サマリの組み立てに関しては</strong> <code>main.ts</code> は固定値も <code>instanceof</code> も 1 つも書かない（<code>main.ts</code> は業務規則を持たない。§8 #11・#46）。この制約はサマリの内容に限る：手順 5 の <code>errorName</code>（<code>e instanceof Error ? e.name : &quot;unknown&quot;</code>）は残る唯一の <code>instanceof</code> で、サマリではなく <strong>entry のログ整形</strong>（クラス名だけを 1 フィールドに出す 1 行）である。これを application へ寄せない理由は、(1) 手順 5 は <code>RunCollection</code> を組み立てる前（手順 8 より前）の DI の途中で、application の関数を呼べる前提が揃っていない、(2) 出力先が固定文言 1 本 + クラス名という entry のログ様式そのもので、分岐の結果が振る舞いを変えない（§8 #56 と同じ扱い）、の 2 点である。サマリの書き出し自体が失敗しても終了コードは 1 のまま（<code>warn</code> を出して続行。§6）。</li>
+<li><p>具象を生成する：<code>SystemClock</code>・<code>Sha256Hasher</code>・<code>FetchHttpClient</code>（§5.7 の設定）・<code>ArticlesFileStore(repoRoot, logger)</code>・<code>GitArticlesPublisher(repoRoot, logger)</code>・通知ゲートウェイ。通知ゲートウェイの生成は次の 3 分岐で、<strong>資源を確保した実装を生成するのは 1 つ目だけ</strong>にする（§8 #69）。</p>
+<ul>
+<li><code>dryRun === false</code> かつ手順 4a でパース済みのオブジェクトがある → <code>new FirebaseNotificationGateway(serviceAccount, logger)</code></li>
+<li><code>dryRun === true</code> → <code>NoopNotificationGateway</code>（<strong><code>FirebaseNotificationGateway</code> を生成しない</strong>。試走では送らないので <code>App</code> も HTTP コネクションも確保する必要が無く、確保した実装を手順 7 で捨てて何も確保していない Noop を閉じる誤配線（#65 の不変条件「確保した側を閉じる」の破れ）を作らない。<code>debug(&quot;dry run: skip FCM initialization&quot;)</code> を 1 件出す）</li>
+<li>上記以外（パース済みのオブジェクトが無い） → <code>NoopNotificationGateway</code>（§8 #16）</li>
+</ul>
+<p><code>notificationGatewayKind</code> は<strong>この分岐ではなく手順 4a の結果だけで決める</strong>：パース済みのオブジェクトがあれば <code>&quot;firebase&quot;</code>、無ければ <code>&quot;noop&quot;</code>。<code>dryRun</code> で Noop を生成した場合も <code>&quot;firebase&quot;</code> のままにする（サマリに載せる目的は Secret の未設定・タイポの検知であり、試走かどうかは <code>publisher</code> 側で見分けられる。§4.8、§8 #32・#45）。<code>dryRun === true</code> では FCM の初期化検証（下の <code>try</code>）も行われないが、Actions 上では手順 4b が DRY_RUN を拒否するため、本番の経路では毎時必ず検証される。</p>
+<p><code>new FirebaseNotificationGateway(...)</code> は <code>try</code> で囲み、スキーマ不正・<code>cert()</code> / <code>initializeApp</code> の失敗のいずれで投げても <code>logger.error(&quot;failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT&quot;, { errorName: e instanceof Error ? e.name : &quot;unknown&quot; })</code> だけを出して終了コード 1（例外の <code>message</code> も <code>cause</code> もログに出さない。§4.7、§5.4、§8 #48）。<code>errorName</code> はクラス名だけで入力由来の断片を含まない切り分け用のフィールドで、想定内の失敗（§5.4 の 3 段）はゲートウェイが素の <code>Error</code> を投げるため <code>&quot;Error&quot;</code> になり、想定外（実装の不具合）は <code>TypeError</code> 等の別の名前になって区別できる。内訳はゲートウェイ側が直前に出す 3 つの <code>warn</code>（§4.7 の経路表・§5.4）で、<code>warn</code> が 1 つも無ければ想定外の例外という読み方になる</p>
+</li>
+<li><p><code>buildSourceBindings(companies, { http, logger })</code>：<code>companyId → Source 生成関数</code> の表（<code>SOURCE_FACTORIES: Readonly&lt;Record&lt;string, (company: Company, deps: { http: HttpClient; logger: Logger }, options: SourceOptions) =&gt; Source&gt;&gt;</code>）を引いて <code>SourceBinding[]</code> を <code>companies</code> の配列順に組む。表にある <code>id</code> は <code>createSource: (options) =&gt; factory(company, { http, logger }, options)</code>、表に無い <code>id</code> は <code>createSource: undefined</code>（未実装として <code>collect-articles</code> が <code>failures</code> に数える。§5.1 手順 1、§6）。<code>fullCrawl</code> の判定は <code>main.ts</code> では行わない（<code>RunCollection</code> 手順 3）。団体の追加はこの表への 1 行と <code>companies.json</code> への 1 要素だけで済む（CLAUDE.md 開放閉鎖）</p>
+</li>
+<li><p><code>dryRun === true</code>（手順 4b）のときは、手順 5 で生成した <code>ArticlesFileStore</code>（<code>ArticleWriter</code> として）・<code>GitArticlesPublisher</code> を <code>NoopArticleWriter</code>（<code>storage/noop-article-writer.ts</code>。<code>write</code> は書かずに <code>logger.info(&quot;dry run: skip writing articles.json&quot;, { articles })</code>）・<code>NoopArticlesPublisher</code>（<code>storage/noop-articles-publisher.ts</code>。<code>publish</code> は常に <code>&quot;no_changes&quot;</code> を返し <code>logger.info(&quot;dry run: skip publish&quot;, { note })</code>）に差し替える（§3.2）。<strong>通知ゲートウェイは差し替えの対象に含めない</strong>（手順 5 が <code>dryRun</code> のときは最初から <code>NoopNotificationGateway</code> を生成するため。§8 #69）。<code>ArticleReader</code> は <code>ArticlesFileStore</code> のまま（前回の読み込みは行う）。<code>notificationGatewayKind</code> は手順 5 で決めた値のまま、<code>publisherKind</code> は差し替えの有無に従って <code>&quot;noop&quot;</code>（DRY_RUN）/ <code>&quot;git&quot;</code> を渡す（§4.8。サマリへの記録専用で、判定には使わない。§8 #45）</p>
+</li>
+<li><p>4 つの UseCase と <code>RunCollection</code> を組み立てて <code>execute({ forceFullCrawl: process.env.CURTAINCALL_FULL_CRAWL === &quot;1&quot;, dryRun })</code> を呼ぶ（<code>dryRun</code> は手順 4b で確定させた同じ値で、実行の意図として <code>RunCollection</code> に渡す。§8 #45・#69）</p>
+</li>
+<li><p><code>RunSummaryStore</code> で <code>.run-summary.json</code> を書き、<code>logger.info(&quot;done&quot;, { ... })</code>、終了コード 0</p>
+</li>
+<li><p>例外を捕まえたら <code>logger.error</code> を出し、<code>buildFailureSummary({ clock, error: e, publisherKind, notificationGatewayKind })</code>（§4.8）の結果を <code>RunSummaryStore</code> で書いて終了コード 1。<code>FailedRunSummary</code> の全フィールドの値と <code>error</code> の種類による分岐（<code>publishOutcome</code> と <code>sourceFailures</code>）は <code>buildFailureSummary</code>（application）が決め、<strong>サマリの組み立てに関しては</strong> <code>main.ts</code> は固定値も <code>instanceof</code> も 1 つも書かない（<code>main.ts</code> は業務規則を持たない。§8 #11・#46）。この制約はサマリの内容に限る：手順 5 の <code>errorName</code>（<code>e instanceof Error ? e.name : &quot;unknown&quot;</code>）は残る唯一の <code>instanceof</code> で、サマリではなく <strong>entry のログ整形</strong>（クラス名だけを 1 フィールドに出す 1 行）である。これを application へ寄せない理由は、(1) 手順 5 は <code>RunCollection</code> を組み立てる前（手順 8 より前）の DI の途中で、application の関数を呼べる前提が揃っていない、(2) 出力先が固定文言 1 本 + クラス名という entry のログ様式そのもので、分岐の結果が振る舞いを変えない（§8 #56 と同じ扱い）、の 2 点である。サマリの書き出し自体が失敗しても終了コードは 1 のまま（<code>warn</code> を出して続行。§6）。</p>
+</li>
 </ol>
-<p>   <strong>手順 3〜6 の失敗はこの経路に入れない</strong>（<code>clock</code>・<code>publisherKind</code>・<code>notificationGatewayKind</code> が揃う手順 7 より前）。この 3 つは手順 5・7 で初めて確定するため、<code>buildFailureSummary</code> を呼べる状態にない（嘘の既定値を入れると <code>publisher</code> / <code>notificationGateway</code> が「注入された事実の記録」でなくなる。§8 #45）。手順 3〜6 の失敗は <code>error</code> ログと終了コード 1 だけで終え、<code>.run-summary.json</code> を書かない。ワークフローはファイル不在の経路（§5.6 の先頭の <code>if [ ! -s ... ]</code>）に入り、<code>published=unknown</code> / <code>failed_sources=unknown</code> として扱う（§6 の「<code>.run-summary.json</code> が無い」に相当する行）</p>
+<p>   <strong>手順 3〜6 の失敗はこの経路に入れない</strong>（<code>clock</code>・<code>publisherKind</code>・<code>notificationGatewayKind</code> が揃う手順 7 より前）。この 3 つは手順 5・7 で初めて確定するため、<code>buildFailureSummary</code> を呼べる状態にない（嘘の既定値を入れると <code>publisher</code> / <code>notificationGateway</code> が「注入された事実の記録」でなくなる。§8 #45）。手順 3〜6 の失敗は <code>error</code> ログと終了コード 1 だけで終え、<code>.run-summary.json</code> を書かない。<strong>この carve-out はサマリの書き出しだけに掛かり、手順 11（ゲートウェイの解放）には掛からない</strong>（手順 6・7 で落ちた経路もゲートウェイは生成済みなので解放が要る。適用範囲は手順 11 の定義に従う）。ワークフローはファイル不在の経路（§5.6 の先頭の <code>if [ ! -s ... ]</code>）に入り、<code>published=unknown</code> / <code>failed_sources=unknown</code> として扱う（§6 の「<code>.run-summary.json</code> が無い」に相当する行）</p>
 <ol start="11">
-<li><strong>通知ゲートウェイの解放</strong>（<code>finally</code> 相当。手順 9・10 のどちらを通っても必ず 1 回だけ実行する。§8 #65）：手順 5 で生成したゲートウェイ（手順 7 で差し替えた場合は差し替え後のもの）を <code>NotificationGatewayCloser</code>（§4.5）として <code>await gateway.close()</code> する。<code>close()</code> は例外を投げない（§5.4 が呑んで <code>warn</code> を出す）が、<code>await</code> を忘れると解放前にプロセスが終わりうるので必ず待つ。<strong>終了コードは変えない</strong>（解放の成否は収集結果と無関係）。手順 5 より前（手順 3・4）で終わる経路にはゲートウェイが存在しないので呼ばない。これを落とすと firebase-admin と google-auth のハンドルでプロセスが終了せず、<code>timeout-minutes: 15</code> のキャンセルに落ちてステップサマリ・検知ステップ・Pages 更新をすべて失う（§6、§8 #64・#65）</li>
+<li><strong>通知ゲートウェイの解放</strong>（<code>finally</code> 相当。§8 #65・#68）：適用範囲は経路の列挙ではなく<strong>ゲートウェイを生成したか否か</strong>で決める。<ul>
+<li><strong>手順 5 でゲートウェイを生成した後に終わるすべての経路で、1 回だけ <code>await gateway.close()</code> する。</strong> 手順 9（正常終了）と手順 10（致命的失敗。手順 7・8 の失敗を含む）に加えて、<strong>手順 6（<code>buildSourceBindings</code>）の失敗のように <code>error</code> ログと終了コード 1 だけで終える経路も含む</strong>（手順 10 の carve-out により手順 6 の失敗は手順 10 を通らないが、ゲートウェイは生成済みなので解放が要る。落とすとプロセスが終了せず <code>timeout-minutes: 15</code> のキャンセルに落ちる＝#65 が防ごうとした事象そのもの）</li>
+<li><strong>生成前（手順 1〜4）で終わる経路では呼ばない</strong>（存在しないため）。手順 5 の <code>new FirebaseNotificationGateway(...)</code> が投げた経路も呼ばない：インスタンスが返っておらず、<code>initializeApp</code> が成功した後に投げる段も無い（§5.4 の初期化手順 1〜3）ので解放すべき資源が無い</li>
+<li>閉じるのは<strong>手順 5 が生成したそのインスタンス</strong>（手順 7 は通知ゲートウェイを差し替えないので、<code>dryRun</code> でも生成物と解放対象は同一。§8 #69）。参照は <code>NotificationGatewayCloser</code>（§4.5）として持つ</li>
+<li><code>close()</code> は例外を投げず、<code>CLOSE_TIMEOUT_MS</code>（5000）で必ず有限時間で解決する（§4.5・§5.4・§8 #68）。<code>await</code> を忘れると解放前にプロセスが終わりうるので必ず待つ。上限があるのでここで無限に待つことはない</li>
+<li><strong>終了コードは変えない</strong>（解放の成否は収集結果と無関係）</li>
+</ul>
+</li>
 </ol>
 <p>終了コードは 0（正常終了。Source の部分失敗を含む）と 1（致命的失敗）の 2 値だけにし、詳細はサマリに載せる（§8 #13）。<code>process.exit()</code> は呼ばず <code>process.exitCode</code> を設定して自然終了させる（stdout のフラッシュを待つため）。</p>
 <h3 id="sec-5-6">5.6 GitHub Actions ワークフロー<a class="anchor" href="#sec-5-6">#</a></h3>
@@ -1352,7 +1404,7 @@ jobs:
           echo &quot;collect は main でのみ実行する（ref: $REF）。workflow_dispatch の「Use workflow from」を main にして再実行する&quot; &gt;&amp;2
           exit 1
   collect:
-    if: github.ref == 'refs/heads/main'   # main 以外では収集・push・Pages アップロードのいずれも行わない（schedule は既定ブランチ = main でしか動かないので、効くのは workflow_dispatch だけ）
+    if: github.ref == 'refs/heads/main'   # main 以外では収集・push・通知のいずれも行わない（schedule は既定ブランチ = main でしか動かないので、効くのは workflow_dispatch だけ）。このジョブが skipped になると deploy-pages も走らない（§8 #67）
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1384,7 +1436,7 @@ jobs:
         run: npm start                     # 非 0 = 致命的失敗。ここで止まれば push も通知も済んでいない
       - name: 実行サマリ
         id: summary
-        if: ${{ !cancelled() }}            # 前のステップが失敗してもサマリを出す（サマリ欠落で Pages を止めない）。
+        if: ${{ !cancelled() }}            # 前のステップが失敗してもサマリを出す（サマリが無いと 4 つの検知ステップが理由を出せない）。
                                            # timeout-minutes 超過はジョブの「キャンセル」なのでこのステップは走らない。
                                            # その経路は下の detect-collect-timeout ジョブが受ける（§8 #64）
         shell: bash                        # 既定のシェルは `bash -e {0}` で pipefail が無効。`shell: bash` を
@@ -1395,8 +1447,9 @@ jobs:
         run: |
           # -f（存在）ではなく -s（存在しかつ 1 バイト以上）で判定する。0 バイトのファイルに対して
           # jq は終了コード 0・出力なしで終わるため、-f だと後続のフォールバックが発火せず 5 つの出力が
-          # すべて空文字になり、deploy-pages が `!= ''` を満たさずスキップされる（#53 の「想定外の形は
-          # unknown にして配信は続ける」と逆に倒れる）。jq 1.7.1 で実測（§8 #61）
+          # すべて空文字になり、failed_sources が unknown にならないので情報源の失敗が届かない
+          # （#53 の「想定外の形は unknown にして配信は続け、ジョブは赤くする」と逆に倒れる）。
+          # jq 1.7.1 で実測（§8 #61）
           SUMMARY_JSON=.run-summary.json     # working-directory: collector なので collector/.run-summary.json（§4.9 の既定値）
           if [ ! -s &quot;$SUMMARY_JSON&quot; ]; then
             echo &quot;published=unknown&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
@@ -1413,13 +1466,17 @@ jobs:
           # 出力 5 本はいずれも `値=$(jq …) || 値=&lt;フォールバック&gt;` の形で取り、パイプラインを作らない（§8 #63）。
           # `jq … | head -n 1 || echo unknown` にしない理由：(1) パイプラインの終了コードは head のものに
           # なるため、pipefail が無効な既定シェル（bash -e）では jq の失敗を取りこぼして出力が空文字になる
-          # （壊れた JSON で実測）。空文字は deploy-pages の `published != ''` を満たさず配信が止まり、#53 の
-          # 方針と逆に倒れる。(2) pipefail が有効でも「複数行なら head が閉じて非 0 になるから安全側」は誤りで、
+          # （壊れた JSON で実測）。空文字になると failed_sources が unknown に倒れず、情報源の失敗が
+          # 届かない（#53 の方針と逆）。(2) pipefail が有効でも「複数行なら head が閉じて非 0 になるから安全側」は誤りで、
           # 出力がパイプバッファに収まると jq は 0 で終わり 1 行目が黙って使われる（実測）。
-          # 1 行性は jq の -s（slurp）で保証する：入力のトップレベル文書をすべて 1 つの配列にまとめるので
-          # フィルタの結果は必ず 1 値 = 1 行になり、$GITHUB_OUTPUT に偽の key=value 行を差し込める構造に
-          # ならない（現在の書き手は RunSummaryStore の JSON.stringify（単一オブジェクト）だけなので到達経路は
-          # 無いが、構造として塞ぐ）。文書が 1 つでなければ length != 1 でフォールバックへ倒す。
+          # jq -s（slurp）が保証するのは「入力のトップレベル文書を 1 つの配列にまとめるのでフィルタの結果が
+          # 1 値になる」ことだけで、**1 値 = 1 行ではない**（結果が改行を含む文字列なら複数行になる）。
+          # 行注入（$GITHUB_OUTPUT に偽の key=value を差し込む）を防ぐ不変条件は -s ではなく次の 1 つ（§8 #71）：
+          #   ここで $GITHUB_OUTPUT へ書く値は **数値・真偽値・固定語彙（unknown）だけ**とし、
+          #   JSON 由来の文字列（message・reason・companyId 等）をそのまま出さない。
+          # 出す必要が生じたら `名前&lt;&lt;EOF` のヒアドキュメント区切りを使うか、
+          # gsub(&quot;[[:cntrl:][:space:]]&quot;; &quot; &quot;) を通してから出す。下の 5 本はこの不変条件を満たしている。
+          # 文書が 1 つでなければ length != 1 でフォールバックへ倒す（旧形式・複数文書の防衛）。
           # jq が失敗する前に部分出力を吐いても、`|| 値=&lt;フォールバック&gt;` が変数を上書きするので残らない。
           published=$(jq -s -r '(if length == 1 then .[0] else null end)
                                 | if type == &quot;object&quot; and (.publishOutcome | type) == &quot;string&quot;
@@ -1474,13 +1531,10 @@ jobs:
                  | if type != &quot;object&quot; then empty
                  else (.discardedByCompany // {}) | to_entries[] | select((.value | type) == &quot;number&quot; and .value &gt; 0) | &quot;- \(.key): 破棄 \(.value) 件（部分破棄。D-03 のセレクタを確認）&quot; end' \
             &quot;$SUMMARY_JSON&quot; &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true
-      - name: Pages 用にアップロード
-        if: ${{ !cancelled() &amp;&amp; steps.summary.outputs.published != 'false' }}   # true と unknown で行う（安全側。前回と同じ内容の再デプロイは無害）
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa   # v3.0.1
-        with:
-          path: data                        # data/ をサイトのルートとして公開（D-01 §4.7）
+      # Pages 用のアップロードはこのジョブに置かない（§8 #67）。作業ツリーの data/ ではなく main の内容を
+      # 配信するため、下の deploy-pages ジョブが main を明示的にチェックアウトしてからアップロードする。
       - name: 情報源の失敗を検知（R-2）
-        if: steps.summary.outputs.failed_sources != '0'    # unknown も失敗にする（サマリが書けない状態を知らせる）
+        if: ${{ !cancelled() &amp;&amp; steps.summary.outputs.failed_sources != '0' }}    # unknown と空文字も失敗にする（サマリが書けない状態を知らせる）。!cancelled() を付けるのは、状態関数を含まない if には暗黙の success() が付き、npm start が非 0 で終わった実行（サマリは failed_sources=unknown を書いている）でこのステップがスキップされるため（他の 3 つの検知ステップと同形にそろえる。§8 #72）
         run: |
           echo &quot;失敗した情報源がある。ログとステップサマリを確認する&quot; &gt;&amp;2
           exit 1                            # ジョブ失敗 → GitHub の既定のワークフロー失敗通知が届く（§8 #25）
@@ -1498,34 +1552,50 @@ jobs:
         if: ${{ !cancelled() &amp;&amp; steps.summary.outputs.notifications_all_failed == 'true' }}   # sent == 0 かつ failed &gt; 0（FCM 鍵の失効・権限剥奪。§8 #34）。!cancelled() が無いと先行する検知ステップ（情報源の失敗・静かな停止）が exit 1 したときにスキップされ、鍵失効のメッセージが出ない
         run: |
           echo &quot;新着があったが FCM 送信がすべて失敗した。FIREBASE_SERVICE_ACCOUNT の鍵と権限を確認する&quot; &gt;&amp;2
-          exit 1                            # articles.json は push 済みで Pages のアップロードも上で済んでいる。配信は止めない
+          exit 1                            # articles.json は push 済み。Pages は deploy-pages ジョブが published で判定するのでこの失敗の影響を受けない（配信は止めない）
   detect-collect-timeout:                   # collect ジョブのキャンセル（timeout-minutes 超過）を開発者に届ける（§8 #64）
     needs: collect
-    # timeout-minutes 超過はジョブのキャンセルであり、(1) if: !cancelled() を付けた実行サマリ・
-    # Pages アップロード・3 つの検知ステップがすべてスキップされ、(2) キャンセルされたジョブは GitHub の
+    # timeout-minutes 超過はジョブのキャンセルであり、(1) if: !cancelled() を付けた実行サマリと
+    # 4 つの検知ステップがすべてスキップされ、(2) キャンセルされたジョブは GitHub の
     # 既定のワークフロー失敗通知（§8 #25）の対象にならない。このジョブを明示的に失敗させて実行全体を
     # failure にし、メールが届くようにする。!cancelled() を残すのは、concurrency で待機中の実行が
     # キャンセルされた場合（§8 #15。実行全体のキャンセル）に毎回赤くしないため。ジョブ単位の
     # timeout では cancelled() は偽のまま needs.collect.result だけが 'cancelled' になる
+    # （この前提は §7 冒頭の目視確認 (d) で 1 回だけ実測して固定する。§8 #70）
     if: ${{ !cancelled() &amp;&amp; needs.collect.result == 'cancelled' }}
     runs-on: ubuntu-latest
     permissions: {}
     steps:
       - run: |
-          echo &quot;collect ジョブがキャンセルされた（timeout-minutes: 15 の超過が主因）。実行サマリ・Pages の更新・失敗の検知はいずれも行われていない。data/articles.json が未 push の内容のまま残った可能性があるため、次回実行の結果を確認する&quot; &gt;&amp;2
-          echo &quot;確認先：通知ゲートウェイの解放漏れ（D-02 §5.5 手順 11）、情報源の応答時間（§5.7 の timeoutMs）、git push のハング（§5.3 手順 3-5 の GIT_TIMEOUT_MS）&quot; &gt;&amp;2
+          echo &quot;collect ジョブがキャンセルされた（timeout-minutes: 15 の超過が主因）。実行サマリと 4 つの検知ステップは行われていない&quot; &gt;&amp;2
+          echo &quot;どこまで進んだかは Actions のログで判定する：(a) 収集・差分・確定・通知 ステップの途中でキャンセル → push も通知も済んでいない（data/articles.json は未 push のまま runner ごと消え、次回実行が main 基準で取り直す）。(b) そのステップのログに published / notified が出ている → push と通知は完了済みで、Pages は下の deploy-pages ジョブが main の内容を配信して追いつく&quot; &gt;&amp;2
+          echo &quot;確認先：通知ゲートウェイの解放（D-02 §5.5 手順 11・§5.4 の CLOSE_TIMEOUT_MS）、情報源の応答時間（§5.7 の timeoutMs）、git push のハング（§5.3 手順 3-5 の GIT_TIMEOUT_MS）&quot; &gt;&amp;2
           exit 1
-  deploy-pages:
+  deploy-pages:                # main の data/ をアップロードして Pages へデプロイする（§8 #67）
     needs: collect
-    if: ${{ !cancelled() &amp;&amp; needs.collect.outputs.published != 'false' &amp;&amp; needs.collect.outputs.published != '' }}
+    # collect ジョブの作業ツリーではなく main の内容を配信するため、このジョブで checkout → upload → deploy を行う。
+    # 判定は published（= 再デプロイが要るか）だけで行い、collect の成功は要求しない：collect は情報源の失敗で
+    # 意図的に failure になる（§8 #25）。published が空文字（サマリステップが動かなかった＝キャンセル）でも
+    # デプロイする。main をチェックアウトするので未 push の内容が配信されることはない（§8 #67）。
+    # skipped（main 以外の workflow_dispatch。collect ジョブの if が偽）だけは除く。
+    if: ${{ !cancelled() &amp;&amp; needs.collect.result != 'skipped' &amp;&amp; needs.collect.outputs.published != 'false' }}
     runs-on: ubuntu-latest
     permissions:
+      contents: read           # main のチェックアウト（§8 #67）
       pages: write             # GitHub Pages のデプロイ。この 2 つはこのジョブだけが持つ（§8 #52）
       id-token: write          # deploy-pages の OIDC
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          ref: main                  # 既定の github.sha は collect の push より前の commit なので明示する（これを落とすと古い data/ を配信する）
+          persist-credentials: false # このジョブは push しないのでトークンを .git/config に残さない
+      - name: Pages 用にアップロード
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa   # v3.0.1
+        with:
+          path: data                        # data/ をサイトのルートとして公開（D-01 §4.7）
       - id: deploy
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e   # v4.0.5</code></pre>
 <table>
@@ -1548,12 +1618,16 @@ jobs:
 <td>通知は collect ジョブの中（push 直後）に送られ、Pages 反映は待たない（D-01 §4.8。反映遅れは D-01 §6 で許容済み）</td>
 </tr>
 <tr>
-<td><code>deploy-pages</code> の <code>!cancelled()</code></td>
-<td>collect ジョブは情報源の失敗で<strong>意図的に</strong> failure になる（§8 #25）。既定の <code>success()</code> 条件では失敗時に Pages が更新されないため、<code>!cancelled()</code> を付けてジョブ結果ではなく <code>published</code> 出力で判定する</td>
+<td>Pages のアップロードを <code>deploy-pages</code> ジョブで行う理由</td>
+<td>アップロードする <code>data/</code> は <strong><code>collect</code> ジョブの作業ツリーではなく <code>main</code> の内容</strong>でなければならない（未 push の内容を配信しないため）。<code>collect</code> の中でアップロードすると、(1) 作業ツリーが未 push の内容になりうる経路（node プロセスだけの強制終了）が残り、(2) push と通知が済んだ後にジョブがキャンセルされた実行では<strong>アップロードに到達せず Pages が古いまま固定される</strong>（配信 JSON に無い記事の通知だけが届く）。<code>deploy-pages</code> ジョブで <code>actions/checkout</code> に <code>ref: main</code> を指定してから上げると、どちらも構造的に起きない（§8 #67）。<code>ref</code> を省くと既定の <code>github.sha</code>（実行開始時点の commit）になり <code>collect</code> の push を含まないため、<strong><code>ref: main</code> は必須</strong>である</td>
+</tr>
+<tr>
+<td><code>deploy-pages</code> の <code>if</code></td>
+<td><code>!cancelled() &amp;&amp; needs.collect.result != &#39;skipped&#39; &amp;&amp; needs.collect.outputs.published != &#39;false&#39;</code>。collect ジョブは情報源の失敗で<strong>意図的に</strong> failure になる（§8 #25）ので、既定の <code>success()</code>（および <code>needs.collect.result == &#39;success&#39;</code>）では失敗時に Pages が更新されない。ジョブ結果ではなく <code>published</code> 出力で判定する。<code>published != &#39;&#39;</code> の条件は外した（空文字＝サマリステップが動かなかった実行でも <code>main</code> の内容を配信するのが正しい。§8 #67）。<code>skipped</code> を除くのは <code>main</code> 以外の <code>workflow_dispatch</code>（<code>collect</code> ジョブの <code>if</code> が偽）で無用なデプロイを起こさないため。<code>!cancelled()</code> を残すのは <code>concurrency</code> の待機キャンセル（§8 #15。実行<strong>全体</strong>のキャンセル）で毎回デプロイしないため</td>
 </tr>
 <tr>
 <td><code>published</code> が <code>unknown</code> / 空</td>
-<td><code>.run-summary.json</code> が無い（collector が書けなかった・<code>npm start</code> より前で止まった）とき、<strong>サマリの形が想定外</strong>（<code>publishOutcome</code> キーの欠落・旧形式・JSON として読めない）のとき、<code>publishOutcome</code> が <code>&quot;unknown&quot;</code>（publish の呼び出し前後を判別できない致命的失敗。§8 #47）のときは <code>unknown</code>。アップロードと deploy は <code>!= &#39;false&#39;</code> で行う（安全側。<code>data/</code> はチェックアウト済みか push 済みの内容で、前回と同じ内容の再デプロイは無害）。例外は <code>writer.write</code> 成功後・push 完了前に <strong>node プロセスだけが強制終了</strong>した場合（OOM 等。runner とジョブは生きているのでサマリステップは走り、ファイルが無いので <code>unknown</code> になる）で、このときだけ <code>data/</code> は未 push の内容になりうる。<code>PublishFailedError</code> の経路は §5.3 手順 3-6 が <code>origin/main</code> の内容へ復元するので該当しない（§8 #35）。この経路でも通知は送られておらず、次回実行が <code>main</code> 基準で取り直すため整合は回復する。空文字は collect ジョブの summary ステップ自体が動かなかった場合（<code>timeout-minutes</code> 超過によるキャンセル・runner 停止）で、アップロードも deploy も行われない（未 push の内容は配信されない。検知は <code>detect-collect-timeout</code> ジョブ。§8 #64）</td>
+<td><code>.run-summary.json</code> が無い（collector が書けなかった・<code>npm start</code> より前で止まった）とき、<strong>サマリの形が想定外</strong>（<code>publishOutcome</code> キーの欠落・旧形式・JSON として読めない）のとき、<code>publishOutcome</code> が <code>&quot;unknown&quot;</code>（publish の呼び出し前後を判別できない致命的失敗。§8 #47）のときは <code>unknown</code>。<strong>空文字</strong>は collect ジョブの <code>実行サマリ</code> ステップ自体が動かなかった場合（<code>timeout-minutes</code> 超過によるキャンセル・runner 停止）。<code>unknown</code> と空文字のどちらでもアップロードと deploy を<strong>行う</strong>（<code>!= &#39;false&#39;</code> で判定。安全側。配信するのは <code>main</code> の内容で、前回と同じ内容の再デプロイは無害）。<code>data/</code> を <code>main</code> からチェックアウトし直すため、<strong>未 push の内容が配信される経路は無い</strong>（§8 #67）：<code>writer.write</code> 成功後・push 完了前に node プロセスだけが強制終了した場合（OOM 等。サマリが無いので <code>unknown</code>）も、<code>PublishFailedError</code> の経路（§5.3 手順 3-6 が <code>origin/main</code> へ復元。§8 #35）も、キャンセルの経路も、配信されるのは push 済みの内容だけである</td>
 </tr>
 <tr>
 <td>資格情報の保持形式</td>
@@ -1573,7 +1647,7 @@ jobs:
 </tr>
 <tr>
 <td>通知の全滅の検知</td>
-<td><code>notifications_all_failed</code>（<code>notificationsSent == 0 &amp;&amp; notificationsFailed &gt; 0</code>）が真なら「通知の全滅を検知」ステップがジョブを失敗させる（§8 #34）。<code>articles.json</code> の push と Pages のアップロードはそのステップより前に済んでおり、配信は止めない。<code>deploy-pages</code> は <code>!cancelled()</code> + <code>published</code> で判定するので失敗の影響を受けない</td>
+<td><code>notifications_all_failed</code>（<code>notificationsSent == 0 &amp;&amp; notificationsFailed &gt; 0</code>）が真なら「通知の全滅を検知」ステップがジョブを失敗させる（§8 #34）。<code>articles.json</code> の push はそのステップより前に済んでおり、配信は止めない。<code>deploy-pages</code> は <code>!cancelled()</code> + <code>published</code> で判定し、<code>collect</code> の成功を要求しないので、このステップの失敗の影響を受けない（§8 #67）</td>
 </tr>
 <tr>
 <td>「通知の全滅を検知」の <code>!cancelled()</code></td>
@@ -1581,7 +1655,7 @@ jobs:
 </tr>
 <tr>
 <td><code>main</code> 以外のブランチでの実行</td>
-<td><code>workflow_dispatch</code> は任意のブランチを選んで実行できるが、<code>GitArticlesPublisher</code> は <code>git push origin HEAD:main</code> を固定で行う（§5.3）。<code>main</code> 以外で走らせると、ブランチが <code>main</code> の子孫なら fast-forward で通ってブランチの作業内容ごと <code>main</code> が進み（CLAUDE.md「main への取り込みは PR」に反する）、非 FF で弾かれても <code>actions/checkout</code> が <code>origin/main</code> を持たないため §5.3 手順 3-6 の復元が効かず、未 push の <code>data/</code> が Pages にアップロードされる。<code>collect</code> ジョブに <code>if: github.ref == &#39;refs/heads/main&#39;</code> を付けて <code>main</code> 以外では何も行わず、代わりに <code>reject-non-main</code> ジョブが理由を出して失敗する（<code>schedule</code> は既定ブランチでしか動かないので影響なし）。<code>deploy-pages</code> は <code>needs.collect.outputs.published</code> が空になるので走らない（§6、§8 #35）</td>
+<td><code>workflow_dispatch</code> は任意のブランチを選んで実行できるが、<code>GitArticlesPublisher</code> は <code>git push origin HEAD:main</code> を固定で行う（§5.3）。<code>main</code> 以外で走らせると、ブランチが <code>main</code> の子孫なら fast-forward で通ってブランチの作業内容ごと <code>main</code> が進み（CLAUDE.md「main への取り込みは PR」に反する）、非 FF で弾かれても <code>actions/checkout</code> が <code>origin/main</code> を持たないため §5.3 手順 3-6 の復元が効かず、未 push の <code>data/</code> が Pages にアップロードされる。<code>collect</code> ジョブに <code>if: github.ref == &#39;refs/heads/main&#39;</code> を付けて <code>main</code> 以外では何も行わず、代わりに <code>reject-non-main</code> ジョブが理由を出して失敗する（<code>schedule</code> は既定ブランチでしか動かないので影響なし）。<code>deploy-pages</code> は <code>needs.collect.result</code> が <code>&#39;skipped&#39;</code> になるので走らない（§6、§8 #35・#67。<code>published</code> が空文字でもデプロイする形に変えた（#67）ため、この除外は <code>!= &#39;skipped&#39;</code> が担う）</td>
 </tr>
 <tr>
 <td><code>concurrency</code> の待機は 1 つだけ</td>
@@ -1593,11 +1667,11 @@ jobs:
 </tr>
 <tr>
 <td>権限</td>
-<td>ワークフロー直下は <code>permissions: {}</code>（無権限）とし、ジョブごとに必要な最小権限だけを宣言する。外部サイトの HTML を解析するコードを走らせる <code>collect</code> ジョブは <code>contents: write</code> のみ、<code>pages: write</code> / <code>id-token: write</code> は <code>deploy-pages</code> ジョブのみ、<code>reject-non-main</code> と <code>detect-collect-timeout</code> は無権限（§8 #52・#64）</td>
+<td>ワークフロー直下は <code>permissions: {}</code>（無権限）とし、ジョブごとに必要な最小権限だけを宣言する。外部サイトの HTML を解析するコードを走らせる <code>collect</code> ジョブは <code>contents: write</code> のみ、<code>deploy-pages</code> ジョブは <code>contents: read</code>（<code>main</code> のチェックアウト。§8 #67）+ <code>pages: write</code> + <code>id-token: write</code>、<code>reject-non-main</code> と <code>detect-collect-timeout</code> は無権限（§8 #52・#64・#67）。<code>deploy-pages</code> の <code>actions/checkout</code> は <code>persist-credentials: false</code>（このジョブは push しないので <code>.git/config</code> にトークンを残さない）</td>
 </tr>
 <tr>
 <td>アクションの固定</td>
-<td><code>uses:</code> はタグではなく<strong>コミット SHA</strong> で固定し、行末コメントにバージョンを書く（タグは付け替えられるため。<code>actions/checkout</code>・<code>actions/setup-node</code>・<code>actions/upload-pages-artifact</code>・<code>actions/deploy-pages</code> の 4 つ。§8 #52）</td>
+<td><code>uses:</code> はタグではなく<strong>コミット SHA</strong> で固定し、行末コメントにバージョンを書く（タグは付け替えられるため。<code>actions/checkout</code>（<code>collect</code> と <code>deploy-pages</code> の 2 か所。<strong>同じ SHA を使う</strong>）・<code>actions/setup-node</code>・<code>actions/upload-pages-artifact</code>・<code>actions/deploy-pages</code> の 4 種。§8 #52）</td>
 </tr>
 <tr>
 <td>Secrets</td>
@@ -1609,11 +1683,11 @@ jobs:
 </tr>
 <tr>
 <td>実行サマリステップの堅牢化</td>
-<td>次の 5 点を YAML の一部として固定する（§8 #61・#63）。(1) サマリの有無は <code>[ ! -s ... ]</code>（存在しかつ 1 バイト以上）で判定する。0 バイトのファイルに jq は終了コード 0・出力なしで応じるため、<code>-f</code> だとフォールバックが発火せず 5 つの出力が空文字になり、<code>deploy-pages</code> の <code>!= &#39;&#39;</code> を満たさず配信が止まる（#53 の方針と逆向き）。(2) <code>$GITHUB_OUTPUT</code> へ書く 5 本は <code>値=$(jq -s …) || 値=&lt;フォールバック&gt;</code> の形にし、<strong>パイプラインを作らない</strong>。1 行性は <code>jq -s</code>（slurp。トップレベル文書を 1 つの配列にまとめる）が保証する。<code>| head -n 1</code> を使わない理由は #63（既定シェルは <code>bash -e</code> で pipefail が無効。パイプにすると jq の失敗を取りこぼして空文字になる）。(3) ステップサマリ本文の <code>reason</code>・<code>message</code> は <code>gsub(&quot;[[:cntrl:][:space:]`]&quot;; &quot; &quot;)</code> で潰す（<code>[\r\n]</code> だけでは ESC が残り ANSI エスケープとして解釈されうる。<code>[[:cntrl:]]</code> が C0/C1・DEL、<code>[[:space:]]</code> が <code>U+2028</code> / <code>U+2029</code> を**覆う**。collector 側 <code>sanitizeFailureMessage</code>（§4.8）と**同一の集合ではなく上位集合**で、連続の畳み込みも行わない。バックティックを含めるのは (4) のコードスパンを閉じさせないため。YAML に <code>U+2028</code> / <code>U+2029</code> を直書きしない）。(4) 外部サイト由来の可変部分（<code>reason</code>・<code>message</code>）はコードスパンで囲む（Markdown としてレンダリングされるため、見出し・リンクを含む体裁で読み手を誤誘導できる）。(5) ステップに <code>shell: bash</code> を明示して <code>pipefail</code> を有効にする（将来パイプを足したときの取りこぼしを防ぐ多層防御。現在の形は pipefail に依存しない）。変数名は <code>SUMMARY_JSON</code>（1 文字の <code>S</code> にしない）</td>
+<td>次の 5 点を YAML の一部として固定する（§8 #61・#63・#71）。(1) サマリの有無は <code>[ ! -s ... ]</code>（存在しかつ 1 バイト以上）で判定する。0 バイトのファイルに jq は終了コード 0・出力なしで応じるため、<code>-f</code> だと 5 つの出力が空文字のままになり、<code>failed_sources</code> が <code>unknown</code> にならず<strong>情報源の失敗が届かない</strong>（#53 の方針と逆向き。<code>deploy-pages</code> は #67 以降は空文字でも配信するので、配信が止まる側の影響は無くなった）。(2) <code>$GITHUB_OUTPUT</code> へ書く 5 本は <code>値=$(jq -s …) || 値=&lt;フォールバック&gt;</code> の形にし、<strong>パイプラインを作らない</strong>（<code>| head -n 1</code> を使わない理由は #63：既定シェルは <code>bash -e</code> で pipefail が無効。パイプにすると jq の失敗を取りこぼして空文字になる）。<strong>この 5 本が書く値は数値・真偽値・固定語彙（<code>unknown</code>）だけとし、JSON 由来の文字列（<code>message</code>・<code>reason</code> 等）をそのまま出さない</strong>（出す必要が生じたら <code>名前&lt;&lt;EOF</code> のヒアドキュメント区切りか <code>gsub(&quot;[[:cntrl:][:space:]]&quot;; &quot; &quot;)</code> を通す）。これが行注入（偽の <code>published=false</code> 行の差し込み）を防ぐ不変条件である。<code>jq -s</code> が保証するのは「結果が 1 値」までで<strong>1 行であることは保証しない</strong>（#71）。(3) ステップサマリ本文の <code>reason</code>・<code>message</code> は <code>gsub(&quot;[[:cntrl:][:space:]`]&quot;; &quot; &quot;)</code> で潰す（<code>[\r\n]</code> だけでは ESC が残り ANSI エスケープとして解釈されうる。<code>[[:cntrl:]]</code> が C0/C1・DEL、<code>[[:space:]]</code> が <code>U+2028</code> / <code>U+2029</code> を**覆う**。collector 側 <code>sanitizeFailureMessage</code>（§4.8）と**同一の集合ではなく上位集合**で、連続の畳み込みも行わない。バックティックを含めるのは (4) のコードスパンを閉じさせないため。YAML に <code>U+2028</code> / <code>U+2029</code> を直書きしない）。(4) 外部サイト由来の可変部分（<code>reason</code>・<code>message</code>）はコードスパンで囲む（Markdown としてレンダリングされるため、見出し・リンクを含む体裁で読み手を誤誘導できる）。(5) ステップに <code>shell: bash</code> を明示して <code>pipefail</code> を有効にする（将来パイプを足したときの取りこぼしを防ぐ多層防御。現在の形は pipefail に依存しない）。変数名は <code>SUMMARY_JSON</code>（1 文字の <code>S</code> にしない）</td>
 </tr>
 <tr>
 <td><code>timeout-minutes</code> 超過の検知</td>
-<td><code>collect</code> ジョブの <code>timeout-minutes: 15</code> 超過は<strong>キャンセル</strong>であり、<code>if: ${{ !cancelled() }}</code> を付けた <code>実行サマリ</code>・<code>Pages 用にアップロード</code>・3 つの検知ステップがすべてスキップされ、ステップサマリも出力も 1 行も残らない。さらに<strong>キャンセルされたジョブは GitHub の既定のワークフロー失敗通知（§8 #25）の対象にならない</strong>ため、何も届かない。<code>detect-collect-timeout</code> ジョブ（<code>needs: collect</code> + <code>if: !cancelled() &amp;&amp; needs.collect.result == &#39;cancelled&#39;</code>）を置いて実行全体を failure にし、メールが届くようにする（§8 #64）。ステップ側の条件を <code>always()</code> に変える案は採らない：キャンセルの経路は <code>data/articles.json</code> が未 push の内容のまま残りうる唯一の経路（§5.3 手順 3-6 の復元にも到達していない）で、<code>always()</code> にすると <code>published=unknown</code> でアップロードが走り、未 push の内容を Pages へ出してしまう（現在の <code>!cancelled()</code> はこれを防いでいる）</td>
+<td><code>collect</code> ジョブの <code>timeout-minutes: 15</code> 超過は<strong>キャンセル</strong>であり、<code>if: ${{ !cancelled() }}</code> を付けたステップはスキップされる。キャンセルされた時点によって残るものが変わるので 2 つに分けて扱う（§8 #64・#67）。<strong>(1) <code>実行サマリ</code> ステップより前にキャンセル</strong>（<code>npm ci</code>〜<code>収集・差分・確定・通知</code> の途中、または <code>npm start</code> がプロセスを終了できずに固まった場合）：<code>実行サマリ</code> と 4 つの検知ステップがすべてスキップされ、ステップサマリも出力も 1 行も残らない。5 つの出力は<strong>空文字</strong>になる。<strong>(2) <code>実行サマリ</code> ステップの後にキャンセル</strong>（4 つの検知ステップの途中など）：<code>$GITHUB_OUTPUT</code> へ書かれた値はそのまま後続ジョブへ引き渡されるため、<code>published</code> は <code>true</code> / <code>false</code> / <code>unknown</code> のいずれかになる。どちらの場合も <code>deploy-pages</code> は <code>!cancelled()</code>（ジョブ単位の timeout では実行全体はキャンセルされないので偽）・<code>result != &#39;skipped&#39;</code>・<code>published != &#39;false&#39;</code> を満たせば走り、<code>main</code> をチェックアウトして配信するので、push 済みの内容が Pages に反映される（#67。この分岐は #67 の前は成り立たず、(1) では Pages が更新されないまま固定されていた）。さらに<strong>キャンセルされたジョブは GitHub の既定のワークフロー失敗通知（§8 #25）の対象にならない</strong>ため、<code>detect-collect-timeout</code> ジョブ（<code>needs: collect</code> + <code>if: !cancelled() &amp;&amp; needs.collect.result == &#39;cancelled&#39;</code>）を置いて実行全体を failure にし、メールが届くようにする（§8 #64。この 2 つの前提は §7 冒頭の目視確認 (d) で 1 回だけ実測する。§8 #70）。ステップ側の条件を <code>always()</code> に変える案は採らない：<code>always()</code> のステップが <code>exit 1</code> してもジョブの結論は <code>cancelled</code> のままなのでメールは届かず、目的を果たさない（§8 #64）</td>
 </tr>
 <tr>
 <td><code>jq</code></td>
@@ -1892,17 +1966,37 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td><code>git push</code> が非 fast-forward で失敗（人手の push と競合。runner 上）</td>
-<td><code>PublishFailedError</code> → 終了コード 1。<strong>通知は送らない</strong>。例外を投げる前に <code>data/articles.json</code> を <code>origin/main</code> の内容へ復元する（§5.3 手順 3-6、§8 #35）ので、後続の Pages アップロードは push 済みの内容を配信する。ローカルのコミットは runner と共に消え、次回実行が同じ記事を新着として再検出して通知する（遅延するが重複しない。D-01 #33・§6）</td>
+<td><code>PublishFailedError</code> → 終了コード 1。<strong>通知は送らない</strong>。例外を投げる前に <code>data/articles.json</code> を <code>origin/main</code> の内容へ復元する（§5.3 手順 3-6、§8 #35）。Pages へ配信されるのは <code>deploy-pages</code> ジョブが <code>main</code> からチェックアウトした内容なので、この経路でも未 push の内容は配信されない（§8 #67。復元は多層防御）。ローカルのコミットは runner と共に消え、次回実行が同じ記事を新着として再検出して通知する（遅延するが重複しない。D-01 #33・§6）</td>
 <td><code>GitArticlesPublisher</code> / <code>run-collection</code></td>
 </tr>
 <tr>
 <td><code>writer.write</code> 成功後・push 完了前に <strong>node プロセスだけ</strong>が強制終了した（OOM 等。runner とジョブは生きている）</td>
-<td>サマリステップは走るが <code>.run-summary.json</code> が無いので <code>published=unknown</code> となり、Pages アップロードは未 push の <code>data/articles.json</code> を配信しうる（§5.6 の表）。通知は送られていない。次回実行は <code>main</code> をチェックアウトし直すので、次回の push で整合が回復する。<code>failed_sources=unknown</code> でジョブは失敗し開発者に届く</td>
+<td>サマリステップは走るが <code>.run-summary.json</code> が無いので <code>published=unknown</code> となり、<code>deploy-pages</code> ジョブが走る。配信されるのは <code>main</code> をチェックアウトし直した内容なので、<strong>未 push の <code>data/articles.json</code> が配信されることは無い</strong>（§8 #67）。通知は送られていない。次回実行は <code>main</code> を基準に取り直すので、次回の push で整合が回復する。<code>failed_sources=unknown</code> でジョブは失敗し開発者に届く</td>
 <td>ワークフロー</td>
 </tr>
 <tr>
-<td><code>collect</code> ジョブが <code>timeout-minutes: 15</code> を超えた（情報源の無応答・git push のハング・通知ゲートウェイの解放漏れでプロセスが終わらない）</td>
-<td>これはジョブの<strong>キャンセル</strong>であり、<code>if: ${{ !cancelled() }}</code> を付けた <code>実行サマリ</code>・<code>Pages 用にアップロード</code>・3 つの検知ステップがすべてスキップされる。ステップサマリも出力も残らず、<code>published</code> は空文字なので <code>deploy-pages</code> も走らない（未 push の <code>data/</code> が配信されることは<strong>無い</strong>）。キャンセルされたジョブは GitHub の既定の失敗通知の対象外なので、<code>detect-collect-timeout</code> ジョブ（<code>needs: collect</code> + <code>needs.collect.result == &#39;cancelled&#39;</code>）が <code>exit 1</code> して実行全体を failure にし、メールで届く（§5.6、§8 #64）。<code>data/articles.json</code> は未 push の内容のまま runner ごと消えるため、次回実行が <code>main</code> 基準で取り直して整合が回復する</td>
+<td><code>収集・差分・確定・通知</code> ステップ（<code>npm start</code>）が非 0 で終了した（致命的失敗。<code>companies.json</code> の重複 <code>id</code>・<code>SnapshotMissingError</code>・<code>PublishFailedError</code> 等）</td>
+<td>ステップは赤くなり、<code>実行サマリ</code> ステップは <code>!cancelled()</code> により走ってサマリの有無に応じた 5 つの出力を書く。<strong>4 つの検知ステップはいずれも <code>!cancelled() &amp;&amp; &lt;条件&gt;</code> の同形なので、前のステップが失敗してもスキップされない</strong>（§8 #72）。<code>.run-summary.json</code> が無い経路では <code>failed_sources=unknown</code> になり <code>情報源の失敗を検知</code> ステップが <code>exit 1</code> して理由をログに残す（<code>!cancelled()</code> が無いと暗黙の <code>success()</code> でスキップされ、§6 の各行が主張する「開発者に届く」が成り立たない）。<code>published</code> は <code>unknown</code> か <code>publishOutcome</code> の写像で、<code>deploy-pages</code> は <code>!= &#39;false&#39;</code> を満たせば <code>main</code> の内容を配信する（§8 #67）</td>
+<td>ワークフロー</td>
+</tr>
+<tr>
+<td><code>collect</code> ジョブが <code>timeout-minutes: 15</code> を超えた（<strong>(a) <code>実行サマリ</code> ステップより前</strong>でキャンセル。情報源の無応答・git push のハング・<code>npm start</code> が <code>npm ci</code>〜収集の途中で固まった）</td>
+<td>ジョブの<strong>キャンセル</strong>であり、<code>if: ${{ !cancelled() }}</code> を付けた <code>実行サマリ</code>・4 つの検知ステップがすべてスキップされる。ステップサマリも出力も残らず、5 つの出力は空文字。push も通知も済んでいないので <code>data/articles.json</code> は未 push の内容のまま runner ごと消え、次回実行が <code>main</code> 基準で取り直して整合が回復する。<code>deploy-pages</code> は空文字でも走り（<code>!= &#39;false&#39;</code> を満たす）、<code>main</code> の内容（＝前回の push 内容）を再デプロイする（無害。§8 #67）。キャンセルされたジョブは GitHub の既定の失敗通知の対象外なので、<code>detect-collect-timeout</code> ジョブが <code>exit 1</code> して実行全体を failure にし、メールで届く（§5.6、§8 #64・#70）</td>
+<td>ワークフロー</td>
+</tr>
+<tr>
+<td><code>collect</code> ジョブが <code>timeout-minutes: 15</code> を超えた（<strong>(b) 手順 9 の完了後</strong>にキャンセル。通知ゲートウェイの解放が <code>CLOSE_TIMEOUT_MS</code> の打ち切り後も残ったハンドルでプロセスが終わらない、<code>実行サマリ</code> 以降のステップの途中で 15 分に達した）</td>
+<td><strong>push も通知も <code>.run-summary.json</code> の書き出しも完了している</strong>。<code>実行サマリ</code> ステップまで走っていれば <code>published</code> は <code>true</code> / <code>false</code> / <code>unknown</code> のいずれかが後続ジョブへ引き渡され、走る前にキャンセルされていれば空文字になる。いずれの場合も <code>deploy-pages</code> ジョブが <code>main</code> をチェックアウトして配信するので、<strong>push 済みの記事は Pages に反映される</strong>（#67 の前は、この経路だけ「通知は届いたのに配信 JSON にその記事が無い」状態が次に記事が変わるまで固定されていた）。失われるのはその実行のステップサマリと 4 つの検知ステップ（情報源の失敗の内訳は Actions のログの <code>warn(&quot;source failed&quot;)</code> に残る）。検知は <code>detect-collect-timeout</code> ジョブが行い、メッセージで (a) と (b) の切り分け方（<code>収集・差分・確定・通知</code> ステップのログに <code>published</code> / <code>notified</code> が出ているか）を示す（§5.6、§8 #64・#67・#68）</td>
+<td>ワークフロー</td>
+</tr>
+<tr>
+<td><code>detect-collect-timeout</code> ジョブが起動しない（依存している Actions の仕様が本書の前提と違う：ジョブ単位の <code>timeout-minutes</code> 超過で <code>cancelled()</code> が<strong>真</strong>になる、または <code>needs.collect.result</code> が <code>&#39;cancelled&#39;</code> にならない）</td>
+<td>キャンセルの経路で <code>if</code> が偽になり、<strong>何も出さずにスキップされて検知経路が 0 になる</strong>（ジョブは黄色のまま、メールも届かない）。この前提は正常運用では踏まないため、§7 冒頭の目視確認 <strong>(d)</strong> で使い捨てのワークフロー（<code>timeout-minutes: 1</code> + <code>sleep 120</code>）を 1 回だけ走らせて実測し、外れていた場合の代替（<code>if</code> を <code>needs.collect.result != &#39;success&#39; &amp;&amp; != &#39;skipped&#39;</code> へ広げる／「メールで届く」の記述を撤回して Actions 画面の目視に頼ると明記する）を §8 #70 に併記してある</td>
+<td>ワークフロー</td>
+</tr>
+<tr>
+<td><code>$GITHUB_OUTPUT</code> へ JSON 由来の文字列を出す変更が入った（例：<code>first_failure=$(jq … .message …)</code> を足した）</td>
+<td>値に改行が残っていれば <code>first_failure=…&lt;改行&gt;published=false</code> の 2 行が書かれ、<strong>外部サイト由来の文字列で <code>published=false</code>（配信しないという積極的な指示）を偽装できる</strong>。<code>jq -s</code> はこれを防がない（保証するのは「結果が 1 値」までで 1 行ではない）。§5.6 の不変条件として「出力へ書く値は数値・真偽値・固定語彙のみ」を定め、文字列を出す必要が生じたときは <code>名前&lt;&lt;EOF</code> のヒアドキュメント区切りか <code>gsub(&quot;[[:cntrl:][:space:]]&quot;; &quot; &quot;)</code> を通すことを YAML のコメントと §5.6 の表に明記する（§8 #71）。回帰はワークフロー差分の PR レビューで見る（§7 冒頭。ワークフローは自動検証を持たない。§8 #66）</td>
 <td>ワークフロー</td>
 </tr>
 <tr>
@@ -1947,7 +2041,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td><code>.run-summary.json</code> の形が想定外（キー欠落・旧形式・JSON として読めない）</td>
-<td>§5.6 の jq がすべて型ガード付きで、<code>published</code> は <code>false</code> ではなく <code>unknown</code> に倒す（Pages のアップロードと deploy は行う。安全側）。<code>failed_sources</code> も <code>0</code> ではなく <code>unknown</code> に倒し、「情報源の失敗を検知」ステップがジョブを失敗させる。<code>changed_but_not_published</code> / <code>no_changes_but_stats</code> は <code>false</code>（誤検知でジョブを赤くしない。形の異常は <code>failed_sources=unknown</code> 側で届く）。ステップサマリの<strong>本文</strong>を出す 3 本の jq にも型ガードと <code>|| true</code> を付け、サマリステップ自体が失敗しないようにする（<code>-e</code> により失敗すると後続の検知ステップが暗黙の <code>success()</code> 条件でスキップされ、理由のメッセージが出ない）。5 つの出力とこの 3 本はいずれも<strong>パイプラインを作らない</strong>形（<code>値=$(jq -s …) || 値=&lt;フォールバック&gt;</code> と <code>jq -s … &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true</code>）なので、フォールバックの発火は <code>pipefail</code> の有無に依存しない（<code>shell: bash</code> で <code>pipefail</code> も有効にしてあるが、それは将来パイプを足したときの保険。§5.6、§8 #63）。それでもサマリステップが失敗した場合、<strong><code>published</code> の行を書く前に落ちたとき</strong>（出力が 1 つも書かれないとき）は <code>published</code> が空文字になり、アップロードは <code>!cancelled() &amp;&amp; published != &#39;false&#39;</code> により<strong>行われる</strong>が、<code>deploy-pages</code> は <code>published != &#39;&#39;</code> を満たさず走らない（次に記事が変わる実行で再デプロイされる）。<strong>出力 5 行を書いた後に（本文 3 本の段で）落ちたときは、既に書かれた値がそのまま後続へ引き渡される</strong>（GitHub Actions は失敗したステップでも、失敗前に <code>$GITHUB_OUTPUT</code> へ書かれた出力を後続に渡す）ので、<code>published</code> は <code>true</code> / <code>false</code> / <code>unknown</code> のいずれかになり、<code>deploy-pages</code> は <code>!= &#39;false&#39;</code> かつ <code>!= &#39;&#39;</code> を満たせば走る（§8 #53）</td>
+<td>§5.6 の jq がすべて型ガード付きで、<code>published</code> は <code>false</code> ではなく <code>unknown</code> に倒す（Pages のアップロードと deploy は行う。安全側）。<code>failed_sources</code> も <code>0</code> ではなく <code>unknown</code> に倒し、「情報源の失敗を検知」ステップがジョブを失敗させる。<code>changed_but_not_published</code> / <code>no_changes_but_stats</code> は <code>false</code>（誤検知でジョブを赤くしない。形の異常は <code>failed_sources=unknown</code> 側で届く）。ステップサマリの<strong>本文</strong>を出す 3 本の jq にも型ガードと <code>|| true</code> を付け、サマリステップ自体が失敗しないようにする（<code>-e</code> により失敗すると後続の検知ステップが暗黙の <code>success()</code> 条件でスキップされ、理由のメッセージが出ない）。5 つの出力とこの 3 本はいずれも<strong>パイプラインを作らない</strong>形（<code>値=$(jq -s …) || 値=&lt;フォールバック&gt;</code> と <code>jq -s … &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true</code>）なので、フォールバックの発火は <code>pipefail</code> の有無に依存しない（<code>shell: bash</code> で <code>pipefail</code> も有効にしてあるが、それは将来パイプを足したときの保険。§5.6、§8 #63）。それでもサマリステップが失敗した場合、<strong><code>published</code> の行を書く前に落ちたとき</strong>（出力が 1 つも書かれないとき）は <code>published</code> が空文字になり、<code>deploy-pages</code> は <code>!= &#39;false&#39;</code> を満たすので<strong>走る</strong>（<code>main</code> の内容を配信する。#67 以降は空文字を除外しない）。<strong>出力 5 行を書いた後に（本文 3 本の段で）落ちたときは、既に書かれた値がそのまま後続へ引き渡される</strong>（GitHub Actions は失敗したステップでも、失敗前に <code>$GITHUB_OUTPUT</code> へ書かれた出力を後続に渡す）ので、<code>published</code> は <code>true</code> / <code>false</code> / <code>unknown</code> のいずれかになり、<code>deploy-pages</code> は <code>!= &#39;false&#39;</code> を満たせば走る（§8 #53・#67）。どちらの場合も <code>情報源の失敗を検知</code> ステップは <code>!cancelled()</code> により走り（<code>failed_sources</code> が空文字または <code>unknown</code> なので <code>!= &#39;0&#39;</code>）、ジョブが赤くなって開発者に届く（§8 #72）</td>
 <td>ワークフロー</td>
 </tr>
 <tr>
@@ -1967,8 +2061,18 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td>通知を送った後にプロセスが終了しない（firebase-admin と google-auth が保持する HTTP コネクションでイベントループが空にならない）</td>
-<td><code>main.ts</code> 手順 11 が <code>NotificationGatewayCloser.close()</code>（§4.5）を必ず 1 回呼び、<code>FirebaseNotificationGateway</code> が <code>deleteApp(this.app)</code> で解放する（§5.4、§8 #65）。<code>process.exit()</code> は使わない（stdout のフラッシュを待つ。§5.5）ため、この解放を落とすとジョブが <code>timeout-minutes: 15</code> でキャンセルされ、ステップサマリ・検知ステップ・Pages 更新をすべて失う（上の <code>timeout-minutes</code> の行）。解放自体が失敗したら <code>warn(&quot;failed to close fcm gateway&quot;)</code> を 1 件出すだけで終了コードは変えない。<code>NoopNotificationGateway</code> は何も確保していないので <code>close()</code> は何もしない</td>
+<td><code>main.ts</code> 手順 11 が <code>NotificationGatewayCloser.close()</code>（§4.5）を必ず 1 回呼び、<code>FirebaseNotificationGateway</code> が <code>deleteApp(this.app)</code> で解放する（§5.4、§8 #65）。呼ぶ範囲は「手順 5 でゲートウェイを生成した後に終わるすべての経路」で、手順 6 の失敗のように <code>error</code> ログだけを出して終える経路（手順 10 を通らない経路）も含む（§5.5 手順 11）。<code>process.exit()</code> は使わない（stdout のフラッシュを待つ。§5.5）ため、この解放を落とすとジョブが <code>timeout-minutes: 15</code> でキャンセルされ、その実行のステップサマリと 4 つの検知ステップを失う（上の <code>timeout-minutes</code> (b) の行。Pages 更新と push・通知は失われない。§8 #67）。解放自体が失敗したら <code>warn(&quot;failed to close fcm gateway&quot;)</code> を 1 件出すだけで終了コードは変えない。<code>NoopNotificationGateway</code> は何も確保していないので <code>close()</code> は何もしない</td>
 <td><code>main.ts</code> / <code>FirebaseNotificationGateway</code></td>
+</tr>
+<tr>
+<td><code>close()</code> が解決しない（<code>deleteApp</code> が Google のエンドポイントへの経路断で reject も resolve もしない）</td>
+<td><code>FirebaseNotificationGateway.close()</code> が <code>CLOSE_TIMEOUT_MS</code>（5000。§4.5）で打ち切り、<code>warn(&quot;fcm gateway close timed out&quot;)</code> を 1 件出して解決する。<code>main.ts</code> 手順 11 の <code>await</code> はここで必ず返るので、解放の待機だけでプロセスが止まることはない（§5.4、§8 #68）。打ち切り後も背後の <code>deleteApp</code> が保持するソケットでプロセスが終了しない可能性は残り、その場合は上の <code>timeout-minutes</code> (b) の行に落ちる（強制終了はしない。理由は §8 #68）</td>
+<td><code>FirebaseNotificationGateway</code></td>
+</tr>
+<tr>
+<td><code>CURTAINCALL_DRY_RUN=1</code> のローカル実行で <code>FIREBASE_SERVICE_ACCOUNT</code> が <code>.env</code> に設定されている</td>
+<td><code>main.ts</code> 手順 5 は <code>FirebaseNotificationGateway</code> を生成せず（<code>App</code> も HTTP コネクションも確保しない）、<code>NoopNotificationGateway</code> を注入して <code>debug(&quot;dry run: skip FCM initialization&quot;)</code> を出す。<code>RunSummary.notificationGateway</code> は手順 4a の結果に従って <code>&quot;firebase&quot;</code> のまま（Secret の未設定・タイポの検知が目的。§8 #32・#45）で、試走であることは <code>publisher: &quot;noop&quot;</code> で見分ける。手順 11 が閉じるのはこの Noop であり、<strong>確保した実装を捨てて何も確保していない実装を閉じる誤配線は起きない</strong>（§8 #69）。FCM の初期化検証はこの実行では行われないが、Actions 上は手順 4b が DRY_RUN を拒否するので本番の経路では毎時検証される</td>
+<td><code>main.ts</code></td>
 </tr>
 <tr>
 <td>1 団体の FCM 送信が失敗した</td>
@@ -1977,7 +2081,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td>FCM 送信が全団体で失敗した（<code>FIREBASE_SERVICE_ACCOUNT</code> は設定済みだが鍵が失効・権限剥奪）</td>
-<td><code>notify-new-articles</code> は例外を出さず <code>notificationsSent: 0</code>・<code>notificationsFailed: 送信対象の団体数</code> を返し、collector は終了コード 0。ワークフローの「通知の全滅を検知」ステップが <code>notificationsSent == 0 &amp;&amp; notificationsFailed &gt; 0</code> でジョブを失敗させ、開発者に届く（§8 #34）。<code>articles.json</code> は push 済み・Pages のアップロードも済んでいるので配信は止めない。失敗した通知は再送しない（至多 1 回。次回は前回ファイルに含まれるので新着にならない）</td>
+<td><code>notify-new-articles</code> は例外を出さず <code>notificationsSent: 0</code>・<code>notificationsFailed: 送信対象の団体数</code> を返し、collector は終了コード 0。ワークフローの「通知の全滅を検知」ステップが <code>notificationsSent == 0 &amp;&amp; notificationsFailed &gt; 0</code> でジョブを失敗させ、開発者に届く（§8 #34）。<code>articles.json</code> は push 済みで、<code>deploy-pages</code> は <code>collect</code> の成功を要求しないので配信は止めない（§8 #67）。失敗した通知は再送しない（至多 1 回。次回は前回ファイルに含まれるので新着にならない）</td>
 <td><code>notify-new-articles</code> / ワークフロー</td>
 </tr>
 <tr>
@@ -1992,7 +2096,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td><code>workflow_dispatch</code> を <code>main</code> 以外のブランチで実行した（<code>task/T-xx</code> で四季の遡りを確かめようとした等）</td>
-<td><code>collect</code> ジョブは <code>if: github.ref == &#39;refs/heads/main&#39;</code> で動かず、<code>reject-non-main</code> ジョブが「main でのみ実行する」と出して失敗する。収集・push・Pages アップロード・通知のいずれも行わない（<code>main</code> が fast-forward でブランチの内容ごと進む事故と、<code>origin/main</code> 不在で復元が効かないまま未 push の <code>data/</code> を配信する事故を防ぐ。§5.6 の表、§8 #35）。ブランチの Source を試すにはローカルで <code>CURTAINCALL_DRY_RUN=1 npm start</code> を使う（§4.9）</td>
+<td><code>collect</code> ジョブは <code>if: github.ref == &#39;refs/heads/main&#39;</code> で動かず、<code>reject-non-main</code> ジョブが「main でのみ実行する」と出して失敗する。収集・push・通知のいずれも行わず、<code>deploy-pages</code> も <code>needs.collect.result == &#39;skipped&#39;</code> で走らない（<code>main</code> が fast-forward でブランチの内容ごと進む事故を防ぐ。§5.6 の表、§8 #35・#67）。ブランチの Source を試すにはローカルで <code>CURTAINCALL_DRY_RUN=1 npm start</code> を使う（§4.9）</td>
 <td>ワークフロー</td>
 </tr>
 <tr>
@@ -2012,23 +2116,23 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td>Pages のデプロイが失敗した（<code>deploy-pages</code> ジョブが赤い）</td>
-<td><code>articles.json</code> は push 済みで、通知も送信済み（D-01 §6「反映遅れは許容」）。ただし<strong>次回の実行では自動で再デプロイされない</strong>：記事に変化が無い実行は <code>publishOutcome: &quot;skipped&quot;</code> → <code>published=false</code> でアップロードもデプロイも飛ばすため（§8 #8）、次に記事が変わるまで Pages は古いままになる。復旧は失敗した実行の <code>deploy-pages</code> ジョブを Actions 画面から再実行する（アーティファクトはその実行に残っている）。それも失効している場合は次に記事が変わる実行を待つ</td>
+<td><code>articles.json</code> は push 済みで、通知も送信済み（D-01 §6「反映遅れは許容」）。ただし<strong>次回の実行では自動で再デプロイされない</strong>：記事に変化が無い実行は <code>publishOutcome: &quot;skipped&quot;</code> → <code>published=false</code> でデプロイを飛ばすため（§8 #8）、次に記事が変わるまで Pages は古いままになる。復旧は失敗した実行の <code>deploy-pages</code> ジョブを Actions 画面から再実行する。#67 以降はこのジョブが<strong>チェックアウト → アップロード → デプロイ</strong>を自分で行うため、前の実行のアーティファクトが失効していても再実行だけで復旧でき（配信されるのは再実行時点の <code>main</code> の内容）、アーティファクト不在で再実行が失敗する経路は無い</td>
 <td>ワークフロー</td>
 </tr>
 <tr>
 <td><code>.run-summary.json</code> の書き出しに失敗した</td>
-<td>collector は <code>warn</code> を出して終了コード 0 のまま続行（サマリは副次情報。収集結果は既に確定している）。ワークフローの <code>実行サマリ</code> ステップはファイル無し・空ファイル（<code>[ ! -s ... ]</code>。書き出しが途中で落ちて 0 バイトになった場合を含む。§8 #61）を検知して <code>published=unknown</code>・<code>failed_sources=unknown</code> を出し（この分岐は jq を通らないので確実に 1 行ずつ書かれる。JSON が壊れていた場合も <code>値=$(jq -s …) || 値=unknown</code> が <code>pipefail</code> に依存せず <code>unknown</code> を書く。§8 #63）、Pages のアップロードと deploy は <code>published != &#39;false&#39;</code> なので<strong>行われる</strong>（push・通知済みの結果が配信されない事態を避ける）。<code>failed_sources</code> が <code>unknown</code> なので失敗検知ステップがジョブを失敗させ、サマリが書けなかったことは開発者に届く</td>
+<td>collector は <code>warn</code> を出して終了コード 0 のまま続行（サマリは副次情報。収集結果は既に確定している）。ワークフローの <code>実行サマリ</code> ステップはファイル無し・空ファイル（<code>[ ! -s ... ]</code>。書き出しが途中で落ちて 0 バイトになった場合を含む。§8 #61）を検知して <code>published=unknown</code>・<code>failed_sources=unknown</code> を出し（この分岐は jq を通らないので確実に 1 行ずつ書かれる。JSON が壊れていた場合も <code>値=$(jq -s …) || 値=unknown</code> が <code>pipefail</code> に依存せず <code>unknown</code> を書く。§8 #63）、<code>deploy-pages</code> は <code>published != &#39;false&#39;</code> なので<strong>走る</strong>（push・通知済みの結果が配信されない事態を避ける。配信するのは <code>main</code> の内容。§8 #67）。<code>failed_sources</code> が <code>unknown</code> なので失敗検知ステップ（<code>!cancelled()</code> 付き。§8 #72）がジョブを失敗させ、サマリが書けなかったことは開発者に届く</td>
 <td><code>main.ts</code> / ワークフロー</td>
 </tr>
 </tbody></table>
 <h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
 <p>テストの単位は UseCase（CLAUDE.md）。Source・HTTP・storage・git・FCM・時計はすべて差し替える。ネットワークへは一切アクセスしない。パーサーのフィクスチャテスト（実サイトの HTML / RSS）は D-03 が <code>test/infrastructure/sources/</code> に置く。<code>main.ts</code>・<code>ConsoleLogger</code>・<code>SystemClock</code>・<code>FirebaseNotificationGateway</code> の単体テストは書かない。</p>
-<p><strong><code>main.ts</code> の起動時検証（§5.5 手順 3・4a・4b）はテストを持たない。</strong> <code>companies.json</code> の検証・<code>CURTAINCALL_REQUIRE_NOTIFICATIONS</code>・<code>FIREBASE_SERVICE_ACCOUNT</code> の <code>JSON.parse</code>・Actions 上の <code>CURTAINCALL_DRY_RUN</code> 拒否の 4 つは §6 に振る舞いを定めているが、DI 組み立てのみの entry に置く方針（§8 #11・#30）を優先し、<code>startup-policy.ts</code> のような application への切り出しは行わない。回帰（歯止めが消えて配信・通知が静かに止まる）は §5.5 の記述と PR レビューで担保する。これは意識した上での設計上の決定であり、無検証であることを承知で残す（§8 #56）。例外として <code>FetchHttpClient</code>・<code>ArticlesFileStore</code>・<code>GitArticlesPublisher</code> の 3 クラスは §7.3 の infrastructure テストを持つ（判定条件は §7.3 冒頭。§8 #30・#37）。加えて <code>infrastructure/storage/sanitize-git-output.ts</code> の 2 つの<strong>純粋関数</strong>（<code>maskCredentials</code>・<code>sanitizeGitOutput</code>）は、CLAUDE.md「テスト方針」の純粋関数の例外としてテーブル駆動テストを直接書く（§7.3、§8 #38）。</p>
+<p><strong><code>main.ts</code> の起動時検証（§5.5 手順 3・4a・4b）と DI の配線（手順 5 の <code>dryRun</code> 分岐・手順 7 の差し替え・手順 11 の適用範囲）はテストを持たない。</strong> <code>companies.json</code> の検証・<code>CURTAINCALL_REQUIRE_NOTIFICATIONS</code>・<code>FIREBASE_SERVICE_ACCOUNT</code> の <code>JSON.parse</code>・Actions 上の <code>CURTAINCALL_DRY_RUN</code> 拒否の 4 つと、<strong><code>dryRun === true</code> のとき <code>FirebaseNotificationGateway</code> を生成しないこと（§8 #69）</strong>・<strong>ゲートウェイを生成したすべての経路で <code>close()</code> を 1 回呼ぶこと（§8 #65・#68）<strong>は §6 に振る舞いを定めているが、DI 組み立てのみの entry に置く方針（§8 #11・#30）を優先し、<code>startup-policy.ts</code> のような application への切り出しは行わない。回帰（歯止めが消えて配信・通知が静かに止まる）は §5.5 の記述と PR レビューで担保する。これは意識した上での設計上の決定であり、無検証であることを承知で残す（§8 #56）。例外として <code>FetchHttpClient</code>・<code>ArticlesFileStore</code>・<code>GitArticlesPublisher</code> の 3 クラスは §7.3 の infrastructure テストを持つ（判定条件は §7.3 冒頭。§8 #30・#37）。加えて <code>infrastructure/storage/sanitize-git-output.ts</code> の 2 つの</strong>純粋関数</strong>（<code>maskCredentials</code>・<code>sanitizeGitOutput</code>）は、CLAUDE.md「テスト方針」の純粋関数の例外としてテーブル駆動テストを直接書く（§7.3、§8 #38）。</p>
 <p><strong>次の 3 つも同じ扱い（無検証であることを設計上の決定として明記し、§5 の記述と PR レビューで担保する。§8 #56 と同型）。</strong></p>
 <ul>
 <li><strong><code>FirebaseNotificationGateway</code> の初期化（§5.4、§8 #60）</strong>：3 段の失敗分岐と固定文言・既定アプリの<strong>名前による解決</strong>（<code>getApps().find(... === &quot;[DEFAULT]&quot;)</code>）と再利用時の <code>warn</code>（§6 の該当 2 行）は、判断ロジックを持つが §7.3 の対象に<strong>入れない</strong>（除外の根拠は §7.3 の当該段落。<code>firebase-admin</code> の <code>getApps</code> / <code>initializeApp</code> / <code>cert</code> / <code>getMessaging</code> をモックする作り込みに見合わないため）。誤ると F-07 の通知が全滅するが、その結果は <code>notificationsSent == 0 &amp;&amp; notificationsFailed &gt; 0</code>（§8 #34）または起動時の <code>error</code> ログ（§5.5 手順 5）として必ずジョブの赤で届く</li>
-<li><strong><code>NotificationGatewayCloser.close()</code>（§4.5・§5.4・§8 #65）</strong>：<code>deleteApp</code> の呼び出しと例外の呑み込みはテストを持たない。落ちた場合の症状は「プロセスが終わらず <code>timeout-minutes</code> でキャンセルされる」で、<code>detect-collect-timeout</code> ジョブ（§8 #64）が毎時のジョブ失敗として届ける</li>
-<li><strong>§5.6 のワークフロー（<code>collect.yml</code>）</strong>：<code>jq</code> の型ガード・フォールバック・ステップの <code>if</code> 条件・新設ジョブはいずれも自動検証を持たない。<code>workflow_dispatch</code> はブランチで走らせても <code>reject-non-main</code>（§8 #35）が即座に失敗させるため、<strong><code>main</code> にマージするまで 1 回も実行できない</strong>。シェルスクリプトへ切り出して <code>vitest</code> から検証する案は、<code>bash</code> を起動するテストという新しい carve-out（#37 が締めた <code>execFile</code> の原則と CLAUDE.md テスト方針の改訂）を要するので採らない（§8 #66）。代わりに、§8.1 の実装行 (i) を入れる周で <strong>main へマージした直後の 1 回目の実行ログとステップサマリを目視確認する</strong>：(a) 5 つの出力が <code>unknown</code> / 空文字でないこと、(b) ステップサマリに「収集 N 件 …」の 1 行が出ていること、(c) <code>deploy-pages</code> が走っていること。この 3 点を PR の説明に貼る</li>
+<li><strong><code>NotificationGatewayCloser.close()</code>（§4.5・§5.4・§8 #65・#68）</strong>：<code>deleteApp</code> の呼び出し・例外の呑み込み・<code>CLOSE_TIMEOUT_MS</code>（5000）での打ち切りと <code>warn(&quot;fcm gateway close timed out&quot;)</code> はいずれもテストを持たない（<code>deleteApp</code> をモックし偽のタイマーで待たせる作り込みは、<code>FirebaseNotificationGateway</code> を §7.3 の対象外にした理由（§7.3 の当該段落）と同じ費用対効果で見合わない）。落ちた場合の症状は「プロセスが終わらず <code>timeout-minutes</code> でキャンセルされる」で、<code>detect-collect-timeout</code> ジョブ（§8 #64）が毎時のジョブ失敗として届け、記事の push・通知・Pages 更新は失われない（§8 #67）</li>
+<li><strong>§5.6 のワークフロー（<code>collect.yml</code>）</strong>：<code>jq</code> の型ガード・フォールバック・ステップの <code>if</code> 条件・新設ジョブはいずれも自動検証を持たない。<code>workflow_dispatch</code> はブランチで走らせても <code>reject-non-main</code>（§8 #35）が即座に失敗させるため、<strong><code>main</code> にマージするまで 1 回も実行できない</strong>。シェルスクリプトへ切り出して <code>vitest</code> から検証する案は、<code>bash</code> を起動するテストという新しい carve-out（#37 が締めた <code>execFile</code> の原則と CLAUDE.md テスト方針の改訂）を要するので採らない（§8 #66）。代わりに、§8.1 の実装行 (i)・(xi)（同一コミットで入れる）の周で <strong>main へマージした直後の 1 回目の実行ログとステップサマリを目視確認する</strong>：(a) 5 つの出力が <code>unknown</code> / 空文字でないこと、(b) ステップサマリに「収集 N 件 …」の 1 行が出ていること、(c) <code>deploy-pages</code> ジョブが走り、その中の <code>actions/checkout</code>（<code>ref: main</code>）→ <code>Pages 用にアップロード</code> → <code>deploy</code> の 3 ステップが成功していること（§8 #67）。加えて <strong>(d) キャンセル経路を 1 回だけ実測する</strong>：使い捨てのワークフロー（<code>timeout-minutes: 1</code> の <code>collect</code> 相当ジョブで <code>sleep 120</code> を実行し、<code>needs</code> と <code>if</code> を本番と同じにした <code>detect-collect-timeout</code> 相当ジョブを置く）を main で 1 回走らせ、① <code>detect-collect-timeout</code> 相当ジョブが<strong>起動する</strong>（＝ジョブ単位の timeout で <code>cancelled()</code> が偽のまま <code>needs.*.result == &#39;cancelled&#39;</code> になる）、② 実行全体の結論が <code>failure</code> になる、③ 失敗通知メールが届く、の 3 点を確認する（§8 #70。この前提が誤っていれば <code>detect-collect-timeout</code> は無言でスキップされ、キャンセルの検知経路が 0 になる。正常運用では timeout が起きないので、確認しない限り永久に未検証のまま残る）。あわせて <strong>(e) <code>$GITHUB_OUTPUT</code> へ書く 5 本の値が数値・真偽値・固定語彙だけであること</strong>（§8 #71 の不変条件）を、ワークフローを変更する PR のレビューで毎回確認する。(a)〜(d) の結果は PR の説明に貼る</li>
 </ul>
 <p><strong>§5.4 末尾の「<code>NotificationSendError.cause</code> に入れてよいのは firebase-admin が送信時に投げた例外だけ」という契約もテストを持たない。</strong> これは <code>FirebaseNotificationGateway</code>（テスト対象外。上記）側の契約であり、<code>notify-new-articles</code> のテストでダブルに契約違反をさせても、§5.4 手順 6 が <code>formatError(e)</code> をログに載せる以上その文字列はログに現れるため、違反を検出できない（<code>formatError</code> は <code>cause</code> を再帰連結する。§4.7）。したがって §7.1 の当該ケースは、実ゲートウェイが取りうる<strong>両方の形</strong>（<code>cause</code> 無しで reject する場合と、送信時の例外を <code>cause</code> に持って reject する場合。実ゲートウェイは送信失敗時には必ず <code>cause</code> を付ける。§5.4）をダブルで再現し、いずれも <code>error</code> ログが 1 行に収まることを固定する。契約そのものの回帰は <code>main.ts</code> の起動時検証と同じ扱い（§8 #56）で、§5.4 の記述と PR レビューで担保する。</p>
 <p><code>GitArticlesPublisher</code> を例外とする条件（§7.3・§8 #37 と同じ文言）：<strong>原則</strong>として被験クラスが呼ぶ <code>node:child_process</code> の <code>execFile</code> を実物を通さないスタブに差し替え、実 git を一度も起動しない（モジュールモックの既定実装は必ず例外を投げる）。<strong>唯一の carve-out</strong> は、実行時の <code>code=1</code> / <code>signal=null</code> を実測で固定する 1 ケースに限り、<code>vi.importActual</code> の <code>execFile</code> で <strong>git ではない・ネットワークにもファイルシステムにも触れない・即座に終了する <code>process.execPath</code> の子プロセス</strong>を起動してよいこと。この経路も被験クラス（<code>GitArticlesPublisher</code>）は通らない。</p>
@@ -2534,15 +2638,15 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td>34</td>
-<td>新着があったのに FCM 送信が全団体で失敗した場合（<code>notificationsSent == 0 &amp;&amp; notificationsFailed &gt; 0</code>）は、ワークフローの「通知の全滅を検知」ステップでジョブを失敗させる。判定は collector ではなくワークフロー（<code>.run-summary.json</code> を読む）が行い、<code>articles.json</code> の push と Pages アップロードは止めない</td>
+<td>新着があったのに FCM 送信が全団体で失敗した場合（<code>notificationsSent == 0 &amp;&amp; notificationsFailed &gt; 0</code>）は、ワークフローの「通知の全滅を検知」ステップでジョブを失敗させる。判定は collector ではなくワークフロー（<code>.run-summary.json</code> を読む）が行い、<code>articles.json</code> の push と Pages の配信は止めない</td>
 <td>collector が全滅時に終了コード 1 を返す／1 件でも失敗したらジョブを失敗させる／検知しない（初稿）</td>
-<td><code>FIREBASE_SERVICE_ACCOUNT</code> が設定済みで鍵が失効・権限剥奪されると、#32 の起動時検証は通り、<code>notify-new-articles</code> は D-01 §6 の「1 団体の失敗が他を止めない」に従って例外を出さないため、通知が静かに止まる。全滅は設定側の異常とみなせるが 1 件だけの失敗は FCM の一時障害でもあり得るので、全滅だけを失敗にする。collector 側で終了コード 1 にすると「収集・push は成功」と「通知は失敗」を 2 値の終了コードで表せず（#13）、<code>published</code> の判定もサマリ側に寄せているため、判定をワークフローに置く。push・アップロード後のステップなので配信は止まらない。新着が 1 団体のみの実行では 1 件の一時障害も全滅として失敗するが、通知対象が 1 団体かどうかで閾値を変えるより判定式の単純さを取る（失敗した通知は再送しないため、届かなかった事実を知らせる価値は 1 団体でも変わらない）。ステップの条件には <code>!cancelled()</code> を付け、直前の「情報源の失敗を検知」が <code>exit 1</code> してもスキップされないようにする（§5.6 の表）。design-review 第 2 周で追加、第 3 周で改訂</td>
+<td><code>FIREBASE_SERVICE_ACCOUNT</code> が設定済みで鍵が失効・権限剥奪されると、#32 の起動時検証は通り、<code>notify-new-articles</code> は D-01 §6 の「1 団体の失敗が他を止めない」に従って例外を出さないため、通知が静かに止まる。全滅は設定側の異常とみなせるが 1 件だけの失敗は FCM の一時障害でもあり得るので、全滅だけを失敗にする。collector 側で終了コード 1 にすると「収集・push は成功」と「通知は失敗」を 2 値の終了コードで表せず（#13）、<code>published</code> の判定もサマリ側に寄せているため、判定をワークフローに置く。push 後のステップであり、<code>deploy-pages</code> は <code>collect</code> の成功を要求しない（#67）ので配信は止まらない。新着が 1 団体のみの実行では 1 件の一時障害も全滅として失敗するが、通知対象が 1 団体かどうかで閾値を変えるより判定式の単純さを取る（失敗した通知は再送しないため、届かなかった事実を知らせる価値は 1 団体でも変わらない）。ステップの条件には <code>!cancelled()</code> を付け、直前の「情報源の失敗を検知」が <code>exit 1</code> してもスキップされないようにする（§5.6 の表）。design-review 第 2 周で追加、第 3 周で改訂</td>
 </tr>
 <tr>
 <td>35</td>
 <td><code>GitArticlesPublisher</code> は <code>PublishFailedError</code> を投げる前に <code>git checkout origin/main -- data/articles.json</code> で <code>data/articles.json</code> を push 済みの内容へ復元する。復元の失敗は <code>warn</code> のみ</td>
 <td>復元しない（初稿）／<code>git reset --hard origin/main</code> で作業ツリー全体を戻す</td>
-<td>復元しないと、<code>writer.write</code> 成功・push 失敗の実行で <code>.run-summary.json</code> が書けなかった場合（<code>published=unknown</code>）に、ワークフローが未 push の <code>data/</code> を Pages にアップロードし、<code>main</code> と配信内容がずれる。<code>origin/main</code> は、<code>collect</code> ジョブが <code>if: github.ref == &#39;refs/heads/main&#39;</code> で <code>main</code> での実行に限定されている（§5.6）ことを前提に、<code>actions/checkout</code> が必ず持つ ref であり、shallow clone でも参照できる（<code>main</code> 以外のブランチをチェックアウトした実行では <code>origin/main</code> が無く復元できないが、そのような実行はガードで <code>collect</code> ジョブ自体が動かない。§6）。<code>reset --hard</code> は作業ツリー全体を触り、<code>collector/dist</code> 等の生成物との関係を考える必要が出る。ファイル 1 つの復元なら #10 の「コミット履歴を操作しない」方針と両立する。プロセスの強制終了（<code>timeout-minutes</code>）で復元まで届かない経路は残るが、通知は送られておらず次回実行が <code>main</code> 基準で取り直すので許容する（§6）。design-review 第 2 周で追加、第 3 周で前提を明記</td>
+<td>復元しないと、<code>writer.write</code> 成功・push 失敗の実行で <code>.run-summary.json</code> が書けなかった場合（<code>published=unknown</code>）に、ワークフローが未 push の <code>data/</code> を Pages にアップロードし、<code>main</code> と配信内容がずれる。<code>origin/main</code> は、<code>collect</code> ジョブが <code>if: github.ref == &#39;refs/heads/main&#39;</code> で <code>main</code> での実行に限定されている（§5.6）ことを前提に、<code>actions/checkout</code> が必ず持つ ref であり、shallow clone でも参照できる（<code>main</code> 以外のブランチをチェックアウトした実行では <code>origin/main</code> が無く復元できないが、そのような実行はガードで <code>collect</code> ジョブ自体が動かない。§6）。<code>reset --hard</code> は作業ツリー全体を触り、<code>collector/dist</code> 等の生成物との関係を考える必要が出る。ファイル 1 つの復元なら #10 の「コミット履歴を操作しない」方針と両立する。プロセスの強制終了（<code>timeout-minutes</code>）で復元まで届かない経路は残るが、通知は送られておらず次回実行が <code>main</code> 基準で取り直すので許容する（§6）。<strong>#67 以降、未 push の <code>data/</code> が Pages へ上がる経路は「アップロード側が <code>main</code> をチェックアウトし直す」ことで構造的に塞がれたため、この復元は多層防御（runner の作業ツリーと後続ステップの読み取りに対する歯止め）として残す位置づけになった。</strong> design-review 第 2 周で追加、第 3 周で前提を明記、第 2 周（第 2 サイクル）で #67 との関係を追記</td>
 </tr>
 <tr>
 <td>36</td>
@@ -2578,7 +2682,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <td>41</td>
 <td><code>RunSummary</code> は <code>published: boolean</code> をやめ、<code>publishOutcome: &quot;published&quot; | &quot;no_changes&quot; | &quot;skipped&quot;</code> と <code>publisher: &quot;git&quot; | &quot;noop&quot;</code> を持つ（<strong>→ #47 で 4 値目 <code>&quot;unknown&quot;</code> を追加。現行の定義は §4.8 の <code>PublishOutcomeSummary</code> を正とする</strong>）。<code>diff.changed === true</code> なのに <code>publishOutcome === &quot;no_changes&quot;</code> になった実行は <code>RunCollection</code> が <code>error</code> ログを出し（<code>RunCollectionInput.dryRun === false</code> のときだけ。#45）、ワークフローの専用ステップ（<code>changed_but_not_published</code>）がジョブを失敗させる</td>
 <td>現状どおり <code>published: boolean</code> だけを持ち、この経路を検知しない／collector 側で例外にして終了コード 1 にする／<code>published</code> と <code>publishOutcome</code> の両方を持つ</td>
-<td>差分判定を #39 と<strong>逆向き</strong>に誤る実装（終了コード 1 を「差分なし」と解釈する、<code>git add</code> のパス指定を誤る等）では、<code>changed === true</code>・<code>write</code> 成功なのに publish が <code>&quot;no_changes&quot;</code> を返し、通知は送られず（§5.5 手順 9）、<code>published=false</code> で Pages アップロードもスキップされ、<code>failed_sources</code> は 0 なので<strong>ジョブは緑のまま配信と通知が静かに止まる</strong>。#39 の障害は毎時ジョブが赤くなるので気付けるが、その鏡像はどの検知手段にも掛からず、#34（通知の静かな停止を検知する）と同じ穴になる。collector 側で例外にする案は、収集・書き出しは成功している実行を致命的失敗として扱うことになり、終了コード 2 値（#13）の意味付けとも合わない。<code>published</code> と <code>publishOutcome</code> を併存させる案は同じ事実を 2 か所に持つ（#36）ので、ワークフローの <code>published</code> 出力は <code>publishOutcome == &quot;published&quot;</code> の jq で導出する（ワークフロー側の出力名と <code>true</code> / <code>false</code> / <code>unknown</code> の意味は変えない）。<code>publisher</code> を持つのは、<code>CURTAINCALL_DRY_RUN=1</code> の <code>NoopArticlesPublisher</code> が常に <code>&quot;no_changes&quot;</code> を返す縮退実行を<strong>後から見分ける</strong>ためで、判定には使わない（判定は <code>RunCollectionInput.dryRun</code>。#45。ワークフローの検知条件からも <code>publisher</code> を外した。#44）。design-review 第 1 周（再開後）で追加、第 2 周（再開後）で判定条件を <code>dryRun</code> に移動</td>
+<td>差分判定を #39 と<strong>逆向き</strong>に誤る実装（終了コード 1 を「差分なし」と解釈する、<code>git add</code> のパス指定を誤る等）では、<code>changed === true</code>・<code>write</code> 成功なのに publish が <code>&quot;no_changes&quot;</code> を返し、通知は送られず（§5.5 手順 9）、<code>published=false</code> で Pages のデプロイもスキップされ、<code>failed_sources</code> は 0 なので<strong>ジョブは緑のまま配信と通知が静かに止まる</strong>。#39 の障害は毎時ジョブが赤くなるので気付けるが、その鏡像はどの検知手段にも掛からず、#34（通知の静かな停止を検知する）と同じ穴になる。collector 側で例外にする案は、収集・書き出しは成功している実行を致命的失敗として扱うことになり、終了コード 2 値（#13）の意味付けとも合わない。<code>published</code> と <code>publishOutcome</code> を併存させる案は同じ事実を 2 か所に持つ（#36）ので、ワークフローの <code>published</code> 出力は <code>publishOutcome == &quot;published&quot;</code> の jq で導出する（ワークフロー側の出力名と <code>true</code> / <code>false</code> / <code>unknown</code> の意味は変えない）。<code>publisher</code> を持つのは、<code>CURTAINCALL_DRY_RUN=1</code> の <code>NoopArticlesPublisher</code> が常に <code>&quot;no_changes&quot;</code> を返す縮退実行を<strong>後から見分ける</strong>ためで、判定には使わない（判定は <code>RunCollectionInput.dryRun</code>。#45。ワークフローの検知条件からも <code>publisher</code> を外した。#44）。design-review 第 1 周（再開後）で追加、第 2 周（再開後）で判定条件を <code>dryRun</code> に移動</td>
 </tr>
 <tr>
 <td>42</td>
@@ -2642,7 +2746,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td>52</td>
-<td><code>collect.yml</code> はワークフロー直下を <code>permissions: {}</code>（無権限）にし、ジョブごとに最小権限を宣言する（<code>collect</code> は <code>contents: write</code> のみ、<code>deploy-pages</code> だけ <code>pages: write</code> / <code>id-token: write</code>、<code>reject-non-main</code> は無権限）。<code>uses:</code> はコミット SHA で固定し、Node のバージョンは <code>node-version-file: collector/.node-version</code> で指定する</td>
+<td><code>collect.yml</code> はワークフロー直下を <code>permissions: {}</code>（無権限）にし、ジョブごとに最小権限を宣言する（<code>collect</code> は <code>contents: write</code> のみ、<code>deploy-pages</code> だけ <code>pages: write</code> / <code>id-token: write</code>（#67 で <code>main</code> のチェックアウト用に <code>contents: read</code> を追加）、<code>reject-non-main</code> は無権限）。<code>uses:</code> はコミット SHA で固定し、Node のバージョンは <code>node-version-file: collector/.node-version</code> で指定する</td>
 <td>ワークフロー直下で 3 つの権限を全ジョブに与える（第 1 周（再開後）までの §5.6 の記述）／<code>uses:</code> をタグ（<code>@v4</code>）で参照する</td>
 <td>直下で与えると、外部サイトの HTML を解析するコード（パーサーの脆弱性・依存パッケージの侵害の影響を受けうる）を走らせる <code>collect</code> ジョブに Pages の書き込みと OIDC トークンの発行権限まで付き、何もしない <code>reject-non-main</code> にもリポジトリへの書き込み権限が付く。タグ参照は同じタグが別のコミットへ付け替えられるため、サプライチェーンの観点で SHA 固定にする。<code>.node-version</code> を単一情報源にするのは、2 つのワークフローとローカルの fnm / nodenv が同じ値を読むようにするため。本決定は<strong>実装（現行の <code>collect.yml</code>・<code>collector-ci.yml</code>）が先行しており、本書がそれに追随する</strong>（第 1 周（再開後）の §5.6 のとおりに実装し直すと権限とアクション固定が後退する）。design-review 第 2 周（再開後）で追加</td>
 </tr>
@@ -2698,7 +2802,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <td>61</td>
 <td>§5.6 の実行サマリステップに 4 つの歯止めを置く：(1) サマリの有無は <code>[ ! -s ... ]</code> で判定する、(2) <code>$GITHUB_OUTPUT</code> へ書く 5 本は 1 行に固定する（<strong>手段は #63 で <code>head -n 1</code> から <code>jq -s</code> + 変数代入に改訂</strong>）、(3) ステップサマリ本文の <code>reason</code>・<code>message</code> は <code>gsub(&quot;[[:cntrl:][:space:]`]&quot;; &quot; &quot;)</code> で潰す（collector 側 <code>sanitizeFailureMessage</code>（§4.8）の対象集合を**覆う**上位集合を POSIX ブラケット式で表す。同一の集合ではない）、(4) 外部サイト由来の可変部分（<code>reason</code>・<code>message</code>）はコードスパンで囲む。変数名は <code>SUMMARY_JSON</code></td>
 <td><code>[ ! -f ... ]</code> のまま（第 7 周までの §5.6）／<code>gsub(&quot;[\\r\\n]&quot;; &quot; &quot;)</code> のまま／<code>echo &quot;key=$(jq …)&quot;</code> のまま／可変部分を地の文のまま埋める／変数名 <code>S</code> のまま</td>
-<td>(1) 0 バイトのサマリに対して jq は終了コード 0・出力なしで終わるため（jq 1.7.1 で実測）、<code>-f</code> ではフォールバックが発火せず 5 つの出力がすべて空文字になり、<code>deploy-pages</code> が <code>published != &#39;&#39;</code> を満たさずスキップされる。これは #53 が決めた「想定外の形 → <code>unknown</code> → 配信は続ける」と逆向きで、1 文字（<code>-f</code> → <code>-s</code>）で解消する。(2) jq がトップレベル JSON 文書を複数出力すると <code>$GITHUB_OUTPUT</code> に 2 行目以降が書かれ、偽の <code>key=value</code> 行を差し込める構造になる（現在の書き手は <code>RunSummaryStore</code> の <code>JSON.stringify</code> だけなので到達経路は無いが、構造として塞ぐ）。<strong>当初の手段（<code>| head -n 1</code> と「複数行なら pipefail で非 0 になるから安全側」という根拠）は誤りだった</strong>：出力がパイプバッファに収まると jq は 0 で終わり 1 行目が黙って使われ、さらに既定シェルでは pipefail が無効で jq の失敗そのものを取りこぼす（#63 で <code>jq -s</code> に置き換えた）。(3) <code>[\r\n]</code> だけでは <code>U+001B</code>（ESC）が残り、Actions のログ・ステップサマリで ANSI エスケープとして解釈されうる。同一実行では collector 側の無害化が必ず先に通るため実害は無いが、多層防御として穴になる。jq 1.7.1 での実測では <code>gsub(&quot;[[:cntrl:][:space:]]&quot;; &quot; &quot;)</code> が C0・C1（<code>U+0085</code>）・DEL・ESC・<code>U+2028</code>・<code>U+2029</code>・NBSP を潰し、<code>U+200B</code>（ZWSP）だけが対象外（collector 側も対象外なので両側で一致する）。ただし <code>[[:space:]]</code> は通常の空白・NBSP・全角空白も含む<strong>上位集合</strong>で、連続の畳み込みも行わないため、collector 側と「同じ範囲」ではなく「覆う」関係である。バックティックは POSIX クラスに含まれないので文字クラスへ明示的に足す（無いと <code>message</code> の 1 文字で (4) のコードスパンが閉じ、以降がステップサマリの Markdown として解釈されて (4) が無効になる）。(4) ステップサマリは Markdown としてレンダリングされるため、外部サイト由来の文字列が <code>#</code> 見出し・リンクを含むと読み手を誤誘導する体裁を作れる（raw HTML と <code>javascript:</code> は GitHub 側でサニタイズされるので影響は表示上のみ）。変数名は 40 行超の <code>run:</code> ブロックで 8 回参照されるため、1 文字では対象が読めない。<strong>本決定は §5.6 の YAML を直す必要があり、<code>.github/workflows/collect.yml</code> は本書の改訂に追随する</strong>（§8.1 の実装行。T-46 のレビュー指摘。FOLLOWUPS 1-14〜1-17・1-19）。第 1 周（FOLLOWUPS §1 反映後）に (2) の手段と (3) の記述を改訂</td>
+<td>(1) 0 バイトのサマリに対して jq は終了コード 0・出力なしで終わるため（jq 1.7.1 で実測）、<code>-f</code> ではフォールバックが発火せず 5 つの出力がすべて空文字になり、<code>failed_sources</code> が <code>unknown</code> に倒れないため情報源の失敗が届かない（本決定の時点ではこれに加えて「<code>deploy-pages</code> が <code>published != &#39;&#39;</code> を満たさずスキップされる」ことも理由に挙げていたが、その条件は #67 で外した）。これは #53 が決めた「想定外の形 → <code>unknown</code> → 配信は続け、ジョブは赤くする」と逆向きで、1 文字（<code>-f</code> → <code>-s</code>）で解消する。(2) jq がトップレベル JSON 文書を複数出力すると <code>$GITHUB_OUTPUT</code> に 2 行目以降が書かれ、偽の <code>key=value</code> 行を差し込める構造になる（現在の書き手は <code>RunSummaryStore</code> の <code>JSON.stringify</code> だけなので到達経路は無い）。<strong>ただし「<code>jq -s</code> にすれば構造として塞げる」という後の記述（#63）は誤りで、#71 が不変条件を「出力へ書く値は数値・真偽値・固定語彙のみ」に置き換えた。*<em><strong>当初の手段（<code>| head -n 1</code> と「複数行なら pipefail で非 0 になるから安全側」という根拠）は誤りだった</strong>：出力がパイプバッファに収まると jq は 0 で終わり 1 行目が黙って使われ、さらに既定シェルでは pipefail が無効で jq の失敗そのものを取りこぼす（#63 で <code>jq -s</code> に置き換えた）。(3) <code>[\r\n]</code> だけでは <code>U+001B</code>（ESC）が残り、Actions のログ・ステップサマリで ANSI エスケープとして解釈されうる。同一実行では collector 側の無害化が必ず先に通るため実害は無いが、多層防御として穴になる。jq 1.7.1 での実測では <code>gsub(&quot;[[:cntrl:][:space:]]&quot;; &quot; &quot;)</code> が C0・C1（<code>U+0085</code>）・DEL・ESC・<code>U+2028</code>・<code>U+2029</code>・NBSP を潰し、<code>U+200B</code>（ZWSP）だけが対象外（collector 側も対象外なので両側で一致する）。ただし <code>[[:space:]]</code> は通常の空白・NBSP・全角空白も含む</em>*上位集合</strong>で、連続の畳み込みも行わないため、collector 側と「同じ範囲」ではなく「覆う」関係である。バックティックは POSIX クラスに含まれないので文字クラスへ明示的に足す（無いと <code>message</code> の 1 文字で (4) のコードスパンが閉じ、以降がステップサマリの Markdown として解釈されて (4) が無効になる）。(4) ステップサマリは Markdown としてレンダリングされるため、外部サイト由来の文字列が <code>#</code> 見出し・リンクを含むと読み手を誤誘導する体裁を作れる（raw HTML と <code>javascript:</code> は GitHub 側でサニタイズされるので影響は表示上のみ）。変数名は 40 行超の <code>run:</code> ブロックで 8 回参照されるため、1 文字では対象が読めない。<strong>本決定は §5.6 の YAML を直す必要があり、<code>.github/workflows/collect.yml</code> は本書の改訂に追随する</strong>（§8.1 の実装行。T-46 のレビュー指摘。FOLLOWUPS 1-14〜1-17・1-19）。第 1 周（FOLLOWUPS §1 反映後）に (2) の手段と (3) の記述を改訂</td>
 </tr>
 <tr>
 <td>62</td>
@@ -2708,27 +2812,63 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td>63</td>
-<td>§5.6 の 5 つの出力とステップサマリ本文の取り方を、<strong><code>pipefail</code> に依存しない形</strong>にする：<code>値=$(jq -s -r &#39;…&#39; &quot;$SUMMARY_JSON&quot; 2&gt;/dev/null) || 値=&lt;フォールバック&gt;</code> と <code>jq -s … &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true</code>（パイプラインを作らない）。1 行性は <code>head -n 1</code> ではなく <strong><code>jq -s</code>（slurp）</strong> が保証する（トップレベル文書を 1 つの配列にまとめるので結果は必ず 1 値。文書が 1 つでなければ <code>length != 1</code> でフォールバック）。あわせて当該ステップに <strong><code>shell: bash</code> を明示</strong>して <code>pipefail</code> も有効にし、将来パイプを足したときの取りこぼしを防ぐ。#61(2) の根拠から「既定シェルが pipefail」「複数行なら head が閉じて非 0 になる」という記述を取り消す</td>
+<td>§5.6 の 5 つの出力とステップサマリ本文の取り方を、<strong><code>pipefail</code> に依存しない形</strong>にする：<code>値=$(jq -s -r &#39;…&#39; &quot;$SUMMARY_JSON&quot; 2&gt;/dev/null) || 値=&lt;フォールバック&gt;</code> と <code>jq -s … &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot; || true</code>（パイプラインを作らない）。<code>jq -s</code>（slurp）はトップレベル文書を 1 つの配列にまとめるので<strong>結果が 1 値</strong>になる（文書が 1 つでなければ <code>length != 1</code> でフォールバック）。**ただし「1 値 = 1 行」ではなく、<code>$GITHUB_OUTPUT</code> への行注入を構造として塞ぐものでもない（#71 で撤回・訂正した。行注入を防ぐ不変条件は #71 が定める「出力へ書く値は数値・真偽値・固定語彙のみ」である）。**あわせて当該ステップに <strong><code>shell: bash</code> を明示</strong>して <code>pipefail</code> も有効にし、将来パイプを足したときの取りこぼしを防ぐ。#61(2) の根拠から「既定シェルが pipefail」「複数行なら head が閉じて非 0 になる」という記述を取り消す</td>
 <td><code>| head -n 1 || echo unknown</code> のまま（#61(2) の当初の形）／<code>shell: bash</code> を足すだけで形は変えない／<code>jq</code> 式側で単一文書を要求せず <code>head</code> を残す</td>
-<td>GitHub Actions の既定シェルは <code>bash -e {0}</code> で <strong><code>pipefail</code> は無効</strong>（<code>shell: bash</code> を書いたときだけ <code>bash --noprofile --norc -eo pipefail {0}</code> になる。現行の <code>collect.yml</code> は <code>shell:</code> も <code>defaults:</code> も持たない）。壊れた JSON を <code>jq … | head -n 1 || echo unknown</code> に流すと、パイプラインの終了コードは <code>head</code> の 0 になるため <code>||</code> が発火せず <strong>出力が空文字</strong>になる（実測）。空文字は <code>deploy-pages</code> の <code>published != &#39;&#39;</code> を満たさずデプロイがスキップされ、#53・§6 が決めた「<code>unknown</code> に倒して配信は続ける」の<strong>逆</strong>に倒れる。さらに #61(2) が根拠にしていた「複数行が来れば pipefail で非 0 になるから安全側」も誤りで、出力がパイプバッファに収まると jq は 0 で終わり 1 行目が黙って使われる（実測）。<code>shell: bash</code> を足すだけの案は、<code>pipefail</code> という暗黙の前提に安全性を預けたままで、<code>bash -e</code> の既定に戻す 1 行の変更（<code>shell:</code> の削除・別のシェル指定）で静かに壊れる。<code>jq -s</code> にすれば失敗の伝播は単純な代入の終了コードだけになり、1 行性も jq 側で保証されるので <code>head</code> が不要になる。<code>shell: bash</code> は多層防御として併せて入れる（両方を採るのは、前者が正しさ、後者が将来の変更に対する歯止めという別の役割だからである）。§5.6 の YAML と §6 の該当行はこの形を前提に書き直した。design-review 第 1 周（FOLLOWUPS §1 反映後）で追加</td>
+<td>GitHub Actions の既定シェルは <code>bash -e {0}</code> で <strong><code>pipefail</code> は無効</strong>（<code>shell: bash</code> を書いたときだけ <code>bash --noprofile --norc -eo pipefail {0}</code> になる。現行の <code>collect.yml</code> は <code>shell:</code> も <code>defaults:</code> も持たない）。壊れた JSON を <code>jq … | head -n 1 || echo unknown</code> に流すと、パイプラインの終了コードは <code>head</code> の 0 になるため <code>||</code> が発火せず <strong>出力が空文字</strong>になる（実測）。空文字になると <code>failed_sources</code> が <code>unknown</code> に倒れず情報源の失敗が届かないため、#53・§6 が決めた「<code>unknown</code> に倒して配信は続け、ジョブは赤くする」の<strong>逆</strong>に倒れる（本決定の時点では「空文字は <code>deploy-pages</code> の <code>published != &#39;&#39;</code> を満たさずデプロイがスキップされる」ことも理由に挙げていたが、その条件は #67 で外した）。さらに #61(2) が根拠にしていた「複数行が来れば pipefail で非 0 になるから安全側」も誤りで、出力がパイプバッファに収まると jq は 0 で終わり 1 行目が黙って使われる（実測）。<code>shell: bash</code> を足すだけの案は、<code>pipefail</code> という暗黙の前提に安全性を預けたままで、<code>bash -e</code> の既定に戻す 1 行の変更（<code>shell:</code> の削除・別のシェル指定）で静かに壊れる。<code>jq -s</code> にすれば失敗の伝播は単純な代入の終了コードだけになり、結果が 1 値に固定されるので <code>head</code> が不要になる（<code>head</code> が担っていた「1 行に抑える」役割は #71 の値の語彙の制限が引き受ける）。<code>shell: bash</code> は多層防御として併せて入れる（両方を採るのは、前者が正しさ、後者が将来の変更に対する歯止めという別の役割だからである）。§5.6 の YAML と §6 の該当行はこの形を前提に書き直した。design-review 第 1 周（FOLLOWUPS §1 反映後）で追加</td>
 </tr>
 <tr>
 <td>64</td>
-<td><code>collect</code> ジョブの <code>timeout-minutes</code> 超過（＝ジョブの<strong>キャンセル</strong>）は、<code>detect-collect-timeout</code> ジョブ（<code>needs: collect</code>・<code>if: !cancelled() &amp;&amp; needs.collect.result == &#39;cancelled&#39;</code>・<code>permissions: {}</code>）が <code>exit 1</code> して実行全体を failure にすることで開発者へ届ける。<code>実行サマリ</code>・アップロード・3 つの検知ステップの条件は <code>!cancelled()</code> のまま変えない。§6 の「プロセスが強制終了した」行を (a) node プロセスのみの強制終了、(b) <code>timeout-minutes</code> 超過、(c) runner 停止の 3 行に分ける</td>
+<td><code>collect</code> ジョブの <code>timeout-minutes</code> 超過（＝ジョブの<strong>キャンセル</strong>）は、<code>detect-collect-timeout</code> ジョブ（<code>needs: collect</code>・<code>if: !cancelled() &amp;&amp; needs.collect.result == &#39;cancelled&#39;</code>・<code>permissions: {}</code>）が <code>exit 1</code> して実行全体を failure にすることで開発者へ届ける。<code>実行サマリ</code>と 4 つの検知ステップの条件は <code>!cancelled()</code> のまま変えない。§6 の「プロセスが強制終了した」行を (a) node プロセスのみの強制終了、(b) <code>timeout-minutes</code> 超過、(c) runner 停止の 3 行に分ける（(b) はさらに #67 で「サマリステップより前／後」の 2 行に分けた）</td>
 <td>ステップの条件を <code>always()</code> に変える／<code>needs: collect</code> + <code>if: always()</code> のジョブで <code>needs.collect.result != &#39;success&#39;</code> を通知する／現状のまま（キャンセルを検知しない）</td>
-<td>キャンセルでは <code>if: ${{ !cancelled() }}</code> のステップがすべてスキップされ、ステップサマリも出力も 1 行も残らない。加えて<strong>キャンセルされたジョブは GitHub の既定のワークフロー失敗通知（#25）の対象にならない</strong>ため、検知経路が 1 つも働かない（本書は「timeout 超過」と「runner 停止」を同一視していた）。<code>always()</code> に変える案は、キャンセルが <code>data/articles.json</code> が未 push の内容のまま残りうる唯一の経路（§5.3 手順 3-6 の復元にも到達していない）であるのに <code>published=unknown</code> でアップロードを走らせ、未 push の内容を Pages へ配信してしまう（現在の <code>!cancelled()</code> がそれを防いでいる）。また <code>always()</code> のステップが <code>exit 1</code> してもジョブの結論は <code>cancelled</code> のままなのでメールは届かず、目的も達成しない。別ジョブなら結論が <code>failure</code> になるので既定の通知に載る。条件を <code>result != &#39;success&#39;</code> に広げない理由は、通常の失敗（#25）では既にメールが届いており二重になること、非 main の <code>workflow_dispatch</code> では <code>collect</code> が <code>skipped</code> になり <code>reject-non-main</code> と重複することの 2 点。<code>!cancelled()</code> を残すのは、<code>concurrency</code> の待機キャンセル（#15。実行<strong>全体</strong>のキャンセル）で毎回赤くしないため（ジョブ単位の timeout では <code>cancelled()</code> は偽のまま <code>needs.collect.result</code> だけが <code>&#39;cancelled&#39;</code> になる）。design-review 第 1 周（FOLLOWUPS §1 反映後）で追加</td>
+<td>キャンセルでは <code>if: ${{ !cancelled() }}</code> のステップがスキップされる（<code>実行サマリ</code> より前にキャンセルされた実行ではステップサマリも出力も 1 行も残らない。後でキャンセルされた実行では、それまでに <code>$GITHUB_OUTPUT</code> へ書かれた値が後続ジョブへ引き渡される。#67 で 2 つの経路を分けて §5.6 の表と §6 に書いた）。加えて<strong>キャンセルされたジョブは GitHub の既定のワークフロー失敗通知（#25）の対象にならない</strong>ため、検知経路が 1 つも働かない（本書は「timeout 超過」と「runner 停止」を同一視していた）。<code>always()</code> に変える案は、<code>always()</code> のステップが <code>exit 1</code> してもジョブの結論は <code>cancelled</code> のままなのでメールが届かず、目的を達成しない（本決定の時点ではこれに加えて「<code>published=unknown</code> でアップロードが走り未 push の内容を Pages へ出す」ことも却下理由に挙げていたが、その経路は #67 でアップロードを <code>main</code> のチェックアウトに移したため消えた。却下理由はメールが届かないことの 1 点になった）。別ジョブなら結論が <code>failure</code> になるので既定の通知に載る。条件を <code>result != &#39;success&#39;</code> に広げない理由は、通常の失敗（#25）では既にメールが届いており二重になること、非 main の <code>workflow_dispatch</code> では <code>collect</code> が <code>skipped</code> になり <code>reject-non-main</code> と重複することの 2 点。<code>!cancelled()</code> を残すのは、<code>concurrency</code> の待機キャンセル（#15。実行<strong>全体</strong>のキャンセル）で毎回赤くしないため（ジョブ単位の timeout では <code>cancelled()</code> は偽のまま <code>needs.collect.result</code> だけが <code>&#39;cancelled&#39;</code> になる）。<strong><code>cancelled()</code> は評価される位置でスコープが違う</strong>ことに依存した条件である：ステップの <code>if</code> ではそのジョブのキャンセルを真として扱う（＝<code>!cancelled()</code> のステップはスキップされる）が、依存ジョブの <code>if</code> では<strong>実行全体</strong>のキャンセルだけを真とする。この 2 つの前提（①ジョブ単位 timeout で依存ジョブ側の <code>cancelled()</code> が偽、②別ジョブを失敗させれば実行の結論が <code>failure</code> になって既定の通知に載る）は本書では未実測なので、#70 で 1 回だけ実測して固定する。design-review 第 1 周（FOLLOWUPS §1 反映後）で追加、第 2 周（第 2 サイクル）でスコープの違いと未実測であることを明記</td>
 </tr>
 <tr>
 <td>65</td>
-<td>通知ゲートウェイの資源解放を **<code>NotificationGatewayCloser</code>（<code>close(): Promise&lt;void&gt;</code>。<code>domain/notification-gateway.ts</code>。§4.5）**として明示し、<code>FirebaseNotificationGateway</code> は <code>deleteApp(this.app)</code>、<code>NoopNotificationGateway</code> は何もしない実装を持つ。呼ぶのは <code>main.ts</code> 手順 11 の 1 か所（<code>finally</code> 相当。手順 9・10 のどちらを通っても 1 回）。<code>close()</code> の失敗は <code>warn</code> だけで終了コードを変えない</td>
+<td>通知ゲートウェイの資源解放を **<code>NotificationGatewayCloser</code>（<code>close(): Promise&lt;void&gt;</code>。<code>domain/notification-gateway.ts</code>。§4.5）**として明示し、<code>FirebaseNotificationGateway</code> は <code>deleteApp(this.app)</code>、<code>NoopNotificationGateway</code> は何もしない実装を持つ。呼ぶのは <code>main.ts</code> 手順 11 の 1 か所（<code>finally</code> 相当）。<strong>適用範囲は経路の列挙ではなく「手順 5 でゲートウェイを生成したか否か」で定める</strong>（手順 9・10（手順 7・8 の失敗を含む）に加え、手順 6 の失敗のように <code>error</code> ログだけを出して終える経路も含む。生成前＝手順 1〜4 と、手順 5 の生成自体が投げた経路では呼ばない）。<code>close()</code> の失敗は <code>warn</code> だけで終了コードを変えない</td>
 <td>解放しない（初稿。規定が無かった）／<code>NotificationGateway</code> に <code>close()</code> を足す／<code>NotifyNewArticles</code> が送信後に解放する／<code>process.exit()</code> で強制終了する</td>
-<td>firebase-admin と google-auth は送信のための HTTP コネクションを保持するため、解放しないとイベントループが空にならずプロセスが終了しない。本書は <code>process.exit()</code> を禁じている（stdout のフラッシュを待つため。§5.5）ので、終了しない実行は <code>timeout-minutes: 15</code> のキャンセルに落ち、#64 の経路（ステップサマリ・検知・Pages 更新をすべて失う）に入る。<code>NotificationGateway</code> に <code>close()</code> を足す案は、<code>send</code> しか使わない <code>NotifyNewArticles</code> に不要なメソッドを見せる（CLAUDE.md インターフェース分離）。<code>NotifyNewArticles</code> が解放する案は、その UseCase が呼ばれない経路（<code>changed</code> が偽・publish が <code>&quot;no_changes&quot;</code>）で解放されず、1 UseCase = 1 責務にも反する。<code>process.exit()</code> 案はログの取りこぼしを招き §5.5 の既定と衝突する。<code>close()</code> の失敗で終了コードを変えないのは、収集・配信・通知の結果と無関係な後片付けだからである。テストは持たない（§7 冒頭の無検証リスト。#56 と同型）。design-review 第 1 周（FOLLOWUPS §1 反映後）で追加</td>
+<td>firebase-admin と google-auth は送信のための HTTP コネクションを保持するため、解放しないとイベントループが空にならずプロセスが終了しない。本書は <code>process.exit()</code> を禁じている（stdout のフラッシュを待つため。§5.5）ので、終了しない実行は <code>timeout-minutes: 15</code> のキャンセルに落ち、#64 の経路（ステップサマリと 4 つの検知ステップを失う。Pages 更新は #67 以降は別ジョブが <code>main</code> から行うので失われない）に入る。<code>NotificationGateway</code> に <code>close()</code> を足す案は、<code>send</code> しか使わない <code>NotifyNewArticles</code> に不要なメソッドを見せる（CLAUDE.md インターフェース分離）。<code>NotifyNewArticles</code> が解放する案は、その UseCase が呼ばれない経路（<code>changed</code> が偽・publish が <code>&quot;no_changes&quot;</code>）で解放されず、1 UseCase = 1 責務にも反する。<code>process.exit()</code> 案はログの取りこぼしを招き §5.5 の既定と衝突する。<code>close()</code> の失敗で終了コードを変えないのは、収集・配信・通知の結果と無関係な後片付けだからである。テストは持たない（§7 冒頭の無検証リスト。#56 と同型）。<strong>適用範囲を「手順 9・10 のどちらを通っても」という経路の列挙で書いていたため、手順 10 の carve-out（手順 3〜6 の失敗はサマリを書かない）と噛み合わず、ゲートウェイ生成済みで手順 6 で落ちた経路（手順 9・10 のどちらも通らない）が解放されない穴が残っていた。生成の有無で定義し直した</strong>（第 2 周（第 2 サイクル））。design-review 第 1 周（FOLLOWUPS §1 反映後）で追加、第 2 周（第 2 サイクル）で適用範囲を訂正</td>
 </tr>
 <tr>
 <td>66</td>
 <td>§5.6 のワークフロー（<code>collect.yml</code>）は<strong>自動検証を持たない</strong>ことを設計上の決定として明記し（§7 冒頭。#56 と同型）、代わりに §8.1 の実装行 (i) を入れる周で main へマージ直後の 1 回目の実行ログとステップサマリを目視確認する手順（5 つの出力・本文 1 行・<code>deploy-pages</code> の実行）を規定する</td>
 <td>サマリステップの本体を <code>collector/scripts/emit-run-summary.sh</code> へ切り出し、<code>vitest</code> から <code>bash</code> を起動して検証する／何も書かずに暗黙のまま残す</td>
-<td><code>workflow_dispatch</code> はブランチを選んで実行できるが <code>reject-non-main</code>（#35）が即座に失敗させるため、<strong>main にマージするまで 1 回も実行できない</strong>。切り出して検証する案は、<code>bash</code> を起動するテストという新しい carve-out を要し、#37 が「実 git を一度も起動しない」で締めた <code>execFile</code> の原則と CLAUDE.md「テスト方針」の改訂（開発者承認）を伴う。得られるのは jq 式と分岐の検証だが、実際の失敗は GitHub 側の式評価（<code>if:</code> 条件・<code>needs</code> の解決・<code>$GITHUB_OUTPUT</code> の受け渡し）に多く、シェルスクリプト単体のテストでは到達しない。暗黙のまま残す案は、後のレビューで同じ指摘が繰り返される（#56 と同じ理由）。目視確認の対象を 3 点に固定し PR の説明に貼ることで、1 回だけの確認を漏らさない。design-review 第 1 周（FOLLOWUPS §1 反映後）で追加</td>
+<td><code>workflow_dispatch</code> はブランチを選んで実行できるが <code>reject-non-main</code>（#35）が即座に失敗させるため、<strong>main にマージするまで 1 回も実行できない</strong>。切り出して検証する案は、<code>bash</code> を起動するテストという新しい carve-out を要し、#37 が「実 git を一度も起動しない」で締めた <code>execFile</code> の原則と CLAUDE.md「テスト方針」の改訂（開発者承認）を伴う。得られるのは jq 式と分岐の検証だが、実際の失敗は GitHub 側の式評価（<code>if:</code> 条件・<code>needs</code> の解決・<code>$GITHUB_OUTPUT</code> の受け渡し）に多く、シェルスクリプト単体のテストでは到達しない。暗黙のまま残す案は、後のレビューで同じ指摘が繰り返される（#56 と同じ理由）。目視確認の対象を（#67・#70 の追加後は (a)〜(d) の）4 点に固定し PR の説明に貼ることで、1 回だけの確認を漏らさない（(e) はワークフローを変更する PR ごとのレビュー項目）。design-review 第 1 周（FOLLOWUPS §1 反映後）で追加、第 2 周（第 2 サイクル）で確認項目を追加</td>
+</tr>
+<tr>
+<td>67</td>
+<td><strong>Pages 用のアップロードを <code>collect</code> ジョブから <code>deploy-pages</code> ジョブへ移す。</strong> <code>deploy-pages</code> は <code>actions/checkout</code>（<code>ref: main</code>・<code>persist-credentials: false</code>・<code>contents: read</code>）→ <code>upload-pages-artifact</code>（<code>path: data</code>）→ <code>deploy-pages</code> の 3 ステップを持ち、<code>if</code> は <code>!cancelled() &amp;&amp; needs.collect.result != &#39;skipped&#39; &amp;&amp; needs.collect.outputs.published != &#39;false&#39;</code>（<code>published != &#39;&#39;</code> の条件を<strong>外す</strong>）</td>
+<td><code>collect</code> の中にアップロードを残し、<code>workflow_dispatch</code> に <code>force_deploy</code> 入力を足して <code>published</code> の判定を上書きする／同じく残して、復旧は「次に記事が変わる実行を待つ」「手作業で <code>data/</code> を触って <code>changed</code> を立てる」という運用手順として §6 に書くだけにする／<code>deploy-pages</code> の <code>if</code> に <code>needs.collect.result == &#39;success&#39;</code> を足す</td>
+<td>手順 9（push + 通知）の完了後にジョブがキャンセルされる実行では、<strong>push も通知も済んでいるのに <code>実行サマリ</code> ステップが走らず <code>published</code> が空文字になり、アップロードにも deploy にも到達しない</strong>。次回以降の実行は <code>changed === false</code> → <code>publishOutcome: &quot;skipped&quot;</code> → <code>published=false</code> でデプロイを飛ばすため、<strong>記事が次に変わるまで Pages が古いまま固定され、利用者は通知を受け取ったのに配信 JSON にその記事が無い</strong>状態が続く。従来の復旧手順（失敗した <code>deploy-pages</code> の再実行）もアーティファクトが存在しないため使えなかった。アップロードを <code>main</code> のチェックアウトの上で行えば、(1) この固定が起きない（キャンセルでも <code>deploy-pages</code> は走り <code>main</code> の内容を配信する）、(2) 「未 push の <code>data/</code> を配信しない」ための <code>published != &#39;&#39;</code> という歯止め自体が不要になる（作業ツリーを配信しないので未 push の内容に触れない）、(3) <code>deploy-pages</code> の再実行だけで常に復旧できる、(4) アップロード中のキャンセルでアーティファクト不在の <code>deploy-pages</code> が失敗する経路も消える（アップロードと deploy が同じジョブにあるため）。<code>force_deploy</code> 入力案は人手の介入が前提で、同じ事故のたびに手作業が要り、(2)〜(4) も解決しない。運用手順だけにする案は、「<code>data/</code> に触らない空コミットを push する」形では <code>changed</code> が立たない（<code>changed</code> は記事配列の比較で決まる）ため復旧にならない。<code>result == &#39;success&#39;</code> を足す案は、情報源の失敗で <code>collect</code> が<strong>意図的に</strong> failure になる設計（#25）と衝突し、毎時 1 情報源でも失敗している間 Pages が更新されなくなるので採らない（代わりに <code>!= &#39;skipped&#39;</code> で <code>main</code> 以外の <code>workflow_dispatch</code> だけを除く）。<code>ref: main</code> を明示するのは、既定の <code>github.sha</code> が実行開始時点の commit で collector の push を含まないため（省くと古い <code>data/</code> を配信する）。デプロイの回数は空文字の経路（キャンセル・サマリ欠落）でも 1 回増えるが、記事に変化が無い通常の実行は <code>published=false</code> で従来どおり飛ばすので #8 の狙い（毎時の無駄なデプロイをしない）は保たれる。design-review 第 2 周（第 2 サイクル）で追加</td>
+</tr>
+<tr>
+<td>68</td>
+<td><code>NotificationGatewayCloser.close()</code> の契約に「<strong>例外を投げず、必ず有限時間で解決する</strong>」を加え、<code>FirebaseNotificationGateway.close()</code> は <code>deleteApp(this.app)</code> を非公開定数 <code>CLOSE_TIMEOUT_MS</code>（5000。<code>firebase-notification-gateway.ts</code>）で打ち切る。期限切れは <code>warn(&quot;fcm gateway close timed out&quot;)</code> を 1 件出して解決し、終了コードは変えない</td>
+<td>上限を置かない（#65 の初稿。<code>deleteApp</code> が投げた場合だけを定めていた）／上限を <code>main.ts</code> 手順 11 側（<code>Promise.race</code>）に置く／上限切れの後に <code>process.exit()</code> で強制終了する</td>
+<td><code>deleteApp</code> は保持中の HTTP コネクションと進行中のトークン更新要求の後片付けを待つため、Google のエンドポイントへの経路が落ちていると <strong>reject も resolve もしない</strong>。§5.5 手順 11 は <code>await</code> を必須にしているので、上限が無いとそこで止まり #65 が防ごうとした事象（プロセスが終わらず <code>timeout-minutes: 15</code> でキャンセル）を、原因の分かりにくい形で再現する。本書には同種のハングに上限を置いた前例（§5.3 手順 3-5 の <code>GIT_TIMEOUT_MS</code> = 60 秒）がある。上限を <code>main.ts</code> に置く案は、entry に後片付けの方針（何秒待つか）を持たせることになり「<code>main.ts</code> は業務規則を持たない」（#11）から外れるうえ、<code>NoopNotificationGateway</code> にも無用なタイマーを被せる。<code>process.exit()</code> 案は書き込み中の stdout を切り落とすため §5.5 の既定と衝突し、#65 でも却下している。<strong>打ち切りで救えるのは <code>await</code> が返ることだけで、背後に残るハンドルでプロセスが終了しない経路は残る</strong>。それを強制終了で一律に救わないのは、#67（Pages は別ジョブが <code>main</code> から配信する）と #64（<code>detect-collect-timeout</code> がメールを届ける）により、キャンセルの影響が「その実行のステップサマリと 4 つの検知ステップが欠ける」ところまで縮んでおり（push・通知・Pages 更新は失われない）、ログの取りこぼしと引き換えにする価値が無いためである。値 5000 は、<code>deleteApp</code> が正常に完了する時間（実測不要なほど短い。ローカルの後片付けと 1 本の HTTP クローズ）に対して十分な余裕があり、かつ毎時のジョブに足す最悪の遅延が 5 秒で <code>timeout-minutes: 15</code> に影響しない大きさとして選ぶ。テストは持たない（§7 冒頭。#56 と同型）。design-review 第 2 周（第 2 サイクル）で追加</td>
+</tr>
+<tr>
+<td>69</td>
+<td><code>main.ts</code> は手順 4b で <code>dryRun</code> を 1 度だけ確定させ、<strong>手順 5 で <code>dryRun === true</code> のときは <code>FirebaseNotificationGateway</code> を生成せず最初から <code>NoopNotificationGateway</code> を注入する</strong>（手順 7 の差し替え対象から通知ゲートウェイを外す）。<code>notificationGatewayKind</code> は手順 4a の結果（サービスアカウントがパースできたか）だけで決め、<code>dryRun</code> でも <code>&quot;firebase&quot;</code> のままにする</td>
+<td>手順 7 で通知ゲートウェイも差し替え続け、手順 11 で<strong>差し替え前と後の 2 つ</strong>を閉じる／現状のまま（手順 5 で生成し、手順 7 で捨て、手順 11 は差し替え後の Noop を閉じる）</td>
+<td>現状のままだと、<code>.env</code> に <code>FIREBASE_SERVICE_ACCOUNT</code> を入れたローカルの <code>CURTAINCALL_DRY_RUN=1 npm start</code>（§4.9 が必須とする形）で、手順 5 が <code>initializeApp</code> で既定アプリを登録したうえで手順 7 がその参照を捨て、手順 11 は<strong>何も確保していない Noop を閉じる</strong>。#65 の不変条件（確保した側を閉じる）が DRY_RUN 経路で成立せず、firebase-admin が将来 <code>initializeApp</code> の時点で接続を張るようになれば、ローカル実行が終わらない事故（Actions と違い上限も原因表示も無い）が復活する。そもそも送信しない試走で FCM SDK を初期化する必要が無いので、生成しない形にすれば誤配線の余地自体が消える。2 つとも閉じる案は、閉じる対象が 1 つという手順 11 の単純さを崩し、「生成したものだけを閉じる」規則を「生成したものと差し替えたものを閉じる」規則に広げる（手順 7 に差し替えを足すたびに解放の列挙が増える）。<code>notificationGatewayKind</code> を手順 4a だけで決めるのは、この値の目的が Secret の未設定・タイポの検知（#32）であり、試走かどうかは <code>publisher: &quot;noop&quot;</code> で見分けられるためで、従来の「差し替え前の値を保つ」と同じ結果になる。DRY_RUN では FCM の初期化検証が行われなくなるが、Actions 上は手順 4b が DRY_RUN を拒否する（#44）ので本番の経路では毎時検証される。テストは持たない（§7 冒頭の無検証リストに追加。#56 と同型）。design-review 第 2 周（第 2 サイクル）で追加</td>
+</tr>
+<tr>
+<td>70</td>
+<td><code>detect-collect-timeout</code>（#64）が依存する Actions の 2 つの仕様——①ジョブ単位の <code>timeout-minutes</code> 超過では依存ジョブの <code>if</code> で <code>cancelled()</code> が偽のまま <code>needs.collect.result</code> が <code>&#39;cancelled&#39;</code> になる、②ジョブを 1 つ明示的に失敗させれば実行の結論が <code>failure</code> になり既定の失敗通知に載る——を、<strong>使い捨てのワークフローで 1 回だけ実測して固定する</strong>（§7 冒頭の目視確認 (d)）。確認できなかった場合の代替も併記する：<code>if</code> を <code>${{ !cancelled() &amp;&amp; needs.collect.result != &#39;success&#39; &amp;&amp; needs.collect.result != &#39;skipped&#39; }}</code> へ広げる、または「メールで届く」の記述を撤回して Actions 画面の目視に頼ると明記する</td>
+<td>実測せず前提のまま進める（第 1 周（FOLLOWUPS §1 反映後）の状態）／本番のワークフローで <code>timeout-minutes</code> を一時的に 1 分へ下げて確かめる</td>
+<td>本書は jq の挙動・Node の <code>TimeoutError</code> 名・<code>[[:cntrl:][:space:]]</code> の被覆をいずれも「実測」と明記しているのに、#64 が乗るこの 2 命題だけは未実測だった。①が偽なら <code>detect-collect-timeout</code> は毎回スキップされて<strong>何も届かず</strong>、②が偽なら<strong>ジョブは赤いがメールは来ない</strong>。どちらでも #64 は目的を果たさないのに、§5.6 と §6 は「メールで届く」と断定している。正常運用では timeout が起きないため、意図的に起こさない限り永久に未検証のまま残る。本番の <code>timeout-minutes</code> を下げて確かめる案は、その実行で収集を途中でキャンセルすることになり（未 push の状態を作る）、毎時の収集に影響するので採らない。使い捨てのワークフロー（<code>timeout-minutes: 1</code> + <code>sleep 120</code> のジョブ + 同じ条件の検知ジョブ）なら収集に触れず、1 回の実行で①②③（メール受信）をまとめて確認できる。design-review 第 2 周（第 2 サイクル）で追加</td>
+</tr>
+<tr>
+<td>71</td>
+<td><code>$GITHUB_OUTPUT</code> への行注入を防ぐ不変条件を「<strong>書く値は数値・真偽値・固定語彙（<code>unknown</code>）のみとし、JSON 由来の文字列をそのまま出さない</strong>」と定め、§5.6 の YAML コメントと表 (2) に書く。文字列を出す必要が生じたら <code>名前&lt;&lt;EOF</code> のヒアドキュメント区切りを使うか <code>gsub(&quot;[[:cntrl:][:space:]]&quot;; &quot; &quot;)</code> を通す。<strong>#63 の「<code>jq -s</code> なら 1 値 = 1 行になり、偽の <code>key=value</code> 行を差し込める構造にならない（構造として塞ぐ）」という記述は撤回する</strong></td>
+<td>#63 の記述をそのまま残す／すべての出力に <code>gsub</code> を必ず通す規則にする／ヒアドキュメント区切りを常用する</td>
+<td><code>-s</code>（slurp）が保証するのは「値が 1 つ」だけで「行が 1 つ」ではない。<code>jq -s -r</code> の出力が 1 行になるのは、フィルタの結果が数値・真偽値・<strong>改行を含まない</strong>文字列のときだけである。現在の 5 本は数値・真偽値・リテラル <code>&quot;unknown&quot;</code> しか出さないので実際には安全だが、その安全は <code>sanitizeFailureMessage</code>（collector 側の 1 か所）と「文字列を出さない」という暗黙の制約に依存しており、#63 が「構造として塞ぐ」と書いているために、後の編集者は文字列値を足しても安全だと読む（例：<code>first_failure=$(jq -s -r &#39;… (.sourceFailures // [])[0].message …&#39;)</code> の <code>message</code> に改行が残っていれば <code>first_failure=…&lt;改行&gt;published=false</code> の 2 行が書かれ、<strong>外部サイト由来の文字列で <code>published=false</code>（配信しないという積極的な指示）を偽装できる</strong>）。多層防御と称している箇所が実際には単層だったので、不変条件を値の語彙として明示する。<code>gsub</code> を必ず通す規則にする案は、数値・真偽値にも無意味な変換を挟むうえ、<code>gsub</code> を通しても長さ上限が無ければ 1 行が巨大になりうる（値の語彙を絞る方が判定が単純）。ヒアドキュメント常用案は、区切り語（<code>EOF</code>）自体が値に含まれる場合の検討が要り、現在の 5 本には不要な複雑さを持ち込む。回帰はワークフロー差分の PR レビュー（§7 冒頭 (e)）で見る（ワークフローは自動検証を持たない。#66）。design-review 第 2 周（第 2 サイクル）で追加</td>
+</tr>
+<tr>
+<td>72</td>
+<td><code>collect</code> ジョブの 4 つの検知ステップの <code>if</code> を<strong>同形</strong>（<code>${{ !cancelled() &amp;&amp; &lt;条件&gt; }}</code>）にそろえる（<code>情報源の失敗を検知</code> にも <code>!cancelled()</code> を付ける）</td>
+<td><code>情報源の失敗を検知</code> だけ <code>steps.summary.outputs.failed_sources != &#39;0&#39;</code> のまま残す／§6 の該当行の文言を「<code>npm start</code> の非 0 終了でジョブが赤くなる」に直して検知ステップの寄与を主張しない</td>
+<td>状態チェック関数を含まない <code>if</code> には暗黙の <code>success() &amp;&amp;</code> が付くため、<code>収集・差分・確定・通知</code> ステップが失敗した実行（例：<code>companies.json</code> の重複 <code>id</code> で手順 3 が終了コード 1）では <code>情報源の失敗を検知</code> が<strong>スキップされる</strong>。一方 §6 の複数行は「<code>failed_sources=unknown</code> なので失敗検知ステップがジョブを失敗させ、サマリが書けなかったことは開発者に届く」と書いており、その経路は発火しない（ジョブは <code>npm start</code> の失敗で赤くなるので実害はないが、記述が事実と違う）。文言を直す案でも整合は取れるが、4 つの検知ステップのうち 1 つだけ形が違う状態が残り、同じ読み違いが再発する。<code>!cancelled()</code> を付けると <code>failed_sources</code> が空文字の場合（サマリステップが <code>published</code> の行を書く前に落ちた）にも <code>!= &#39;0&#39;</code> で発火してジョブが赤くなるが、これは #53 の方針（想定外の形は届ける側に倒す）と一致する。design-review 第 2 周（第 2 サイクル）で追加</td>
 </tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
@@ -2781,6 +2921,11 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <td>§4.2、§4.5、§4.7、§4.8、§4.10、§5.1、§5.4、§5.5、§5.6、§5.7、§7.1、§7.2、§7.3、§8 #59〜#66</td>
 </tr>
 <tr>
+<td>実装（design-review 第 2 周（第 2 サイクル）の反映の後続タスク。司令塔が別タスクで扱う）</td>
+<td>本改訂で新たに生じた作業は次の (xi)〜(xvii) で、<strong>前の行の (i)（<code>collect.yml</code> の書き換え）と (viii)（<code>close()</code> の実装）を置き換える形で同一コミットに入れる</strong>（同じ主題を 2 か所で別々に直さない）。(xi) <code>.github/workflows/collect.yml</code> の <strong><code>Pages 用にアップロード</code> ステップを <code>collect</code> から <code>deploy-pages</code> ジョブへ移す</strong>（#67）：<code>deploy-pages</code> に <code>actions/checkout</code>（<code>ref: main</code>・<code>persist-credentials: false</code>。SHA は <code>collect</code> と同じもの）と <code>upload-pages-artifact</code> を足し、<code>permissions</code> に <code>contents: read</code> を加え、<code>if</code> を <code>${{ !cancelled() &amp;&amp; needs.collect.result != &#39;skipped&#39; &amp;&amp; needs.collect.outputs.published != &#39;false&#39; }}</code>（<code>!= &#39;&#39;</code> を削除）にする。(xii) 同ファイルの <code>情報源の失敗を検知（R-2）</code> ステップの <code>if</code> を <code>${{ !cancelled() &amp;&amp; steps.summary.outputs.failed_sources != &#39;0&#39; }}</code> にそろえる（#72）。(xiii) <code>infrastructure/fcm/firebase-notification-gateway.ts</code> に非公開定数 <code>CLOSE_TIMEOUT_MS = 5_000</code> を置き、<code>close()</code> を「<code>deleteApp</code> と上限タイマーを競わせ、期限切れは <code>warn(&quot;fcm gateway close timed out&quot;)</code> を 1 件出して解決する」形にする（#68。前の行 (viii) の <code>close()</code> はこの形で実装する）。(xiv) <code>main.ts</code> の手順 4b で <code>dryRun</code> を 1 度だけ確定させ、<strong>手順 5 を 3 分岐（<code>dryRun</code> なら <code>FirebaseNotificationGateway</code> を生成せず <code>NoopNotificationGateway</code> + <code>debug(&quot;dry run: skip FCM initialization&quot;)</code>）にし、手順 7 の差し替え対象から通知ゲートウェイを外す</strong>（#69）。手順 11 の適用範囲は「手順 5 でゲートウェイを生成した後に終わるすべての経路」で実装する（手順 10 を通らない手順 6 の失敗経路を含む。#65）。(xv) 同ファイル（<code>collect.yml</code>）の <code>実行サマリ</code> ステップのコメントを #71 の不変条件（出力へ書く値は数値・真偽値・固定語彙のみ。<code>jq -s</code> は 1 行性を保証しない）に差し替える。(xvi) <strong>使い捨てのワークフロー（<code>timeout-minutes: 1</code> + <code>sleep 120</code> + 同条件の検知ジョブ）を main で 1 回だけ走らせ、§7 冒頭の目視確認 (d) の 3 点を PR の説明に貼る</strong>（#70）。確認できなかった場合は #70 の代替（<code>if</code> を広げる／「メールで届く」の記述を撤回する）に切り替え、§5.6・§6・§8 #64 の文言を同時に直す。(xvii) <code>application/run-collection.ts</code> の <code>RunSummary</code> 組み立てで、<code>collected</code> が <code>collect.articles.length</code>（<code>diff.file.articles.length</code> ではない）・<code>changed</code> が <code>diff.changed</code> であることを確認する（§5.5 手順 10。本改訂で由来を明記した項目で、実装が既にこの形なら変更は不要）</td>
+<td>§4.5、§5.4、§5.5、§5.6、§6、§7、§8 #65・#67〜#72</td>
+</tr>
+<tr>
 <td>D-01（reopen とセットで行う。単独では着手しない）</td>
 <td>コードポイント単位の切り詰めが <code>application/run-collection.ts</code>（<code>sanitizeFailureMessage</code>）と <code>infrastructure/storage/sanitize-git-output.ts</code>（<code>sanitizeGitOutput</code>）に素の式（<code>Array.from(...).slice(0, n).join(&quot;&quot;)</code>）で重複している。§8 #55 は「単位を揃える」決定であって実装の複写までは求めておらず、片方だけ将来書き換えられると #55 が守ろうとした一致が静かに崩れる。<code>domain/text.ts</code> に <code>truncateCodePoints(s, max)</code> を足して両方から呼ぶ形に寄せる。<strong>D-01 §3.2 が <code>text.ts</code> の公開物を <code>normalizeTitle</code> / <code>foldText</code> / <code>truncateUtf16</code> と列挙しているため、D-01 の改訂（reopen）を伴う。</strong> 本サイクル（D-02 単独の reopen）では扱わない</td>
 <td>§4.8、§4.10、§8 #55、D-01 §3.2</td>
@@ -2831,7 +2976,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <ul>
 <li>背景：§8 #48 が「秘密漏洩の経路」として警戒している <code>formatError</code> の <code>cause</code> 再帰連結は、collector 全体で 1 本も直接テストされていない（連結子を変える変異が 486 テスト全通過した実績がある）。§7.1 の <code>notify-new-articles</code> の行で <code>cause</code> 有無の 2 経路は固定したが、<strong>深さ上限（<code>FORMAT_ERROR_MAX_DEPTH</code>）・循環参照（<code>seen</code>）・<code>[unprintable]</code></strong> は依然無検証で、退行しても品質ゲートは緑のまま（静かな失敗）、結果は<strong>公開リポジトリの Actions ログへの秘密鍵流出</strong>という不可逆な形で現れる。<code>FirebaseNotificationGateway</code>（§5.4、§8 #60）も同じ理由で無検証（3 段の固定文言・既定アプリの名前による解決）</li>
 <li>選択肢：<ul>
-<li><strong>A. <code>formatError</code> だけを純粋関数の例外に加える</strong>（<code>test/domain/logger.test.ts</code> にテーブル駆動テスト）。CLAUDE.md「テスト方針」の純粋関数の例外列挙に <code>formatError</code>（<code>domain/logger.ts</code>）を追記し、本書 §7 冒頭・§7.3 の carve-out にも同じ 1 行を加える</li>
+<li><strong>A. <code>formatError</code> だけを純粋関数の例外に加える</strong>（<code>test/domain/logger.test.ts</code> にテーブル駆動テスト）。CLAUDE.md「テスト方針」の純粋関数の例外列挙に <code>formatError</code>（<code>domain/logger.ts</code>）を追記し、本書 §7 冒頭・§7.3 の carve-out にも同じ 1 行を加える。固定するケースは §4.7 の規定に対応する次の <strong>4 つ</strong>：(1) <code>name</code> / <code>message</code> が文字列化できない（<code>message</code> が <code>Symbol</code>・null プロトタイプのオブジェクト、<code>name</code> / <code>message</code> が throw する getter）→ <code>&quot;[unprintable]&quot;</code>、(2) <strong><code>cause</code> の getter だけが throw する → <code>head</code> までを返す</strong>（<code>[unprintable]</code> にしない。§4.7 の <code>formatErrorChain</code> の 2 つ目の <code>catch</code>）、(3) <code>cause</code> が自分自身を指す・6 段の連鎖 → <code>seen</code> と <code>FORMAT_ERROR_MAX_DEPTH</code>（5）で打ち切られ、連結が 5 段を超えない、(4) <code>Error</code> 以外（<code>Symbol</code>・<code>String()</code> できない値）→ <code>String(e)</code> の結果または <code>&quot;[unprintable]&quot;</code>。採用したら §7.1 に 1 行（<code>formatError</code> のテーブル駆動テスト。上の 4 ケース）として転記する</li>
 <li><strong>B. A に加えて <code>FirebaseNotificationGateway</code> も §7.3 の infrastructure テストの対象に加える</strong>（<code>firebase-admin</code> の <code>getApps</code> / <code>initializeApp</code> / <code>cert</code> / <code>getMessaging</code> を <code>vi.mock</code> で差し替える）。§8 #30 の排他的条件（「薄い委譲だけで判断を持たない実装は対象外」）に「既定アプリの名前による解決と 3 段の失敗分岐は判断ロジックに数える」という改訂が必要で、CLAUDE.md 側にも 1 クラス追記が要る</li>
 <li><strong>C. どちらも置かず現状のまま</strong>（§8 #56 と同じ「無検証を承知で受け入れる」扱いにする）</li>
 </ul>
@@ -3048,6 +3193,10 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <tr>
 <td>2026-09-28</td>
 <td>design-review 第 1 段階・第 1 周（FOLLOWUPS §1 反映後）の指摘 24 件（M-1〜M-24）を修正。<strong>§8.1 旧「実装」行 (a) が「値部分の終端は次の空白または行末」と指示しており、§4.10・#59 が禁じた <code>(\S+)</code> の形そのもので、従うと T-44 で 5 回再発したトークン漏洩が戻る状態だった</strong>ため削除。§8 #63〜#66 を追加（サマリ取得を <code>pipefail</code> に依存しない形にする・<code>timeout-minutes</code> 超過の検知ジョブ・通知ゲートウェイの資源解放・ワークフローを無検証と明記）、#30・#40・#55・#61 を改訂、§2 に要件 §5「秘密情報」の行を追加、§4.2・§4.5・§4.7・§4.8・§4.9・§4.10・§5.1・§5.4・§5.5・§5.6・§6・§7・§7.1〜§7.3 を更新、§8.1 の実装行に (v)〜(x) を起票。<strong>司令塔が実測で裏を取った 4 件</strong>：Actions の既定シェルは <code>bash -e</code>（pipefail 無効）で改訂前の形では壊れた JSON で <code>published</code> が空文字になり <code>deploy-pages</code> がスキップされる／<code>published</code> の jq に型ガードが無く <code>null</code> が <code>false</code>（配信しない）に倒れる／<code>AbortSignal.timeout</code> は Node 22.23.2 で <code>DOMException</code> の <code>TimeoutError</code>（設計書の <code>AbortError</code> が誤り）／jq の <code>[[:cntrl:][:space:]]</code> は U+2028・U+2029 を覆う（記述は正しかった）</td>
+</tr>
+<tr>
+<td>2026-09-28</td>
+<td>design-review 第 1 段階・第 2 周（第 2 サイクル）の指摘 13 件（M-1〜M-13）を修正。Pages のアップロードを <code>deploy-pages</code> ジョブ（<code>ref: main</code> のチェックアウト）へ移し <code>published != &#39;&#39;</code> を撤去（手順 9 完了後のキャンセルでも Pages が追いつき、アーティファクト不在の失敗も構造的に消える）、<code>close()</code> に <code>CLOSE_TIMEOUT_MS</code>（5000）の上限、DRY_RUN では FCM を初期化しない、手順 11 の適用範囲を「ゲートウェイ生成の有無」で再定義、<code>$GITHUB_OUTPUT</code> の値の語彙を不変条件化（#63 の「1 値 = 1 行」を撤回）、4 つの検知ステップの <code>if</code> を同形化。§3.1 の図に <code>MAIN --&gt; dom</code>、§6 に 5 行追加と timeout 行の 2 分割、§7 に目視確認 (d)・(e)。§8 #35・#52・#61・#63〜#66 を改訂し #67〜#72 を追加。§9 は Q-1 の 1 件のまま</td>
 </tr>
 </tbody></table>
 

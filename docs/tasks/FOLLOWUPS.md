@@ -10,34 +10,38 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 
 ## 1. D-02（collector 設計）reopen 時
 
-いずれも **実装が正で、設計書が追随すべきもの**。
+**1-1〜1-21 のうち 19 件は 2026-09-27 の commit `711c634` で D-02 に反映済み**（`✅` 印。1-13 は §9 Q-1 へ、1-18 は D-01 の reopen とセットのため §8.1 へ）。
+
+**方向づけの訂正（2026-09-27）**：当初この節を「いずれも実装が正で、設計書が追随すべきもの」としたのは**誤り**。**1-14〜1-17・1-19 は逆方向**で、`.github/workflows/collect.yml` は §5.6 の YAML とほぼ逐語一致（実測）なので、**設計書を直し、ワークフローがそれに追随する**（→ 4-13 として起票）。1-5・1-10・1-11 は設計書への追記だけでは閉じず**テストの新規作成を伴う**（D-02 §8.1 の実装行 (ii)(iii)）。
 
 | # | 節 | 内容 |
 |---|---|---|
-| 1-1 | §5.4 | `getApps().length === 0` による判定を実装に合わせる。`getApps()` は**名前付きアプリも数える**ため件数では判定できない。実装は `getApps().find((app) => app.name === "[DEFAULT]")`。また `initializeApp({ credential })` は **credential 指定時は冪等でない**（既定アプリがあると `INVALID_APP_OPTIONS`）。生成・再利用した `App` をフィールドに保持し `getMessaging(this.app).send(...)` を呼ぶ形に改める |
-| 1-2 | §5.4 | `logger` 引数の用途が未定義。実装はコンストラクタで初期化完了を `debug`、throw 直前に固定文言を `warn` に出す |
-| 1-3 | §5.5 手順 4a | **型ガード失敗時の文言が未定義。** 実装は `FIREBASE_SERVICE_ACCOUNT is not valid JSON`（非オブジェクトもここに落ちる）。「型ガードが落ちた場合も同じ文言」と 1 文足す |
-| 1-4 | §4.7 経路表・§6 | ゲートウェイ側の `warn` 3 文言を注記（`... does not have project_id/client_email/private_key` ／ `... private_key could not be parsed (check newline escaping)` ／ `failed to initialize firebase app`）。いずれも入力の断片を含まない。**権威ある `error` は `main.ts` の 1 本**であることも明記する |
-| 1-5 | §7.1 | 「全団体が reject」の第 4 区切り「`FakeNotificationGateway` が**実ゲートウェイの契約どおり** `cause` を持たない」は**誤り**。実ゲートウェイは送信失敗時に必ず `cause` を付ける。「実ゲートウェイの契約どおり」を削り、第 5 区切り（`cause` 付きで reject → `error` が `" <- "` で連結され 1 行に収まる）を追加。§7 冒頭の「〜だけを固定する」も「`cause` 無し／有りの両経路で」に改める。§7.2 のダブルに `mode: "reject-with-cause"` を追記 |
-| 1-6 | §4.10 | **マスク規則表に「否定先読み」を追記する（最重要）。** 区切り文字の種類を変えるだけでは食い潰しを防げないことが実測で判明した（同一行に 2 件あると普通の半角スペースでも素通りする）。さらに**先読みを値の先頭だけに置くと前置文字 1 つで破れる**ため、実装は tempered greedy token `((?:(?!authorization\s*:)\S)+)` を使っている。規則表に「値が次のヘッダ名に達しないことを**各文字位置で**否定先読みする」を加える |
-| 1-7 | §4.10 | extraheader 行に実装上の決定 2 つを追記。(a) ヘッダ名の語頭に単語境界を課さない（`xauthorization:` も伏せる＝漏れない側に倒す）、(b) 区切りは**垂直空白以外のすべての空白**（NBSP・全角空白・BOM を含む）で、**改行は区切りとしない**（改行を許すと空値行の次行の本物のトークンを走査が飛び越える）。**記録が無いとリファクタで `\s*` に戻され、秘密情報が素通りする** |
-| 1-8 | §4.10 | **URL 形式の限界。** `[^/\s]+@` は `/` を跨げないため、認証情報に `/` を含む URL（`https://x-access-token:SEC/RET@host/`）は**全くマスクされない**（実測）。GitHub のトークンは `[A-Za-z0-9_]` のみなので実害は無いが、限界を明記するか正規表現を厳密化する |
-| 1-9 | §4.10 | マスク対象を `basic` / `bearer` 以外へ広げるか（`token` スキーム、スキーム無しの `AUTHORIZATION: <値>`）。レビュアー 3 人が指摘。`actions/checkout@v4` は `basic` しか使わないので現行経路では発生しない。**広げるなら実装の `AUTH_SCHEMES` 化と同時に行う** |
-| 1-10 | §7.3 | `maskCredentials` 行に回帰テストを追記する。`AUTHORIZATION: basic\nAUTHORIZATION: basic SECRET` → 2 件目がマスクされる／`AUTHORIZATION: basic\nremote: rejected` → 変化しない／`xauthorization: basic SECRET` → マスクする／`Proxy-Authorization: Basic SECRET` → マスクする。表に無いと将来の担当者に削除されうる |
-| 1-11 | §7.3 | **`PUBLISH_BRANCH` / `ARTICLES_JSON_RELATIVE_PATH` が git の引数として渡ることを固定するテスト**を carve-out に追加するか。現在は §7.3 に列挙が無いため足せない |
-| 1-12 | §8.1 | **✅ 反映済みの 2 行を「反映済み」に更新する。** 「CLAUDE.md（司令塔。D-02 承認後に更新）」と「要件書（開発者の承認事項）」は 2026-09-25 の commit `f890477` で反映済みで、残作業が無い |
+| ✅ 1-1 | §5.4 | `getApps().length === 0` による判定を実装に合わせる。`getApps()` は**名前付きアプリも数える**ため件数では判定できない。実装は `getApps().find((app) => app.name === "[DEFAULT]")`。また `initializeApp({ credential })` は **credential 指定時は冪等でない**（既定アプリがあると `INVALID_APP_OPTIONS`）。生成・再利用した `App` をフィールドに保持し `getMessaging(this.app).send(...)` を呼ぶ形に改める |
+| ✅ 1-2 | §5.4 | `logger` 引数の用途が未定義。実装はコンストラクタで初期化完了を `debug`、throw 直前に固定文言を `warn` に出す |
+| ✅ 1-3 | §5.5 手順 4a | **型ガード失敗時の文言が未定義。** 実装は `FIREBASE_SERVICE_ACCOUNT is not valid JSON`（非オブジェクトもここに落ちる）。「型ガードが落ちた場合も同じ文言」と 1 文足す |
+| ✅ 1-4 | §4.7 経路表・§6 | ゲートウェイ側の `warn` 3 文言を注記（`... does not have project_id/client_email/private_key` ／ `... private_key could not be parsed (check newline escaping)` ／ `failed to initialize firebase app`）。いずれも入力の断片を含まない。**権威ある `error` は `main.ts` の 1 本**であることも明記する |
+| ✅ 1-5 | §7.1 | 「全団体が reject」の第 4 区切り「`FakeNotificationGateway` が**実ゲートウェイの契約どおり** `cause` を持たない」は**誤り**。実ゲートウェイは送信失敗時に必ず `cause` を付ける。「実ゲートウェイの契約どおり」を削り、第 5 区切り（`cause` 付きで reject → `error` が `" <- "` で連結され 1 行に収まる）を追加。§7 冒頭の「〜だけを固定する」も「`cause` 無し／有りの両経路で」に改める。§7.2 のダブルに `mode: "reject-with-cause"` を追記 |
+| ✅ 1-6 | §4.10 | **マスク規則表に「否定先読み」を追記する（最重要）。** 区切り文字の種類を変えるだけでは食い潰しを防げないことが実測で判明した（同一行に 2 件あると普通の半角スペースでも素通りする）。さらに**先読みを値の先頭だけに置くと前置文字 1 つで破れる**ため、実装は tempered greedy token `((?:(?!authorization\s*:)\S)+)` を使っている。規則表に「値が次のヘッダ名に達しないことを**各文字位置で**否定先読みする」を加える |
+| ✅ 1-7 | §4.10 | extraheader 行に実装上の決定 2 つを追記。(a) ヘッダ名の語頭に単語境界を課さない（`xauthorization:` も伏せる＝漏れない側に倒す）、(b) 区切りは**垂直空白以外のすべての空白**（NBSP・全角空白・BOM を含む）で、**改行は区切りとしない**（改行を許すと空値行の次行の本物のトークンを走査が飛び越える）。**記録が無いとリファクタで `\s*` に戻され、秘密情報が素通りする** |
+| ✅ 1-8 | §4.10 | **URL 形式の限界。** `[^/\s]+@` は `/` を跨げないため、認証情報に `/` を含む URL（`https://x-access-token:SEC/RET@host/`）は**全くマスクされない**（実測）。GitHub のトークンは `[A-Za-z0-9_]` のみなので実害は無いが、限界を明記するか正規表現を厳密化する |
+| ✅ 1-9 | §4.10 | マスク対象を `basic` / `bearer` 以外へ広げるか（`token` スキーム、スキーム無しの `AUTHORIZATION: <値>`）。レビュアー 3 人が指摘。`actions/checkout@v4` は `basic` しか使わないので現行経路では発生しない。**広げるなら実装の `AUTH_SCHEMES` 化と同時に行う** |
+| ✅ 1-10 | §7.3 | `maskCredentials` 行に回帰テストを追記する。`AUTHORIZATION: basic\nAUTHORIZATION: basic SECRET` → 2 件目がマスクされる／`AUTHORIZATION: basic\nremote: rejected` → 変化しない／`xauthorization: basic SECRET` → マスクする／`Proxy-Authorization: Basic SECRET` → マスクする。表に無いと将来の担当者に削除されうる |
+| ✅ 1-11 | §7.3 | **`PUBLISH_BRANCH` / `ARTICLES_JSON_RELATIVE_PATH` が git の引数として渡ることを固定するテスト**を carve-out に追加するか。現在は §7.3 に列挙が無いため足せない |
+| ✅ 1-12 | §8.1 | **✅ 反映済みの 2 行を「反映済み」に更新する。** 「CLAUDE.md（司令塔。D-02 承認後に更新）」と「要件書（開発者の承認事項）」は 2026-09-25 の commit `f890477` で反映済みで、残作業が無い |
 
-| 1-14 | §5.6（jq） | **ステップサマリの `gsub("[\\r\\n]"; " ")` が CR/LF しか潰しておらず、直前のコメントの「古い形式のサマリに備えた多層防御として**同じ処理**を掛ける」が事実と異なる。** collector 側 `sanitizeFailureMessage` は C0/C1（ESC = U+001B を含む）・U+2028/U+2029 をすべて潰す。ESC が残ると Actions のログ／サマリで ANSI エスケープとして解釈されうる。同一実行では collector 側が必ず先に通るため実害は無いが、多層防御として穴がある。jq の Oniguruma は POSIX ブラケット式を解釈するので `gsub("[[:cntrl:]\u2028\u2029]"; " ")` に揃える（T-46 security [R-2]。司令塔が両実装を突き合わせて確認） |
-| 1-15 | §5.6・§8 #53 | **`.run-summary.json` が 0 バイトのとき jq は終了コード 0・出力なしで終わるため `\|\| echo unknown` が発火せず、5 つの出力がすべて空文字になる**（jq 1.7.1 で実測）。結果 `deploy-pages` が `!= ''` の条件でスキップされ、#53 が決めた「想定外の形 → `unknown` → 配信は続ける」と逆に倒れる。ジョブは `failed_sources=''` により赤くなるので静かな停止にはならない。`if [ ! -f .run-summary.json ]` を `if [ ! -s ... ]` にすれば 1 文字で解消する（T-46 adversarial [R-3]・typescript-expert [R-5]） |
-| 1-16 | §5.6（jq） | **`echo "published=$(jq ...)" >> "$GITHUB_OUTPUT"` は、jq がトップレベル JSON 文書を複数出力すると偽の `key=value` 行を差し込める構造。** 現実には書き手が `RunSummaryStore`（`JSON.stringify` で単一オブジェクト）だけなので到達経路は無い。`head -n 1` で 1 行に固定するか delimiter 形式にする（T-46 security [R-1]） |
-| 1-17 | §5.6（jq） | **外部サイト由来の `message` を `$GITHUB_STEP_SUMMARY` に地の文として埋めている。** Markdown としてレンダリングされるため、`#` 見出し・リンクを含むと読み手を誤誘導する体裁を作れる（raw HTML と `javascript:` は GitHub 側でサニタイズされるので影響は表示上のみ）。可変部分をコードスパンで囲む（T-46 security [R-3]） |
+| ✅ 1-14 | §5.6（jq） | **ステップサマリの `gsub("[\\r\\n]"; " ")` が CR/LF しか潰しておらず、直前のコメントの「古い形式のサマリに備えた多層防御として**同じ処理**を掛ける」が事実と異なる。** collector 側 `sanitizeFailureMessage` は C0/C1（ESC = U+001B を含む）・U+2028/U+2029 をすべて潰す。ESC が残ると Actions のログ／サマリで ANSI エスケープとして解釈されうる。同一実行では collector 側が必ず先に通るため実害は無いが、多層防御として穴がある。jq の Oniguruma は POSIX ブラケット式を解釈するので `gsub("[[:cntrl:]\u2028\u2029]"; " ")` に揃える（T-46 security [R-2]。司令塔が両実装を突き合わせて確認） |
+| ✅ 1-15 | §5.6・§8 #53 | **`.run-summary.json` が 0 バイトのとき jq は終了コード 0・出力なしで終わるため `\|\| echo unknown` が発火せず、5 つの出力がすべて空文字になる**（jq 1.7.1 で実測）。結果 `deploy-pages` が `!= ''` の条件でスキップされ、#53 が決めた「想定外の形 → `unknown` → 配信は続ける」と逆に倒れる。ジョブは `failed_sources=''` により赤くなるので静かな停止にはならない。`if [ ! -f .run-summary.json ]` を `if [ ! -s ... ]` にすれば 1 文字で解消する（T-46 adversarial [R-3]・typescript-expert [R-5]） |
+| ✅ 1-16 | §5.6（jq） | **`echo "published=$(jq ...)" >> "$GITHUB_OUTPUT"` は、jq がトップレベル JSON 文書を複数出力すると偽の `key=value` 行を差し込める構造。** 現実には書き手が `RunSummaryStore`（`JSON.stringify` で単一オブジェクト）だけなので到達経路は無い。`head -n 1` で 1 行に固定するか delimiter 形式にする（T-46 security [R-1]） |
+| ✅ 1-17 | §5.6（jq） | **外部サイト由来の `message` を `$GITHUB_STEP_SUMMARY` に地の文として埋めている。** Markdown としてレンダリングされるため、`#` 見出し・リンクを含むと読み手を誤誘導する体裁を作れる（raw HTML と `javascript:` は GitHub 側でサニタイズされるので影響は表示上のみ）。可変部分をコードスパンで囲む（T-46 security [R-3]） |
 | 1-18 | §4.8・D-01 §3.2 | **コードポイント単位の切り詰めが `run-collection.ts` と `sanitize-git-output.ts` に素の式で重複している。** §8 #55 は「単位を揃える」決定であって実装の複写までは求めていない。片方だけ将来書き換えられると #55 が守ろうとした一致が崩れる。`domain/text.ts` に `truncateCodePoints(s, max)` を追加して両方から呼ぶ。**D-01 §3.2 が `text.ts` の公開物を `normalizeTitle` / `foldText` / `truncateUtf16` と列挙しているため、D-01 側への 1 行追随が要る**（T-46 architecture [R-2]） |
 
-| 1-19 | §5.6（jq） | **`S=.run-summary.json` の 1 文字変数名を `SUMMARY_JSON` にする。** 40 行超の `run:` ブロックで `"$S"` が 8 回出るのに名前から対象が読めない。§5.6 の YAML にそのまま書かれているため実装側の裁量では直せない（T-46 readability [R-8]） |
+| ✅ 1-19 | §5.6（jq） | **`S=.run-summary.json` の 1 文字変数名を `SUMMARY_JSON` にする。** 40 行超の `run:` ブロックで `"$S"` が 8 回出るのに名前から対象が読めない。§5.6 の YAML にそのまま書かれているため実装側の裁量では直せない（T-46 readability [R-8]） |
 
-| 1-20 | §5.5 手順 5・§6 | **`main.ts` 手順 5 の `logger.error("failed to initialize FCM ...", { errorName })` の `errorName` フィールドが §5.5 手順 5・§6 に無い。** 直前に出るゲートウェイ側の 3 つの `warn` が切り分け用の一次情報で、`warn` が無ければ想定外の例外という読み方になる（実装のコメントがこの読み方を記録している）。フィールドを経路表に加える（T-47 で実装側の自己申告コメントを外せなかった 4 件のうちの 1 件。残り 3 件は 1-1・1-2・1-4） |
+| ✅ 1-20 | §5.5 手順 5・§6 | **`main.ts` 手順 5 の `logger.error("failed to initialize FCM ...", { errorName })` の `errorName` フィールドが §5.5 手順 5・§6 に無い。** 直前に出るゲートウェイ側の 3 つの `warn` が切り分け用の一次情報で、`warn` が無ければ想定外の例外という読み方になる（実装のコメントがこの読み方を記録している）。フィールドを経路表に加える（T-47 で実装側の自己申告コメントを外せなかった 4 件のうちの 1 件。残り 3 件は 1-1・1-2・1-4） |
 
-| 1-21 | §4.7・§5.1 手順 6・§4.2 | **設計書のコード片・文言と実装の文字列が食い違っている箇所が 3 件。** いずれも挙動・分岐は一致しており、文言だけの差。(a) §4.7 のコード片は `const MAX_CAUSE_DEPTH = 5;` だが実装は **`FORMAT_ERROR_MAX_DEPTH`**（値 5・挙動同一）。(b) §5.1 手順 6 は `message: "source did not return an array"` だが実装は `"fetch() did not return an array"`。非配列時の `warn` 文言（実装は `"source returned non-array"`）は §5.1 に規定が無い。(c) §4.2 のコード片は `` `year out of range: ${year}` `` だが実装は `` `out of range: ${instant.toISOString()}` ``。**`ISO8601` を含む実装側の文言は診断上有用なので、設計書を実装に合わせる方向を推奨**（T-47 spec [R-2][R-3]） |
+| ✅ 1-21 | §4.7・§5.1 手順 6・§4.2 | **設計書のコード片・文言と実装の文字列が食い違っている箇所が 3 件。** いずれも挙動・分岐は一致しており、文言だけの差。(a) §4.7 のコード片は `const MAX_CAUSE_DEPTH = 5;` だが実装は **`FORMAT_ERROR_MAX_DEPTH`**（値 5・挙動同一）。(b) §5.1 手順 6 は `message: "source did not return an array"` だが実装は `"fetch() did not return an array"`。非配列時の `warn` 文言（実装は `"source returned non-array"`）は §5.1 に規定が無い。(c) §4.2 のコード片は `` `year out of range: ${year}` `` だが実装は `` `out of range: ${instant.toISOString()}` ``。**`ISO8601` を含む実装側の文言は診断上有用なので、設計書を実装に合わせる方向を推奨**（T-47 spec [R-2][R-3]） |
+
+| 1-22 | §5.1 手順 6 | **要素破棄ログのフィールドが実装と違う。** 設計書は `logger.warn("invalid raw article", { companyId, sourceId })` だが、実装（`collect-articles.ts`）は `{ sourceId, error: previewRawValue(shapeResult.error.message) }` で **`companyId` が無く、zod メッセージのプレビューが付く**。挙動（1 件ずつ破棄）は一致しており**フィールドのみの差**。`companyId` はどの団体の Source が壊れたかの切り分けに要るので、実装側に足すか設計書を実装に合わせるかを決める（D-02 の反映作業中に design-writer が発見。FOLLOWUPS に無かった乖離） |
 
 ### 開発者の承認が要る（CLAUDE.md / 要件書の変更を伴う）
 
@@ -116,6 +120,8 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 | 4-11 | collector | **`RawArticleShapeSchema`（`application/collect-articles.ts`）を `domain/source.ts` へ寄せるかを検討する。** `RawArticle` の契約をコードで表明できる一方、§5.1 手順 6 は「形の実行時検査は application に置く」と確定している（Source は infrastructure なので型契約を信用しない、という趣旨）。T-47 で当該の自己申告コメントを削除した際、この整理案だけが記録から落ちたため起票する。**採らない判断でもよい**（その場合はこの行に理由を書いて閉じる）（T-47 readability [R-6]） |
 
 | 4-12 | app | **`CupertinoListTile` の 1 行省略を解除する `DefaultTextStyle` 包み（`settings_screen.dart` の `_wrappableText`）を、2 ファイル目が使い始めた時点で `core/ui/` へ寄せる。** 現在 `CupertinoListTile` を使うのは `app/lib` 全体で `settings_screen.dart` だけ（実測）で、S-01・S-02 は `core/ui/article/` の記事セルを使う設計なので 1 例に留まっている。**寄せるときは D-05 §3.2 の `core/ui/` の区分（`status/`・`article/`・`list/`）を増やす必要があるため D-05 の reopen が要る。** 次に `CupertinoListTile` を使う人は別ファイルを書くので `settings_screen.dart` のコメントを読まない＝閾値に達したことに気づく仕組みが無い（T-35 maintainability [R-4]。4-10 と同型） |
+
+| 4-13 | collector | **`.github/workflows/collect.yml` を D-02 §5.6 の改訂（#61）に追随させる。** 2026-09-27 の D-02 改訂で §5.6 の jq を 4 点直したので、ワークフロー側を合わせる。(1) `gsub("[\\r\\n]"; " ")` を制御文字＋行区切りを覆う形に、(2) `if [ ! -f .run-summary.json ]` を `[ ! -s ... ]` に（0 バイトで jq が終了コード 0・出力なしになり `deploy-pages` がスキップされる）、(3) 出力 5 本に `head -n 1` を足す、(4) `reason` / `message` をコードスパンで囲む、(5) `S=` を `SUMMARY_JSON=` に改名。**(1) は要実測**：design-writer が `gsub("[[:cntrl:][:space:]]"; " ")` を採ったが、**jq の Oniguruma で `[[:space:]]` が U+2028/U+2029 を覆うかは一次資料で未確認**。`printf '{"m":"a\u2028b"}' \| jq -r '.m \| gsub("[[:cntrl:][:space:]]"; "_")'` 相当で確かめ、覆わなければ 2 段の `gsub` に分ける（2 段目はエスケープ列を使う）。**YAML / シェルに U+2028/U+2029 を直書きするとリテラル文字に化けやすい**（反映作業中に実際に 4 か所化けた）ので、エスケープ列で書いて必ず実測すること |
 
 
 ---

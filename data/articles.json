@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T16:59:32+09:00",
+  "generatedAt": "2026-09-29T00:17:02+09:00",
   "articles": [
     {
       "id": "530fb01c36eeec52",
@@ -40,8 +40,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260919_002.html",
       "category": "other",
       "publishedAt": "2026-09-25T00:00:00+09:00",
-      "contentHash": "4bc573bf6f07ec45",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "4bc573bf6f07ec45",
       "updatedAt": "2026-09-25T22:36:45+09:00"
     },
     {
@@ -92,8 +92,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260613_001.html",
       "category": "streaming",
       "publishedAt": "2026-09-25T00:00:00+09:00",
-      "contentHash": "212e27c03b299d7c",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "212e27c03b299d7c"
     },
     {
       "id": "63954331275ad261",
@@ -183,8 +183,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260920_3.html",
       "category": "other",
       "publishedAt": "2026-09-20T00:00:00+09:00",
-      "contentHash": "a670a71ef9f89b2f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "a670a71ef9f89b2f"
     },
     {
       "id": "973b24d45eec648f",
@@ -333,8 +333,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260910_001.html",
       "category": "schedule",
       "publishedAt": "2026-09-10T00:00:00+09:00",
-      "contentHash": "b12568fae42d5641",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "b12568fae42d5641"
     },
     {
       "id": "1ccbb4990a59eca1",
@@ -763,8 +763,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260725_002.html",
       "category": "ticket",
       "publishedAt": "2026-07-26T00:00:00+09:00",
-      "contentHash": "43c6e8d17c903a82",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "43c6e8d17c903a82"
     },
     {
       "id": "fb869e5e84d914cf",
@@ -1007,6 +1007,17 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "b0860e14e236fb16",
+      "companyId": "shiki",
+      "title": "『ロボット・イン・ザ・ガーデン』東京公演に向けて――稽古が始まりました！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038009.html",
+      "category": "other",
+      "publishedAt": "2026-09-28T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/umekomi_DSC_7232_thum-thumb-500x373-41622.jpg",
+      "contentHash": "30e65b35d31def75",
+      "fetchedAt": "2026-09-29T00:17:02+09:00"
+    },
+    {
       "id": "e7fb49f7fd664a6d",
       "companyId": "shiki",
       "title": "有明四季劇場が開場5周年を迎えました！",
@@ -1112,9 +1123,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037984.html",
       "category": "ticket",
       "publishedAt": "2026-09-12T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2024/01/BTTF_news_thmn-thumb-500x373-35153.jpg",
-      "contentHash": "31423038f38708a0",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "31423038f38708a0"
     },
     {
       "id": "e3850848381609c6",

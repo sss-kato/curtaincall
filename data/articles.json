@@ -1,7 +1,37 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-29T10:45:14+09:00",
+  "generatedAt": "2026-09-29T17:18:55+09:00",
   "articles": [
+    {
+      "id": "064082137320c604",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
+      "url": "https://kageki.hankyu.co.jp/news/20260929_006.html",
+      "category": "streaming",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "contentHash": "f406c990ffa40fa2",
+      "fetchedAt": "2026-09-29T17:18:55+09:00"
+    },
+    {
+      "id": "0b6f82066ba75e5e",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞雪組公演『ポーの一族』新人公演",
+      "url": "https://kageki.hankyu.co.jp/news/20260929_003.html",
+      "category": "schedule",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "contentHash": "48acd282cc555de7",
+      "fetchedAt": "2026-09-29T17:18:55+09:00"
+    },
+    {
+      "id": "ba54a8f580f222cd",
+      "companyId": "takarazuka",
+      "title": "【テレビ】日本テレビ「ヒルナンデス！」出演のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20260929_004.html",
+      "category": "streaming",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "contentHash": "7e78e04bff170268",
+      "fetchedAt": "2026-09-29T17:18:55+09:00"
+    },
     {
       "id": "56374204b59baccc",
       "companyId": "takarazuka",
@@ -173,8 +203,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2026/yoidoregomen/cast.html",
       "category": "cast",
       "publishedAt": "2026-09-22T00:00:00+09:00",
-      "contentHash": "9804ada53fb75cae",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "9804ada53fb75cae"
     },
     {
       "id": "d4986b32a4421de2",
@@ -183,8 +213,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260922_003.html",
       "category": "streaming",
       "publishedAt": "2026-09-22T00:00:00+09:00",
-      "contentHash": "f406c990ffa40fa2",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "f406c990ffa40fa2"
     },
     {
       "id": "6983602598cd6199",
@@ -977,36 +1007,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "8937d40871266eef",
-      "companyId": "takarazuka",
-      "title": "宝塚歌劇オリジナル菓子「宝塚歌劇 2026年ビジュアル缶」の販売について",
-      "url": "https://kageki.hankyu.co.jp/news/20260522_002.html",
-      "category": "other",
-      "publishedAt": "2026-05-22T00:00:00+09:00",
-      "contentHash": "2888711d01030889",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "1c33e5ae60958d6a",
-      "companyId": "takarazuka",
-      "title": "専科 退団者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260520_002.html",
-      "category": "person",
-      "publishedAt": "2026-05-20T00:00:00+09:00",
-      "contentHash": "f02a42d2934bafbc",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "3cd43ffed784c2fa",
-      "companyId": "takarazuka",
-      "title": "月組トップ娘役・天紫珠李 退団記者会見",
-      "url": "https://kageki.hankyu.co.jp/news/20260518_002.html",
-      "category": "person",
-      "publishedAt": "2026-05-20T00:00:00+09:00",
-      "contentHash": "aa5b2d06007665be",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "b0860e14e236fb16",
       "companyId": "shiki",
       "title": "『ロボット・イン・ザ・ガーデン』東京公演に向けて――稽古が始まりました！",
@@ -1601,6 +1601,16 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "35278bb3e553390d",
+      "companyId": "horipro",
+      "title": "ミュージカル『スウィーニー・トッド フリート街の悪魔の理髪師』東京公演チケット販売詳細",
+      "url": "https://horipro-stage.jp/news/sweeneytodd2027_ticket/",
+      "category": "ticket",
+      "publishedAt": "2026-09-29T10:59:00+09:00",
+      "contentHash": "8acf0e4917ca694e",
+      "fetchedAt": "2026-09-29T17:18:55+09:00"
+    },
+    {
       "id": "e5c13c9cbf0a76d6",
       "companyId": "horipro",
       "title": "【重要】舞台『ハリー・ポッターと呪いの子』公演中止のお詫びと払い戻し対応実施のお知らせ（2026年9月8日発表）",
@@ -1687,8 +1697,31 @@
       "url": "https://horipro-stage.jp/news/dearevanhansen2026_information/",
       "category": "ticket",
       "publishedAt": "2026-07-15T16:59:00+09:00",
-      "contentHash": "0831ddf44a688a39",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "0831ddf44a688a39"
+    },
+    {
+      "id": "94795fd1a2dc5834",
+      "companyId": "toho",
+      "title": "2027年2・3月 日生劇場 ミュージカル『モーツァルト！』追加キャスト、公演の詳細が決定しました！",
+      "url": "https://www.tohostage.com/mozart/",
+      "category": "cast",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_mozart2027_2.jpg",
+      "contentHash": "db6e6b445e1f15c4",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-09-29T17:18:55+09:00"
+    },
+    {
+      "id": "32ebd653af77f21b",
+      "companyId": "toho",
+      "title": "舞台『キングダムII -継承-』の博多座公演アーカイブ付きLIVE配信が決定いたしました！",
+      "url": "https://www.tohostage.com/kingdom2/stream2.html",
+      "category": "streaming",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_kingdom2_2026.jpg",
+      "contentHash": "57a0dcf48608e868",
+      "fetchedAt": "2026-09-29T17:18:55+09:00"
     },
     {
       "id": "678c511707332ac0",
@@ -1742,17 +1775,6 @@
       "publishedAt": "2026-07-31T00:00:00+09:00",
       "thumbnail": "https://www.toho.co.jp/images/4e996c81db3e3b7fc872639dde873f32a9d58dd82a3eb4c8d47353e5082aaf18.jpg",
       "contentHash": "e7ffc39df422642f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "94795fd1a2dc5834",
-      "companyId": "toho",
-      "title": "2027年2・3月 日生劇場 ミュージカル『モーツァルト！』上演決定！",
-      "url": "https://www.tohostage.com/mozart/",
-      "category": "new_work",
-      "publishedAt": "2026-07-21T00:00:00+09:00",
-      "thumbnail": "https://www.toho.co.jp/images/a4e5d8f19590c16d4cd4a06e883c41ad6b7d1fb885666f729c29e265bbf60a91.jpg",
-      "contentHash": "fc7044b14889594d",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -1828,9 +1850,9 @@
       "url": "https://www.tohostage.com/ever_after/",
       "category": "new_work",
       "publishedAt": "2026-05-24T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/dde9ab273e1d3bd61b9fefc8bedd24f412643f78548e1a13f0a4c6436d40847b.jpg",
-      "contentHash": "23a2c614d904a6c2",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "23a2c614d904a6c2"
     },
     {
       "id": "711d22717727b060",

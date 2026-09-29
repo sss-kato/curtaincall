@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-29T17:18:55+09:00",
+  "generatedAt": "2026-09-30T00:39:06+09:00",
   "articles": [
     {
       "id": "064082137320c604",
@@ -1007,6 +1007,17 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "a0ac42898cec5270",
+      "companyId": "shiki",
+      "title": "ツアー最北の離島へ――「こころの劇場」『はじまりの樹の神話～こそあどの森の物語～』利尻公演レポート",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038015.html",
+      "category": "other",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260925_kokoro_rishiri_thum_s-thumb-500x373-41626.jpg",
+      "contentHash": "b58c3ebbce98363b",
+      "fetchedAt": "2026-09-30T00:39:06+09:00"
+    },
+    {
       "id": "b0860e14e236fb16",
       "companyId": "shiki",
       "title": "『ロボット・イン・ザ・ガーデン』東京公演に向けて――稽古が始まりました！",
@@ -1101,9 +1112,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037987.html",
       "category": "other",
       "publishedAt": "2026-09-17T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/04/roba_mtthmn_2026-thumb-500x373-40576.jpg",
-      "contentHash": "5d973bdcde89090f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "5d973bdcde89090f"
     },
     {
       "id": "92e603fecae3656d",

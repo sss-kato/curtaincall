@@ -1,7 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-29T00:17:02+09:00",
+  "generatedAt": "2026-09-29T10:45:14+09:00",
   "articles": [
+    {
+      "id": "56374204b59baccc",
+      "companyId": "takarazuka",
+      "title": "＜出演者決定＞星組 東京国際フォーラム ホールC／梅田芸術劇場メインホール公演『大奥』",
+      "url": "https://kageki.hankyu.co.jp/revue/2027/ooku/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "contentHash": "13f320f9a0d81845",
+      "fetchedAt": "2026-09-29T10:45:14+09:00"
+    },
+    {
+      "id": "b670cb358027499b",
+      "companyId": "takarazuka",
+      "title": "＜出演者決定＞星組 東京建物 Brillia HALL／梅田芸術劇場シアター・ドラマシティ公演『I am Heathcliff』",
+      "url": "https://kageki.hankyu.co.jp/revue/2027/iamheathcliff/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "contentHash": "bad7d7d979ca7aa3",
+      "fetchedAt": "2026-09-29T10:45:14+09:00"
+    },
     {
       "id": "530fb01c36eeec52",
       "companyId": "takarazuka",
@@ -987,26 +1007,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "9e2d24d3343cd4b8",
-      "companyId": "takarazuka",
-      "title": "月組トップスター・鳳月杏 退団記者会見",
-      "url": "https://kageki.hankyu.co.jp/news/20260518_001.html",
-      "category": "person",
-      "publishedAt": "2026-05-20T00:00:00+09:00",
-      "contentHash": "3e017727230fcaeb",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "00081473d811a78e",
-      "companyId": "takarazuka",
-      "title": "外部出演「2027年国際園芸博覧会（GREEN×EXPO 2027）」応援メッセージ",
-      "url": "https://kageki.hankyu.co.jp/news/20260428_006.html",
-      "category": "other",
-      "publishedAt": "2026-04-28T00:00:00+09:00",
-      "contentHash": "fada90c2893f0269",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "b0860e14e236fb16",
       "companyId": "shiki",
       "title": "『ロボット・イン・ザ・ガーデン』東京公演に向けて――稽古が始まりました！",
@@ -1691,6 +1691,17 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "678c511707332ac0",
+      "companyId": "toho",
+      "title": "2027年1･2月シアタークリエ公演としまして、 ケラリーノ・サンドロヴィッチ作・演出による「新作」（タイトル未定） の上演が決定しました。",
+      "url": "https://www.tohostage.com/kera/",
+      "category": "new_work",
+      "publishedAt": "2026-09-28T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_kera2027.jpg",
+      "contentHash": "9ebc90fad518bdf6",
+      "fetchedAt": "2026-09-29T10:45:14+09:00"
+    },
+    {
       "id": "31fb73b081216883",
       "companyId": "toho",
       "title": "海外ツアー公演 制作スタッフ募集のお知らせ",
@@ -1828,9 +1839,9 @@
       "url": "https://www.tohostage.com/rent2026/",
       "category": "cast",
       "publishedAt": "2026-04-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-24T13:32:13+09:00",
       "thumbnail": "https://www.toho.co.jp/images/93c656ccaef585315ee23a17bdbf4ad76eccc51dbf5d200d674ab4903815bf7e.jpg",
-      "contentHash": "38cec487ce8b7a45",
-      "fetchedAt": "2026-09-24T13:32:13+09:00"
+      "contentHash": "38cec487ce8b7a45"
     },
     {
       "id": "383842644c13922d",

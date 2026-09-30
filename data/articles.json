@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-30T15:34:30+09:00",
+  "generatedAt": "2026-09-30T22:34:15+09:00",
   "articles": [
     {
       "id": "108cc6bec9fb9a1d",
@@ -193,8 +193,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2026/elisabeth/cast.html",
       "category": "cast",
       "publishedAt": "2026-09-23T00:00:00+09:00",
-      "contentHash": "161a31e777b996f9",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "161a31e777b996f9"
     },
     {
       "id": "673b8f76b88a3d76",
@@ -643,8 +643,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260822_004.html",
       "category": "streaming",
       "publishedAt": "2026-08-22T00:00:00+09:00",
-      "contentHash": "0cc8827001c8b2f3",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "0cc8827001c8b2f3"
     },
     {
       "id": "c0c4fef2050067b6",
@@ -993,8 +993,8 @@
       "url": "https://shop.tca-pictures.net/shop/t/t1691/",
       "category": "other",
       "publishedAt": "2026-06-04T00:00:00+09:00",
-      "contentHash": "04f955642af288fa",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "04f955642af288fa"
     },
     {
       "id": "51c4882eb732f1d7",
@@ -1756,6 +1756,17 @@
       "contentHash": "0831ddf44a688a39"
     },
     {
+      "id": "0fe693549026dd3c",
+      "companyId": "toho",
+      "title": "2027年7月 東京ガーデンシアター ミュージカル『十二国記 -月の影 影の海-』ARENA LIVE開催決定！",
+      "url": "https://www.tohostage.com/12kokuki_Live/",
+      "category": "new_work",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_12kokuki_Live2027.jpg",
+      "contentHash": "b9288ac73c075226",
+      "fetchedAt": "2026-09-30T22:34:15+09:00"
+    },
+    {
       "id": "94795fd1a2dc5834",
       "companyId": "toho",
       "title": "2027年2・3月 日生劇場 ミュージカル『モーツァルト！』追加キャスト、公演の詳細が決定しました！",
@@ -1894,9 +1905,9 @@
       "url": "https://horipro-stage.jp/stage/thisisthemoment2026/",
       "category": "new_work",
       "publishedAt": "2026-06-15T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/642af80a80fd3cbd2bbf96b4c6fe3e25912177a9af98ec717620ed86b943b625.jpg",
-      "contentHash": "f191e5c33031464b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "f191e5c33031464b"
     },
     {
       "id": "2a11c11d3013509e",

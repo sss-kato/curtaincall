@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-30T00:39:06+09:00",
+  "generatedAt": "2026-09-30T15:34:30+09:00",
   "articles": [
+    {
+      "id": "108cc6bec9fb9a1d",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第1抽選方式」＞月組 宝塚大劇場公演『天穹のアルテミス』『Belle Époque』",
+      "url": "https://kageki.hankyu.co.jp/news/20260930_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "contentHash": "df6aaf599c5456b9",
+      "fetchedAt": "2026-09-30T15:34:30+09:00"
+    },
     {
       "id": "064082137320c604",
       "companyId": "takarazuka",
@@ -997,13 +1007,69 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "9b244850743b9029",
-      "companyId": "takarazuka",
-      "title": "東京宝塚劇場における視覚・聴覚に障がいのあるお客様への新たな鑑賞サポート導入について",
-      "url": "https://kageki.hankyu.co.jp/news/20260524_003.html",
+      "id": "1da85b0dce1fd8e3",
+      "companyId": "shiki",
+      "title": "まもなく開幕！『マンマ・ミーア！』広島公演の稽古が進んでいます",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038025.html",
       "category": "other",
-      "publishedAt": "2026-05-24T00:00:00+09:00",
-      "contentHash": "441a0fcee5756f29",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/MM00_DSC_1797_thum-thumb-500x373-41670.jpg",
+      "contentHash": "2f476e7acc84a168",
+      "fetchedAt": "2026-09-30T15:34:30+09:00"
+    },
+    {
+      "id": "51e710482e8cb7af",
+      "companyId": "shiki",
+      "title": "『キャッツ』福岡公演開幕記念「四季の会」会員限定リピートキャンペーン実施！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038005.html",
+      "category": "ticket",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/cats_mtthmn_2603-thumb-500x373-40319.jpg",
+      "contentHash": "5782e29423c48dd2",
+      "fetchedAt": "2026-09-30T15:34:30+09:00"
+    },
+    {
+      "id": "7c6287a3bad24401",
+      "companyId": "shiki",
+      "title": "「四季の会」会員限定『キャッツ』福岡公演 事前抽選販売について",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038004.html",
+      "category": "ticket",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/cats_mtthmn_2603-thumb-500x373-40319.jpg",
+      "contentHash": "18ec3757ef5897c3",
+      "fetchedAt": "2026-09-30T15:34:30+09:00"
+    },
+    {
+      "id": "93e2bf470fb06135",
+      "companyId": "shiki",
+      "title": "『オペラ座の怪人』名古屋公演 2027年8月8日（日）千秋楽決定！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038023.html",
+      "category": "other",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/06/operaza_mtthmn_2025-thumb-500x373-38718.jpg",
+      "contentHash": "447c6285fa1eeb98",
+      "fetchedAt": "2026-09-30T15:34:30+09:00"
+    },
+    {
+      "id": "cb3ba1aee882a371",
+      "companyId": "shiki",
+      "title": "「台本タブレット端末」貸出サービスのお知らせ",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/036752.html",
+      "category": "other",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
+      "contentHash": "b5819ec5b6d4c625",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "f759d128bcc66e5f",
+      "companyId": "shiki",
+      "title": "開場中の写真撮影について",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/033709.html",
+      "category": "other",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
+      "contentHash": "d6367bed67e650c8",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -1057,9 +1123,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037991.html",
       "category": "ticket",
       "publishedAt": "2026-09-25T00:00:00+09:00",
+      "fetchedAt": "2026-09-25T16:37:31+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/12/lk_mtthmn_2512-thumb-500x373-39833.jpg",
-      "contentHash": "8935f2b2b6002137",
-      "fetchedAt": "2026-09-25T16:37:31+09:00"
+      "contentHash": "8935f2b2b6002137"
     },
     {
       "id": "bd5abf779b51a3b1",
@@ -1068,9 +1134,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037993.html",
       "category": "other",
       "publishedAt": "2026-09-20T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/00_roba_kaimaku0920_-thumb-500x373-41574.jpg",
-      "contentHash": "e46b8bb95cfa9278",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "e46b8bb95cfa9278"
     },
     {
       "id": "4003190ea5bb8411",
@@ -1079,9 +1145,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037986.html",
       "category": "ticket",
       "publishedAt": "2026-09-18T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/07/hajimari_roba_mtthmn-thumb-500x373-41224.jpg",
-      "contentHash": "e1d9c4767ae33856",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "e1d9c4767ae33856"
     },
     {
       "id": "5da0b4d10b235a81",
@@ -1090,9 +1156,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037990.html",
       "category": "other",
       "publishedAt": "2026-09-18T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260916_roba_zenkoku_00_thum-thumb-500x373-41557.jpg",
-      "contentHash": "15d5675ed7d0fefb",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "15d5675ed7d0fefb"
     },
     {
       "id": "dab2bea7724d80e4",
@@ -1101,9 +1167,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037818.html",
       "category": "other",
       "publishedAt": "2026-09-18T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/36189a2185a3b440b2866909a5d4dc1206902f10-thumb-500x373-40278.jpg",
-      "contentHash": "4922c3472e321472",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "4922c3472e321472"
     },
     {
       "id": "6f8fd8fcf1a19e92",
@@ -1123,9 +1189,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037988.html",
       "category": "other",
       "publishedAt": "2026-09-17T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "c81c5891f9204aa1",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "c81c5891f9204aa1"
     },
     {
       "id": "c5089340b31c6982",
@@ -1192,28 +1258,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/07/7be9e045156424cf2a9b349eb67ab9a1ebd81cdb-thumb-500x373-38880.jpg",
       "contentHash": "dece01f008ab8ceb"
-    },
-    {
-      "id": "cb3ba1aee882a371",
-      "companyId": "shiki",
-      "title": "「台本タブレット端末」貸出サービスのお知らせ",
-      "url": "https://www.shiki.jp/navi/news/renewinfo/036752.html",
-      "category": "other",
-      "publishedAt": "2026-08-31T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "b5819ec5b6d4c625"
-    },
-    {
-      "id": "f759d128bcc66e5f",
-      "companyId": "shiki",
-      "title": "開場中の写真撮影について",
-      "url": "https://www.shiki.jp/navi/news/renewinfo/033709.html",
-      "category": "other",
-      "publishedAt": "2026-08-31T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "d6367bed67e650c8"
     },
     {
       "id": "566de6bd92d2ebe1",

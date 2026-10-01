@@ -1,7 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-01T10:59:58+09:00",
+  "generatedAt": "2026-10-01T17:43:00+09:00",
   "articles": [
+    {
+      "id": "4c943fabb0370d57",
+      "companyId": "takarazuka",
+      "title": "株式会社 宝塚歌劇団 音楽助手（作曲・編曲家志望）の募集について",
+      "url": "https://kageki.hankyu.co.jp/news/20261001_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-01T00:00:00+09:00",
+      "contentHash": "1267d91d799da6ca",
+      "fetchedAt": "2026-10-01T17:43:00+09:00"
+    },
+    {
+      "id": "c558a60694b06a07",
+      "companyId": "takarazuka",
+      "title": "＜動画配信サービス タカラヅカ・オン・デマンド＞10月1日配信開始のラインアップ（ROBIN THE HERO（'25年雪組・東京・千秋楽）他）",
+      "url": "https://kageki.hankyu.co.jp/news/20261001_005.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-01T00:00:00+09:00",
+      "contentHash": "2f6513316dbcef9e",
+      "fetchedAt": "2026-10-01T17:43:00+09:00"
+    },
     {
       "id": "4827fa1e45fff030",
       "companyId": "takarazuka",
@@ -21,6 +41,16 @@
       "publishedAt": "2026-10-01T00:00:00+09:00",
       "contentHash": "ca0bb75ef7bf0713",
       "fetchedAt": "2026-10-01T10:59:58+09:00"
+    },
+    {
+      "id": "73be3c98085633cb",
+      "companyId": "takarazuka",
+      "title": "（追）美穂圭子 ディナーショー",
+      "url": "https://kageki.hankyu.co.jp/news/20260520_009.html",
+      "category": "other",
+      "publishedAt": "2026-10-01T00:00:00+09:00",
+      "contentHash": "4754219192ffd247",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "108cc6bec9fb9a1d",
@@ -203,8 +233,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260924_001.html",
       "category": "schedule",
       "publishedAt": "2026-09-24T00:00:00+09:00",
-      "contentHash": "94d541e06cc6a197",
-      "fetchedAt": "2026-09-24T13:32:13+09:00"
+      "fetchedAt": "2026-09-24T13:32:13+09:00",
+      "contentHash": "94d541e06cc6a197"
     },
     {
       "id": "9fb72b21be9f5375",
@@ -394,16 +424,6 @@
       "category": "other",
       "publishedAt": "2026-09-12T00:00:00+09:00",
       "contentHash": "b361f5f11a20d715",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "73be3c98085633cb",
-      "companyId": "takarazuka",
-      "title": "（追）美穂圭子 ディナーショー",
-      "url": "https://kageki.hankyu.co.jp/news/20260520_009.html",
-      "category": "other",
-      "publishedAt": "2026-09-11T00:00:00+09:00",
-      "contentHash": "4754219192ffd247",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -984,26 +1004,6 @@
       "category": "other",
       "publishedAt": "2026-06-18T00:00:00+09:00",
       "contentHash": "8506f8858c9b58a3",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "6f515105b6f0cf6f",
-      "companyId": "takarazuka",
-      "title": "（追）新サービス「ebooksタカラヅカ定期購読」スタートのお知らせ ＜タカラットキャンペーンも実施！＞",
-      "url": "https://shop.tca-pictures.net/shop/t/t1688/",
-      "category": "other",
-      "publishedAt": "2026-06-06T00:00:00+09:00",
-      "contentHash": "29c436c5a6d1dcab",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "efd9560829d9eca4",
-      "companyId": "takarazuka",
-      "title": "東京宝塚劇場 喫茶・ラウンジ「Café de Repos（カフェ ド ルポ）」20周年記念ドリンクについて",
-      "url": "https://kageki.hankyu.co.jp/news/20260605_003.html",
-      "category": "other",
-      "publishedAt": "2026-06-05T00:00:00+09:00",
-      "contentHash": "fd0b8d27944376f2",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -1767,6 +1767,17 @@
       "contentHash": "0831ddf44a688a39"
     },
     {
+      "id": "31fb73b081216883",
+      "companyId": "toho",
+      "title": "海外ツアー公演 制作スタッフ募集のお知らせ【応募終了】",
+      "url": "https://www.tohostage.com/recruit/tour_seisaku.html",
+      "category": "other",
+      "publishedAt": "2026-09-04T00:00:00+09:00",
+      "contentHash": "1b32f9b2facb1fdf",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-01T17:43:00+09:00"
+    },
+    {
       "id": "0fe693549026dd3c",
       "companyId": "toho",
       "title": "2027年7月 東京ガーデンシアター ミュージカル『十二国記 -月の影 影の海-』ARENA LIVE開催決定！",
@@ -1810,16 +1821,6 @@
       "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_kera2027.jpg",
       "contentHash": "9ebc90fad518bdf6",
       "fetchedAt": "2026-09-29T10:45:14+09:00"
-    },
-    {
-      "id": "31fb73b081216883",
-      "companyId": "toho",
-      "title": "海外ツアー公演 制作スタッフ募集のお知らせ",
-      "url": "https://www.tohostage.com/recruit/tour_seisaku.html",
-      "category": "other",
-      "publishedAt": "2026-09-04T00:00:00+09:00",
-      "contentHash": "bfa4cdd9d952cc6a",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "da8f22abec2a116e",

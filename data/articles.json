@@ -1,7 +1,37 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-02T01:17:23+09:00",
+  "generatedAt": "2026-10-02T10:32:31+09:00",
   "articles": [
+    {
+      "id": "150aec75ce3df439",
+      "companyId": "takarazuka",
+      "title": "＜ブルーレイ予約受付開始のお知らせ＞月組兵庫県立芸術文化センター公演『稲妻開化譚－イナズマカイカタン－』",
+      "url": "https://www.tca-pictures.net/stage/2026/inazumakaikatan/",
+      "category": "ticket",
+      "publishedAt": "2026-10-02T00:00:00+09:00",
+      "contentHash": "d84a7a2d225775e3",
+      "fetchedAt": "2026-10-02T10:32:31+09:00"
+    },
+    {
+      "id": "9c1b2b85a9bced2a",
+      "companyId": "takarazuka",
+      "title": "＜出演者決定＞雪組 宝塚大劇場／東京宝塚劇場公演『陽炎のごとく』『Buena Vista!!』",
+      "url": "https://kageki.hankyu.co.jp/revue/2027/kageronogotoku/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-10-02T00:00:00+09:00",
+      "contentHash": "3142898259e7a800",
+      "fetchedAt": "2026-10-02T10:32:31+09:00"
+    },
+    {
+      "id": "644bfec7cc461a57",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞雪組公演『ポーの一族』",
+      "url": "https://kageki.hankyu.co.jp/news/20260613_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-02T00:00:00+09:00",
+      "contentHash": "ec19915adc3bc013",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
     {
       "id": "4c943fabb0370d57",
       "companyId": "takarazuka",
@@ -323,8 +353,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260918_001.html",
       "category": "streaming",
       "publishedAt": "2026-09-18T00:00:00+09:00",
-      "contentHash": "45d7f3c815d2ae8f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "45d7f3c815d2ae8f"
     },
     {
       "id": "6ed6e627e66be0f6",
@@ -505,16 +535,6 @@
       "publishedAt": "2026-09-04T00:00:00+09:00",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "52b5b6cfc120de95"
-    },
-    {
-      "id": "644bfec7cc461a57",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞雪組公演『ポーの一族』",
-      "url": "https://kageki.hankyu.co.jp/news/20260613_003.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-04T00:00:00+09:00",
-      "contentHash": "ec19915adc3bc013",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "3552b8c3b559b63d",
@@ -984,26 +1004,6 @@
       "category": "cast",
       "publishedAt": "2026-06-28T00:00:00+09:00",
       "contentHash": "31bcf705cd6e2529",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "154127af779036db",
-      "companyId": "takarazuka",
-      "title": "第112期初舞台生 班編成について",
-      "url": "https://kageki.hankyu.co.jp/news/20260618_003.html",
-      "category": "other",
-      "publishedAt": "2026-06-18T00:00:00+09:00",
-      "contentHash": "b76ff90dd3ca5308",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "8a4117cffc224949",
-      "companyId": "takarazuka",
-      "title": "＜人物相関図 公開＞雪組公演『ポーの一族』",
-      "url": "https://kageki.hankyu.co.jp/revue/2026/ponoichizoku/correlation.html",
-      "category": "other",
-      "publishedAt": "2026-06-18T00:00:00+09:00",
-      "contentHash": "8506f8858c9b58a3",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -1765,6 +1765,16 @@
       "publishedAt": "2026-07-15T16:59:00+09:00",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "0831ddf44a688a39"
+    },
+    {
+      "id": "e81e9fb7b82e8343",
+      "companyId": "toho",
+      "title": "VOICARION10周年記念展示会が本日10月2日(金)より 日比谷シャンテ３階にて開催されます。",
+      "url": "https://www.tohostage.com/voicarion/10th/exhibition.html",
+      "category": "other",
+      "publishedAt": "2026-10-02T00:00:00+09:00",
+      "contentHash": "9a30941fcb55f1a9",
+      "fetchedAt": "2026-10-02T10:32:31+09:00"
     },
     {
       "id": "31fb73b081216883",

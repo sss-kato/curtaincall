@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-02T10:32:31+09:00",
+  "generatedAt": "2026-10-02T17:22:01+09:00",
   "articles": [
     {
       "id": "150aec75ce3df439",
@@ -21,6 +21,16 @@
       "publishedAt": "2026-10-02T00:00:00+09:00",
       "contentHash": "3142898259e7a800",
       "fetchedAt": "2026-10-02T10:32:31+09:00"
+    },
+    {
+      "id": "07b81ac8c5dc8a32",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』",
+      "url": "https://kageki.hankyu.co.jp/news/20260801_005.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-02T00:00:00+09:00",
+      "contentHash": "6b916718c732d365",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "644bfec7cc461a57",
@@ -614,16 +624,6 @@
       "category": "other",
       "publishedAt": "2026-08-29T00:00:00+09:00",
       "contentHash": "f46792b937cca78f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "07b81ac8c5dc8a32",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260801_005.html",
-      "category": "streaming",
-      "publishedAt": "2026-08-28T00:00:00+09:00",
-      "contentHash": "6b916718c732d365",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -1667,6 +1667,16 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "cf7e956b310919b8",
+      "companyId": "horipro",
+      "title": "『This is the Moment！～フランク・ワイルドホーン JAPAN 25th anniversary concert～』ご来場のお客様へのご案内",
+      "url": "https://horipro-stage.jp/news/thisisthemoment2026_information/",
+      "category": "other",
+      "publishedAt": "2026-10-02T16:11:31+09:00",
+      "contentHash": "69c63ab697ec894e",
+      "fetchedAt": "2026-10-02T17:22:01+09:00"
+    },
+    {
       "id": "35278bb3e553390d",
       "companyId": "horipro",
       "title": "ミュージカル『スウィーニー・トッド フリート街の悪魔の理髪師』東京公演チケット販売詳細",
@@ -1753,8 +1763,8 @@
       "url": "https://horipro-stage.jp/news/info20260717/",
       "category": "other",
       "publishedAt": "2026-07-17T14:59:00+09:00",
-      "contentHash": "7106830586cc2919",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "7106830586cc2919"
     },
     {
       "id": "3db137c16262692a",

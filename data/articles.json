@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-04T02:10:21+09:00",
+  "generatedAt": "2026-10-04T06:04:48+09:00",
   "articles": [
     {
       "id": "590f15c3f87477b9",
@@ -997,14 +997,14 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "8b114f1c2f6ec084",
+      "id": "2dd087b41e0b0a61",
       "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞星組 宝塚大劇場公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260630_001.html",
+      "title": "＜ブルーレイ予約受付開始のお知らせ＞星組御園座公演『花より男子II』－Shooting STAR－",
+      "url": "https://www.tca-pictures.net/stage/2026/hanayoridango2/",
       "category": "ticket",
       "publishedAt": "2026-06-30T00:00:00+09:00",
-      "contentHash": "384a4b362b3159ea",
-      "fetchedAt": "2026-10-04T02:10:21+09:00"
+      "contentHash": "f6c9343866fb1155",
+      "fetchedAt": "2026-10-04T06:04:48+09:00"
     },
     {
       "id": "bbbeefa71444489b",

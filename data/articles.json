@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-03T15:20:25+09:00",
+  "generatedAt": "2026-10-03T21:26:58+09:00",
   "articles": [
+    {
+      "id": "590f15c3f87477b9",
+      "companyId": "takarazuka",
+      "title": "＜一般前売＞宙組 全国ツアー 福岡サンパレス ホテル＆ホール公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
+      "url": "https://kageki.hankyu.co.jp/news/20261003_002.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-03T00:00:00+09:00",
+      "contentHash": "1adc9e71dca8e5cb",
+      "fetchedAt": "2026-10-03T21:26:58+09:00"
+    },
     {
       "id": "46386a0e44becd79",
       "companyId": "takarazuka",
@@ -994,16 +1004,6 @@
       "category": "ticket",
       "publishedAt": "2026-06-30T00:00:00+09:00",
       "contentHash": "f6c9343866fb1155",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "8b114f1c2f6ec084",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞星組 宝塚大劇場公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260630_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-06-30T00:00:00+09:00",
-      "contentHash": "384a4b362b3159ea",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {

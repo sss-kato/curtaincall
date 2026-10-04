@@ -1149,6 +1149,9 @@ final class ArticleNotOpened extends OpenArticleResult {
 enum SelectBrowserResult { applied, rejectedChromeUnavailable }
 
 // lib/features/settings/domain/app_info.dart
+/// 空文字は**未取得**として扱う（`Info.plist` の値が `$(FLUTTER_BUILD_NAME)` のまま
+/// 解決されなかったビルドで起こる）。読み手（§5.9 の E-18）は
+/// `version` / `buildNumber` のいずれかが空文字なら値を出さずラベルだけにする。
 final class AppVersion {
   const AppVersion({required this.version, required this.buildNumber});
   final String version;        // CFBundleShortVersionString
@@ -1955,7 +1958,23 @@ onTap: () {
 <li><strong>出力</strong>：<code>bool</code></li>
 <li><strong>失敗時</strong>：drift の例外（<code>articleId</code> の記事が同期で削除された直後の FK 違反）はそのまま投げる。presentation が <code>logger.w</code>。セルは Stream の再発火で消えている</li>
 </ul>
-<p><strong>手順 1 → 2 は原子的でない</strong>（<code>isSaved()</code> と <code>remove()</code> / <code>save()</code> は別のクエリで、間に <code>await</code> が 1 つある）。<code>execute()</code> を<strong>逐次化するのは呼び出し側の責務</strong>で、<code>await</code> せずに 2 回呼ぶと両方が「未保存」を読んで両方 <code>save</code> し、2 回タップしたのに保存されたまま残る（§6 の「星の連打・二重タップ」）。そのため<strong>セルの星のハンドラは、同じ <code>articleId</code> の <code>execute()</code> が進行中の間は次のタップを無視するガードを持つ</strong>（<code>HomePage</code> の <code>State</code> に <code>Set&lt;String&gt; _togglingIds</code> を置き、<code>add</code> できたときだけ <code>execute()</code> を呼び、<code>finally</code> で <code>remove</code> する。§10 T-M の完了条件）。DB の現在値で判定する設計（§8 #17）は「Stream の遅延でセルの表示値が古い」ことへの備えであって、逐次化の代わりにはならない。<code>SavedArticleRepository</code> に反転メソッド（1 文で upsert / delete を切り替える SQL）を足して原子化する案は §8 #49。</p>
+<p><strong>手順 1 → 2 は原子的でない</strong>（<code>isSaved()</code> と <code>remove()</code> / <code>save()</code> は別のクエリで、間に <code>await</code> が 1 つある）。<code>execute()</code> を<strong>逐次化するのは呼び出し側の責務</strong>で、<code>await</code> せずに 2 回呼ぶと両方が「未保存」を読んで両方 <code>save</code> し、2 回タップしたのに保存されたまま残る（§6 の「星の連打・二重タップ」）。そのため<strong>セルの星のハンドラは、同じ <code>articleId</code> の <code>execute()</code> が進行中の間は次のタップを無視するガードを持つ</strong>（<code>HomePage</code> の <code>State</code> に <code>Set&lt;String&gt; _togglingIds</code> を置き、<code>add</code> できたときだけ <code>execute()</code> を呼び、<code>finally</code> で <code>remove</code> する）。<strong>ガードは §4.6 の「唯一の形」の <code>unawaited(...)</code> の外側に置く</strong>（ガードが <code>try</code> の中に入ると <code>add</code> の前にハンドラを抜ける経路が作れず、<code>finally</code> で消し忘れたときに星が恒久的に反応しなくなる）。<code>onToggleSaved</code>（§5.12）に渡すハンドラの形は次の 1 つだけで、<strong><code>execute()</code> を素のまま <code>unawaited</code> する形は書かない</strong>（§10 T-M の完了条件）：</p>
+<pre><code class="language-dart">// HomePage の State。S-00/A-11・S-01/A-06。§4.6 の唯一の形をガードで包む
+final Set&lt;String&gt; _togglingIds = &lt;String&gt;{};
+
+void _onToggleSaved(String articleId) {
+  if (!_togglingIds.add(articleId)) return;   // 同じ記事の execute() が進行中なら捨てる（§6）
+  unawaited(() async {
+    try {
+      await ref.read(toggleSavedUseCaseProvider).execute(articleId, now: DateTime.now().toUtc());
+    } on Object catch (e, s) {
+      _logger.w('保存の切替に失敗', error: releaseSafeError(e), stackTrace: releaseSafeStackTrace(s));
+    } finally {
+      _togglingIds.remove(articleId);   // setState は要らない（表示は Stream 追従。§6）
+    }
+  }());
+}</code></pre>
+<p>DB の現在値で判定する設計（§8 #17）は「Stream の遅延でセルの表示値が古い」ことへの備えであって、逐次化の代わりにはならない。<code>SavedArticleRepository</code> に反転メソッド（1 文で upsert / delete を切り替える SQL）を足して原子化する案は §8 #49。</p>
 <p>本 UseCase を呼ぶのは<strong>ホームだけ</strong>（S-01/A-06）。保存画面（S-02/A-02）は解除を画面上で保留し <code>CommitSavedChangesUseCase</code>（§5.5）で確定するため、本 UseCase を呼ばない（§8 #5）。解除後の <code>articles</code> の行の削除（D-04 §4.2・§8.1）も本 UseCase では行わない。ホームで解除できる記事は <code>in_feed = true</code> なので削除対象にならず、ホームの一覧から消えることは無い。</p>
 <h3 id="sec-5-5">5.5 保存画面（S-02）：SavedListController と CommitSavedChangesUseCase<a class="anchor" href="#sec-5-5">#</a></h3>
 <p><code>SavedScreen</code> の構成：<code>CupertinoNavigationBar</code>（S-02/E-01）+ <code>AnchoredListView</code>（§5.11.1。<code>CupertinoSliverRefreshControl</code> は置かない。S-02 §8 #1）。<strong>保存画面は <code>feedStatusProvider</code> も <code>resolveListStatus</code> も使わない</strong>（D-04 §8 #51・§8.1）。状態は <code>hasVisible</code>（保存済みが 1 件以上か）と「保存一覧を読み出せたか」から <code>ListStatus</code> を<strong>直接組み立てる</strong>（<code>ListStatus</code>・<code>FullView</code> は <code>lib/core/ui/status/list_status.dart</code> から import する。<code>saved/presentation → articles/presentation</code> の import を作らない）。<code>RefreshingHeader</code>・<code>OfflineBanner</code> は出ず、<strong>取得の失敗</strong>を知らせる S-00/E-25 も出ない（S-02 §3・§5。<code>syncControllerProvider</code> は <code>ref.listen</code> しない。D-04 §8.1）。<strong><code>TransientNotice</code> は記事を開けなかったとき（S-02/ST-07）だけ使う</strong>（§5.3。契機は A-01 の結果で <code>sequence</code> とは無関係。S-00 §4.3 E-25 の (b)）。<code>empty</code> のときは <code>AnchoredListView.emptyView</code> に S-02 §5 ST-02 のアイコン・文言の <code>EmptyView</code> を渡す（<code>content</code> のときは <code>null</code>）。<code>unavailable</code>（S-02/ST-06）のときは <code>AnchoredListView</code> を作らず、<code>FullErrorView</code> を E-02 の領域全体に置く（下記「読み出しに失敗したときの扱い」）。<code>AnchoredListController</code> は <code>SavedScreen</code> の <code>State</code> が <code>initState</code> で生成し <code>dispose</code> で破棄する（§5.11.2）。</p>
@@ -2190,8 +2209,26 @@ bool _isHomeVisible() =&gt;
 <li><strong>出力</strong>：<code>bool</code></li>
 <li><strong>失敗時</strong>：drift の例外をそのまま投げる（presentation が <code>logger.w</code>。E-02 の表示は <code>unreadFilterProvider</code> の値なので、失敗すれば変わらない）</li>
 </ul>
-<p><strong>手順の read-modify-write は原子的でない</strong>（<code>unreadFilter()</code> と <code>setUnreadFilter()</code> の間に <code>await</code> が 1 つあり、drift の 1 往復ぶんの窓がある）。<code>await</code> せずに 2 回呼ぶと両方が同じ <code>current</code> を読んで同じ値を書き、2 回タップしたのに 1 回ぶんしか反転しない。<strong>呼び出し側（<code>HomeScreen</code> の E-02 のハンドラ）が進行中の <code>execute()</code> を無視するガードを持つ</strong>（<code>bool _togglingFilter</code> を <code>State</code> に置き、false のときだけ呼んで <code>finally</code> で戻す。§10 T-M の完了条件）。<strong>S-01/A-03 の期待は「最後のタップの結果に落ち着く」</strong>（§6 の「未読フィルタを連打した」）で、ガードにより「連打中の後続タップは捨て、最後に確定した値が表示に残る」形で満たす。<code>SettingsRepository</code> に反転メソッドを足して原子化する案は §8 #49（<code>ToggleSavedUseCase</code> と同じ扱い）。</p>
-<p>呼び出し側（<code>HomeScreen</code>）：<code>execute()</code> の後に <code>homeScrollToTopProvider.notifier.requestAll()</code>（<strong>全ページ</strong>を先頭へ <code>jumpTo</code>。アニメーションしない。S-01/A-03・§8 #5「スクロール位置は先頭に戻す」。§5.6・§8 #27）。§4.6 の唯一の形に当てはめると <code>unawaited(() async { try { await ref.read(toggleUnreadFilterUseCaseProvider).execute(); ref.read(homeScrollToTopProvider.notifier).requestAll(); } on Object catch (e, s) { _logger.w(&#39;未読フィルタの切替に失敗&#39;, error: releaseSafeError(e), stackTrace: releaseSafeStackTrace(s)); } }())</code>（<code>requestAll()</code> は <code>try</code> の中で <code>execute()</code> の成功後に呼ぶ。失敗時は先頭へ戻さない。ログは D-04 §8 #75 の <code>releaseSafe*</code> を通す）。一覧の絞り込みは <code>unreadFilterProvider</code> の再発火で <code>homeArticlesProvider</code> が全ページ分の Stream を作り直す（S-01/ST-11「全ページ」）が、作り直しの間も前の値で描き全面ローディング（E-20）は挟まない（§4.6・§5.1.4）。</p>
+<p><strong>手順の read-modify-write は原子的でない</strong>（<code>unreadFilter()</code> と <code>setUnreadFilter()</code> の間に <code>await</code> が 1 つあり、drift の 1 往復ぶんの窓がある）。<code>await</code> せずに 2 回呼ぶと両方が同じ <code>current</code> を読んで同じ値を書き、2 回タップしたのに 1 回ぶんしか反転しない。<strong>呼び出し側（<code>HomeScreen</code> の E-02 のハンドラ）が進行中の <code>execute()</code> を無視するガードを持つ</strong>（<code>bool _togglingFilter</code> を <code>State</code> に置き、false のときだけ呼んで <code>finally</code> で戻す。§10 T-M の完了条件。<strong>ガードは §5.4 と同じく <code>unawaited(...)</code> の外側</strong>）。<strong>S-01/A-03 の期待は「最後のタップの結果に落ち着く」</strong>（§6 の「未読フィルタを連打した」）で、ガードにより「連打中の後続タップは捨て、最後に確定した値が表示に残る」形で満たす。<code>SettingsRepository</code> に反転メソッドを足して原子化する案は §8 #49（<code>ToggleSavedUseCase</code> と同じ扱い）。</p>
+<p>呼び出し側（<code>HomeScreen</code>）：<code>execute()</code> の後に <code>homeScrollToTopProvider.notifier.requestAll()</code>（<strong>全ページ</strong>を先頭へ <code>jumpTo</code>。アニメーションしない。S-01/A-03・§8 #5「スクロール位置は先頭に戻す」。§5.6・§8 #27）。§4.6 の唯一の形をガードで包んだ<strong>次の形だけを書く</strong>（<code>requestAll()</code> は <code>try</code> の中で <code>execute()</code> の成功後に呼ぶ。失敗時は先頭へ戻さない。ログは D-04 §8 #75 の <code>releaseSafe*</code> を通す）：</p>
+<pre><code class="language-dart">// HomeScreen の State。S-01/A-03（E-02 のハンドラ）
+bool _togglingFilter = false;
+
+void _onToggleUnreadFilter() {
+  if (_togglingFilter) return;   // 進行中のタップは捨てる（最後に確定した値が表示に残る。§6）
+  _togglingFilter = true;        // setState は要らない（E-02 の表示は unreadFilterProvider の値）
+  unawaited(() async {
+    try {
+      await ref.read(toggleUnreadFilterUseCaseProvider).execute();
+      ref.read(homeScrollToTopProvider.notifier).requestAll();
+    } on Object catch (e, s) {
+      _logger.w('未読フィルタの切替に失敗', error: releaseSafeError(e), stackTrace: releaseSafeStackTrace(s));
+    } finally {
+      _togglingFilter = false;
+    }
+  }());
+}</code></pre>
+<p>一覧の絞り込みは <code>unreadFilterProvider</code> の再発火で <code>homeArticlesProvider</code> が全ページ分の Stream を作り直す（S-01/ST-11「全ページ」）が、作り直しの間も前の値で描き全面ローディング（E-20）は挟まない（§4.6・§5.1.4）。</p>
 <h3 id="sec-5-9">5.9 設定画面（S-03）：通知トグル・ブラウザ選択・案内行・バージョン<a class="anchor" href="#sec-5-9">#</a></h3>
 <p><code>SettingsScreen</code>（<code>ConsumerStatefulWidget</code> + <code>WidgetsBindingObserver</code>）：<code>CupertinoNavigationBar</code>（S-03/E-01）+ <code>CupertinoListSection.insetGrouped</code> × 4（S-03 §8 #1。セクション名・説明文・行の文言はすべて S-03 §4）。</p>
 <p><strong><code>CupertinoListTile</code> の 1 行省略を解除する</strong>（S-03 §7.6「ラベルが幅に収まらないときは折り返し、行の高さが伸びる。省略はしない」）：Flutter SDK の <code>cupertino/list_tile.dart</code> は <code>title</code> と <code>subtitle</code> に渡した Widget を <code>DefaultTextStyle(maxLines: 1, overflow: TextOverflow.ellipsis, …)</code> で包む（Flutter 3.47.4 stable で確認。<code>list_tile.dart</code> の 292–293 行・351–352 行）ため、<code>Text</code> をそのまま渡すと<strong>必ず 1 行に省略される</strong>。とくに E-09 の 2 行目（「iOS の設定アプリで CurtainCall の通知を許可してください」）は既定の文字サイズでも末尾が切れ、通知許可の手順が読めない。そのため <strong><code>title</code> / <code>subtitle</code> に渡す Widget は、<code>DefaultTextStyle.of(context)</code> で現在のスタイルを取り、素の <code>DefaultTextStyle</code> コンストラクタで包み直す</strong>（<code>settings_screen.dart</code> の private ヘルパ <code>_wrappableText</code>）。<strong><code>DefaultTextStyle.merge</code> は使えない</strong>：SDK の実装が <code>maxLines: maxLines ?? parent.maxLines</code> なので <code>maxLines: null</code> を渡しても親の <code>maxLines: 1</code> がそのまま残り（Flutter 3.47.4 stable の <code>widgets/text.dart</code> で確認）、同コンストラクタの doc 自身が「祖先の <code>maxLines</code> を null で上書きすることは<strong>できない</strong>。null にするには <code>DefaultTextStyle.of</code> で現在値を取り <strong><code>DefaultTextStyle.new</code> を直接使う</strong>」と明文で禁じている。素のコンストラクタは <strong><code>maxLines</code> を渡さなければ null・<code>overflow</code> は既定の <code>TextOverflow.clip</code>・<code>softWrap</code> は既定の true</strong> になるため、これで <code>CupertinoListTile</code> の 1 行省略が外れる。<code>title</code> / <code>subtitle</code> は <code>Row</code> の <code>Expanded</code> の中にあるので、<code>maxLines</code> を解けば幅で折り返る。</p>
@@ -2207,7 +2244,7 @@ Widget _wrappableText(String data, {TextStyle? style, TextAlign? textAlign}) =&g
 );</code></pre>
 <p>シグネチャは <strong><code>Widget _wrappableText(String data, {TextStyle? style, TextAlign? textAlign})</code></strong>。<code>style</code> / <code>textAlign</code> の 2 引数は E-18 の組み立て（下記 <code>_versionTitle</code>）が値のセカンダリ色と右寄せを与えるために足すもので（§8 #53・§10 <code>T-T</code>）、<strong>拡張後も <code>maxLines</code>・<code>overflow</code> は渡さない</strong>（渡すと上の目的が壊れる）。<code>_wrappableText</code> を <code>core/ui/</code> へ寄せる閾値（2 ファイル目が使い始めた時点）は §8 #51。</p>
 <p><strong>E-18（バージョン行）は <code>additionalInfo</code> を使わない</strong>（§8 #53）：SDK は <code>additionalInfo</code> を <code>DefaultTextStyle(style: coloredStyle, maxLines: 1, child: additionalInfo)</code>（同 360 行。<code>overflow</code> を渡さないため既定の <code>TextOverflow.clip</code>）で包み、かつ <code>Row</code> の<strong>非 flex の子</strong>として置くため折り返す幅の制約が無く、Dynamic Type 最大では末尾が切れる（<code>trailing</code> も非 flex の子である点は同じ）。S-03 §7.5・§8 #20 は<strong>省略も切り詰めもしない</strong>（値を次の行に送る）と定めているため、<strong>ラベルと値の組み立てを <code>title</code> に渡す private ヘルパ <code>_versionTitle</code> に移し、1 行に収まるかを実測して 1 行（ラベル左・値右）と 2 行（ラベル左寄せ・値右寄せ）を切り替える</strong>：</p>
-<pre><code class="language-dart">// S-03 §4 E-18・§7.5。値が null（未着・失敗）ならラベルだけを返す
+<pre><code class="language-dart">// S-03 §4 E-18・§7.5。値が null（未着・失敗・空文字）ならラベルだけを返す
 static const double _versionRowGap = 8;     // 1 行に収まるときのラベルと値の最小の間隔（pt）
 static const double _versionValueGap = 2;   // 値を次の行に送ったときの行間（pt）
 
@@ -2219,21 +2256,8 @@ Widget _versionTitle(BuildContext context, {required String label, required Stri
   if (value == null) return _wrappableText(label, style: labelStyle);   // S-03 §7.5「値が未着・読み出せないとき」
   return LayoutBuilder(
     builder: (context, constraints) {
-      final scaler = MediaQuery.textScalerOf(context);
-      final fitsOneLine = _singleLineWidth(label, labelStyle, scaler) +
-              _versionRowGap +
-              _singleLineWidth(value, valueStyle, scaler) &lt;=
-          constraints.maxWidth;
-      if (fitsOneLine) {
-        // ラベルは非 flex（実測で収まることを確かめた幅）、値は残り幅いっぱいの右寄せ。
-        // 実測と実レイアウトがわずかにずれても Expanded の中で折り返るだけで、あふれも省略もしない
-        return Row(children: [
-          _wrappableText(label, style: labelStyle),
-          const SizedBox(width: _versionRowGap),
-          Expanded(child: _wrappableText(value, style: valueStyle, textAlign: TextAlign.right)),
-        ]);
-      }
-      return Column(
+      // 2 行の経路（ラベル左寄せ・値右寄せ）。幅が無制約のときもこちらへ倒す
+      Widget twoLines() =&gt; Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _wrappableText(label, style: labelStyle, textAlign: TextAlign.left),
@@ -2241,21 +2265,64 @@ Widget _versionTitle(BuildContext context, {required String label, required Stri
           _wrappableText(value, style: valueStyle, textAlign: TextAlign.right),
         ],
       );
+      // 1 行の経路は Expanded を使うため、幅が有界であること（= title が CupertinoListTile の
+      // Row の Expanded の中にあること）に依存する。その前提をコード上に残す：E-18 に
+      // additionalInfo / trailing を足す・_versionTitle を他の行へ流用する・SDK 側で title の
+      // 置き場が変わると maxWidth が infinity になり、fitsOneLine が必ず true（x &lt;= infinity）に
+      // なって「RenderFlex children have non-zero flex but incoming width constraints are
+      // unbounded」で落ちる
+      if (!constraints.hasBoundedWidth) return twoLines();
+      final fitsOneLine = _singleLineWidth(context, label, labelStyle) +
+              _versionRowGap +
+              _singleLineWidth(context, value, valueStyle) &lt;=
+          constraints.maxWidth;
+      if (!fitsOneLine) return twoLines();
+      // ラベルは非 flex（実測で収まることを確かめた幅）、値は残り幅いっぱいの右寄せ。
+      // 実測と実レイアウトがわずかにずれても Expanded の中で折り返るだけで、あふれも省略もしない
+      return Row(children: [
+        _wrappableText(label, style: labelStyle),
+        const SizedBox(width: _versionRowGap),
+        Expanded(child: _wrappableText(value, style: valueStyle, textAlign: TextAlign.right)),
+      ]);
     },
   );
 }
 
-/// 制約なしで 1 行に並べたときの幅（Dynamic Type の倍率を含む）
-double _singleLineWidth(String text, TextStyle style, TextScaler scaler) {
-  final painter = TextPainter(
-    text: TextSpan(text: text, style: style),
-    textDirection: TextDirection.ltr,
-    textScaler: scaler,
+/// `_wrappableText(text, style: style)` を、この [context] の条件で制約なしに 1 行で並べたときの幅（pt）。
+///
+/// **不変条件：実測は実描画とまったく同じ条件で行う。** `Text` が描画時に適用する上書きの集合
+/// （`DefaultTextStyle` の親スタイルとの合成・`MediaQuery.boldTextOf` が true のときの
+/// `FontWeight.bold` の merge・`maybeLineHeightScaleFactorOverrideOf` /
+/// `maybeLetterSpacingOverrideOf` / `maybeWordSpacingOverrideOf` の merge）と、`Text` が
+/// `RichText` に渡す `locale`・`textDirection`・`textScaler` を、ここでも同じ値でそろえる
+/// （Flutter 3.47.4 stable の `widgets/text.dart` 717–751 行で確認）。**片方だけに足すと実測が
+/// 実描画より狭くなり、1 行の経路を選んだのに収まらない**（§6 の「E-18 の実測と実描画がずれた」）。
+/// Flutter 側で上書きの集合が増えたときは必ずここも同時に直す。
+/// [context] には実描画と同じ subtree のもの（`_versionTitle` の `LayoutBuilder` の builder）を渡す。
+double _singleLineWidth(BuildContext context, String text, TextStyle style) {
+  final overrides = TextStyle(
+    fontWeight: MediaQuery.boldTextOf(context) ? FontWeight.bold : null,   // iOS「文字を太くする」
+    height: MediaQuery.maybeLineHeightScaleFactorOverrideOf(context),
+    letterSpacing: MediaQuery.maybeLetterSpacingOverrideOf(context),
+    wordSpacing: MediaQuery.maybeWordSpacingOverrideOf(context),
+  );
+  // TextPainter.computeWidth は layout して width を返し、finally で dispose する
+  // （Flutter 3.47.4 stable の painting/text_painter.dart 642–686 行）。自前の TextPainter は
+  // 持たない：この builder は文字サイズの変更・回転・appVersionProvider の
+  // AsyncLoading → AsyncData のたびに再実行されるため、dispose を忘れると
+  // そのたびに ui.Paragraph（ネイティブ資源）が漏れる
+  return TextPainter.computeWidth(
+    text: TextSpan(
+      text: text,
+      style: DefaultTextStyle.of(context).style.merge(style).merge(overrides),   // _wrappableText と同じ合成
+      locale: Localizations.maybeLocaleOf(context),
+    ),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
     maxLines: 1,
-  )..layout();
-  return painter.width;
+  );
 }</code></pre>
-<p><code>title</code> は <code>CupertinoListTile</code> の <code>Row</code> の <code>Expanded</code> の中にあるため、<code>LayoutBuilder</code> の <code>constraints.maxWidth</code> は<strong>そのままラベルと値に使える幅</strong>になる（<code>additionalInfo</code> / <code>trailing</code> を渡さないので取り合う相手がいない）。2 行になったときも <code>_wrappableText</code> が <code>maxLines</code> を解いているので、ラベル・値のいずれも省略されずに折り返して行の高さが伸びる（S-03 §7.5・§7.6）。<code>_versionRowGap</code>（8pt）は 1 行の経路でラベルと値の間に置く固定の間隔で、同じ値を「収まるか」の実測にも足す。1 行の経路の値を <code>Expanded</code>（右寄せ）に入れてあるため、<strong>実測と実レイアウトがわずかにずれても（フォントフォールバック等）値がその中で折り返るだけで、<code>Row</code> があふれることも省略が起きることもない</strong>。ラベルを非 flex のまま置けるのは、ラベル単独で幅を超えるときは必ず 2 行の経路（ラベルを <code>stretch</code> の <code>Column</code> に置く＝折り返す）に落ちるため。担保は §10.3 の目視 3・7（本画面は §7 により自動テストを持たない）。</p>
+<p><code>title</code> は <code>CupertinoListTile</code> の <code>Row</code> の <code>Expanded</code> の中にあるため、<code>LayoutBuilder</code> の <code>constraints.maxWidth</code> は<strong>そのままラベルと値に使える幅</strong>になる（<code>additionalInfo</code> / <code>trailing</code> を渡さないので取り合う相手がいない）。<strong>この「幅が有界である」前提はコード側にも <code>if (!constraints.hasBoundedWidth) return twoLines();</code> の 1 行で残す</strong>（散文だけに置かない。<code>additionalInfo</code> / <code>trailing</code> を足す・<code>_versionTitle</code> を他の行に流用する・SDK 側で <code>title</code> の置き場が変わると <code>maxWidth</code> が infinity になり、1 行の経路の <code>Expanded</code> が <code>RenderFlex children have non-zero flex but incoming width constraints are unbounded</code> で落ちる。<code>T-T</code> の完了条件で <code>additionalInfo:</code> / <code>trailing:</code> を E-18 に渡していないことも確認する）。2 行になったときも <code>_wrappableText</code> が <code>maxLines</code> を解いているので、ラベル・値のいずれも省略されずに折り返して行の高さが伸びる（S-03 §7.5・§7.6）。<code>_versionRowGap</code>（8pt）は 1 行の経路でラベルと値の間に置く固定の間隔で、同じ値を「収まるか」の実測にも足す。1 行の経路の値を <code>Expanded</code>（右寄せ）に入れてあるため、<strong>実測と実レイアウトがわずかにずれても（フォントフォールバック等）値がその中で折り返るだけで、<code>Row</code> があふれることも省略が起きることもない</strong>。ラベルを非 flex のまま置けるのは、ラベル単独で幅を超えるときは必ず 2 行の経路（ラベルを <code>stretch</code> の <code>Column</code> に置く＝折り返す）に落ちるため。<strong>ただし「わずかなずれ」で済むのは実測と実描画の条件がそろっている場合だけ</strong>で、<code>_singleLineWidth</code> の doc の不変条件（<code>Text</code> が適用する上書きの集合と <code>locale</code> / <code>textDirection</code> / <code>textScaler</code> を実描画と一致させる）が崩れると、1 行の経路で値がラベル横の狭い列の中で折り返り、<strong>§8 #53 が (d) として却下した見え方</strong>（S-03 §7.5 に反する）になる（§6）。担保は §10.3 の目視 3・7・<strong>8</strong>（本画面は §7 により自動テストを持たない）。</p>
 <table>
 <thead>
 <tr>
@@ -2281,7 +2348,7 @@ double _singleLineWidth(String text, TextStyle style, TextScaler scaler) {
 </tr>
 <tr>
 <td>E-18</td>
-<td><code>CupertinoListTile(title: _versionTitle(context, label: /* S-03 §4 E-18 のラベル */, value: …))</code>（<strong><code>additionalInfo</code> は渡さない</strong>。上記 <code>_versionTitle</code>・§8 #53）。<code>value</code> は <code>ref.watch(appVersionProvider).value</code> を S-03 §7.5 の書式で結合した文字列で、<code>AsyncLoading</code> / <code>AsyncError</code> の間は <strong><code>null</code></strong>（値を出さずラベルのみ。S-03 §7.5「値が未着・読み出せないとき」）。<code>onTap</code> は渡さない（タップしても何も起きない。S-03 §4 E-18）</td>
+<td><code>CupertinoListTile(title: _versionTitle(context, label: /* S-03 §4 E-18 のラベル */, value: …))</code>（<strong><code>additionalInfo</code> は渡さない</strong>。上記 <code>_versionTitle</code>・§8 #53）。<code>value</code> は <code>ref.watch(appVersionProvider).value</code> を S-03 §7.5 の書式で結合した文字列で、<code>AsyncLoading</code> / <code>AsyncError</code> の間は <strong><code>null</code></strong>（値を出さずラベルのみ。S-03 §7.5「値が未着・読み出せないとき」）。<strong><code>AppVersion.version</code> と <code>buildNumber</code> のいずれかが空文字のときも <code>value: null</code>（ラベルのみ）にする</strong>（空文字は未取得として扱う。§4.1。<code>Info.plist</code> の <code>CFBundleShortVersionString</code> が <code>$(FLUTTER_BUILD_NAME)</code> のまま解決されなかったビルドでは <code>AsyncData(AppVersion(version: &#39;&#39;, buildNumber: &#39;1&#39;))</code> が届き、素直に結合すると <code>&quot; (1)&quot;</code>・<code>&quot;1.0.0 ()&quot;</code> のような括弧だけの意味のない値が出る。S-03 §8 #20 が値を読める状態にする目的も満たさない）。<code>onTap</code> は渡さない（タップしても何も起きない。S-03 §4 E-18）</td>
 </tr>
 <tr>
 <td>A-07</td>
@@ -2703,7 +2770,7 @@ ArticleCellModel buildArticleCellModel(ArticleListItem item, {required String? F
 <pre><code class="language-dart">final now = ref.watch(minuteClockProvider).value ?? DateTime.now();
 final names = ref.watch(companyShortNamesProvider);          // core/di/providers.dart（§4.6）
 final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_providers.dart（§4.6）</code></pre>
-<p>を取り、<code>itemBuilder</code> で <code>ArticleCell(model: buildArticleCellModel(item, shortNameOf: (id) =&gt; names[id]), onTap: /* §5.3 の形。open(...) の戻り値 false で TransientNotice.show */, onToggleSaved: onToggleSaved, now: now)</code> を描く（<strong><code>onTap</code> の配線の正は §5.3 の 1 箇所</strong>で、本節には実体を書かない。<code>openArticle</code> の戻り値 <code>bool</code> を捨てると S-00/E-25 が出ず S-01/ST-20・S-02/ST-07 を満たさないため、<code>await</code> して false のときだけ <code>TransientNotice.show</code> を呼ぶ。担保は §10 T-M・T-N の完了条件（コードの形）と §10.1 の目視 18・§10.2 の目視 6。<code>onToggleSaved</code> はホームが <code>ToggleSavedUseCase</code> を §4.6 の唯一の形で呼ぶ（§5.4）、保存画面が <code>ref.read(savedListControllerProvider.notifier).toggle(item.article.id, DateTime.now().toUtc())</code>（§5.5））。<code>SavedScreen</code> では <code>item</code> は <code>SavedArticle.item</code>。<code>now</code> の変化は <code>AnchoredListView.items</code> を変えないため位置の再計算は走らない（§5.11.4）。<code>minuteClockProvider</code> が毎分流れることで、日付が変わった直後の描画で E-14 が「今日」→「昨日」に変わる（S-00 §7.3。D-04 §6「端末の日付が変わった」の引き取り）。<code>ArticleCell</code> の見た目・<code>Category.fromValue</code>・<code>formatPublishedDate</code> は D-04 §5.9。</p>
+<p>を取り、<code>itemBuilder</code> で <code>ArticleCell(model: buildArticleCellModel(item, shortNameOf: (id) =&gt; names[id]), onTap: /* §5.3 の形。open(...) の戻り値 false で TransientNotice.show */, onToggleSaved: onToggleSaved, now: now)</code> を描く（<strong><code>onTap</code> の配線の正は §5.3 の 1 箇所</strong>で、本節には実体を書かない。<code>openArticle</code> の戻り値 <code>bool</code> を捨てると S-00/E-25 が出ず S-01/ST-20・S-02/ST-07 を満たさないため、<code>await</code> して false のときだけ <code>TransientNotice.show</code> を呼ぶ。担保は §10 T-M・T-N の完了条件（コードの形）と §10.1 の目視 18・§10.2 の目視 6。<code>onToggleSaved</code> はホームが <strong>§5.4 の <code>_onToggleSaved</code></strong>（<code>_togglingIds</code> のガードの中で §4.6 の唯一の形を使う。ガード無しで <code>execute()</code> を呼ぶ形は書かない）、保存画面が <code>ref.read(savedListControllerProvider.notifier).toggle(item.article.id, DateTime.now().toUtc())</code>（§5.5））。<code>SavedScreen</code> では <code>item</code> は <code>SavedArticle.item</code>。<code>now</code> の変化は <code>AnchoredListView.items</code> を変えないため位置の再計算は走らない（§5.11.4）。<code>minuteClockProvider</code> が毎分流れることで、日付が変わった直後の描画で E-14 が「今日」→「昨日」に変わる（S-00 §7.3。D-04 §6「端末の日付が変わった」の引き取り）。<code>ArticleCell</code> の見た目・<code>Category.fromValue</code>・<code>formatPublishedDate</code> は D-04 §5.9。</p>
 <h2 id="sec-6">6. 異常系・境界<a class="anchor" href="#sec-6">#</a></h2>
 <table>
 <thead>
@@ -2765,12 +2832,12 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 </tr>
 <tr>
 <td>星の連打・二重タップ</td>
-<td><code>ToggleSavedUseCase</code> が DB の現在値で判定するため 2 回目は元に戻る。セルの表示は Stream 追従。<strong>ただし手順 1 → 2 は原子的でないため、これが成り立つのは呼び出し側が逐次化している前提のとき</strong>（<code>HomePage</code> の <code>_togglingIds</code> のガード。§5.4）。ガードが無いと 2 回のタップが両方「未保存」を読んで両方 <code>save</code> し、保存されたまま残る</td>
+<td><code>ToggleSavedUseCase</code> が DB の現在値で判定するため 2 回目は元に戻る。セルの表示は Stream 追従。<strong>ただし手順 1 → 2 は原子的でないため、これが成り立つのは呼び出し側が逐次化している前提のとき</strong>（<code>HomePage</code> の <code>_togglingIds</code> のガード。§5.4）。ガードが無いと 2 回のタップが両方「未保存」を読んで両方 <code>save</code> し、保存されたまま残る。確認は <strong>§10.1 の目視 27</strong></td>
 <td>application / presentation</td>
 </tr>
 <tr>
 <td>未読フィルタ（S-01/A-03）を連打した</td>
-<td><strong>最後のタップの結果に落ち着く。</strong> <code>ToggleUnreadFilterUseCase</code> の read-modify-write も原子的でないため、<code>HomeScreen</code> の <code>_togglingFilter</code> のガードで進行中のタップを捨てる（§5.8）。ガードが無いと 2 回のタップが同じ <code>current</code> を読んで同じ値を書き、1 回ぶんしか反転しない。捨てたタップに対する表示の変化は無い（E-02 のアイコンは <code>unreadFilterProvider</code> の値のまま）</td>
+<td><strong>最後のタップの結果に落ち着く。</strong> <code>ToggleUnreadFilterUseCase</code> の read-modify-write も原子的でないため、<code>HomeScreen</code> の <code>_togglingFilter</code> のガードで進行中のタップを捨てる（§5.8）。ガードが無いと 2 回のタップが同じ <code>current</code> を読んで同じ値を書き、1 回ぶんしか反転しない。捨てたタップに対する表示の変化は無い（E-02 のアイコンは <code>unreadFilterProvider</code> の値のまま）。確認は <strong>§10.1 の目視 28</strong></td>
 <td>presentation / application</td>
 </tr>
 <tr>
@@ -3339,8 +3406,13 @@ final openArticle = ref.read(openArticleActionProvider);     // core/di/browser_
 <td>app / presentation</td>
 </tr>
 <tr>
-<td><code>PackageInfo.fromPlatform()</code> が失敗</td>
-<td>起きない（アプリ自身のバンドル情報）。万一 <code>AsyncError</code> なら E-18 の値を出さずラベルのみ（<strong>S-03 §7.5「値が未着・読み出せないとき」</strong>。画面には何も知らせず再試行の動線も置かない）、<code>logger.w</code>。設定画面を開いた最初のフレーム（<code>AsyncLoading</code>。数ミリ秒）も同じ見え方</td>
+<td><code>PackageInfo.fromPlatform()</code> が失敗した・<strong>または <code>version</code> / <code>buildNumber</code> が空文字</strong>（<code>Info.plist</code> の <code>CFBundleShortVersionString</code> が <code>$(FLUTTER_BUILD_NAME)</code> のまま解決されなかったビルド）</td>
+<td>起きない（アプリ自身のバンドル情報）。万一 <code>AsyncError</code> なら E-18 の値を出さずラベルのみ（<strong>S-03 §7.5「値が未着・読み出せないとき」</strong>。画面には何も知らせず再試行の動線も置かない）、<code>logger.w</code>。設定画面を開いた最初のフレーム（<code>AsyncLoading</code>。数ミリ秒）も同じ見え方。<strong>空文字のときは <code>AsyncData</code> でも同じくラベルのみ</strong>にする（<code>&quot; (1)&quot;</code>・<code>&quot;1.0.0 ()&quot;</code> のような括弧だけの値を出さない。§4.1・§5.9）</td>
+<td>presentation</td>
+</tr>
+<tr>
+<td>E-18 の実測（<code>_singleLineWidth</code>）と実描画がずれて 1 行の経路で値が収まらなかった</td>
+<td>値は 1 行の経路の <code>Expanded</code> の中で 2 行になる（あふれも省略もしない）が、<strong>ラベル横の狭い列で割れる見え方</strong>になり S-03 §7.5「値を次の行に送る（右寄せのまま）」を満たさない（§8 #53 が (d) として却下した見え方）。<strong><code>_singleLineWidth</code> が <code>Text</code> の適用する上書き（<code>boldText</code> の <code>FontWeight.bold</code>・<code>letterSpacing</code> / <code>wordSpacing</code> / 行高の上書き）と <code>locale</code> / <code>textDirection</code> / <code>textScaler</code> を実描画と一致させることでこの経路に落ちないようにする</strong>（§5.9 の不変条件）。到達する代表例は iOS の「文字を太くする」を ON にして文字サイズを中〜大にした帯。確認は §10.3 の目視 8</td>
 <td>presentation</td>
 </tr>
 <tr>
@@ -3684,7 +3756,15 @@ Future&lt;void&gt; seedArticles(
 </tr>
 <tr>
 <td>E-18（バージョン行）の 1 行 / 2 行の切替（<code>_versionTitle</code> の実測。§5.9・§8 #53）</td>
-<td><strong>設定画面（S-03）は本節冒頭のとおり自動テストを持たない</strong>（<code>SettingsScreen</code> の状態・レイアウトは対象外）。<code>_singleLineWidth</code> は <code>TextStyle</code> と <code>TextScaler</code> を受ける<strong>レイアウトの実測</strong>なので純粋関数の例外（CLAUDE.md の列挙）には足さない。担保は <strong>§10.3 の目視 3（2 行に送って全桁読める）と目視 7（既定サイズで 1 行・ラベル左・値右）</strong>、および <code>settings_screen.dart</code> に <code>additionalInfo:</code> が残っていないこと（§10 <code>T-T</code> の完了条件）</td>
+<td><strong>設定画面（S-03）は本節冒頭のとおり自動テストを持たない</strong>（<code>SettingsScreen</code> の状態・レイアウトは対象外）。<code>_singleLineWidth</code> は <code>BuildContext</code> から <code>MediaQuery</code> / <code>Directionality</code> / <code>Localizations</code> / <code>DefaultTextStyle</code> を読む<strong>レイアウトの実測</strong>なので純粋関数の例外（CLAUDE.md の列挙）には足さない。担保は <strong>§10.3 の目視 3（2 行に送って全桁読める）・目視 7（既定サイズで 1 行・ラベル左・値右）・目視 8（「文字を太くする」ON で数段変えても値がラベル横で折り返さない）</strong>、および <code>settings_screen.dart</code> に <code>additionalInfo:</code> / <code>trailing:</code> が残っていないこと（§10 <code>T-T</code> の完了条件）</td>
+</tr>
+<tr>
+<td>ホームの星（S-00/A-11）の連打を <code>_togglingIds</code> で逐次化すること（§5.4・§6・§8 #49）</td>
+<td><code>ToggleSavedUseCase</code> 側は <code>group(&#39;保存と解除&#39;)</code> が DB の現在値でのトグルを覆うが、<strong>手順 1 → 2 の非原子性を埋めるのは presentation のガード</strong>なのでテストで差が出ない。担保は §10 T-M の完了条件（<code>_togglingIds</code> のコードの形）と <strong>§10.1 の目視 27</strong></td>
+</tr>
+<tr>
+<td>未読フィルタ（S-01/A-03）の連打を <code>_togglingFilter</code> で逐次化すること（§5.8・§6・§8 #49）</td>
+<td>同上（<code>ToggleUnreadFilterUseCase</code> の read-modify-write も原子的でない）。担保は §10 T-M の完了条件（<code>_togglingFilter</code> のコードの形）と <strong>§10.1 の目視 28</strong></td>
 </tr>
 <tr>
 <td>S-00/E-25 の抑止 2 条件（<code>unavailable</code> 中・<code>suppressed</code>）と <code>sequence</code> の消費規則（§5.6）</td>
@@ -3912,7 +3992,7 @@ Future&lt;void&gt; seedArticles(
 </tr>
 <tr>
 <td>22</td>
-<td><code>SettingsRepository</code> は通知・ブラウザ・未読フィルタの 3 関心・10 メソッドを 1 インターフェースに持つ（§4.3）。関心ごとに分割しない</td>
+<td><code>SettingsRepository</code> は通知・ブラウザ・未読フィルタの 3 関心・<strong>9 メソッド</strong>（通知 3 + ブラウザ 3 + 未読フィルタ 3。§4.3）を 1 インターフェースに持つ。関心ごとに分割しない</td>
 <td><code>NotificationSettingsRepository</code>・<code>BrowserSettingsRepository</code>・<code>UnreadFilterRepository</code> に分ける（D-04 §8 #42 の「肥大化したら分割」の適用）</td>
 <td>3 関心とも <code>settings</code> テーブル 1 つの <code>key</code> / <code>value</code> 行で、具象は <code>DriftSettingsRepository</code> 1 つ・トランザクション境界も 1 つ。分けても具象と Provider が 3 倍になるだけで、利用側の UseCase はそれぞれ 1〜2 メソッドしか呼ばない（I の趣旨「不要なメソッドに依存しない」は、UseCase が受け取る型を絞らなくてもテストのスタブが <code>SettingsRepository</code> 実物の in-memory drift で済むため実害が無い）。D-04 #42 が分けたのは <code>articles</code> の同期系と閲覧系で、書き込みの性質（トランザクション・件数）が違う場合。<code>feed_*</code> を足さない規則（§4.3）は保つ（レビュー第 1 周 M-14）</td>
 </tr>
@@ -4076,7 +4156,7 @@ Future&lt;void&gt; seedArticles(
 <td>49</td>
 <td>読み書きの原子性が無い 2 つの UseCase（<code>ToggleSavedUseCase</code> の <code>isSaved</code> → <code>remove</code>/<code>save</code>、<code>ToggleUnreadFilterUseCase</code> の <code>unreadFilter</code> → <code>setUnreadFilter</code>）は、<strong>Repository に反転メソッドを足して原子化せず、呼び出し側のガード（進行中の <code>execute()</code> を無視する）で逐次化する</strong>（§5.4・§5.8）</td>
 <td>(a) <code>SavedArticleRepository.toggle(id, savedAt:)</code> / <code>SettingsRepository.toggleUnreadFilter()</code> を足し、1 文の SQL（<code>INSERT … ON CONFLICT DO DELETE</code> 相当 / <code>value = CASE WHEN value = &#39;1&#39; THEN &#39;0&#39; ELSE &#39;1&#39; END</code> の upsert）で原子化する／(b) 何もしない（連打で取りこぼす）</td>
-<td>(a) は<strong>戻り値の意味が変わる</strong>：<code>ToggleSavedUseCase</code> は「保存したか解除したか」を返す契約（§5.4）なので、1 文にするには <code>RETURNING</code> か追加の <code>SELECT</code> が要り、後者では原子性が戻らない。<code>settings</code> 側も「未知の値は false 扱い」（§4.3）の規則を SQL の <code>CASE</code> に二重に書くことになり、規則の置き場が domain（<code>SettingsRepository</code> の doc）と SQL の 2 箇所に割れる。<strong>ガードは 1 画面 1 フィールドで済み、取りこぼしの窓（drift の 1 往復）を完全に閉じる</strong>（<code>await</code> 中の次のタップを捨てるため、原子化と違って「2 回タップして 2 回反転する」は起こらないが、S-00/A-11 も S-01/A-03 も「最後のタップの結果に落ち着く」しか定めていない）。(b) は星が保存されたまま残る・フィルタが 1 回ぶんしか反転しないという利用者に見える不具合になる。<strong>原子化が必要になる（複数の画面から同時に呼ぶようになる）のは、保存のトグルがホーム以外からも即時で呼ばれるようになった時点</strong>で、そのときに (a) を再検討する</td>
+<td>(a) は<strong>戻り値の意味が変わる</strong>：<code>ToggleSavedUseCase</code> は「保存したか解除したか」を返す契約（§5.4）なので、1 文にするには <code>RETURNING</code> か追加の <code>SELECT</code> が要り、後者では原子性が戻らない。<code>settings</code> 側も「未知の値は false 扱い」（§4.3）の規則を SQL の <code>CASE</code> に二重に書くことになり、規則の置き場が domain（<code>SettingsRepository</code> の doc）と SQL の 2 箇所に割れる。<strong>ガードは 1 画面 1 フィールドで済み、取りこぼしの窓（drift の 1 往復）を完全に閉じる</strong>（<code>await</code> 中の次のタップを捨てるため、原子化と違って「2 回タップして 2 回反転する」は起こらないが、S-00/A-11 も S-01/A-03 も「最後のタップの結果に落ち着く」しか定めていない）。(b) は星が保存されたまま残る・フィルタが 1 回ぶんしか反転しないという利用者に見える不具合になる。<strong>原子化が必要になる（複数の画面から同時に呼ぶようになる）のは、保存のトグルがホーム以外からも即時で呼ばれるようになった時点</strong>で、そのときに (a) を再検討する。<strong>適用条件（この時点を誰がどう検出するか）</strong>：<code>ToggleSavedUseCase</code> / <code>ToggleUnreadFilterUseCase</code> に<strong>新しい呼び出し元を足すタスクは、そのタスクの完了条件にガードの有無を書く</strong>（§10 T-M が <code>_togglingIds</code>・<code>_togglingFilter</code> について書いているのと同じ形）。<strong>書けない＝ガードを置く主体が決まらない場合は、その時点で (a) の原子化へ移る</strong>（ガードは「1 画面 1 フィールド」が前提で、呼び出し元が 2 画面になるとフィールドを共有できず前提が崩れるため）。§5.4・§5.8・§7 の 2 行・§10.1 の目視 27・28</td>
 </tr>
 <tr>
 <td>50</td>
@@ -4098,9 +4178,9 @@ Future&lt;void&gt; seedArticles(
 </tr>
 <tr>
 <td>53</td>
-<td><strong>E-18（バージョン行）は <code>CupertinoListTile.additionalInfo</code> を使わず、ラベルと値の組み立てを <code>title</code> に渡す private ヘルパ <code>_versionTitle</code> に移す</strong>：<code>LayoutBuilder</code> + <code>TextPainter</code> で「ラベル + 間隔 + 値」が 1 行に収まるかを実測し、収まるなら <code>Row</code>（ラベルは非 flex で左、値は <code>Expanded</code> の右寄せ）、収まらないなら <code>Column</code>（ラベル左寄せ・値右寄せの 2 行）にする。値が <code>null</code>（未着・失敗）ならラベルだけ（§5.9・§10.3 の目視 3・7）。<strong>組み立てに使う <code>_wrappableText</code> は <code>style</code> / <code>textAlign</code> の 2 引数を受け取る形に拡張するが、<code>maxLines</code>・<code>overflow</code> は渡さない</strong>（素の <code>DefaultTextStyle</code> コンストラクタのまま。<code>DefaultTextStyle.merge</code> に書き換えると親の <code>maxLines: 1</code> が残って折り返さない。§5.9・§8 #51）</td>
+<td><strong>E-18（バージョン行）は <code>CupertinoListTile.additionalInfo</code> を使わず、ラベルと値の組み立てを <code>title</code> に渡す private ヘルパ <code>_versionTitle</code> に移す</strong>：<code>LayoutBuilder</code> + <code>TextPainter.computeWidth</code> で「ラベル + 間隔 + 値」が 1 行に収まるかを実測し、収まるなら <code>Row</code>（ラベルは非 flex で左、値は <code>Expanded</code> の右寄せ）、収まらないなら <code>Column</code>（ラベル左寄せ・値右寄せの 2 行）にする。値が <code>null</code>（未着・失敗・<strong>空文字</strong>）ならラベルだけ（§5.9・§10.3 の目視 3・7・8）。<strong>実測は実描画とまったく同じ条件で行い</strong>（<code>Text</code> が適用する <code>boldText</code> の <code>FontWeight.bold</code>・<code>letterSpacing</code> / <code>wordSpacing</code> / 行高の上書き・<code>DefaultTextStyle</code> との合成と、<code>locale</code> / <code>textDirection</code> / <code>textScaler</code>。§5.9 の <code>_singleLineWidth</code> の不変条件）、<strong>幅が無制約のときは 1 行の経路に入らない</strong>（<code>constraints.hasBoundedWidth</code>）。<strong>組み立てに使う <code>_wrappableText</code> は <code>style</code> / <code>textAlign</code> の 2 引数を受け取る形に拡張するが、<code>maxLines</code>・<code>overflow</code> は渡さない</strong>（素の <code>DefaultTextStyle</code> コンストラクタのまま。<code>DefaultTextStyle.merge</code> に書き換えると親の <code>maxLines: 1</code> が残って折り返さない。§5.9・§8 #51）</td>
 <td><strong>(a)</strong> <code>additionalInfo</code> のままにし、E-18 の値だけ末尾の省略を許す（2026-10-04 以前の本書・旧 §9 Q-1 の推奨）／<strong>(b)</strong> <code>title</code> + <code>subtitle</code> の縦並びにする（常に 2 行。値は左寄せ）／<strong>(c)</strong> 値を <code>trailing</code> に移す／<strong>(d)</strong> <code>title</code> に <code>Row</code> + <code>Flexible</code>（値を <code>TextAlign.right</code>・<code>maxLines: null</code>）を組む／<strong>(e)</strong> <code>Wrap</code>（<code>WrapAlignment.end</code> または <code>spaceBetween</code>）</td>
-<td><strong>(a) は S-03 §8 #20 が明示的に却下した案</strong>で、採ると承認済みの画面定義書（§7.5「省略や切り詰めはしない」・§7.6 に例外を設けない）を<strong>設計書側で下方修正する</strong>ことになる（CLAUDE.md「画面定義書が上流」）。(b) は §4 E-18「右にセカンダリ色で値」と §7.5「1 行に収まるときは同じ行の右」に反する（短い値でも常に 2 行になり、iOS 設定アプリの見た目から外れる）。(c) は <code>trailing</code> も <code>Row</code> の<strong>非 flex の子</strong>で折り返す幅が無く、<code>additionalInfo</code> と同じ結論になる（S-03 §8 #20 の (c) と同じ）。(d)（実測せず常に <code>Row</code> で組む案）は省略は起きないが、値が<strong>ラベルの横の狭い列の中で</strong>折り返すだけで「次の行に送る」にならず、Dynamic Type 最大ではラベルと値が 2 本の細い列に割れて読み順が崩れる（§7.5「右寄せのまま次の行」と食い違う）。<strong>採った形の 1 行の経路が値を <code>Expanded</code> に入れているのは、実測で収まると分かったときの安全網</strong>（実レイアウトのわずかなずれであふれない）であり、収まらないときは 2 行の経路に落ちる点が (d) と違う。(e) は <code>WrapAlignment.end</code> だと 1 行に収まるときにラベルまで右端に寄り（§4 E-18「左にラベル」に反する）、<code>spaceBetween</code> だと 2 行目に落ちた値が<strong>左寄せ</strong>になる（§7.5「右寄せのまま」に反する）。<strong>条件分岐は実測でしか決まらない</strong>（Flutter の標準部品に「収まらなければ次の行、収まれば両端」という配置は無い）ため、<code>LayoutBuilder</code> + <code>TextPainter</code> の 1 箇所で測る形にする。測る対象は 2 つの文字列だけで I/O も状態も持たず、<code>title</code> が <code>Expanded</code> の中にあるので <code>constraints.maxWidth</code> がそのまま使える。<strong>本画面は §7 により自動テストを持たない</strong>ため担保は §10.3 の目視 3（2 行に送って全桁読めること）と目視 7（既定の文字サイズで 1 行・ラベル左・値右であること）。実装は <code>settings_screen.dart</code> の 1 箇所で、<strong>T-O（実タスク T-35）は <code>done</code> なので追随を §10 の <code>T-T</code> として切る</strong>（§8.1「実装（片付け）」）</td>
+<td><strong>(a) は S-03 §8 #20 が明示的に却下した案</strong>で、採ると承認済みの画面定義書（§7.5「省略や切り詰めはしない」・§7.6 に例外を設けない）を<strong>設計書側で下方修正する</strong>ことになる（CLAUDE.md「画面定義書が上流」）。(b) は §4 E-18「右にセカンダリ色で値」と §7.5「1 行に収まるときは同じ行の右」に反する（短い値でも常に 2 行になり、iOS 設定アプリの見た目から外れる）。(c) は <code>trailing</code> も <code>Row</code> の<strong>非 flex の子</strong>で折り返す幅が無く、<code>additionalInfo</code> と同じ結論になる（S-03 §8 #20 の (c) と同じ）。(d)（実測せず常に <code>Row</code> で組む案）は省略は起きないが、値が<strong>ラベルの横の狭い列の中で</strong>折り返すだけで「次の行に送る」にならず、Dynamic Type 最大ではラベルと値が 2 本の細い列に割れて読み順が崩れる（§7.5「右寄せのまま次の行」と食い違う）。<strong>採った形の 1 行の経路が値を <code>Expanded</code> に入れているのは、実測で収まると分かったときの安全網</strong>（実レイアウトのわずかなずれであふれない）であり、収まらないときは 2 行の経路に落ちる点が (d) と違う。(e) は <code>WrapAlignment.end</code> だと 1 行に収まるときにラベルまで右端に寄り（§4 E-18「左にラベル」に反する）、<code>spaceBetween</code> だと 2 行目に落ちた値が<strong>左寄せ</strong>になる（§7.5「右寄せのまま」に反する）。<strong>条件分岐は実測でしか決まらない</strong>（Flutter の標準部品に「収まらなければ次の行、収まれば両端」という配置は無い）ため、<code>LayoutBuilder</code> + <code>TextPainter</code> の 1 箇所で測る形にする。測る対象は 2 つの文字列だけで I/O も状態も持たず、<code>title</code> が <code>Expanded</code> の中にあるので <code>constraints.maxWidth</code> がそのまま使える。<strong>本画面は §7 により自動テストを持たない</strong>ため担保は §10.3 の目視 3（2 行に送って全桁読めること）・目視 7（既定の文字サイズで 1 行・ラベル左・値右であること）・<strong>目視 8</strong>（「文字を太くする」ON で文字サイズを数段変えても値がラベル横で折り返さないこと＝実測と実描画の条件がそろっていること）。<strong><code>TextPainter</code> を自前で持たず <code>TextPainter.computeWidth</code> を使う</strong>のは、<code>LayoutBuilder</code> の builder が文字サイズの変更・回転・<code>appVersionProvider</code> の <code>AsyncLoading</code> → <code>AsyncData</code> のたびに再実行され、<code>dispose</code> を忘れると毎回 <code>ui.Paragraph</code>（ネイティブ資源）が漏れるため（<code>computeWidth</code> は内部で <code>try</code> / <code>finally</code> により <code>dispose</code> する。Flutter 3.47.4 stable の <code>painting/text_painter.dart</code> 642–686 行）。実装は <code>settings_screen.dart</code> の 1 箇所で、<strong>T-O（実タスク T-35）は <code>done</code> なので追随を §10 の <code>T-T</code> として切る</strong>（§8.1「実装（片付け）」）</td>
 </tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
@@ -4350,7 +4430,7 @@ Future&lt;void&gt; seedArticles(
 <td><code>articles/presentation/home_tab_bar.dart</code>・<code>home_page.dart</code>・<code>home_providers.dart</code>・<strong><code>home_status.dart</code>（§5.1.1・§8 #39）</strong>、<code>lib/app/notification_tap_handler.dart</code>、<code>core/ui/article/article_cell_model_builder.dart</code>、<code>test/core/ui/article/article_cell_model_builder_test.dart</code>、<strong><code>test/features/articles/presentation/home_status_test.dart</code>（§7）</strong>。改修：<code>home_screen.dart</code>、<code>lib/app/app_lifecycle_sync.dart</code>（<code>NotificationTapHandler</code> を子に挟む）、<strong><code>core/ui/list/anchored_list_view.dart</code></strong>（§5.11.4 手順 0 の据え置きと再試行の実装と、library doc を §7 の 9 項目に揃えること。<strong>T-H3 / T-Q は実タスク T-28 / T-41 として完了済みで引き取れないため T-M が持つ</strong>。§8 #52）。<strong><code>core/ui/status/transient_notice.dart</code> は触らない</strong>（<code>static void show(BuildContext context, {required String message})</code> は D-04 §5.9 が持ち T-F2a が実装済み。§5.6）。新規 8 + 改修 3</td>
 <td><code>lib/features/articles/presentation/</code>、<code>lib/app/</code>、<code>lib/core/ui/article/</code>、<code>lib/core/ui/list/</code>、<code>test/core/ui/article/</code>、<code>test/features/articles/presentation/</code></td>
 <td>T-H3、T-I、T-J、T-K、T-L、<strong>D-04 §10 T-F3</strong>（<code>FullView</code> 6 値・<code>FullErrorKind</code> 3 値・<code>resolveArticleCount</code>（<code>retryRequested</code>）・<code>countRetryRequestedProvider</code> を用意し、<code>lib/app/app_lifecycle_sync.dart</code> を同じく改修するため。D-04 §8.1）、<strong>D-04 §10 T-F5a</strong>（<code>releaseSafeError</code> の追加と <code>lib/</code> 18 箇所への一括適用（D-04 §8 #75）。<code>app_lifecycle_sync.dart</code>・<code>notification_tap_providers.dart</code> を改修するため<strong>T-F3 とも並行不可</strong>）、<strong>D-04 §10 T-F5b</strong>（<code>NotificationTap</code> の identity 化（D-04 §8 #70）が §5.7 手順 2・§6「通知が連続して届き連打された」の前提。<strong>本タスクの着手前に完了していること</strong>。D-04 §10 が「順序は T-F5a → T-F5b」「T-F5b は T-F5a の後・T-33 の着手前」と定めており、T-F5b だけを先に走らせると <code>sync_controller.dart</code> のログ行が <code>releaseSafeError</code> 不在でコンパイルできない。D-04 §8.1）</td>
-<td>品質ゲート通過。<strong>§7 の <code>home_status_test.dart</code> のケースをすべて含み、<code>home_screen.dart</code> / <code>home_page.dart</code> に <code>resolveListStatus</code> の直接呼び出しと <code>AsyncValue</code> の <code>switch</code> が無いこと（判定は <code>home_status.dart</code> の 3 関数だけが持つ。§8 #39）。<code>home_screen.dart</code> の中で <code>countRetryRequestedProvider.notifier.retry()</code> が現れるのは <code>_retry()</code> の中だけ、<code>ref.invalidate(homeArticlesProvider)</code> が現れるのは <code>_retry()</code> と <code>_reloadArticlesIfDead()</code>（§5.1.5 の張り直し）の 2 か所だけであること（§5.6・§8 #37 と同じ文言）。<code>home_screen.dart</code> の <code>PageView.builder</code> に <strong><code>findChildIndexCallback</code> が渡され、<code>_warpedOrder</code> 上の slot index（逆写像）を返していること</strong>（<code>key</code> だけの実装を通さない。§5.1.3「ページ State の追随」・§8 #46）。<code>_finishTabAnimation</code> の末尾に <strong><code>select(landing, source: TabSelectSource.user)</code> の無条件の呼び出しがあること</strong>（<code>onPageChanged</code> に依存しない。§8 #43）。<strong>星のハンドラに <code>Set&lt;String&gt; _togglingIds</code> のガード、未読フィルタ（E-02）のハンドラに <code>bool _togglingFilter</code> のガードがあること</strong>（<code>ToggleSavedUseCase</code> / <code>ToggleUnreadFilterUseCase</code> の read-modify-write は原子的でない。§5.4・§5.8・§6・§8 #49）。</strong><code>anchored_list_view.dart</code> に §5.11.4 手順 0 の据え置きと再試行（<code>_pendingItemsChanged</code>・<code>_pendingFrames</code>・<code>_maxPendingFrames</code>（2）・<code>_retryDeferredItemsChange()</code>・<code>_requestScrollToTopOnLayout()</code>）が実装され、library doc が §7 の 9 項目を過不足なく列挙していること**（§8 #52・§5.11.6）。<strong><code>ArticleCell.onTap</code> が <code>open(...)</code>（<code>openArticleActionProvider</code> の関数）の戻り値を <code>await</code> して受け取り、false のときだけ <code>TransientNotice.show</code> を呼んでいること</strong>（戻り値を捨てる <code>unawaited(...)</code> の形を通さない。§5.3 が配線の正・§5.12・§8 #34。S-01/ST-20）。<strong>§10.1 の目視（1〜25）をシミュレータで 1 項目ずつ確認する</strong></td>
+<td>品質ゲート通過。<strong>§7 の <code>home_status_test.dart</code> のケースをすべて含み、<code>home_screen.dart</code> / <code>home_page.dart</code> に <code>resolveListStatus</code> の直接呼び出しと <code>AsyncValue</code> の <code>switch</code> が無いこと（判定は <code>home_status.dart</code> の 3 関数だけが持つ。§8 #39）。<code>home_screen.dart</code> の中で <code>countRetryRequestedProvider.notifier.retry()</code> が現れるのは <code>_retry()</code> の中だけ、<code>ref.invalidate(homeArticlesProvider)</code> が現れるのは <code>_retry()</code> と <code>_reloadArticlesIfDead()</code>（§5.1.5 の張り直し）の 2 か所だけであること（§5.6・§8 #37 と同じ文言）。<code>home_screen.dart</code> の <code>PageView.builder</code> に <strong><code>findChildIndexCallback</code> が渡され、<code>_warpedOrder</code> 上の slot index（逆写像）を返していること</strong>（<code>key</code> だけの実装を通さない。§5.1.3「ページ State の追随」・§8 #46）。<code>_finishTabAnimation</code> の末尾に <strong><code>select(landing, source: TabSelectSource.user)</code> の無条件の呼び出しがあること</strong>（<code>onPageChanged</code> に依存しない。§8 #43）。<strong>星のハンドラに <code>Set&lt;String&gt; _togglingIds</code> のガード、未読フィルタ（E-02）のハンドラに <code>bool _togglingFilter</code> のガードがあること</strong>（<code>ToggleSavedUseCase</code> / <code>ToggleUnreadFilterUseCase</code> の read-modify-write は原子的でない。§5.4・§5.8・§6・§8 #49）。</strong><code>anchored_list_view.dart</code> に §5.11.4 手順 0 の据え置きと再試行（<code>_pendingItemsChanged</code>・<code>_pendingFrames</code>・<code>_maxPendingFrames</code>（2）・<code>_retryDeferredItemsChange()</code>・<code>_requestScrollToTopOnLayout()</code>）が実装され、library doc が §7 の 9 項目を過不足なく列挙していること**（§8 #52・§5.11.6）。<strong><code>ArticleCell.onTap</code> が <code>open(...)</code>（<code>openArticleActionProvider</code> の関数）の戻り値を <code>await</code> して受け取り、false のときだけ <code>TransientNotice.show</code> を呼んでいること</strong>（戻り値を捨てる <code>unawaited(...)</code> の形を通さない。§5.3 が配線の正・§5.12・§8 #34。S-01/ST-20）。<strong>§10.1 の目視（1〜25・27・28。26 は欠番）をシミュレータで 1 項目ずつ確認する</strong></td>
 </tr>
 <tr>
 <td>T-N</td>
@@ -4368,7 +4448,7 @@ Future&lt;void&gt; seedArticles(
 <td><code>settings/presentation/settings_providers.dart</code>。改修：<code>settings_screen.dart</code>。新規 1 + 改修 1</td>
 <td><code>lib/features/settings/presentation/</code></td>
 <td>T-H3、T-I、T-K、T-L</td>
-<td>品質ゲート通過。<strong>§10.3 の目視（1〜7。うち 3 と 7 は <code>T-T</code> が持つ。§8 #53）をシミュレータで 1 項目ずつ確認する</strong>（本画面は §7 により自動テストを持たないため、担保は目視と <code>settings_screen.dart</code> のコードの形だけ）。T-M・T-N と並行可</td>
+<td>品質ゲート通過。<strong>§10.3 の目視（1〜8。うち 3・7・8 は <code>T-T</code> が持つ。§8 #53）をシミュレータで 1 項目ずつ確認する</strong>（本画面は §7 により自動テストを持たないため、担保は目視と <code>settings_screen.dart</code> のコードの形だけ）。T-M・T-N と並行可</td>
 </tr>
 <tr>
 <td>T-Q</td>
@@ -4395,7 +4475,7 @@ Future&lt;void&gt; seedArticles(
 <td>なし（<code>lib/features/settings/presentation/settings_screen.dart</code> の改修のみ。改修 1）</td>
 <td><code>lib/features/settings/presentation/</code></td>
 <td>T-O 完了済み（実タスク T-35 が <code>done</code> のため、本書の反映後に本タスクだけを切る）</td>
-<td>品質ゲート通過。<strong><code>settings_screen.dart</code> に <code>additionalInfo:</code> が 1 箇所も残っていないこと</strong>（E-18 は <code>title: _versionTitle(...)</code> で組む。§5.9・§8 #53）。<code>_wrappableText</code> が <code>style</code> / <code>textAlign</code> を受け取り、<strong>拡張後も素の <code>DefaultTextStyle</code> コンストラクタのままで <code>maxLines</code>・<code>overflow</code> を渡していないこと</strong>（<code>DefaultTextStyle.merge</code> に書き換えると親の <code>maxLines: 1</code> が残り S-03 §7.6 を満たさない。§5.9・§8 #51・#53）。<code>_versionTitle</code> が値 <code>null</code> のときラベルだけを返すこと（S-03 §7.5）。<strong>§10.3 の目視 3 と 7 をシミュレータで確認する</strong>（既定の文字サイズと Dynamic Type 最大の 2 通り）。触るファイルが他タスクと重ならないため T-M・T-N・T-S と並行可</td>
+<td>品質ゲート通過。<strong><code>settings_screen.dart</code> の E-18 の行に <code>additionalInfo:</code> も <code>trailing:</code> も渡していないこと</strong>（E-18 は <code>title: _versionTitle(...)</code> だけで組む。<code>trailing</code> を渡すと <code>title</code> が幅を取り合う相手を持ち、<code>_singleLineWidth</code> が前提にする <code>title</code> の <code>maxWidth</code>（<code>constraints.hasBoundedWidth</code>）が崩れる。<strong>E-11〜E-13 などブラウザ選択のチェックマークの <code>trailing:</code> は対象外で、E-18 の行に限る</strong>。§5.9・§8 #53）。<code>_wrappableText</code> が <code>style</code> / <code>textAlign</code> を受け取り、<strong>拡張後も素の <code>DefaultTextStyle</code> コンストラクタのままで <code>maxLines</code>・<code>overflow</code> を渡していないこと</strong>（<code>DefaultTextStyle.merge</code> に書き換えると親の <code>maxLines: 1</code> が残り S-03 §7.6 を満たさない。§5.9・§8 #51・#53）。<code>_versionTitle</code> が値 <code>null</code> のときラベルだけを返すこと（S-03 §7.5）。<strong>§10.3 の目視 3・7・8 をシミュレータで確認する</strong>（既定の文字サイズ・Dynamic Type 最大・<strong>「文字を太くする」ON での中〜最大の数段</strong>。目視 8 は <code>_singleLineWidth</code> の実測が実描画と一致していることの唯一の確認手段で、目視 3・7 の 2 点だけでは太字 ON の境界帯が掛からない）。触るファイルが他タスクと重ならないため T-M・T-N・T-S と並行可</td>
 </tr>
 <tr>
 <td>T-R</td>
@@ -4439,6 +4519,8 @@ Future&lt;void&gt; seedArticles(
 <li><strong>上部タブを非隣接タップしてワープのアニメーションが走っている最中に、(a) 別の上部タブを続けてタップすると最後にタップしたタブに落ち着くこと</strong>（並びが壊れて別のページに着地しない。§5.1.3「タブのタップ（A-01）」・§8 #43）、<strong>(b) 通知タップ相当を流すと、アニメーションの完了後に通知先の団体タブが選ばれたままになること。ただしその最中にさらに別の上部タブをタップしたときは、最後にタップしたタブに落ち着くこと</strong>（利用者のタップ先で通知が上書きされず、通知の後のタップは利用者が勝つ。S-01 §5.3 ST-15・§5.1.3「通知由来の変化を取りこぼさない」・§8 #43）、<strong>(c) アニメーションの最中に下線が中間のタブへ動かず、目的のタブに出たままであること</strong>（§5.1.3「ワープ中の <code>onPageChanged</code> を捨てる」「下線位置の入力」）、<strong>(d) その最中に中間のタブ（並べ替えで隣に来ているタブ）をタップしても無視されず、そのタブに切り替わること</strong>（A-10 と誤判定しない。§6）、<strong>(e) 非隣接タップの前後で、経由したタブ（および元のタブ）のスクロール位置が保たれていること</strong>（<code>ValueKey</code> + <code>findChildIndexCallback</code> による Element の移送。key だけでは State が破棄され、着地したページが先頭から出る。§5.1.3「ページ State の追随」・§8 #46・§6）</li>
 <li><strong>記事が 1 件以上ある団体タブで未読フィルタ ON にして全件を既読にすると、そのページに「未読の記事はありません」（S-01/ST-05）が出る。記事 0 件の団体タブでは「記事がありません」（ST-04）が出る。機内モードにしても（ページ側の判定が <code>offline</code> に落ちても）空白にならず同じ文言が出ること</strong>（<code>homePageListStateOf</code> と <code>showEmpty</code> の配線。§8 #41・#42）</li>
 <li><strong>（欠番）</strong> 一覧 Stream の張り直しの目視（§5.1.5・§8 #40）。完了条件に置かない（<strong>§8 #47</strong>）。番号は詰めない</li>
+<li><strong>記事セルの星（S-00/A-11）を素早く 2 回タップすると枠線の星に戻り、保存されたまま残らないこと</strong>（<code>_togglingIds</code> のガード。ガードが無いと両方のタップが「未保存」を読んで両方 <code>save</code> し塗りつぶしのまま残る。§5.4・§6・§8 #49）</li>
+<li><strong>未読フィルタ（S-01/A-03）を素早く 2 回タップしても E-02 のアイコンと一覧の内容が一致し、1 回ぶんしか反転しない状態にならないこと</strong>（<code>_togglingFilter</code> のガード。§5.8・§6・§8 #49）</li>
 </ol>
 <p>値を流した後に Stream を失敗させる再現手段が無いため、26 は完了条件に置かない（<strong>§8 #47</strong>）。</p>
 <h3 id="sec-10-2">10.2 T-N の目視項目<a class="anchor" href="#sec-10-2">#</a></h3>
@@ -4456,7 +4538,7 @@ Future&lt;void&gt; seedArticles(
 <p><strong>値を流した後に <code>watchAll()</code> の Stream を失敗させる目視（直前の一覧を残すこと・<code>_onEnter()</code> の張り直し）は完了条件に置かない</strong>（再現手段が無いため。<strong>§8 #47</strong>）。</p>
 <p><strong>確定した解除を <code>_fromDb</code> から取り除くことの目視も完了条件に置かない</strong>（値を流した後に <code>watchAll()</code> を失敗させないと差が出ないため。<strong>§8 #47</strong>）。健全な端末では、取り除かない実装でも保存タブへ戻る途中で <code>watchAll()</code> の再発火が <code>_fromDb</code> を DB の内容に更新するため、<strong>実装に依らず「復活していない」ように見えてしまう</strong>（差が出るのは購読が値つきエラーで終了している端末だけで、その状態は §8 #47 のとおり作れない）。<strong>7 は欠番</strong>。担保は §10 T-N の完了条件（<code>_onLeave()</code> の完了処理が <code>execute()</code> の戻り値だけを使うというコードの形）と、<code>CommitSavedChangesUseCase</code> の <code>group(&#39;確定&#39;)</code>（§7）が戻り値の内容を覆うこと。</p>
 <h3 id="sec-10-3">10.3 T-O の目視項目<a class="anchor" href="#sec-10-3">#</a></h3>
-<p>シミュレータで 1 項目ずつ確認する（T-O の完了条件）。番号の扱いは §10.1 と同じ。<strong>設定画面（S-03）は §7 により自動テストを持たない</strong>ため、本節が唯一の担保である（実装コメントだけに残さない）。<strong>以後 <code>settings_screen.dart</code> を触るタスクは本節を再確認する</strong>（T-O = 実タスク T-35 は完了済みで、1・2・4・5・6 は同タスク内で確認済み。<strong>3 と 7 は E-18 の作り替え（§8 #53）に伴って <code>T-T</code> で確認する</strong>）。</p>
+<p>シミュレータで 1 項目ずつ確認する（T-O の完了条件）。番号の扱いは §10.1 と同じ。<strong>設定画面（S-03）は §7 により自動テストを持たない</strong>ため、本節が唯一の担保である（実装コメントだけに残さない）。<strong>以後 <code>settings_screen.dart</code> を触るタスクは本節を再確認する</strong>（T-O = 実タスク T-35 は完了済みで、1・2・4・5・6 は同タスク内で確認済み。<strong>3・7・8 は E-18 の作り替え（§8 #53）に伴って <code>T-T</code> で確認する</strong>。8 は T-35 の時点では存在しなかった項目）。</p>
 <ol>
 <li><strong>初回表示で最初のセクションヘッダ（「通知」）がナビゲーションバーに隠れず、全文が読めること</strong>（<code>CupertinoListSection.insetGrouped</code> を <code>CustomScrollView</code> に置く場合の上端の余白。<strong>T-35 の第 2 周に実際に退行した経路</strong>）</li>
 <li><strong>通知トグル（S-03/A-01）を素早く連続タップしても無反応の行が出ず、最後のタップの状態に落ち着くこと</strong>（各タップで設定を書き、<code>PushSubscriptionCoordinator</code> が直列化する。S-03 §7.2・§8 #4・§6「通知トグルを連打」）</li>
@@ -4465,6 +4547,7 @@ Future&lt;void&gt; seedArticles(
 <li><strong>Chrome をインストールした状態で E-13 を選び、Chrome を削除して設定画面へ復帰すると E-13 が非活性表示（S-03/ST-05）になること</strong>（<code>didChangeAppLifecycleState(resumed)</code> での <code>chromeAvailableProvider</code> の invalidate。S-03/A-07・§5.9）。<strong>あわせて、非活性になる前に E-13 をタップした場合は <code>rejectedChromeUnavailable</code> で設定値が変わらず、その場で非活性表示に切り替わること</strong>（§6・§5.9）</li>
 <li><strong>ブラウザ選択（S-03/A-03）の 3 行を素早く連続タップしても、最後にタップした行にチェックマークが移ること</strong>（latest-wins の直列化。§5.9・§6「ブラウザ選択を連打した」）</li>
 <li><strong>既定の文字サイズでは E-18（バージョン）がラベル左・値右の 1 行で、他の行（E-13 等）と左端・右端がそろっていること</strong>（<code>_versionTitle</code> の 1 行の経路。<code>additionalInfo</code> をやめても見た目が変わらないこと。S-03 §4 E-18・§7.5。§5.9・§8 #53）</li>
+<li><strong>iOS の「設定 &gt; アクセシビリティ &gt; 画面表示とテキストサイズ」で「文字を太くする」を ON にし、そのまま文字サイズを中〜最大まで数段変えても、E-18 の値がラベルの横で折り返さず、収まらなくなった時点で次の行（右寄せ・全幅）に送られること</strong>（<code>_singleLineWidth</code> が実描画と同じ条件で測っていることの確認。ずれていると 1 行の経路のまま <code>Expanded</code> の中で値が割れる＝§8 #53 が (d) として却下した見え方になる。§5.9・§6・§8 #53）</li>
 </ol>
 <h2 id="h-変更履歴">変更履歴<a class="anchor" href="#h-変更履歴">#</a></h2>
 <table>
@@ -4625,6 +4708,10 @@ Future&lt;void&gt; seedArticles(
 <tr>
 <td>2026-10-04</td>
 <td>design-review 第 1 段階・第 1 周の指摘 14 件を反映。<strong>§5.9 の <code>_wrappableText</code> を <code>DefaultTextStyle.merge</code> から素の <code>DefaultTextStyle</code> コンストラクタへ訂正</strong>（<code>merge</code> は <code>maxLines: maxLines ?? parent.maxLines</code> なので null を渡しても <code>CupertinoListTile</code> の <code>maxLines: 1</code> が残り、SDK の doc が明文で禁じている。<strong>実装（<code>settings_screen.dart:277</code>）は既に正しい形で、誤っていたのは設計書</strong>。司令塔が Flutter SDK の実物で確認。§8 #51・#53・§10 T-T も同形に）。<strong>§5.12 の <code>onTap</code> を §5.3 への参照に畳み</strong>（<code>unawaited(openArticle(...))</code> は戻り値 <code>bool</code> を捨てて S-00/E-25 を出さず、S-01/ST-20・S-02/ST-07 を満たさない。Widget テストを書かない方針のため型検査もテストも通る状態だった）、T-M・T-N の完了条件に戻り値の扱いを追加。<strong><code>D-04 §10 T-F5</code> を <code>T-F5a</code> / <code>T-F5b</code> に置き換え（7 箇所）<strong>順序を明記（<code>T-F5b</code> は <code>T-F5a</code> の後。逆順では CI が赤になる）。§2.2 #25 の <code>const NotificationTap</code> の根拠を型保証（コンパイルエラー）に訂正し、D-05 所管のテスト 4 箇所の書き換えが T-F5b の担当である旨を明記。</strong>§8.1 の pm 宛を <code>docs/tasks/</code> の実測に合わせて 6 点に書き直し</strong>（4 項目は既に解消済みだった）。<strong>§10 の表に「実タスク / 状態」列を追加</strong>（残作業は T-M・T-N・T-S・T-T の 4 つだけ。他 10 行は <code>done</code>）。§6 の S-01 §8 #12 を両枝に書き直し（主筋は「待つ」側で、従来の「後追い 1 回」は #12 を誤読させる形だった）、抑止判定が失敗したときに E-21・<strong>E-23</strong>・E-25 が通常どおり出る旨を追記。§8 #10・§3.1 に <code>lib/app</code> からの import の判断基準、§8 #51 の共通化対象を <code>_wrappableText</code>・<code>_singleLineWidth</code> の 2 つに限定、§2.1 の #30 を <code>(a)(b)(c)</code> に、§10 前文に目視項目の ID 参照運用。§8.1 に <strong>D-04 宛</strong>（<code>SettingsRepository</code> の 3 関心の分割）と <strong>S-03 宛</strong>（E-18 の 8pt / 2pt の寸法）の申し送りを追加。§9 は「該当なし」のまま</td>
+</tr>
+<tr>
+<td>2026-10-04</td>
+<td>design-review 第 1 段階・第 1 周の adversarial の指摘 6 件 + 自己申告 1 件を反映。<strong>§5.9 の <code>_singleLineWidth</code> を「実描画と同じ条件で測る」形に作り直した</strong>：<code>MediaQuery.boldTextOf</code> の bold を merge し、<code>locale</code>（<code>Localizations.maybeLocaleOf</code>）・<code>textDirection</code>（<code>Directionality.of</code>）・<code>textScaler</code> を実描画とそろえ、<code>TextPainter.computeWidth</code>（dispose を内包）を使う。<strong>司令塔が Flutter SDK の実物で確認</strong>：<code>Text.build</code> は 722〜724 行で <code>boldTextOf</code> を merge し 729〜730 行で letterSpacing / wordSpacing の上書きを適用するため、<code>FontWeight.w400</code> で測ると iOS の「文字を太くする」ON 時に 1 行経路を誤って選び、<strong>§8 #53 が (d) として却下した「ラベル横の狭い列で値が割れる」見え方</strong>になる。<code>constraints.hasBoundedWidth</code> のガードも追加（<code>title</code> が <code>Expanded</code> の中であることへの依存をコード上の前提として残す）。<strong>§6 に 2 行</strong>（実測と実描画のずれ・<code>version</code> / <code>buildNumber</code> が空文字）、<strong>§10.3 に目視 8</strong>（「文字を太くする」ON の境界帯。目視 3・7 の 2 点では掛からない）、<strong>§10.1 に目視 27・28</strong>（星と未読フィルタの連打）、<strong>§7 の表に 2 行</strong>（<code>_togglingIds</code>・<code>_togglingFilter</code> の逐次化）を追加し、§5.4・§5.8 のコード例を<strong>ガードつき</strong>に直した（コード例どおり書くとガードが落ち、2 回のタップが両方 <code>save</code> して保存されたまま残る状態だった）。§8 #49 に「新しい呼び出し元を足すタスクはその完了条件にガードの有無を書く」の適用条件、§5.9 の E-18 に空文字も <code>value: null</code> とする規定、§8 #22 の「10 メソッド」を実際の <strong>9</strong> に訂正。T-T の完了条件に目視 3・7・8 と「E-18 の行に <code>additionalInfo:</code> も <code>trailing:</code> も渡さない」を明記。§9 は「該当なし」のまま</td>
 </tr>
 </tbody></table>
 

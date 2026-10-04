@@ -48,7 +48,7 @@ a{color:var(--accent)}
 <a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 層と依存の方向</a><a class="d3" href="#sec-3-2">3.2 ファイル配置</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Source インターフェースと素材（<code>domain/source.ts</code>）</a><a class="d3" href="#sec-4-2">4.2 日時の変換（<code>domain/datetime.ts</code>）</a><a class="d3" href="#sec-4-3">4.3 HTTP ポート（<code>domain/http-client.ts</code>）</a><a class="d3" href="#sec-4-4">4.4 storage のポート（<code>domain/article-store.ts</code>・<code>domain/articles-publisher.ts</code>）</a><a class="d3" href="#sec-4-5">4.5 通知のポート（<code>domain/notification-gateway.ts</code>）</a><a class="d3" href="#sec-4-6">4.6 UseCase の入出力型（<code>application/</code>）</a><a class="d3" href="#sec-4-7">4.7 ログと時刻のポート（<code>domain/logger.ts</code>・<code>domain/clock.ts</code>）</a><a class="d3" href="#sec-4-8">4.8 実行サマリ（<code>.run-summary.json</code>）</a><a class="d3" href="#sec-4-9">4.9 プロジェクト設定と環境変数</a><a class="d3" href="#sec-4-10">4.10 storage の定数と git 出力の無害化（<code>infrastructure/storage/</code>）</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 collect-articles（全 Source の並行実行と正規化）</a><a class="d3" href="#sec-5-2">5.2 detect-diff（前回との突合・確定・切り詰め）</a><a class="d3" href="#sec-5-3">5.3 publish-articles（検証 → 書き出し → コミット → push）</a><a class="d3" href="#sec-5-4">5.4 notify-new-articles（新着の通知）</a><a class="d3" href="#sec-5-5">5.5 run-collection と main.ts</a><a class="d3" href="#sec-5-6">5.6 GitHub Actions ワークフロー</a><a class="d3" href="#sec-5-7">5.7 http ラッパー（<code>infrastructure/http</code>）</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d3" href="#sec-7-1">7.1 UseCase ごとのケース</a><a class="d3" href="#sec-7-2">7.2 テストダブル（<code>test/helpers/</code>）</a><a class="d3" href="#sec-7-3">7.3 infrastructure のテスト（CLAUDE.md の例外。§8 #30・#37・#38）</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
 </nav>
 <main>
-<header><h1>D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</h1><div class="meta"><b>status</b><span><span class="badge draft">draft</span></span><b>scope</b><span>collector</span><b>features</b><span>F-07, F-11</span><b>risks</b><span>R-2, R-7</span><b>depends_on</b><span>D-01</span><b>review_rounds</b><span>11</span></div></header>
+<header><h1>D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</h1><div class="meta"><b>status</b><span><span class="badge approved">approved</span></span><b>scope</b><span>collector</span><b>features</b><span>F-07, F-11</span><b>risks</b><span>R-2, R-7</span><b>depends_on</b><span>D-01</span><b>review_rounds</b><span>18</span></div></header>
 <h2 id="sec-1">1. 目的と範囲<a class="anchor" href="#sec-1">#</a></h2>
 <p>本書は、収集バッチ <code>collector/</code> が<strong>どう動くか</strong>を定める。<a href="D-01.html">D-01</a> が「何を出力するか（<code>articles.json</code>・<code>companies.json</code>・<code>id</code> / <code>contentHash</code> の規則・通知ペイロード）」を決めたのに対し、本書は (1) 層構成と手動 DI の組み立て、(2) <code>Source</code> インターフェースと Source↔Company の対応付け、(3) <code>infrastructure/http</code> のラッパー（User-Agent・間隔・タイムアウト・文字コード）、(4) application の 5 UseCase（<code>collect-articles</code>・<code>detect-diff</code>・<code>publish-articles</code>・<code>notify-new-articles</code>・<code>run-collection</code>）の入出力と手順、(5) <code>infrastructure/storage</code>（<code>articles.json</code> の読み書き・原子性・git への確定）、(6) <code>infrastructure/fcm</code> の送信、(7) GitHub Actions のワークフロー（cron・権限・Secrets・GitHub Pages デプロイ・失敗の検知）、(8) ログと終了コードを決める。決めないのは、団体別のセレクタ・URL 規則・日付書式・カテゴリ対応表（<a href="D-03.html">D-03</a>）と、app 側のすべて（<a href="D-04.html">D-04</a>・<a href="D-05.html">D-05</a>）である。D-01 の決定（§8 #1〜#34）は本書の前提であり、変更しない。</p>
 <p>用語：設計上の要素（インターフェース・実装・テストダブル・失敗種別）は <strong>Source</strong> と書き、開発者向けの日本語メッセージ（ワークフローのステップ名・ステップサマリ・ログ本文）だけは「情報源」と書く。両者は同じものを指す。</p>
@@ -1992,12 +1992,12 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td><code>git add</code> / <code>git commit</code> が失敗した（ファイル欠落・index ロック・コミット不可）</td>
-<td>後続のコマンドを呼ばず、手順 3-6 の復元を経て <code>PublishFailedError</code> → 終了コード 1。通知は送らない（§5.3 手順 3-5、§8 #39）</td>
+<td>後続のコマンドを呼ばず、<strong>§5.3 手順 3-6</strong> の復元を経て <code>PublishFailedError</code> → 終了コード 1。通知は送らない（§5.3 手順 3-5、§8 #39）</td>
 <td><code>GitArticlesPublisher</code></td>
 </tr>
 <tr>
 <td>git が応答しない（認証プロンプト待ち・ネットワーク無応答）</td>
-<td><code>GIT_TERMINAL_PROMPT=0</code> でプロンプトを出さず即座に失敗させ、なお応答しない場合は <code>timeout</code>（<code>GIT_TIMEOUT_MS</code>。値は §4.10）が <code>signal: &quot;SIGTERM&quot;</code> の失敗にする。手順 3-6 の復元を経て <code>PublishFailedError</code> → 終了コード 1。ハングでジョブごと強制終了され、復元に到達しないまま未 push の <code>data/articles.json</code> が Pages に配信されるのを防ぐ（§8 #39）</td>
+<td><code>GIT_TERMINAL_PROMPT=0</code> でプロンプトを出さず即座に失敗させ、なお応答しない場合は <code>timeout</code>（<code>GIT_TIMEOUT_MS</code>。値は §4.10）が <code>signal: &quot;SIGTERM&quot;</code> の失敗にする。<strong>§5.3 手順 3-6</strong> の復元を経て <code>PublishFailedError</code> → 終了コード 1。ハングでジョブごと強制終了され、復元に到達しないまま未 push の <code>data/articles.json</code> が Pages に配信されるのを防ぐ（§8 #39）</td>
 <td><code>GitArticlesPublisher</code></td>
 </tr>
 <tr>
@@ -2909,7 +2909,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <tr>
 <td>69</td>
 <td><code>main.ts</code> は手順 4b で <code>dryRun</code> を 1 度だけ確定させ、<strong>手順 5 で <code>dryRun === true</code> のときは <code>FirebaseNotificationGateway</code> を生成せず最初から <code>NoopNotificationGateway</code> を注入する</strong>（手順 7 の差し替え対象から通知ゲートウェイを外す）。<code>notificationGatewayKind</code> は手順 4a の結果（サービスアカウントがパースできたか）だけで決め、<code>dryRun</code> でも <code>&quot;firebase&quot;</code> のままにする</td>
-<td>手順 7 で通知ゲートウェイも差し替え続け、手順 11 で<strong>差し替え前と後の 2 つ</strong>を閉じる／現状のまま（手順 5 で生成し、手順 7 で捨て、手順 11 は差し替え後の Noop を閉じる）</td>
+<td><strong><code>main.ts</code> 手順 7</strong> で通知ゲートウェイも差し替え続け、手順 11 で<strong>差し替え前と後の 2 つ</strong>を閉じる／現状のまま（手順 5 で生成し、手順 7 で捨て、手順 11 は差し替え後の Noop を閉じる）</td>
 <td>現状のままだと、<code>.env</code> に <code>FIREBASE_SERVICE_ACCOUNT</code> を入れたローカルの <code>CURTAINCALL_DRY_RUN=1 npm start</code>（§4.9 が必須とする形）で、手順 5 が <code>initializeApp</code> で既定アプリを登録したうえで手順 7 がその参照を捨て、手順 11 は<strong>何も確保していない Noop を閉じる</strong>。#65 の不変条件（確保した側を閉じる）が DRY_RUN 経路で成立せず、firebase-admin が将来 <code>initializeApp</code> の時点で接続を張るようになれば、ローカル実行が終わらない事故（Actions と違い上限も原因表示も無い）が復活する。そもそも送信しない試走で FCM SDK を初期化する必要が無いので、生成しない形にすれば誤配線の余地自体が消える。2 つとも閉じる案は、閉じる対象が 1 つという手順 11 の単純さを崩し、「生成したものだけを閉じる」規則を「生成したものと差し替えたものを閉じる」規則に広げる（手順 7 に差し替えを足すたびに解放の列挙が増える）。<code>notificationGatewayKind</code> を手順 4a だけで決めるのは、この値の目的が Secret の未設定・タイポの検知（#32）であり、試走かどうかは <code>publisher: &quot;noop&quot;</code> で見分けられるためで、従来の「差し替え前の値を保つ」と同じ結果になる。DRY_RUN では FCM の初期化検証が行われなくなるが、Actions 上は手順 4b が DRY_RUN を拒否する（#44）ので本番の経路では毎時検証される。テストは持たない（§7 冒頭の無検証リストに追加。#56 と同型）。design-review 第 2 周（第 2 サイクル）で追加</td>
 </tr>
 <tr>
@@ -2973,7 +2973,7 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 </tr>
 <tr>
 <td>CLAUDE.md（<strong>反映済み</strong>（2026-10-04。<code>formatError</code> を純粋関数の例外に追加）。履歴として残す）</td>
-<td>「テスト方針」の純粋関数の例外列挙の collector 側に <code>formatError</code>（<code>domain/logger.ts</code>。<code>cause</code> の再帰連結・深さ上限・循環参照・非 <code>Error</code> 入力。漏れると例外連鎖に混ざった秘密情報が Actions のログに出るため。テストは <code>test/domain/</code> に置く）を追記する（§8 #73、旧 §9 [Q-1] の A 案）。<strong>CLAUDE.md 側が正の文言であり、本書 §7 冒頭・§7.1・§7.3 はそれに合わせてある。この申し送りは完了しており残作業は無い</strong>（実装側の作業は §10 Task D＝<code>test/domain/logger.test.ts</code> の追加のみ）。<strong>ただし表記の訂正が 1 件残る：CLAUDE.md 66 行の根拠表記 <code>D-02 §8 #48・§9 Q-1 の回答 2026-10-04</code> は、本書 §9 が「該当なし」になって参照先が宙に浮いたため <code>D-02 §8 #48・#73</code> へ差し替える</strong>（次に CLAUDE.md を触るコミットで実施する。本書の編集は不要で、CLAUDE.md は司令塔が更新する）</td>
+<td>「テスト方針」の純粋関数の例外列挙の collector 側に <code>formatError</code>（<code>domain/logger.ts</code>。<code>cause</code> の再帰連結・深さ上限・循環参照・非 <code>Error</code> 入力。漏れると例外連鎖に混ざった秘密情報が Actions のログに出るため。テストは <code>test/domain/</code> に置く）を追記する（§8 #73、旧 §9 [Q-1] の A 案）。<strong>CLAUDE.md 側が正の文言であり、本書 §7 冒頭・§7.1・§7.3 はそれに合わせてある。この申し送りは完了しており残作業は無い</strong>（実装側の作業は §10 Task D＝<code>test/domain/logger.test.ts</code> の追加のみ）。<strong>CLAUDE.md 66 行の根拠表記は <code>D-02 §8 #48・#73</code> に差し替え済み</strong>（2026-10-04。本書 §9 が「該当なし」になり <code>§9 Q-1 の回答</code> の参照先が宙に浮いたため。<strong>残作業は無い</strong>）</td>
 <td>§4.7、§7 冒頭、§7.1、§7.3、§8 #48・#73</td>
 </tr>
 <tr>
@@ -3302,6 +3302,18 @@ export const DEFAULT_FETCH_HTTP_CLIENT_OPTIONS: Omit&lt;FetchHttpClientOptions, 
 <tr>
 <td>2026-10-04</td>
 <td>design-review 第 2 段階・第 2 周の指摘 6 件（M-1〜M-6）を修正。<strong>§8 の決定（#1〜#73）の決定列は 1 文字も変えていない。</strong> §3.2 のツリーと直後の段落に <code>test/domain/logger.test.ts</code>（§8 #73）を追加（<strong>CLAUDE.md が「§3.2 を正とする」と定めているのに新規テストの置き場が §3.2 に無かった</strong>）。§5.5 冒頭の表記規則に反する裸の「手順 N」を <strong>7 か所</strong>で系列名つきに修飾（§2・§4.6・§4.8・§4.9・§6 の timeout (b)・§7 冒頭・§8 #67・#72・§8.1 (b)）。<strong>同じ「手順 9」が §6 では <code>main.ts</code> 手順 9（サマリ書き出し）、§8 #67 では <code>RunCollection</code> 手順 9（push + 通知）を指しており、§6 の行が自己矛盾していた</strong>。§8.1 の (xi)〜(xvii) を「<strong>(xi)〜(xv)・(xvii) は同一コミット／(xvi) は §10 Task J</strong>」に分け、§10 Task D・H・I の「状態」列に 1 タスク化の指示を追記（(xvi) はマージ後にしか実施できない確認でコミットに含められない）。<strong>§10 Task J の完了条件に ③（失敗通知メールの受信）の実施者を開発者と明記</strong>し、dev は <code>gh run view</code> で run の結論が <code>failure</code> であることまでを確認する形に分担（<code>collector-dev</code> は開発者のメールボックスを見られないため必ず手が止まる状態だった）。使い捨てワークフローの投入手順（<code>workflow_dispatch</code> のみ・PR でマージ・<code>gh workflow run</code>・別 PR で削除）も明記。§10 冒頭の実タスク範囲を実測値（<strong>T-01〜T-09・T-16・T-38・T-44〜T-47</strong>。app 側の T-17〜T-36・T-39〜T-43 は D-04・D-05 の管理、<strong><code>T-37</code> は <code>stack: docs</code> の未了タスク</strong>）に訂正。§8.1 に CLAUDE.md 66 行の根拠表記の差し替えを起票（同コミットで実施済み）</td>
+</tr>
+<tr>
+<td>2026-10-04</td>
+<td>design-review 第 2 段階・最終周の低 3 件を修正。§8 #69 の採らなかった案の列の先頭に <code>main.ts</code> を名乗らせ、§8.1 の CLAUDE.md 66 行の訂正を「差し替え済み・残作業なし」に更新（同コミットで実施済みなのに「訂正が 1 件残る」と読めた）、§6 の 2 行の <code>手順 3-6</code> を <code>§5.3 手順 3-6</code> に統一。<strong>設計内容の変更なし</strong></td>
+</tr>
+<tr>
+<td>2026-10-04</td>
+<td>design-review 通過（reviewed）。今回の再開は<strong>第 1 段階 3 周 + 追加 1 周・第 2 段階 3 周</strong>で、累計 <code>review_rounds</code> は 18。第 1 段階で §8 #59〜#73 を新設・改訂（<code>pipefail</code> に依存しない jq、<code>detect-collect-timeout</code>、Pages のアップロードを <code>deploy-pages</code> ジョブへ移設、<code>close()</code> の待機上限と上限タイマーの後始末、dryRun での FCM 非初期化、<code>$GITHUB_OUTPUT</code> の値の語彙、検知ステップの <code>if</code> の同形化、<code>formatError</code> のテーブル駆動テスト）。第 2 段階で参照の一意化（§5.5 の 2 系列を修飾形に統一）・§10 の実態反映（「状態」列と残作業の正を §8.1 に一本化）・Task J の新設と実施者の分担を整えた</td>
+</tr>
+<tr>
+<td>2026-10-04</td>
+<td>承認（approved）。開発者の委任により司令塔が承認（費用の発生しない工程は代行する指示による）。§9 は「該当なし」</td>
 </tr>
 </tbody></table>
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-04T14:39:24+09:00",
+  "generatedAt": "2026-10-04T21:13:27+09:00",
   "articles": [
     {
       "id": "5ab87eb9de7c2238",
@@ -1007,6 +1007,17 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "0b324c9b9211a732",
+      "companyId": "shiki",
+      "title": "『マンマ・ミーア！』広島公演が開幕しました！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038045.html",
+      "category": "other",
+      "publishedAt": "2026-10-04T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/MMhiroshima_news00-thumb-500x373-41679.jpg",
+      "contentHash": "bf8ccc7fef137f77",
+      "fetchedAt": "2026-10-04T21:13:27+09:00"
+    },
+    {
       "id": "bbbeefa71444489b",
       "companyId": "shiki",
       "title": "『マンマ・ミーア！』広島公演 公演グッズのご紹介",
@@ -1112,9 +1123,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038009.html",
       "category": "other",
       "publishedAt": "2026-09-28T00:00:00+09:00",
+      "fetchedAt": "2026-09-29T00:17:02+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/umekomi_DSC_7232_thum-thumb-500x373-41622.jpg",
-      "contentHash": "30e65b35d31def75",
-      "fetchedAt": "2026-09-29T00:17:02+09:00"
+      "contentHash": "30e65b35d31def75"
     },
     {
       "id": "e7fb49f7fd664a6d",

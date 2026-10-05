@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-04T21:13:27+09:00",
+  "generatedAt": "2026-10-05T15:50:36+09:00",
   "articles": [
     {
       "id": "5ab87eb9de7c2238",
@@ -2005,6 +2005,16 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "103f8ee64feb95e6",
+      "companyId": "shinkansen",
+      "title": "／DOKURO77／オリジナルグッズ WEB販売決定！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=13935",
+      "category": "other",
+      "publishedAt": "2026-10-05T12:00:00+09:00",
+      "contentHash": "26b4f2e8b716bdd9",
+      "fetchedAt": "2026-10-05T15:50:36+09:00"
+    },
+    {
       "id": "50e9998d8d953926",
       "companyId": "shinkansen",
       "title": "／DOKURO77／『髑髏城の七人』花鳥風月極BD-BOX 10/2(金)正午WEB予約開始！",
@@ -2101,8 +2111,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13704",
       "category": "other",
       "publishedAt": "2026-08-31T12:00:00+09:00",
-      "contentHash": "8eddb6f2393124de",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "8eddb6f2393124de"
     },
     {
       "id": "70f4f68708628a86",

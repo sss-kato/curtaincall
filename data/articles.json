@@ -1,7 +1,59 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-05T15:50:36+09:00",
+  "generatedAt": "2026-10-06T11:52:22+09:00",
   "articles": [
+    {
+      "id": "3552b8c3b559b63d",
+      "companyId": "takarazuka",
+      "title": "Le CINQ（ル・サンク）vol.257『RRR × TAKA”R”AZUKA ～√Rama～』発売【電子版同時発売！】",
+      "url": "https://kageki.hankyu.co.jp/news/20260901_004.html",
+      "category": "other",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "d52c549d313198cb",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-06T11:52:22+09:00"
+    },
+    {
+      "id": "9b14899c0c410247",
+      "companyId": "takarazuka",
+      "title": "「歌劇10月号」発売【ebooksタカラヅカでも同時発売！】",
+      "url": "https://shop.tca-pictures.net/shop/c/cbook/",
+      "category": "other",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "d3ac7d5e8630118c",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-06T11:52:22+09:00"
+    },
+    {
+      "id": "dd6c594b5803c345",
+      "companyId": "takarazuka",
+      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞月組 宝塚大劇場公演『天穹のアルテミス』『Belle Époque』",
+      "url": "https://kageki.hankyu.co.jp/news/20261006_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "720032ee4ceced9d",
+      "fetchedAt": "2026-10-06T11:52:22+09:00"
+    },
+    {
+      "id": "14a8d8c0a174a01f",
+      "companyId": "takarazuka",
+      "title": "メディア出演情報",
+      "url": "https://kageki.hankyu.co.jp/news/tv_radio.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "8b95bc28f2e1ffe9",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "d5fbd88d685d003a",
+      "companyId": "takarazuka",
+      "title": "（追）外部出演「HiGH&LOW THE 戦国 LOVE&HATE」",
+      "url": "https://kageki.hankyu.co.jp/news/20260704_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "4e6d2f4e43e65b04",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
     {
       "id": "5ab87eb9de7c2238",
       "companyId": "takarazuka",
@@ -437,16 +489,6 @@
       "contentHash": "cadc510b6ccdca11"
     },
     {
-      "id": "9b14899c0c410247",
-      "companyId": "takarazuka",
-      "title": "「宝塚GRAPH10月号」発売【ebooksタカラヅカでも同時発売！】",
-      "url": "https://shop.tca-pictures.net/shop/c/cbook/",
-      "category": "other",
-      "publishedAt": "2026-09-17T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "1069f3a48a11d1a8"
-    },
-    {
       "id": "6ce63a844202b94f",
       "companyId": "takarazuka",
       "title": "＜宝塚友の会 チケット先行販売「抽選方式」＞宝塚友の会 会員様限定 特別イベント『トークスペシャルin宝塚』花組",
@@ -557,16 +599,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "14a8d8c0a174a01f",
-      "companyId": "takarazuka",
-      "title": "メディア出演情報",
-      "url": "https://kageki.hankyu.co.jp/news/tv_radio.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-04T00:00:00+09:00",
-      "contentHash": "8b95bc28f2e1ffe9",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "5bf3bb6dd2d0f016",
       "companyId": "takarazuka",
       "title": "（宝塚友の会会員様対象）宝塚歌劇カスタマープログラムWチャンスについて",
@@ -575,16 +607,6 @@
       "publishedAt": "2026-09-04T00:00:00+09:00",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "52b5b6cfc120de95"
-    },
-    {
-      "id": "3552b8c3b559b63d",
-      "companyId": "takarazuka",
-      "title": "Le CINQ（ル・サンク）vol.257『RRR × TAKA”R”AZUKA ～√Rama～』発売のご案内",
-      "url": "https://kageki.hankyu.co.jp/news/20260901_004.html",
-      "category": "other",
-      "publishedAt": "2026-09-01T00:00:00+09:00",
-      "contentHash": "30265b8f521158c6",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "57ac457577bcfeaf",
@@ -764,16 +786,6 @@
       "category": "ticket",
       "publishedAt": "2026-08-18T00:00:00+09:00",
       "contentHash": "852d48a1cdb146ab",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "d5fbd88d685d003a",
-      "companyId": "takarazuka",
-      "title": "（追）外部出演「HiGH&LOW THE 戦国 LOVE&HATE」",
-      "url": "https://kageki.hankyu.co.jp/news/20260704_003.html",
-      "category": "other",
-      "publishedAt": "2026-08-18T00:00:00+09:00",
-      "contentHash": "4e6d2f4e43e65b04",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -994,16 +1006,6 @@
       "category": "streaming",
       "publishedAt": "2026-07-07T00:00:00+09:00",
       "contentHash": "4c6e94e1d964b02c",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "8945467c5b0df2b9",
-      "companyId": "takarazuka",
-      "title": "（追）【テレビ】「2026 FNS歌謡祭 夏」花組生出演",
-      "url": "https://kageki.hankyu.co.jp/news/20260617_005.html",
-      "category": "streaming",
-      "publishedAt": "2026-07-01T00:00:00+09:00",
-      "contentHash": "467dc9e121ffd0f8",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {

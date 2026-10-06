@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-06T11:52:22+09:00",
+  "generatedAt": "2026-10-06T19:04:31+09:00",
   "articles": [
     {
       "id": "3552b8c3b559b63d",
@@ -23,6 +23,16 @@
       "contentHash": "d3ac7d5e8630118c",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-10-06T11:52:22+09:00"
+    },
+    {
+      "id": "f3f1c4742db5ba4b",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
+      "url": "https://kageki.hankyu.co.jp/news/20261006_006.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "f406c990ffa40fa2",
+      "fetchedAt": "2026-10-06T19:04:31+09:00"
     },
     {
       "id": "dd6c594b5803c345",
@@ -191,8 +201,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260929_006.html",
       "category": "streaming",
       "publishedAt": "2026-09-29T00:00:00+09:00",
-      "contentHash": "f406c990ffa40fa2",
-      "fetchedAt": "2026-09-29T17:18:55+09:00"
+      "fetchedAt": "2026-09-29T17:18:55+09:00",
+      "contentHash": "f406c990ffa40fa2"
     },
     {
       "id": "0b6f82066ba75e5e",
@@ -201,8 +211,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260929_003.html",
       "category": "schedule",
       "publishedAt": "2026-09-29T00:00:00+09:00",
-      "contentHash": "48acd282cc555de7",
-      "fetchedAt": "2026-09-29T17:18:55+09:00"
+      "fetchedAt": "2026-09-29T17:18:55+09:00",
+      "contentHash": "48acd282cc555de7"
     },
     {
       "id": "ba54a8f580f222cd",
@@ -221,8 +231,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2027/ooku/cast.html",
       "category": "cast",
       "publishedAt": "2026-09-29T00:00:00+09:00",
-      "contentHash": "13f320f9a0d81845",
-      "fetchedAt": "2026-09-29T10:45:14+09:00"
+      "fetchedAt": "2026-09-29T10:45:14+09:00",
+      "contentHash": "13f320f9a0d81845"
     },
     {
       "id": "b670cb358027499b",
@@ -231,8 +241,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2027/iamheathcliff/cast.html",
       "category": "cast",
       "publishedAt": "2026-09-29T00:00:00+09:00",
-      "contentHash": "bad7d7d979ca7aa3",
-      "fetchedAt": "2026-09-29T10:45:14+09:00"
+      "fetchedAt": "2026-09-29T10:45:14+09:00",
+      "contentHash": "bad7d7d979ca7aa3"
     },
     {
       "id": "530fb01c36eeec52",
@@ -996,16 +1006,6 @@
       "category": "ticket",
       "publishedAt": "2026-07-07T00:00:00+09:00",
       "contentHash": "dc9244ff670998e8",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "93f94891e78cae35",
-      "companyId": "takarazuka",
-      "title": "ブルーレイ、DVD、CDの商品価格改定について",
-      "url": "https://shop.tca-pictures.net/shop/t/t1713/",
-      "category": "streaming",
-      "publishedAt": "2026-07-07T00:00:00+09:00",
-      "contentHash": "4c6e94e1d964b02c",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -1790,6 +1790,17 @@
       "contentHash": "0831ddf44a688a39"
     },
     {
+      "id": "4e4ecd07ad23c850",
+      "companyId": "toho",
+      "title": "ミュージカル『民王』博多座公演のアーカイブ付きLIVE配信が決定いたしました！",
+      "url": "https://www.tohostage.com/tamiou/stream.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_tamiou2026_3.jpg",
+      "contentHash": "e777de59c745edb7",
+      "fetchedAt": "2026-10-06T19:04:31+09:00"
+    },
+    {
       "id": "e81e9fb7b82e8343",
       "companyId": "toho",
       "title": "VOICARION10周年記念展示会が本日10月2日(金)より 日比谷シャンテ３階にて開催されます。",
@@ -1939,9 +1950,9 @@
       "url": "https://www.tohostage.com/relatively_speaking/",
       "category": "new_work",
       "publishedAt": "2026-06-16T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/b16ebd2ba78bff4995a95c252ee8fb638785ba028709941664af09c2cc92e0b9.jpg",
-      "contentHash": "6e27429b71afab78",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "6e27429b71afab78"
     },
     {
       "id": "6a430969540f35a9",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-07T10:23:48+09:00",
+  "generatedAt": "2026-10-07T17:31:45+09:00",
   "articles": [
     {
       "id": "17891212ff21b4fd",
@@ -211,8 +211,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260930_001.html",
       "category": "ticket",
       "publishedAt": "2026-09-30T00:00:00+09:00",
-      "contentHash": "df6aaf599c5456b9",
-      "fetchedAt": "2026-09-30T15:34:30+09:00"
+      "fetchedAt": "2026-09-30T15:34:30+09:00",
+      "contentHash": "df6aaf599c5456b9"
     },
     {
       "id": "064082137320c604",
@@ -989,6 +989,16 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "b6a3b3662e7b85e5",
+      "companyId": "takarazuka",
+      "title": "組替え（異動）について",
+      "url": "https://kageki.hankyu.co.jp/news/20260710_007.html",
+      "category": "person",
+      "publishedAt": "2026-07-10T00:00:00+09:00",
+      "contentHash": "b26dfd873e7d5793",
+      "fetchedAt": "2026-10-07T17:31:45+09:00"
+    },
+    {
       "id": "32255cc25e8e71a7",
       "companyId": "takarazuka",
       "title": "星組 副組長の就任について",
@@ -999,14 +1009,15 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "9e81c69c6f05495b",
-      "companyId": "takarazuka",
-      "title": "星組 退団者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260710_002.html",
-      "category": "person",
-      "publishedAt": "2026-07-10T00:00:00+09:00",
-      "contentHash": "4bc3c9c7372b5bcc",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "id": "ec5192600c3ad1f2",
+      "companyId": "shiki",
+      "title": "『ノートルダムの鐘』海外クリエイティブスタッフによる稽古が行われました",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038048.html",
+      "category": "other",
+      "publishedAt": "2026-10-07T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/261007_hnd_osaka_thum-thumb-500x373-41704.jpg",
+      "contentHash": "2dfcf96ba40cb57a",
+      "fetchedAt": "2026-10-07T17:31:45+09:00"
     },
     {
       "id": "0b324c9b9211a732",
@@ -1114,9 +1125,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038015.html",
       "category": "other",
       "publishedAt": "2026-09-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-30T00:39:06+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260925_kokoro_rishiri_thum_s-thumb-500x373-41626.jpg",
-      "contentHash": "b58c3ebbce98363b",
-      "fetchedAt": "2026-09-30T00:39:06+09:00"
+      "contentHash": "b58c3ebbce98363b"
     },
     {
       "id": "b0860e14e236fb16",

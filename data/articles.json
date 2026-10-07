@@ -1,7 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-07T06:33:54+09:00",
+  "generatedAt": "2026-10-07T10:23:48+09:00",
   "articles": [
+    {
+      "id": "17891212ff21b4fd",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第2抽選方式」＞月組 宝塚大劇場公演『天穹のアルテミス』『Belle Époque』",
+      "url": "https://kageki.hankyu.co.jp/news/20261007_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-07T00:00:00+09:00",
+      "contentHash": "74237c2270cae6f1",
+      "fetchedAt": "2026-10-07T10:23:48+09:00"
+    },
+    {
+      "id": "d716c4f6b3c0e7e0",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第1抽選方式」＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261007_002.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-07T00:00:00+09:00",
+      "contentHash": "b17e684b95b2c257",
+      "fetchedAt": "2026-10-07T10:23:48+09:00"
+    },
     {
       "id": "3552b8c3b559b63d",
       "companyId": "takarazuka",
@@ -987,26 +1007,6 @@
       "publishedAt": "2026-07-10T00:00:00+09:00",
       "contentHash": "4bc3c9c7372b5bcc",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "b6a3b3662e7b85e5",
-      "companyId": "takarazuka",
-      "title": "組替え（異動）について",
-      "url": "https://kageki.hankyu.co.jp/news/20260710_007.html",
-      "category": "person",
-      "publishedAt": "2026-07-10T00:00:00+09:00",
-      "contentHash": "b26dfd873e7d5793",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "14b5a46ed3f3288a",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞雪組 東京宝塚劇場公演『ポーの一族』",
-      "url": "https://kageki.hankyu.co.jp/news/20260707_003.html",
-      "category": "ticket",
-      "publishedAt": "2026-07-07T00:00:00+09:00",
-      "contentHash": "dc9244ff670998e8",
-      "fetchedAt": "2026-10-07T06:33:54+09:00"
     },
     {
       "id": "0b324c9b9211a732",

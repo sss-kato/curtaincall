@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-07T17:31:45+09:00",
+  "generatedAt": "2026-10-08T01:19:15+09:00",
   "articles": [
     {
       "id": "17891212ff21b4fd",
@@ -989,6 +989,16 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "9e81c69c6f05495b",
+      "companyId": "takarazuka",
+      "title": "星組 退団者のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20260710_002.html",
+      "category": "person",
+      "publishedAt": "2026-07-10T00:00:00+09:00",
+      "contentHash": "4bc3c9c7372b5bcc",
+      "fetchedAt": "2026-10-08T01:19:15+09:00"
+    },
+    {
       "id": "b6a3b3662e7b85e5",
       "companyId": "takarazuka",
       "title": "組替え（異動）について",
@@ -997,16 +1007,6 @@
       "publishedAt": "2026-07-10T00:00:00+09:00",
       "contentHash": "b26dfd873e7d5793",
       "fetchedAt": "2026-10-07T17:31:45+09:00"
-    },
-    {
-      "id": "32255cc25e8e71a7",
-      "companyId": "takarazuka",
-      "title": "星組 副組長の就任について",
-      "url": "https://kageki.hankyu.co.jp/news/20260710_008.html",
-      "category": "person",
-      "publishedAt": "2026-07-10T00:00:00+09:00",
-      "contentHash": "c3a74cbcb8e2dda9",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "ec5192600c3ad1f2",

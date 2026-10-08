@@ -1,7 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-08T06:54:52+09:00",
+  "generatedAt": "2026-10-08T10:46:24+09:00",
   "articles": [
+    {
+      "id": "4db906bd56144630",
+      "companyId": "takarazuka",
+      "title": "チケットの不正転売禁止について",
+      "url": "https://kageki.hankyu.co.jp/news/20261008_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-08T00:00:00+09:00",
+      "contentHash": "28fba6016600a9b5",
+      "fetchedAt": "2026-10-08T10:46:24+09:00"
+    },
+    {
+      "id": "9956c87df6d36f6a",
+      "companyId": "takarazuka",
+      "title": "宝塚歌劇オーケストラ楽員募集のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261008_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-08T00:00:00+09:00",
+      "contentHash": "ed6a384a193a278b",
+      "fetchedAt": "2026-10-08T10:46:24+09:00"
+    },
     {
       "id": "17891212ff21b4fd",
       "companyId": "takarazuka",
@@ -181,8 +201,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261001_004.html",
       "category": "ticket",
       "publishedAt": "2026-10-01T00:00:00+09:00",
-      "contentHash": "f4c86768d7df206e",
-      "fetchedAt": "2026-10-01T10:59:58+09:00"
+      "fetchedAt": "2026-10-01T10:59:58+09:00",
+      "contentHash": "f4c86768d7df206e"
     },
     {
       "id": "7b2d221235bb9314",
@@ -987,26 +1007,6 @@
       "publishedAt": "2026-07-11T00:00:00+09:00",
       "contentHash": "e70b8a44db8e594b",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "32255cc25e8e71a7",
-      "companyId": "takarazuka",
-      "title": "星組 副組長の就任について",
-      "url": "https://kageki.hankyu.co.jp/news/20260710_008.html",
-      "category": "person",
-      "publishedAt": "2026-07-10T00:00:00+09:00",
-      "contentHash": "c3a74cbcb8e2dda9",
-      "fetchedAt": "2026-10-08T06:54:52+09:00"
-    },
-    {
-      "id": "9e81c69c6f05495b",
-      "companyId": "takarazuka",
-      "title": "星組 退団者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260710_002.html",
-      "category": "person",
-      "publishedAt": "2026-07-10T00:00:00+09:00",
-      "contentHash": "4bc3c9c7372b5bcc",
-      "fetchedAt": "2026-10-08T01:19:15+09:00"
     },
     {
       "id": "ec5192600c3ad1f2",

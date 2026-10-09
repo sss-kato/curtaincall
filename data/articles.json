@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-09T06:58:35+09:00",
+  "generatedAt": "2026-10-09T10:57:20+09:00",
   "articles": [
+    {
+      "id": "e1b86a95e01aa0f8",
+      "companyId": "takarazuka",
+      "title": "＜CD-BOX発売のご案内＞「Culmination An HOZUKI -history of songs in 2010～2026-」",
+      "url": "https://shop.tca-pictures.net/shop/g/gTCAC-733-735/",
+      "category": "other",
+      "publishedAt": "2026-10-09T00:00:00+09:00",
+      "contentHash": "a4e3117805e18e76",
+      "fetchedAt": "2026-10-09T10:57:20+09:00"
+    },
     {
       "id": "4db906bd56144630",
       "companyId": "takarazuka",
@@ -999,14 +1009,15 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "89032087bd43e028",
-      "companyId": "takarazuka",
-      "title": "＜動画配信サービス “TAKARAZUKA SQUARE【タカスク】\"＞公演連動タカスクおためしキャンペーンスタート！",
-      "url": "https://www.tca-pictures.net/square_cp/campaign/",
-      "category": "streaming",
-      "publishedAt": "2026-07-11T00:00:00+09:00",
-      "contentHash": "e70b8a44db8e594b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "id": "7ea1a2da504b7f55",
+      "companyId": "shiki",
+      "title": "『ノートルダムの鐘』大阪公演 公演グッズのご紹介",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/037849.html",
+      "category": "other",
+      "publishedAt": "2026-10-09T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/09ce5ab2e3d25cb0f135ae6a502d0fff8f65049e-thumb-500x373-40451.jpg",
+      "contentHash": "ae386293456bc66c",
+      "fetchedAt": "2026-10-09T10:57:20+09:00"
     },
     {
       "id": "ec5192600c3ad1f2",
@@ -1103,9 +1114,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/036752.html",
       "category": "other",
       "publishedAt": "2026-09-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "b5819ec5b6d4c625",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "b5819ec5b6d4c625"
     },
     {
       "id": "f759d128bcc66e5f",

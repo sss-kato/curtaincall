@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-10T15:55:34+09:00",
+  "generatedAt": "2026-10-10T22:31:31+09:00",
   "articles": [
+    {
+      "id": "cc6c35455ed0c25a",
+      "companyId": "takarazuka",
+      "title": "＜一般前売＞宙組 KAAT神奈川芸術劇場公演『酔いどれ御免！』",
+      "url": "https://kageki.hankyu.co.jp/news/20261010_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-10T00:00:00+09:00",
+      "contentHash": "d3179d2e7217b481",
+      "fetchedAt": "2026-10-10T22:31:31+09:00"
+    },
     {
       "id": "a1cdb77b340163f2",
       "companyId": "takarazuka",
@@ -806,8 +816,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260822_001.html",
       "category": "ticket",
       "publishedAt": "2026-08-23T00:00:00+09:00",
-      "contentHash": "e4d9c8e0ca9a7222",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "e4d9c8e0ca9a7222"
     },
     {
       "id": "6c05c3529272ad1f",
@@ -998,16 +1008,6 @@
       "publishedAt": "2026-07-29T00:00:00+09:00",
       "contentHash": "e2d5cd63998b647b",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "affdc8032d6da004",
-      "companyId": "takarazuka",
-      "title": "（追）＜一般前売＞月組 東急シアターオーブ公演『NINE』",
-      "url": "https://kageki.hankyu.co.jp/news/20260725_002.html",
-      "category": "ticket",
-      "publishedAt": "2026-07-26T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "43c6e8d17c903a82"
     },
     {
       "id": "14cb771d1a340b1b",

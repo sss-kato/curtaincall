@@ -1,7 +1,37 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-09T17:51:06+09:00",
+  "generatedAt": "2026-10-10T15:55:34+09:00",
   "articles": [
+    {
+      "id": "a1cdb77b340163f2",
+      "companyId": "takarazuka",
+      "title": "＜ライブ中継・ライブ配信＞宙組 全国ツアー 市川市文化会館公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
+      "url": "https://kageki.hankyu.co.jp/news/20261010_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-10T00:00:00+09:00",
+      "contentHash": "901c37ed2ae3fde2",
+      "fetchedAt": "2026-10-10T15:55:34+09:00"
+    },
+    {
+      "id": "d0790ba20de7e4c9",
+      "companyId": "takarazuka",
+      "title": "＜ライブ配信＞宙組 梅田芸術劇場シアター・ドラマシティ公演『酔いどれ御免！』",
+      "url": "https://kageki.hankyu.co.jp/news/20261010_004.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-10T00:00:00+09:00",
+      "contentHash": "deea632194ceffff",
+      "fetchedAt": "2026-10-10T15:55:34+09:00"
+    },
+    {
+      "id": "07b81ac8c5dc8a32",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』",
+      "url": "https://kageki.hankyu.co.jp/news/20260801_005.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-10T00:00:00+09:00",
+      "contentHash": "6b916718c732d365",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
     {
       "id": "ed19e8acf7bdf7f8",
       "companyId": "takarazuka",
@@ -22,16 +52,6 @@
       "publishedAt": "2026-10-09T00:00:00+09:00",
       "contentHash": "a4e3117805e18e76",
       "fetchedAt": "2026-10-09T10:57:20+09:00"
-    },
-    {
-      "id": "07b81ac8c5dc8a32",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260801_005.html",
-      "category": "streaming",
-      "publishedAt": "2026-10-09T00:00:00+09:00",
-      "contentHash": "6b916718c732d365",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "4db906bd56144630",
@@ -988,26 +1008,6 @@
       "publishedAt": "2026-07-26T00:00:00+09:00",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "43c6e8d17c903a82"
-    },
-    {
-      "id": "fb869e5e84d914cf",
-      "companyId": "takarazuka",
-      "title": "＜初日舞台映像（ロング）＞雪組公演『ポーの一族』",
-      "url": "https://youtu.be/phgAFs8aUWk",
-      "category": "other",
-      "publishedAt": "2026-07-24T00:00:00+09:00",
-      "contentHash": "65fb9f045b19e721",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "072cec96636b9f19",
-      "companyId": "takarazuka",
-      "title": "（追）雪組 宝塚大劇場公演『ポーの一族』の初日を原作者の萩尾望都氏が観劇",
-      "url": "https://kageki.hankyu.co.jp/news/20260712_1.html",
-      "category": "other",
-      "publishedAt": "2026-07-17T00:00:00+09:00",
-      "contentHash": "c0a035fdffde49fc",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "14cb771d1a340b1b",

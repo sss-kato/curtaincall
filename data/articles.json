@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-10T22:31:31+09:00",
+  "generatedAt": "2026-10-11T17:39:36+09:00",
   "articles": [
+    {
+      "id": "2ba11d72168666cd",
+      "companyId": "takarazuka",
+      "title": "宝塚大劇場各施設の営業体制（花組公演期間）について",
+      "url": "https://kageki.hankyu.co.jp/news/20261011_002.html",
+      "category": "schedule",
+      "publishedAt": "2026-10-11T00:00:00+09:00",
+      "contentHash": "ff7895be0ac59932",
+      "fetchedAt": "2026-10-11T17:39:36+09:00"
+    },
     {
       "id": "cc6c35455ed0c25a",
       "companyId": "takarazuka",
@@ -172,8 +182,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261004_001.html",
       "category": "schedule",
       "publishedAt": "2026-10-04T00:00:00+09:00",
-      "contentHash": "4f29148f6ccb7a50",
-      "fetchedAt": "2026-10-04T14:39:24+09:00"
+      "fetchedAt": "2026-10-04T14:39:24+09:00",
+      "contentHash": "4f29148f6ccb7a50"
     },
     {
       "id": "590f15c3f87477b9",
@@ -766,8 +776,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260829_002.html",
       "category": "other",
       "publishedAt": "2026-08-29T00:00:00+09:00",
-      "contentHash": "f46792b937cca78f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "f46792b937cca78f"
     },
     {
       "id": "1e0983d80931a408",
@@ -776,8 +786,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260828_001.html",
       "category": "other",
       "publishedAt": "2026-08-28T00:00:00+09:00",
-      "contentHash": "f1e073029191029b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "f1e073029191029b"
     },
     {
       "id": "59fdbd8b044f5f1d",
@@ -786,8 +796,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260828_003.html",
       "category": "other",
       "publishedAt": "2026-08-28T00:00:00+09:00",
-      "contentHash": "50368c0464c4d799",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "50368c0464c4d799"
     },
     {
       "id": "57d3da30008603cb",
@@ -806,8 +816,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260825_003.html",
       "category": "other",
       "publishedAt": "2026-08-25T00:00:00+09:00",
-      "contentHash": "dfe422d3f6f9fa93",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "dfe422d3f6f9fa93"
     },
     {
       "id": "54d4537bfa723ed3",
@@ -836,8 +846,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260823_003.html",
       "category": "schedule",
       "publishedAt": "2026-08-23T00:00:00+09:00",
-      "contentHash": "1a4bda6cb793bec7",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "1a4bda6cb793bec7"
     },
     {
       "id": "7b4a3f24af42bbe7",
@@ -916,8 +926,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260807_001.html",
       "category": "ticket",
       "publishedAt": "2026-08-07T00:00:00+09:00",
-      "contentHash": "c32c6d14c5bf61bb",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "c32c6d14c5bf61bb"
     },
     {
       "id": "602d2424263128f0",
@@ -986,8 +996,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260731_002.html",
       "category": "person",
       "publishedAt": "2026-07-31T00:00:00+09:00",
-      "contentHash": "ae7a74255c78e5c1",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "ae7a74255c78e5c1"
     },
     {
       "id": "1002a9794625c57c",
@@ -997,16 +1007,6 @@
       "category": "ticket",
       "publishedAt": "2026-07-30T00:00:00+09:00",
       "contentHash": "ef12ac8a454ec855",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "158e815d2c9e3164",
-      "companyId": "takarazuka",
-      "title": "＜PR映像＞花組公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://youtu.be/cJQ8PGw7Unc",
-      "category": "other",
-      "publishedAt": "2026-07-29T00:00:00+09:00",
-      "contentHash": "e2d5cd63998b647b",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {

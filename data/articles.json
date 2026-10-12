@@ -1,7 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-11T17:39:36+09:00",
+  "generatedAt": "2026-10-12T16:13:37+09:00",
   "articles": [
+    {
+      "id": "cc6c35455ed0c25a",
+      "companyId": "takarazuka",
+      "title": "（追）＜一般前売＞宙組 KAAT神奈川芸術劇場公演『酔いどれ御免！』",
+      "url": "https://kageki.hankyu.co.jp/news/20261010_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-12T00:00:00+09:00",
+      "contentHash": "4c11c46fa7df808b",
+      "fetchedAt": "2026-10-10T22:31:31+09:00",
+      "updatedAt": "2026-10-12T16:13:37+09:00"
+    },
     {
       "id": "2ba11d72168666cd",
       "companyId": "takarazuka",
@@ -11,16 +22,6 @@
       "publishedAt": "2026-10-11T00:00:00+09:00",
       "contentHash": "ff7895be0ac59932",
       "fetchedAt": "2026-10-11T17:39:36+09:00"
-    },
-    {
-      "id": "cc6c35455ed0c25a",
-      "companyId": "takarazuka",
-      "title": "＜一般前売＞宙組 KAAT神奈川芸術劇場公演『酔いどれ御免！』",
-      "url": "https://kageki.hankyu.co.jp/news/20261010_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-10T00:00:00+09:00",
-      "contentHash": "d3179d2e7217b481",
-      "fetchedAt": "2026-10-10T22:31:31+09:00"
     },
     {
       "id": "a1cdb77b340163f2",
@@ -806,8 +807,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260825_004.html",
       "category": "schedule",
       "publishedAt": "2026-08-25T00:00:00+09:00",
-      "contentHash": "85c02f9d1f6e6398",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "85c02f9d1f6e6398"
     },
     {
       "id": "5ac372eef7a9355a",
@@ -836,8 +837,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260823_002.html",
       "category": "other",
       "publishedAt": "2026-08-23T00:00:00+09:00",
-      "contentHash": "f497da4a17f77166",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "f497da4a17f77166"
     },
     {
       "id": "721af286733f4f68",

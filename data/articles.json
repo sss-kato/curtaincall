@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13T16:36:25+09:00",
+  "generatedAt": "2026-10-14T00:51:18+09:00",
   "articles": [
+    {
+      "id": "0c2ba1ad7ce872bc",
+      "companyId": "takarazuka",
+      "title": "＜TAKARAZUKA REVUE MUSIC＞10月配信のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261013_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "contentHash": "5105db7bdab12580",
+      "fetchedAt": "2026-10-14T00:51:18+09:00"
+    },
     {
       "id": "1ed2a0640db9ce6c",
       "companyId": "takarazuka",
@@ -183,8 +193,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261006_006.html",
       "category": "streaming",
       "publishedAt": "2026-10-06T00:00:00+09:00",
-      "contentHash": "f406c990ffa40fa2",
-      "fetchedAt": "2026-10-06T19:04:31+09:00"
+      "fetchedAt": "2026-10-06T19:04:31+09:00",
+      "contentHash": "f406c990ffa40fa2"
     },
     {
       "id": "dd6c594b5803c345",
@@ -435,8 +445,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260915_004.html",
       "category": "streaming",
       "publishedAt": "2026-09-25T00:00:00+09:00",
-      "contentHash": "f96fdc2c341e708a",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "f96fdc2c341e708a",
       "updatedAt": "2026-09-25T22:36:45+09:00"
     },
     {
@@ -999,16 +1009,6 @@
       "publishedAt": "2026-08-04T00:00:00+09:00",
       "contentHash": "7a6b78b65c1b7c5d",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "3e6793520f4a1842",
-      "companyId": "takarazuka",
-      "title": "＜タカラヅカ・スカイ・ステージ＞9月ラインアップのお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260801_001.html",
-      "category": "streaming",
-      "publishedAt": "2026-08-01T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "9b9ef61124eafe37"
     },
     {
       "id": "639530587e1e92f4",
@@ -1759,6 +1759,16 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "c0601170f9c0c606",
+      "companyId": "horipro",
+      "title": "ミュージカル『キングアーサー』東京公演チケット販売詳細",
+      "url": "https://horipro-stage.jp/news/kingarthur2027_ticket/",
+      "category": "ticket",
+      "publishedAt": "2026-10-13T16:59:00+09:00",
+      "contentHash": "ab1dfcc7965bec39",
+      "fetchedAt": "2026-10-14T00:51:18+09:00"
+    },
+    {
       "id": "52d7ef6c59402c1b",
       "companyId": "horipro",
       "title": "舞台『ヘッダ・ガブラー』チケット販売詳細",
@@ -1855,8 +1865,8 @@
       "url": "https://horipro-stage.jp/news/findingneverland2027_ticket/",
       "category": "ticket",
       "publishedAt": "2026-07-23T10:59:00+09:00",
-      "contentHash": "e5870c33913ab416",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "e5870c33913ab416"
     },
     {
       "id": "10207302269dfa98",

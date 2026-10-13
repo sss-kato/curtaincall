@@ -1,7 +1,47 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-12T16:13:37+09:00",
+  "generatedAt": "2026-10-13T16:36:25+09:00",
   "articles": [
+    {
+      "id": "1ed2a0640db9ce6c",
+      "companyId": "takarazuka",
+      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261013_002.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "contentHash": "50923bfce1e9c91a",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
+    },
+    {
+      "id": "28b909af71cb9963",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第3抽選方式」＞月組 宝塚大劇場公演『天穹のアルテミス』『Belle Époque』",
+      "url": "https://kageki.hankyu.co.jp/news/20261013_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "contentHash": "95fd7cbe257c90db",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
+    },
+    {
+      "id": "6cc13e56a4ef56e8",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞花組 宝塚大劇場公演",
+      "url": "https://kageki.hankyu.co.jp/news/20261013_005.html",
+      "category": "schedule",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "contentHash": "d7bd94675cf31870",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
+    },
+    {
+      "id": "86bb28380e4f6a9e",
+      "companyId": "takarazuka",
+      "title": "宙組 KAAT神奈川芸術劇場公演『酔いどれ御免！』の追加販売について",
+      "url": "https://kageki.hankyu.co.jp/news/20261013_004.html",
+      "category": "other",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "contentHash": "5c986e88d4944299",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
+    },
     {
       "id": "cc6c35455ed0c25a",
       "companyId": "takarazuka",
@@ -971,44 +1011,26 @@
       "contentHash": "9b9ef61124eafe37"
     },
     {
-      "id": "772271c6a6d7bc31",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場公演 立見の販売再開について",
-      "url": "https://kageki.hankyu.co.jp/news/20260801_004.html",
+      "id": "639530587e1e92f4",
+      "companyId": "shiki",
+      "title": "2027年度＜技術スタッフ＞新卒・中途採用のお知らせ（映像／音楽）",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038056.html",
       "category": "other",
-      "publishedAt": "2026-08-01T00:00:00+09:00",
-      "contentHash": "708db877a2470ca9",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
+      "contentHash": "0b9fe12165c880b4",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
     },
     {
-      "id": "c128e3b21f7e973e",
-      "companyId": "takarazuka",
-      "title": "（追）外部出演 阪神甲子園球場「阪急阪神不動産冠協賛試合（阪神×巨人）」始球式",
-      "url": "https://kageki.hankyu.co.jp/news/20260623_001.html",
-      "category": "other",
-      "publishedAt": "2026-08-01T00:00:00+09:00",
-      "contentHash": "f3689757d20146ab",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "3324ec62f4bf624c",
-      "companyId": "takarazuka",
-      "title": "月組 退団者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260731_002.html",
-      "category": "person",
-      "publishedAt": "2026-07-31T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "ae7a74255c78e5c1"
-    },
-    {
-      "id": "1002a9794625c57c",
-      "companyId": "takarazuka",
-      "title": "＜ブルーレイ予約受付開始のお知らせ＞『EXCITER‼』 Blu-ray BOX",
-      "url": "https://shop.tca-pictures.net/shop/g/gTCAB-308/",
-      "category": "ticket",
-      "publishedAt": "2026-07-30T00:00:00+09:00",
-      "contentHash": "ef12ac8a454ec855",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "id": "d46766c1e75f5af8",
+      "companyId": "shiki",
+      "title": "『オペラ座の怪人』がロンドン初演から40周年を迎えました",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038053.html",
+      "category": "new_work",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/261013_pha_london40th_thum-thumb-500x373-41710.jpg",
+      "contentHash": "e75c107bdbc030ff",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
     },
     {
       "id": "14cb771d1a340b1b",
@@ -1105,9 +1127,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038025.html",
       "category": "other",
       "publishedAt": "2026-09-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-30T15:34:30+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/MM00_DSC_1797_thum-thumb-500x373-41670.jpg",
-      "contentHash": "2f476e7acc84a168",
-      "fetchedAt": "2026-09-30T15:34:30+09:00"
+      "contentHash": "2f476e7acc84a168"
     },
     {
       "id": "51e710482e8cb7af",
@@ -1138,9 +1160,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038023.html",
       "category": "other",
       "publishedAt": "2026-09-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-30T15:34:30+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/06/operaza_mtthmn_2025-thumb-500x373-38718.jpg",
-      "contentHash": "447c6285fa1eeb98",
-      "fetchedAt": "2026-09-30T15:34:30+09:00"
+      "contentHash": "447c6285fa1eeb98"
     },
     {
       "id": "cb3ba1aee882a371",

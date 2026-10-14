@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-14T15:02:42+09:00",
+  "generatedAt": "2026-10-14T20:40:13+09:00",
   "articles": [
+    {
+      "id": "7a989ab99c77c7d1",
+      "companyId": "takarazuka",
+      "title": "公演ラインアップ【Kanadevia Hall公演／梅田芸術劇場メインホール公演】＜2027年4月・花組『Ave Mare!』＞",
+      "url": "https://kageki.hankyu.co.jp/news/20261014_005.html",
+      "category": "new_work",
+      "publishedAt": "2026-10-14T00:00:00+09:00",
+      "contentHash": "d89cd28aa06e8a92",
+      "fetchedAt": "2026-10-14T20:40:13+09:00"
+    },
     {
       "id": "35959fa80f788bbd",
       "companyId": "takarazuka",
@@ -191,8 +201,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261007_001.html",
       "category": "ticket",
       "publishedAt": "2026-10-07T00:00:00+09:00",
-      "contentHash": "74237c2270cae6f1",
-      "fetchedAt": "2026-10-07T10:23:48+09:00"
+      "fetchedAt": "2026-10-07T10:23:48+09:00",
+      "contentHash": "74237c2270cae6f1"
     },
     {
       "id": "d716c4f6b3c0e7e0",
@@ -201,8 +211,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261007_002.html",
       "category": "ticket",
       "publishedAt": "2026-10-07T00:00:00+09:00",
-      "contentHash": "b17e684b95b2c257",
-      "fetchedAt": "2026-10-07T10:23:48+09:00"
+      "fetchedAt": "2026-10-07T10:23:48+09:00",
+      "contentHash": "b17e684b95b2c257"
     },
     {
       "id": "3552b8c3b559b63d",
@@ -998,16 +1008,6 @@
       "category": "ticket",
       "publishedAt": "2026-08-09T00:00:00+09:00",
       "contentHash": "3bc8d0f8cf71409e",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "e4a3b8bb26049da9",
-      "companyId": "takarazuka",
-      "title": "（追）瀬央ゆりあ ディナーショー",
-      "url": "https://kageki.hankyu.co.jp/news/20260730_002.html",
-      "category": "other",
-      "publishedAt": "2026-08-09T00:00:00+09:00",
-      "contentHash": "ff34692d9b246a1b",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -1889,6 +1889,17 @@
       "contentHash": "0831ddf44a688a39"
     },
     {
+      "id": "7cd7211b324471df",
+      "companyId": "toho",
+      "title": "2027年夏 EXシアター有明『ムーラン・ルージュ！ザ・ミュージカル』キャスト解禁！",
+      "url": "https://www.tohostage.com/moulinmusical_japan/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-10-14T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_moulinmusical_japan2027_2.jpg",
+      "contentHash": "3b8206540a3be8d8",
+      "fetchedAt": "2026-10-14T20:40:13+09:00"
+    },
+    {
       "id": "4e4ecd07ad23c850",
       "companyId": "toho",
       "title": "ミュージカル『民王』博多座公演のアーカイブ付きLIVE配信が決定いたしました！",
@@ -2038,9 +2049,9 @@
       "url": "https://www.voicemonster.jp/",
       "category": "new_work",
       "publishedAt": "2026-06-24T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/5b6fe769b68c2f28da7ccc5ee5d54638de0da549c86ac1f662e60e77d785e944.jpg",
-      "contentHash": "2a73b583a9502e6a",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "2a73b583a9502e6a"
     },
     {
       "id": "e8da79cfa4649127",

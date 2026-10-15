@@ -1,7 +1,49 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-15T08:50:46+09:00",
+  "generatedAt": "2026-10-15T13:23:13+09:00",
   "articles": [
+    {
+      "id": "4c943fabb0370d57",
+      "companyId": "takarazuka",
+      "title": "（再）株式会社 宝塚歌劇団 音楽助手（作曲・編曲家志望）の募集について",
+      "url": "https://kageki.hankyu.co.jp/news/20261001_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-15T00:00:00+09:00",
+      "contentHash": "b4e197928c812e45",
+      "fetchedAt": "2026-10-01T17:43:00+09:00",
+      "updatedAt": "2026-10-15T13:23:13+09:00"
+    },
+    {
+      "id": "5bed923b67f6ae35",
+      "companyId": "takarazuka",
+      "title": "（追）「ザ・タカラヅカIX 雪組」好評発売中！",
+      "url": "https://kageki.hankyu.co.jp/news/20260901_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-15T00:00:00+09:00",
+      "contentHash": "c31412ab82c06e94",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-15T13:23:13+09:00"
+    },
+    {
+      "id": "644bfec7cc461a57",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞雪組公演『ポーの一族』",
+      "url": "https://kageki.hankyu.co.jp/news/20260613_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-15T00:00:00+09:00",
+      "contentHash": "ec19915adc3bc013",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "73be3c98085633cb",
+      "companyId": "takarazuka",
+      "title": "（追）美穂圭子 ディナーショー",
+      "url": "https://kageki.hankyu.co.jp/news/20260520_009.html",
+      "category": "other",
+      "publishedAt": "2026-10-15T00:00:00+09:00",
+      "contentHash": "4754219192ffd247",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
     {
       "id": "7a989ab99c77c7d1",
       "companyId": "takarazuka",
@@ -327,26 +369,6 @@
       "contentHash": "3142898259e7a800"
     },
     {
-      "id": "644bfec7cc461a57",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞雪組公演『ポーの一族』",
-      "url": "https://kageki.hankyu.co.jp/news/20260613_003.html",
-      "category": "streaming",
-      "publishedAt": "2026-10-02T00:00:00+09:00",
-      "contentHash": "ec19915adc3bc013",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "4c943fabb0370d57",
-      "companyId": "takarazuka",
-      "title": "株式会社 宝塚歌劇団 音楽助手（作曲・編曲家志望）の募集について",
-      "url": "https://kageki.hankyu.co.jp/news/20261001_003.html",
-      "category": "other",
-      "publishedAt": "2026-10-01T00:00:00+09:00",
-      "contentHash": "1267d91d799da6ca",
-      "fetchedAt": "2026-10-01T17:43:00+09:00"
-    },
-    {
       "id": "c558a60694b06a07",
       "companyId": "takarazuka",
       "title": "＜動画配信サービス タカラヅカ・オン・デマンド＞10月1日配信開始のラインアップ（ROBIN THE HERO（'25年雪組・東京・千秋楽）他）",
@@ -375,16 +397,6 @@
       "publishedAt": "2026-10-01T00:00:00+09:00",
       "contentHash": "ca0bb75ef7bf0713",
       "fetchedAt": "2026-10-01T10:59:58+09:00"
-    },
-    {
-      "id": "73be3c98085633cb",
-      "companyId": "takarazuka",
-      "title": "（追）美穂圭子 ディナーショー",
-      "url": "https://kageki.hankyu.co.jp/news/20260520_009.html",
-      "category": "other",
-      "publishedAt": "2026-10-01T00:00:00+09:00",
-      "contentHash": "4754219192ffd247",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "108cc6bec9fb9a1d",
@@ -821,16 +833,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "5bed923b67f6ae35",
-      "companyId": "takarazuka",
-      "title": "「ザ・タカラヅカIX 雪組」発売のご案内",
-      "url": "https://kageki.hankyu.co.jp/news/20260901_003.html",
-      "category": "other",
-      "publishedAt": "2026-09-01T00:00:00+09:00",
-      "contentHash": "6032d0ff3cbbd41f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "78a86f4cfde1b267",
       "companyId": "takarazuka",
       "title": "（追）ライブマルチアングル配信の実施について",
@@ -1001,14 +1003,14 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "e4a3b8bb26049da9",
+      "id": "c44d6673adcc1f6d",
       "companyId": "takarazuka",
-      "title": "（追）瀬央ゆりあ ディナーショー",
-      "url": "https://kageki.hankyu.co.jp/news/20260730_002.html",
-      "category": "other",
+      "title": "（追）＜一般前売＞雪組 東京宝塚劇場公演『ポーの一族』",
+      "url": "https://kageki.hankyu.co.jp/news/20260808_001.html",
+      "category": "ticket",
       "publishedAt": "2026-08-09T00:00:00+09:00",
-      "contentHash": "ff34692d9b246a1b",
-      "fetchedAt": "2026-10-15T08:50:46+09:00"
+      "contentHash": "3bc8d0f8cf71409e",
+      "fetchedAt": "2026-10-15T13:23:13+09:00"
     },
     {
       "id": "639530587e1e92f4",

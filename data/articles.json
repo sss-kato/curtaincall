@@ -1,7 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-16T14:43:46+09:00",
+  "generatedAt": "2026-10-16T20:12:45+09:00",
   "articles": [
+    {
+      "id": "89032087bd43e028",
+      "companyId": "takarazuka",
+      "title": "（追）＜動画配信サービス “TAKARAZUKA SQUARE【タカスク】\"＞公演連動タカスクおためしキャンペーンスタート！",
+      "url": "https://www.tca-pictures.net/square_cp/campaign/",
+      "category": "streaming",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "2d4472f3bdec4ac0",
+      "fetchedAt": "2026-10-16T20:12:45+09:00"
+    },
+    {
+      "id": "bc3e0e2504b5720b",
+      "companyId": "takarazuka",
+      "title": "タイ大手映像配信プラットフォーム「TrueID」にて宝塚歌劇の動画コンテンツの配信開始！",
+      "url": "https://kageki.hankyu.co.jp/news/20261016_006.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "73d1491089b25465",
+      "fetchedAt": "2026-10-16T20:12:45+09:00"
+    },
     {
       "id": "679fc24020c8b6d1",
       "companyId": "takarazuka",
@@ -31,6 +51,16 @@
       "publishedAt": "2026-10-16T00:00:00+09:00",
       "contentHash": "50368c0464c4d799",
       "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
+      "id": "644bfec7cc461a57",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞雪組公演『ポーの一族』",
+      "url": "https://kageki.hankyu.co.jp/news/20260613_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "ec19915adc3bc013",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "0c2ba1ad7ce872bc",
@@ -75,16 +105,6 @@
       "contentHash": "c31412ab82c06e94",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-10-15T13:23:13+09:00"
-    },
-    {
-      "id": "644bfec7cc461a57",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞雪組公演『ポーの一族』",
-      "url": "https://kageki.hankyu.co.jp/news/20260613_003.html",
-      "category": "streaming",
-      "publishedAt": "2026-10-15T00:00:00+09:00",
-      "contentHash": "ec19915adc3bc013",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "73be3c98085633cb",
@@ -995,26 +1015,6 @@
       "contentHash": "0cc8827001c8b2f3"
     },
     {
-      "id": "c0c4fef2050067b6",
-      "companyId": "takarazuka",
-      "title": "花組 宝塚大劇場／東京宝塚劇場公演 出演予定者の変更について",
-      "url": "https://kageki.hankyu.co.jp/news/20260820_002.html",
-      "category": "other",
-      "publishedAt": "2026-08-20T00:00:00+09:00",
-      "contentHash": "16c5d56ee27c89d5",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "190844fbe07f2a55",
-      "companyId": "takarazuka",
-      "title": "「阪急17番街presents 心躍る宝塚歌劇衣装展」開催について",
-      "url": "https://kageki.hankyu.co.jp/news/20260818_001.html",
-      "category": "other",
-      "publishedAt": "2026-08-18T00:00:00+09:00",
-      "contentHash": "b48e2a639bec4297",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "0ab16a6f364c9d0e",
       "companyId": "shiki",
       "title": "『バック・トゥ・ザ・フューチャー』東京公演 公演グッズのご紹介",
@@ -1774,6 +1774,16 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "367e4ac3541b385b",
+      "companyId": "horipro",
+      "title": "ダンスエンターテイメント演劇『PASSION ― 北斎の描く夢 ―』ご来場のお客様へのご案内",
+      "url": "https://horipro-stage.jp/news/passion2026_information/",
+      "category": "other",
+      "publishedAt": "2026-10-16T17:59:00+09:00",
+      "contentHash": "80f3c43cba01e016",
+      "fetchedAt": "2026-10-16T20:12:45+09:00"
+    },
+    {
       "id": "1245a7e905f1e42e",
       "companyId": "horipro",
       "title": "【抽選でご招待】ミュージカル『ファインディング・ネバーランド』製作発表11月11日(水)開催決定！",
@@ -1880,8 +1890,8 @@
       "url": "https://horipro-stage.jp/news/dearevanhansen2026_info0723/",
       "category": "other",
       "publishedAt": "2026-07-23T17:59:00+09:00",
-      "contentHash": "668326bd26bf07dc",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "668326bd26bf07dc"
     },
     {
       "id": "2a81472b3c66f95e",
@@ -1912,6 +1922,17 @@
       "publishedAt": "2026-07-15T16:59:00+09:00",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "0831ddf44a688a39"
+    },
+    {
+      "id": "431cbb85822e1391",
+      "companyId": "toho",
+      "title": "『レジェンド・オブ・ミュージカル』第9回の開催が決定しました！",
+      "url": "https://www.tohostage.com/legend/",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_legend2026.jpg",
+      "contentHash": "322c45bdc5373aca",
+      "fetchedAt": "2026-10-16T20:12:45+09:00"
     },
     {
       "id": "7cd7211b324471df",
@@ -2074,9 +2095,9 @@
       "url": "https://www.tohostage.com/meoto/",
       "category": "new_work",
       "publishedAt": "2026-06-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/9ba5e812c55ef75db078711b7ee45a2bf275d66553f83af7c17a6b373caf7c07.jpg",
-      "contentHash": "2244b11ab0ca6f9c",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "2244b11ab0ca6f9c"
     },
     {
       "id": "01d567fee3f3888a",

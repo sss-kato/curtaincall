@@ -1,7 +1,37 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-16T09:19:46+09:00",
+  "generatedAt": "2026-10-16T14:43:46+09:00",
   "articles": [
+    {
+      "id": "679fc24020c8b6d1",
+      "companyId": "takarazuka",
+      "title": "宝塚大劇場レストラン 花組公演特別メニューについて",
+      "url": "https://kageki.hankyu.co.jp/news/20261016_001.html",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "2845059a23b4ab48",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
+      "id": "94ab593ec270516d",
+      "companyId": "takarazuka",
+      "title": "モロゾフ「宝塚大劇場オリジナル アーモンドスカッチクッキー」「宝塚大劇場オリジナル フェイバリット」発売のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261016_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "2b80b28b342daccf",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
+      "id": "9e9e1bfac6a48cbf",
+      "companyId": "takarazuka",
+      "title": "宝塚大劇場内「レビューショップ」「劇場売店」期間限定商品の販売について",
+      "url": "https://kageki.hankyu.co.jp/news/20261016_002.html",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "50368c0464c4d799",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
     {
       "id": "0c2ba1ad7ce872bc",
       "companyId": "takarazuka",
@@ -985,34 +1015,26 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "b005f1ecd290b7cb",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞星組 東京宝塚劇場公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260818_003.html",
-      "category": "ticket",
-      "publishedAt": "2026-08-18T00:00:00+09:00",
-      "contentHash": "852d48a1cdb146ab",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "1ab970a626fdf482",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞花組 宝塚大劇場公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20260811_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-08-11T00:00:00+09:00",
-      "contentHash": "da11d0e9b1992a04",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "e4a3b8bb26049da9",
-      "companyId": "takarazuka",
-      "title": "（追）瀬央ゆりあ ディナーショー",
-      "url": "https://kageki.hankyu.co.jp/news/20260730_002.html",
+      "id": "0ab16a6f364c9d0e",
+      "companyId": "shiki",
+      "title": "『バック・トゥ・ザ・フューチャー』東京公演 公演グッズのご紹介",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/036717.html",
       "category": "other",
-      "publishedAt": "2026-08-09T00:00:00+09:00",
-      "contentHash": "ff34692d9b246a1b",
-      "fetchedAt": "2026-10-16T09:19:46+09:00"
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2024/01/BTTF_news_thmn-thumb-500x373-35153.jpg",
+      "contentHash": "a7b7cf27ef9a7a62",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
+      "id": "dab2bea7724d80e4",
+      "companyId": "shiki",
+      "title": "『オペラ座の怪人』名古屋公演 公演グッズのご紹介",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/037818.html",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/36189a2185a3b440b2866909a5d4dc1206902f10-thumb-500x373-40278.jpg",
+      "contentHash": "4922c3472e321472",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "639530587e1e92f4",
@@ -1109,9 +1131,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038027.html",
       "category": "other",
       "publishedAt": "2026-10-01T00:00:00+09:00",
+      "fetchedAt": "2026-10-01T10:59:58+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/04/f201c3f95fe1f5d5fc64bd93d8145c00fbe4223e-thumb-500x373-40589.jpg",
-      "contentHash": "2489b61cfc525b03",
-      "fetchedAt": "2026-10-01T10:59:58+09:00"
+      "contentHash": "2489b61cfc525b03"
     },
     {
       "id": "1adfe7d5f22ad4e5",
@@ -1120,9 +1142,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/033713.html",
       "category": "other",
       "publishedAt": "2026-10-01T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "3f01562971ffac15",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "3f01562971ffac15"
     },
     {
       "id": "1da85b0dce1fd8e3",
@@ -1277,17 +1299,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260916_roba_zenkoku_00_thum-thumb-500x373-41557.jpg",
       "contentHash": "15d5675ed7d0fefb"
-    },
-    {
-      "id": "dab2bea7724d80e4",
-      "companyId": "shiki",
-      "title": "『オペラ座の怪人』名古屋公演 公演グッズのご紹介",
-      "url": "https://www.shiki.jp/navi/news/renewinfo/037818.html",
-      "category": "other",
-      "publishedAt": "2026-09-18T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/36189a2185a3b440b2866909a5d4dc1206902f10-thumb-500x373-40278.jpg",
-      "contentHash": "4922c3472e321472"
     },
     {
       "id": "6f8fd8fcf1a19e92",
@@ -1763,6 +1774,16 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "1245a7e905f1e42e",
+      "companyId": "horipro",
+      "title": "【抽選でご招待】ミュージカル『ファインディング・ネバーランド』製作発表11月11日(水)開催決定！",
+      "url": "https://horipro-stage.jp/news/findingneverland20271016/",
+      "category": "new_work",
+      "publishedAt": "2026-10-16T12:00:00+09:00",
+      "contentHash": "53c1e4cf2f2acd92",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
       "id": "c0601170f9c0c606",
       "companyId": "horipro",
       "title": "ミュージカル『キングアーサー』東京公演チケット販売詳細",
@@ -1970,15 +1991,26 @@
       "fetchedAt": "2026-09-29T17:18:55+09:00"
     },
     {
+      "id": "c89e1a49365622d5",
+      "companyId": "toho",
+      "title": "2027年1･2月シアタークリエ公演としまして、 ケラリーノ・サンドロヴィッチ作・演出による「新作」（タイトル未定） の上演が決定しました。",
+      "url": "https://www.tohostage.com/freedom_of_choice/",
+      "category": "new_work",
+      "publishedAt": "2026-09-28T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_kera2027.jpg",
+      "contentHash": "9ebc90fad518bdf6",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
       "id": "678c511707332ac0",
       "companyId": "toho",
       "title": "2027年1･2月シアタークリエ公演としまして、 ケラリーノ・サンドロヴィッチ作・演出による「新作」（タイトル未定） の上演が決定しました。",
       "url": "https://www.tohostage.com/kera/",
       "category": "new_work",
       "publishedAt": "2026-09-28T00:00:00+09:00",
+      "fetchedAt": "2026-09-29T10:45:14+09:00",
       "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_kera2027.jpg",
-      "contentHash": "9ebc90fad518bdf6",
-      "fetchedAt": "2026-09-29T10:45:14+09:00"
+      "contentHash": "9ebc90fad518bdf6"
     },
     {
       "id": "da8f22abec2a116e",

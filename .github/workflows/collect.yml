@@ -1,19 +1,19 @@
 name: collect
 on:
   schedule:
-    - cron: "7 * * * *" # 毎時 7 分（UTC 指定だが毎時なので JST でも毎時 7 分）。遅延は許容（R-7）
+    - cron: "7 * * * *"        # 毎時 7 分（UTC 指定だが毎時なので JST でも毎時 7 分）。遅延は許容（R-7）
   workflow_dispatch:
     inputs:
       full_crawl:
         description: "ページ送りを持つ情報源を初回相当の範囲まで遡る"
         type: boolean
         default: false
-permissions: {} # 既定は無権限。必要な権限は job 単位で最小限を宣言する（D-02 §5.6）
+permissions: {}              # 既定は無権限。必要な権限はジョブ単位で最小限を宣言する（§8 #52）
 concurrency:
   group: collect
-  cancel-in-progress: false # 遅延で重なっても前の実行を殺さず順番に流す（R-7）
+  cancel-in-progress: false  # 遅延で重なっても前の実行を殺さず順番に流す（R-7）
 jobs:
-  reject-non-main: # workflow_dispatch を main 以外のブランチで実行したときだけ動き、明示的に失敗する（§8 #35 の前提。§6）
+  reject-non-main:                     # workflow_dispatch を main 以外のブランチで実行したときだけ動き、明示的に失敗する（§8 #35 の前提。§6）
     if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions: {}
@@ -24,11 +24,11 @@ jobs:
           echo "collect は main でのみ実行する（ref: $REF）。workflow_dispatch の「Use workflow from」を main にして再実行する" >&2
           exit 1
   collect:
-    if: github.ref == 'refs/heads/main' # main 以外では収集・push・Pages アップロードのいずれも行わない（schedule は既定ブランチ = main でしか動かないので、効くのは workflow_dispatch だけ）
+    if: github.ref == 'refs/heads/main'   # main 以外では収集・push・通知のいずれも行わない（schedule は既定ブランチ = main でしか動かないので、効くのは workflow_dispatch だけ）。このジョブが skipped になると deploy-pages も走らない（§8 #67）
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: write # data/articles.json の push
+      contents: write                    # data/articles.json の push。このジョブが要る唯一の権限（§8 #52）
     outputs:
       published: ${{ steps.summary.outputs.published }}
       failed_sources: ${{ steps.summary.outputs.failed_sources }}
@@ -37,10 +37,10 @@ jobs:
       no_changes_but_stats: ${{ steps.summary.outputs.no_changes_but_stats }}
     steps:
       # 既定（persist-credentials: true）で GITHUB_TOKEN を .git/config の http.extraheader に保存 → git push に使える（§4.10 のマスク対象）。fetch-depth は既定の 1（shallow）
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0（§8 #52）
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: collector/.node-version
+          node-version-file: collector/.node-version   # バージョンの単一情報源（§4.9）
           cache: npm
           cache-dependency-path: collector/package-lock.json
       - run: npm ci
@@ -51,95 +51,170 @@ jobs:
         working-directory: collector
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          CURTAINCALL_REQUIRE_NOTIFICATIONS: "" # フェーズ 5（Firebase 設定後）に "1" へ変える（§4.9、§8 #32）
+          CURTAINCALL_REQUIRE_NOTIFICATIONS: ""   # フェーズ 5（Firebase 設定後）に "1" へ変える（§4.9、§8 #32）
           CURTAINCALL_FULL_CRAWL: ${{ inputs.full_crawl && '1' || '' }}
-        run: npm start # 非 0 = 致命的失敗。ここで止まれば push も通知も済んでいない
+        run: npm start                     # 非 0 = 致命的失敗。ここで止まれば push も通知も済んでいない
       - name: 実行サマリ
         id: summary
-        if: ${{ !cancelled() }} # 前のステップが失敗してもサマリを出す（サマリ欠落で Pages を止めない）
+        if: ${{ !cancelled() }}            # 前のステップが失敗してもサマリを出す（サマリが無いと 4 つの検知ステップが理由を出せない）。
+                                           # timeout-minutes 超過はジョブの「キャンセル」なのでこのステップは走らない。
+                                           # その経路は下の detect-collect-timeout ジョブが受ける（§8 #64）
+        shell: bash                        # 既定のシェルは `bash -e {0}` で pipefail が無効。`shell: bash` を
+                                           # 書いたときだけ `bash --noprofile --norc -eo pipefail {0}` になる。
+                                           # 下の run: はパイプラインを作らないので現在の動作は pipefail に依存しないが、
+                                           # 将来パイプを足したときに失敗が黙って飲まれるのを防ぐ（§8 #63）
         working-directory: collector
         run: |
-          if [ ! -f .run-summary.json ]; then
+          # -f（存在）ではなく -s（存在しかつ 1 バイト以上）で判定する。0 バイトのファイルに対して
+          # jq は終了コード 0・出力なしで終わるため、-f だと後続のフォールバックが発火せず 5 つの出力が
+          # すべて空文字になり、failed_sources が unknown にならないので情報源の失敗が届かない
+          # （#53 の「想定外の形は unknown にして配信は続け、ジョブは赤くする」と逆に倒れる）。
+          # jq 1.7.1 で実測（§8 #61）
+          SUMMARY_JSON=.run-summary.json     # working-directory: collector なので collector/.run-summary.json（§4.9 の既定値）
+          if [ ! -s "$SUMMARY_JSON" ]; then
             echo "published=unknown" >> "$GITHUB_OUTPUT"
             echo "failed_sources=unknown" >> "$GITHUB_OUTPUT"
             echo "notifications_all_failed=false" >> "$GITHUB_OUTPUT"
             echo "changed_but_not_published=false" >> "$GITHUB_OUTPUT"
             echo "no_changes_but_stats=false" >> "$GITHUB_OUTPUT"
-            echo "実行サマリ .run-summary.json が無い（collector が書けなかった）" >> "$GITHUB_STEP_SUMMARY"
+            echo "実行サマリ .run-summary.json が無い、または空（collector が書けなかった）" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           # すべての jq に型ガードを付ける（§8 #53）。サマリの形が想定外（キー欠落・旧形式・JSON でない）のとき、
           # published は false ではなく unknown に倒す（false は「配信しない」という積極的な指示になり、
-          # push・通知済みの内容が Pages に出ないまま止まるため）。数を読む出力も 0 に倒さない
-          S=.run-summary.json
-          echo "published=$(jq -r 'if type == "object" and has("publishOutcome")
-                                   then (if .publishOutcome == "unknown" then "unknown" else (.publishOutcome == "published") end)
-                                   else "unknown" end' "$S" 2>/dev/null || echo unknown)" >> "$GITHUB_OUTPUT"
+          # push・通知済みの内容が Pages に出ないまま止まるため）。数を読む出力も 0 に倒さない。
+          # 出力 5 本はいずれも `値=$(jq …) || 値=<フォールバック>` の形で取り、パイプラインを作らない（§8 #63）。
+          # `jq … | head -n 1 || echo unknown` にしない理由：(1) パイプラインの終了コードは head のものに
+          # なるため、pipefail が無効な既定シェル（bash -e）では jq の失敗を取りこぼして出力が空文字になる
+          # （壊れた JSON で実測）。空文字になると failed_sources が unknown に倒れず、情報源の失敗が
+          # 届かない（#53 の方針と逆）。(2) pipefail が有効でも「複数行なら head が閉じて非 0 になるから安全側」は誤りで、
+          # 出力がパイプバッファに収まると jq は 0 で終わり 1 行目が黙って使われる（実測）。
+          # jq -s（slurp）が保証するのは「入力のトップレベル文書を 1 つの配列にまとめるのでフィルタの結果が
+          # 1 値になる」ことだけで、**1 値 = 1 行ではない**（結果が改行を含む文字列なら複数行になる）。
+          # 行注入（$GITHUB_OUTPUT に偽の key=value を差し込む）を防ぐ不変条件は -s ではなく次の 1 つ（§8 #71）：
+          #   ここで $GITHUB_OUTPUT へ書く値は **数値・真偽値・固定語彙（unknown）だけ**とし、
+          #   JSON 由来の文字列（message・reason・companyId 等）をそのまま出さない。
+          # 出す必要が生じたら `名前<<EOF` のヒアドキュメント区切りを使うか、
+          # gsub("[[:cntrl:][:space:]]"; " ") を通してから出す。下の 5 本はこの不変条件を満たしている。
+          # 文書が 1 つでなければ length != 1 でフォールバックへ倒す（旧形式・複数文書の防衛）。
+          # jq が失敗する前に部分出力を吐いても、`|| 値=<フォールバック>` が変数を上書きするので残らない。
+          published=$(jq -s -r '(if length == 1 then .[0] else null end)
+                                | if type == "object" and (.publishOutcome | type) == "string"
+                                  then (if .publishOutcome == "unknown" then "unknown" else (.publishOutcome == "published") end)
+                                  else "unknown" end' "$SUMMARY_JSON" 2>/dev/null) || published=unknown
+          echo "published=$published" >> "$GITHUB_OUTPUT"
           # 記事は変わったのに何も確定されなかった（配信と通知の静かな停止。§8 #41）
-          echo "changed_but_not_published=$(jq -r 'if type == "object" and has("publishOutcome") and has("changed")
-                                                   then (.changed == true and .publishOutcome == "no_changes")
-                                                   else false end' "$S" 2>/dev/null || echo false)" >> "$GITHUB_OUTPUT"
-          # 逆向きの静かな停止：切り詰め後の出力配列に新着・更新が残っているのに changed が偽（§5.5 手順 7、§8 #51）
-          echo "no_changes_but_stats=$(jq -r 'if type == "object" and has("changed") and (.survivingChanges | type) == "number"
-                                              then (.changed == false and .survivingChanges > 0)
-                                              else false end' "$S" 2>/dev/null || echo false)" >> "$GITHUB_OUTPUT"
+          changed_but_not_published=$(jq -s -r '(if length == 1 then .[0] else null end)
+                                                | if type == "object" and (.changed | type) == "boolean" and (.publishOutcome | type) == "string"
+                                                  then (.changed == true and .publishOutcome == "no_changes")
+                                                  else false end' "$SUMMARY_JSON" 2>/dev/null) || changed_but_not_published=false
+          echo "changed_but_not_published=$changed_but_not_published" >> "$GITHUB_OUTPUT"
+          # 逆向きの静かな停止：切り詰め後の出力配列に新着・更新が残っているのに changed が偽（§5.5 RunCollection 手順 7、§8 #51）
+          no_changes_but_stats=$(jq -s -r '(if length == 1 then .[0] else null end)
+                                           | if type == "object" and (.changed | type) == "boolean" and (.survivingChanges | type) == "number"
+                                             then (.changed == false and .survivingChanges > 0)
+                                             else false end' "$SUMMARY_JSON" 2>/dev/null) || no_changes_but_stats=false
+          echo "no_changes_but_stats=$no_changes_but_stats" >> "$GITHUB_OUTPUT"
           # sourceFailures が配列でない（キー欠落・形式違い）なら 0 ではなく unknown（0 は「失敗なし」と読まれる）
-          echo "failed_sources=$(jq -r 'if type == "object"
-                                        then (.sourceFailures | if type == "array" then length else "unknown" end)
-                                        else "unknown" end' "$S" 2>/dev/null || echo unknown)" >> "$GITHUB_OUTPUT"
-          echo "notifications_all_failed=$(jq -r 'if type == "object" and (.notificationsSent | type) == "number" and (.notificationsFailed | type) == "number"
-                                                  then (.notificationsSent == 0 and .notificationsFailed > 0)
-                                                  else false end' "$S" 2>/dev/null || echo false)" >> "$GITHUB_OUTPUT"
-          # 以降はステップサマリの本文。出力用の jq と同じく型ガードを付ける（§8 #53）。
-          # 既定シェルは bash -e -o pipefail なので、ガードが無いとここで jq が非 0 終了したときサマリ
-          # ステップ自体が失敗し、後続の検知ステップ（暗黙の success() 条件）がスキップされて理由が出ない
-          jq -r 'if type != "object" then "サマリの形が想定外（.run-summary.json を確認する）"
+          failed_sources=$(jq -s -r '(if length == 1 then .[0] else null end)
+                                     | if type == "object" and (.sourceFailures | type) == "array"
+                                       then (.sourceFailures | length)
+                                       else "unknown" end' "$SUMMARY_JSON" 2>/dev/null) || failed_sources=unknown
+          echo "failed_sources=$failed_sources" >> "$GITHUB_OUTPUT"
+          notifications_all_failed=$(jq -s -r '(if length == 1 then .[0] else null end)
+                                               | if type == "object" and (.notificationsSent | type) == "number" and (.notificationsFailed | type) == "number"
+                                                 then (.notificationsSent == 0 and .notificationsFailed > 0)
+                                                 else false end' "$SUMMARY_JSON" 2>/dev/null) || notifications_all_failed=false
+          echo "notifications_all_failed=$notifications_all_failed" >> "$GITHUB_OUTPUT"
+          # 以降はステップサマリの本文。出力用の jq と同じく -s（1 文書に固定）と型ガードを付ける（§8 #53・#63）。
+          # ガードとフォールバックが無いと、jq が非 0 終了したときサマリステップ自体が失敗し（`bash -e`）、
+          # 後続の検知ステップ（暗黙の success() 条件）がスキップされて理由が出ない。`>>` はパイプでは
+          # ないので、ここの `|| …` は pipefail の有無にかかわらず発火する
+          jq -s -r '(if length == 1 then .[0] else null end)
+                 | if type != "object" then "サマリの形が想定外（.run-summary.json を確認する）"
                  else "収集 \(.collected) 件 / 破棄 \(.discarded) / 新着 \(.created) / 更新 \(.updated) / 残存 \(.survivingChanges) / 通知 \(.notificationsSent) 失敗 \(.notificationsFailed)（\(.notificationGateway)）/ 失敗した情報源 \((.sourceFailures // []) | length) / fullCrawl \((.fullCrawlCompanyIds // []) | join(","))" end' \
-            "$S" >> "$GITHUB_STEP_SUMMARY" || echo "サマリ本文の整形に失敗した" >> "$GITHUB_STEP_SUMMARY"
-          # message は collector 側で sanitizeFailureMessage 済み（§4.8）。古い形式のサマリに備えた多層防御として同じ処理を掛ける
-          jq -r 'if type != "object" then empty
-                 else (.sourceFailures // [])[] | "- \(.companyId): \(.reason) \(.message | tostring | gsub("[\\r\\n]"; " ") | .[0:200])" end' \
-            "$S" >> "$GITHUB_STEP_SUMMARY" || true
-          jq -r 'if type != "object" then empty
+            "$SUMMARY_JSON" >> "$GITHUB_STEP_SUMMARY" || echo "サマリ本文の整形に失敗した" >> "$GITHUB_STEP_SUMMARY"
+          # message は collector 側で sanitizeFailureMessage 済み（§4.8）。古い形式のサマリに備えた多層防御として
+          # 制御文字・空白・バックティックをまとめて潰す。[\r\n] だけでは ESC（U+001B）が残り、Actions のログ・
+          # サマリで ANSI エスケープとして解釈されうる。[[:cntrl:]] が C0/C1・DEL を、[[:space:]] が
+          # U+2028 / U+2029 を含む（jq 1.7.1 で実測。Oniguruma は UTF-8 で POSIX ブラケット式を Unicode
+          # 対応として解釈する）。YAML に U+2028 / U+2029 を直書きしない（パーサによって改行として
+          # 扱われうる）ため文字クラスで表す。バックティックを含めるのは、これを落とすと message の中の
+          # 1 文字で下のコードスパンが閉じ、以降が Markdown として解釈されて (4) の目的が無効になるため。
+          # 外部サイト由来の可変部分（reason・message）はコードスパンで囲み、`#` 見出しやリンクとして
+          # レンダリングされて読み手を誤誘導する体裁を作れないようにする（§8 #61）
+          jq -s -r '(if length == 1 then .[0] else null end)
+                 | if type != "object" then empty
+                 else (.sourceFailures // [])[] | "- \(.companyId): `\(.reason | tostring | gsub("[[:cntrl:][:space:]`]"; " "))` `\(.message | tostring | gsub("[[:cntrl:][:space:]`]"; " ") | .[0:200])`" end' \
+            "$SUMMARY_JSON" >> "$GITHUB_STEP_SUMMARY" || true
+          jq -s -r '(if length == 1 then .[0] else null end)
+                 | if type != "object" then empty
                  else (.discardedByCompany // {}) | to_entries[] | select((.value | type) == "number" and .value > 0) | "- \(.key): 破棄 \(.value) 件（部分破棄。D-03 のセレクタを確認）" end' \
-            "$S" >> "$GITHUB_STEP_SUMMARY" || true
-      - name: Pages 用にアップロード
-        if: ${{ !cancelled() && steps.summary.outputs.published != 'false' }} # true と unknown で行う（安全側。前回と同じ内容の再デプロイは無害）
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
-        with:
-          path: data # data/ をサイトのルートとして公開（D-01 §4.7）
+            "$SUMMARY_JSON" >> "$GITHUB_STEP_SUMMARY" || true
+      # Pages 用のアップロードはこのジョブに置かない（§8 #67）。作業ツリーの data/ ではなく main の内容を
+      # 配信するため、下の deploy-pages ジョブが main を明示的にチェックアウトしてからアップロードする。
       - name: 情報源の失敗を検知（R-2）
-        if: steps.summary.outputs.failed_sources != '0' # unknown も失敗にする（サマリが書けない状態を知らせる）
+        if: ${{ !cancelled() && steps.summary.outputs.failed_sources != '0' }}    # unknown と空文字も失敗にする（サマリが書けない状態を知らせる）。!cancelled() を付けるのは、状態関数を含まない if には暗黙の success() が付き、npm start が非 0 で終わった実行（サマリは failed_sources=unknown を書いている）でこのステップがスキップされるため（他の 3 つの検知ステップと同形にそろえる。§8 #72）
         run: |
           echo "失敗した情報源がある。ログとステップサマリを確認する" >&2
-          exit 1 # ジョブ失敗 → GitHub の既定のワークフロー失敗通知が届く（§8 #25）
+          exit 1                            # ジョブ失敗 → GitHub の既定のワークフロー失敗通知が届く（§8 #25）
       - name: 記事が変わったのに確定されなかったことを検知（§8 #41）
         if: ${{ !cancelled() && steps.summary.outputs.changed_but_not_published == 'true' }}
         run: |
           echo "記事配列は変化したのに publish が no_changes を返した。差分判定（D-02 §5.3 手順 3-2）を確認する" >&2
-          exit 1 # 配信も通知も静かに止まる経路。ジョブを赤くして開発者に届ける
+          exit 1                            # 配信も通知も静かに止まる経路。ジョブを赤くして開発者に届ける
       - name: 差分判定が変化を見落としたことを検知（§8 #51）
         if: ${{ !cancelled() && steps.summary.outputs.no_changes_but_stats == 'true' }}
         run: |
           echo "新着・更新があるのに changed が偽だった。detect-diff の hasSameArticles（D-02 §5.2 手順 9）を確認する" >&2
-          exit 1 # 上と対称の静かな停止（記事が二度と更新されない）。ジョブを赤くする
+          exit 1                            # 上と対称の静かな停止（記事が二度と更新されない）。ジョブを赤くする
       - name: 通知の全滅を検知（F-07）
-        # sent == 0 かつ failed > 0（FCM 鍵の失効・権限剥奪。§8 #34）。!cancelled() が無いと先行する検知ステップ
-        # （情報源の失敗・静かな停止）が exit 1 したときにスキップされ、鍵失効のメッセージが出ない
-        if: ${{ !cancelled() && steps.summary.outputs.notifications_all_failed == 'true' }}
+        if: ${{ !cancelled() && steps.summary.outputs.notifications_all_failed == 'true' }}   # sent == 0 かつ failed > 0（FCM 鍵の失効・権限剥奪。§8 #34）。!cancelled() が無いと先行する検知ステップ（情報源の失敗・静かな停止）が exit 1 したときにスキップされ、鍵失効のメッセージが出ない
         run: |
           echo "新着があったが FCM 送信がすべて失敗した。FIREBASE_SERVICE_ACCOUNT の鍵と権限を確認する" >&2
-          exit 1 # articles.json は push 済みで Pages のアップロードも上で済んでいる。配信は止めない
-  deploy-pages:
+          exit 1                            # articles.json は push 済み。Pages は deploy-pages ジョブが published で判定するのでこの失敗の影響を受けない（配信は止めない）
+  detect-collect-timeout:                   # collect ジョブのキャンセル（timeout-minutes 超過）を開発者に届ける（§8 #64）
     needs: collect
-    if: ${{ !cancelled() && needs.collect.outputs.published != 'false' && needs.collect.outputs.published != '' }}
+    # timeout-minutes 超過はジョブのキャンセルであり、(1) if: !cancelled() を付けた実行サマリと
+    # 4 つの検知ステップがすべてスキップされ、(2) キャンセルされたジョブは GitHub の
+    # 既定のワークフロー失敗通知（§8 #25）の対象にならない。このジョブを明示的に失敗させて実行全体を
+    # failure にし、メールが届くようにする。!cancelled() を残すのは、concurrency で待機中の実行が
+    # キャンセルされた場合（§8 #15。実行全体のキャンセル）に毎回赤くしないため。ジョブ単位の
+    # timeout では cancelled() は偽のまま needs.collect.result だけが 'cancelled' になる
+    # （この前提は §7 冒頭の目視確認 (d) で 1 回だけ実測して固定する。§8 #70）
+    if: ${{ !cancelled() && needs.collect.result == 'cancelled' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - run: |
+          echo "collect ジョブがキャンセルされた（timeout-minutes: 15 の超過が主因）。実行サマリと 4 つの検知ステップは行われていない" >&2
+          echo "どこまで進んだかは Actions のログで判定する：(a) 収集・差分・確定・通知 ステップの途中でキャンセル → push も通知も済んでいない（data/articles.json は未 push のまま runner ごと消え、次回実行が main 基準で取り直す）。(b) そのステップのログに published / notified が出ている → push と通知は完了済みで、Pages は下の deploy-pages ジョブが main の内容を配信して追いつく" >&2
+          echo "確認先：通知ゲートウェイの解放（D-02 §5.5 main.ts 手順 11・§5.4 の CLOSE_TIMEOUT_MS）、情報源の応答時間（§5.7 の timeoutMs）、git push のハング（§5.3 手順 3-5 の GIT_TIMEOUT_MS）" >&2
+          exit 1
+  deploy-pages:                # main の data/ をアップロードして Pages へデプロイする（§8 #67）
+    needs: collect
+    # collect ジョブの作業ツリーではなく main の内容を配信するため、このジョブで checkout → upload → deploy を行う。
+    # 判定は published（= 再デプロイが要るか）だけで行い、collect の成功は要求しない：collect は情報源の失敗で
+    # 意図的に failure になる（§8 #25）。published が空文字（サマリステップが動かなかった＝キャンセル）でも
+    # デプロイする。main をチェックアウトするので未 push の内容が配信されることはない（§8 #67）。
+    # skipped（main 以外の workflow_dispatch。collect ジョブの if が偽）だけは除く。
+    if: ${{ !cancelled() && needs.collect.result != 'skipped' && needs.collect.outputs.published != 'false' }}
     runs-on: ubuntu-latest
     permissions:
-      pages: write # GitHub Pages のデプロイ
-      id-token: write # deploy-pages の OIDC
+      contents: read           # main のチェックアウト（§8 #67）
+      pages: write             # GitHub Pages のデプロイ。この 2 つはこのジョブだけが持つ（§8 #52）
+      id-token: write          # deploy-pages の OIDC
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          ref: main                  # 既定の github.sha は collect の push より前の commit なので明示する（これを落とすと古い data/ を配信する）
+          persist-credentials: false # このジョブは push しないのでトークンを .git/config に残さない
+      - name: Pages 用にアップロード
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa   # v3.0.1
+        with:
+          path: data                        # data/ をサイトのルートとして公開（D-01 §4.7）
       - id: deploy
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e   # v4.0.5

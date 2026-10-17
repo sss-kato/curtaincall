@@ -174,9 +174,9 @@ export class FetchHttpClient implements HttpClient {
         },
       });
     } catch (error) {
-      // §5.7 手順 4 のとおり：ネットワーク失敗（TypeError）・タイムアウトはリトライ対象。
-      // D-02 追随: タイムアウトの例外名は設計書の表記が "AbortError" だが、AbortSignal.timeout が
-      // 投げるのは Node 22 では DOMException "TimeoutError"（実装で確認した表記差）。
+      // fetch が投げた例外は種別を問わず（ネットワーク失敗の TypeError・タイムアウトの TimeoutError・
+      // 明示的な中断の AbortError 等）status なしの HttpError に包む。isRetryable は status が
+      // 無ければリトライ対象とみなす（リトライしないのは NonRetryableHttpError だけ。§5.7 手順 3・4、§8 #58）
       throw new HttpError("request failed", url, undefined, { cause: error });
     }
     const rejection = this.rejectionFor(url, response);

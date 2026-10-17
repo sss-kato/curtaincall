@@ -33,7 +33,11 @@ Future<NotificationTap?> initialNotificationTap(Ref ref) async {
   } on Object catch (e, s) {
     ref
         .read(loggerProvider)
-        .w('通知タップ情報の取得に失敗', error: e, stackTrace: releaseSafeStackTrace(s));
+        .w(
+          '通知タップ情報の取得に失敗',
+          error: releaseSafeError(e),
+          stackTrace: releaseSafeStackTrace(s),
+        );
     return null;
   }
 }

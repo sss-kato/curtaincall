@@ -28,6 +28,295 @@ jobs:
         # CI は UTC で走るためその対策が効いていることを検証できない。対象を 1 ディレクトリに
         # 絞れば数秒で済む。
         run: TZ=America/New_York flutter test test/core/ui/article/
+      # ログの整形漏れの検査（D-04 §4.9・D-04 §8 #75）。release のログに DB ファイルの絶対パスが
+      # 載る退行を止める。error: / stackTrace: の名前付き引数は logger の呼び出しだけに現れる
+      # （D-04 §4.9）。1 行で判定できる形は下の (2) が強制し、(4)(5) が 1 行の中の出現数を突き合わせる。
+      # 行頭が // の行（説明コメント）は除外する。コード行の末尾コメントに書かないこと。
+      # 除外の正規表現は「grep -rn の出力の <ファイル>:<行番号>: に続くコード先頭」を見ている
+      # （':[[:space:]]*//' だけだと https:// の "s:" + "//" に一致して URL を含むログ行が除外され、
+      #  未整形の例外を渡していても検査をすり抜ける。実測済み）
+      # name に ": " が入るため YAML のマッピングと解釈されない形で引用する
+      - name: "logger の error: / stackTrace: が整形関数を通っているか"
+        run: |
+          # この step の検査の一覧（目次）。各判定の直上コメントは対応するラベルで始まる。
+          # 検査を増減したらこの一覧も同じ変更で直す（個数は書かない）。
+          # ラベルは追番で、既存の番号は振り直さない（番号の集合を参照するコメントが
+          # 目次と各判定の直上に散っており、振り直しに漏れたコメントは静かに嘘になる
+          # ＝ CI は赤くならない）。検査を足すときは途中に挿入せず末尾に足す
+          #   (0) strip_strings / occurrences 自身が機能しているかの自己検査
+          #   (1) lib に合格形が最低 1 件あるかの番兵（走査対象が消えたときの失効防止）
+          #   (2) error: / stackTrace: の実引数の折り返しの禁止
+          #   (3) 文字列リテラルの除去が破綻した行の検出（出現数を信用できない行を落とす）
+          #   (4) error: の実引数が releaseSafeError( を通っているか（1 行内の出現数の突合）
+          #   (5) stackTrace: の実引数が releaseSafeStackTrace( を通っているか（同）
+          #   (6) ログ定型ヘルパが error: / stackTrace: を名前付きで受けていないか
+          # D-04 §4.8 の抜粋にある本 step は grep -v 'error: releaseSafeError(' の旧版で、
+          # (0)〜(6) とヘルパに相当する記述が設計書に無い（§4.8 の限界一覧が名指しする
+          # ヘルパ名は下の step の冒頭に対応表を置いた）
+          # 共用ヘルパ 3 つ（lib_code_lines / strip_strings / occurrences）を (0)(1)(3)(4)(5) で
+          # 使う。(4)(5) 専用の unwrapped は (3) の直後に定義する（検査本体ではない）。
+          # lib_code_lines: （引数必須）lib 全体のうち、字面 $1 を含むコード行（行頭が // の説明コメント行は除外）
+          #   -a（--binary-files=text）: NUL バイトを含む .dart が 1 つでもあると grep が
+          #   そのファイルをバイナリ扱いして行を出力せず、そのファイルの違反が丸ごと
+          #   0 件に見えて緑になる（実測済み）
+          lib_code_lines() { grep -arn --include='*.dart' -e "$1" lib | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//'; }
+          # strip_strings: 文字列リテラル（'...' / "..."）を落とす。message の字面に 'error: ' を
+          #   含む正当なログ行を赤にしないため、数える前に必ず通す（実測済み）
+          strip_strings() { sed -E "s/'([^'\\\\]|\\\\.)*'//g; s/\"([^\"\\\\]|\\\\.)*\"//g"; }
+          # occurrences: strip_strings で文字列リテラルを落としたうえでの、字面 $1 の出現数
+          occurrences() { strip_strings | grep -oF "$1" | wc -l | tr -d '[:space:]'; }
+          # (0) strip_strings / occurrences が機能していることの自己検査（positive control）。
+          #     strip_strings の sed の編集ミス 1 か所で (3)(4)(5) は同時に失効しうる
+          #     （sed が空出力になる故障では、(3) は引用符が残らないので grep が 1 を返して
+          #      通過し、(4)(5) は両辺 0 で一致する＝未整形の error: e があっても
+          #      この 3 つは緑。実測済み）。その故障は (1) が 0 件で赤にし、置換が no-op に
+          #      なる故障は (3) が赤にする（どちらも (0) を外して実測済み）が、出る診断は
+          #      「lib に合格形が無い」「文字列リテラルの除去が破綻」で、真の原因
+          #      （strip_strings 自体の故障）を指さない。(0) を先頭に置くのは、
+          #      ヘルパの故障をその場で 1 行で示して (1)(3) の誤った診断を追わせないため。
+          #     既定シェルは bash -e で pipefail が無いためパイプ中段の失敗は終了コードに出ないが、
+          #     set -o pipefail では代替しないこと。入れると (3) の
+          #     { lib_code_lines ...; lib_code_lines ...; } | strip_strings | grep が、
+          #     どちらかの lib_code_lines が 0 件（終了コード 1）のとき grep が一致しても
+          #     pipeline 全体が 1 を返し、(3) が fail-open に反転する（実測済み）
+          [ "$(printf '%s\n' "w('error: x', error: e);" | occurrences 'error: ')" = 1 ] \
+            || { echo 'strip_strings / occurrences の自己検査に失敗（検査が失効している。D-04 §4.8）'; exit 1; }
+          # (1) 走査対象が消えたときに「0 件＝緑」で検査が黙って失効するのを防ぐ番兵
+          #     （working-directory の変更・lib/ の配置変更・app_logger.dart の移動）。
+          #     上の一覧の (3)(4)(5)(6) はいずれも「違反が 0 件」で合格を判定するため、
+          #     合格形が最低 1 件あることを先に確かめる（実測済み。D-04 §4.8）。
+          #     ここで照合する字面 'error: releaseSafeError(' は、下の step「release のログに
+          #     例外の自由文を出していないか」冒頭の期待値の一覧と対になる（step が別なので
+          #     変数は共有できない）。整形関数を改名するときは両方を同じ変更で直す。
+          #     lib_code_lines で数える＝説明コメント 1 行だけの lib では緑にしない（実測済み）。
+          #     strip_strings も通す＝文字列リテラルの中の合格形
+          #     （const sample = 'error: releaseSafeError(';）1 行では満足しない（実測済み。
+          #      行末コメント中の合格形は strip_strings では落ちないので、上に書いたとおり
+          #      説明コメントをコード行の末尾に書かないという規約で担保する）
+          [ "$(lib_code_lines 'error: releaseSafeError(' | strip_strings | grep -cF 'error: releaseSafeError(')" -ge 1 ] \
+            || { echo 'lib を走査できていない、または lib に合格形（error: releaseSafeError(）が 1 件も無い。後者ならこの番兵の字面を現在のログ経路に合わせて見直す（D-04 §4.8）'; exit 1; }
+          # (2) 実引数の折り返しを禁じる。下の (4)(5) は「error: と整形関数の呼び出しが同じ行に
+          #     並ぶ」ことを前提にするが、dart format は 80 桁を超える単一式を 'error:' だけの行に
+          #     折り返すため、その形では前提が崩れて 1 件も検出できない（実測済み）。
+          #     1 行に収まらない場合は releaseSafeError(...) の内側の式をローカル変数に出す
+          #     （error: の実引数は releaseSafeError( のままにする。D-04 §4.9）。実引数そのものを
+          #     ローカル変数に出す形（final safe = releaseSafeError(e); ... error: safe,）は
+          #     (4) が赤にするので回避策にならない（実測済み）。それでも収まらない場合は
+          #     位置引数のログ定型ヘルパ（AppLifecycleSync._warn・SettingsScreen._logWarn）に寄せる
+          if grep -rnE --include='*.dart' '(error|stackTrace):[[:space:]]*$' lib | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//'; then
+            echo 'error: / stackTrace: の実引数が折り返されており検査できない（1 行に収めること。D-04 §4.9）'; exit 1
+          fi
+          # (3) 文字列リテラルの除去が破綻した行を、数える前に落とす。strip_strings は行内の
+          #     引用符を左から素朴に対にするため、コード部に対にならない引用符が 1 個あると
+          #     error: を含む区間ごと食われ、(4)(5) の両辺の出現数が 0 で揃って違反が緑になる
+          #     （偽陰性。prefer_single_quotes はアポストロフィを含む文字列に二重引用符を許すので
+          #      "it's …" と行内のもう 1 個の ' が揃うだけで成立する。実測済み）。
+          #     除去が破綻した行＝除去後に引用符が残る行は、出現数を信用できない。
+          #     逆に、引用符が偶数個で残骸が再び対になる形（error: をまたぐ区間が食われるのに
+          #     strip_strings 後の引用符は 0 個で揃う。実測：
+          #      _logger.w("a's", error: e, stackTrace: traces["x's"]);）はこの (3) では見えない
+          #     ＝ error: の前後にアポストロフィを含む文字列を置く形は検出外
+          #     （D-04 §4.8 (A) に未収載の限界）。
+          #     赤になったら、二重引用符の文字列からアポストロフィを外す（"can't" → 'できない'）・
+          #     行末コメントの引用符を外す・raw string の末尾の \ を避ける、のいずれかで直す。
+          #     いずれも取れない場合はログ呼び出しを位置引数ヘルパ（AppLifecycleSync._warn・
+          #     SettingsScreen._logWarn）に寄せる。
+          #     違反行は CI ログに出す（他の判定と同じく file:line を残す）。grep が 1 を返すのは
+          #     「残留なし」＝合格なので、|| true で受けて $broken_lines が空のときは通過させる
+          broken_lines=$({ lib_code_lines 'error: '; lib_code_lines 'stackTrace: '; } | strip_strings | grep "['\"]" || true)
+          if [ -n "$broken_lines" ]; then
+            printf '%s\n' "$broken_lines"
+            echo '文字列リテラルの除去が破綻している行がある（出現数を信用できないので赤にする。D-04 §4.9）'; exit 1
+          fi
+          # unwrapped: (4)(5) が共用するヘルパ（検査本体ではない）。$1 の出現数と
+          #   $2（整形関数つき）の出現数が一致しない行だけを返す
+          unwrapped() {
+            lib_code_lines "$1" | while IFS= read -r line; do
+              [ "$(printf '%s\n' "$line" | occurrences "$1")" = "$(printf '%s\n' "$line" | occurrences "$2")" ] \
+                || printf '%s\n' "$line"
+            done
+          }
+          # (4) 判定は行単位ではなく出現単位で行う。「合格形を含む行」を grep -v で落とす形は、
+          #     1 行に合格形と違反形が混在すると緑になる（実測済み。例：
+          #     _logger.w('a', error: releaseSafeError(e)); _logger.w('b', error: e);）。
+          #     出現数が一致しなければ、整形関数を通していない実引数がその行にある。
+          #     逆は成り立たない（error: の直後が整形関数でさえあれば、三項・??・キャストで
+          #     同じ式に生の例外を混ぜた形は緑になる。D-04 §4.8 (A) の限界。実測済み）
+          hits=$(unwrapped 'error: ' 'error: releaseSafeError(')
+          if [ -n "$hits" ]; then
+            printf '%s\n' "$hits"
+            echo '例外を releaseSafeError() を通さずに logger へ渡している（D-04 §4.9）'; exit 1
+          fi
+          # (5) stackTrace: 側。考え方と限界は (4) と同じ
+          hits=$(unwrapped 'stackTrace: ' 'stackTrace: releaseSafeStackTrace(')
+          if [ -n "$hits" ]; then
+            printf '%s\n' "$hits"
+            echo 'スタックトレースを releaseSafeStackTrace() を通さずに logger へ渡している（D-04 §4.9）'; exit 1
+          fi
+          # (6) ログ定型ヘルパが error: / stackTrace: を名前付きで受けると、(4)(5) を満たすために
+          #     呼び出し側と本体の両方が包んで releaseSafeError(releaseSafeError(e)) になり、
+          #     release では内側の戻り値（String）だけがログに残る
+          #     （D-04 §4.9 の「必ず位置引数で受ける」）。名前付き引数の宣言
+          #     （) より手前に { があり、その後に Object? error / StackTrace? stackTrace）を禁じる。
+          #     位置引数（'(String m, Object error, StackTrace s) {'）は ) の手前に { が無いので当たらない
+          if grep -rnE --include='*.dart' '\{[^)]*(Object|Exception|Error|StackTrace)\??[[:space:]]+(error|stackTrace)\b' lib | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//'; then
+            echo 'ログ定型ヘルパが error: / stackTrace: を名前付きで受けている（D-04 §4.9・D-04 §8 #75）'; exit 1
+          fi
+      # 上の検査は error: / stackTrace: の実引数しか見ないため、message 文字列に例外を埋め込む形
+      # （_logger.w('DB 失敗: $e')）と、releaseSafeError の release 分岐そのものの書き換え
+      # （return cause.toString() 等）はすり抜ける。この 2 つを塞ぐ（D-04 §4.9・D-04 §8 #75）。
+      # (a) app_logger.dart は「字面の許可リスト」と「制御フロー」を固定する（判定の一覧は
+      #     下の run: 冒頭の目次。D-04 §10 T-F5a の (a-1)〜(a-4) との対応もそこに書く）。
+      #     字面だけでは if (!kDebugMode) return error; の 1 文字の反転を 1 件も検出できない
+      #     （補間もメンバ参照も変わらないため字面の判定はすべて緑。実測済み）ので
+      #     制御フローも固定する。
+      #     -o は行頭情報を落とすため、コメント行の除外を先に行う
+      # (b) lib/ 全体は '$e' だけを見る形より広い名前集合（e と、error / exception / cause / stackTrace を
+      #     含む識別子）の補間を禁じる。'$e' だけを見る形では $error・${next.error}・${error.remoteCause}
+      #     が素通りする（\b が e の直後の r で成立しないため。実測済み）＝「書き換え」だけでなく
+      #     「別経路の 1 行の追加」も捕まえる。名前集合と「補間という形」には依存する
+      #     （限界は D-04 §4.8 末尾の一覧）。
+      #     生成物（*.g.dart）も走査対象に含める（コミットされ CI で再生成も照合もされない＝
+      #     そのまま release ビルドに載る。D-04 §8 #20）。生成物が hit した場合（drift の生成
+      #     toString() は全列を ..write('id: $id, ') の形で補間するため、lastError のような列名を
+      #     足すと確実に hit する）は、列名・テーブル名・Provider 名を error / exception / cause /
+      #     stackTrace を含まない名前に変える（命名で避けるのが既定。D-04 §4.8 (B) の偽陽性の対処と同じ）。
+      #     それが取れない場合に限り --exclude='*.g.dart' の再付与を D-04 §8 #75 の再レビューで判断する
+      # この 2 つの step の期待値を緩める変更は D-04 §8 #75 の決定の変更にあたる。期待値だけを緩めて
+      # 通す形をレビューで止めるため、緩めるときは設計書を draft に戻して /design-review をやり直す
+      - name: release のログに例外の自由文を出していないか
+        run: |
+          # この step の検査の一覧（目次）。各判定の直上コメントは対応するラベルで始まる。
+          # 検査を増減したらこの一覧も同じ変更で直す（個数は書かない）。
+          # 既存の記号は振り直さない（群内では追番、群は固定）。(a-*) を足すときは (a-vi) の
+          # 直後に、(b) 系を足すときは (b) の後ろに置く（記号は 2 群あり、末尾に足すと
+          # 群の区切りと目次の並びが崩れる）。
+          # 記号は (a-i)… とする：D-04 §10 T-F5a の (a-1)〜(a-4)（= §4.8 の (a) の 4 検査）は
+          # 切り方が違う（設計書側に (a-iii)(a-iv) が無い）ため、番号が衝突しない別記号にして
+          # 対応をこの目次に書く
+          #   (a-i)   すべての文字列補間が許可リストと一致（D-04 §10 T-F5a (a-1)）
+          #   (a-ii)  cause のメンバ参照が許可リストと一致（同 (a-2)）
+          #   (a-iii) error 側のメンバ参照が error.remoteCause だけ（D-04 に未収載。キャスト経由対策）
+          #   (a-iv)  .remoteCause の出現数が 1（同上）
+          #   (a-v)   自由文を読む語が無い（同 (a-3)）
+          #   (a-vi)  制御フローと出現数の固定（同 (a-4)）。(a-i)〜(a-v) は字面しか見ないため必要
+          #   (b)     lib/ 全体（app_logger.dart を除く）の例外の補間の禁止（同 (b)）
+          # D-04 §4.8 の抜粋・限界一覧が名指しする code() / danger は、本 step の
+          # app_logger_code_lines / forbidden_interp に対応する（ヘルパ名は設計書の
+          # code() / danger から改名している）。上の step のヘルパ（lib_code_lines /
+          # strip_strings / occurrences / unwrapped）は設計書に対応物が無い
+          # （§4.8 の抜粋は素の 2 段パイプの旧版）
+          # （設計書側の追随は FOLLOWUPS 2-12〜2-17。2 step のスクリプト切り出しは 4-22）
+          # app_logger.dart を変えるときに同じ変更で直す期待値（許可リスト）は、この一覧だけ
+          # （下の判定と診断メッセージはすべてこの変数を参照する）。これ以外に
+          # app_logger.dart へ結びつく字面は (a-v) の自由文の語の禁止リスト 1 か所と
+          # ファイルパス 3 か所（app_logger_code_lines の定義・(a-v) の grep・(b) の除外）
+          # だけで、ファイル移動・型の追加のときはそちらも見る。D-04 §4.9 のコード片・D-04 §4.8 の
+          # 期待値と三重管理になるので、実装・設計書・この一覧を同じ変更で直す。
+          # 整形関数を改名するときは、上の step「logger の error: / stackTrace: が整形関数を
+          # 通っているか」の (1) 番兵が持つ合格形の字面 'error: releaseSafeError(' も同じ
+          # 変更で直す（step が別なので変数としては共有できない）
+          expected_interps='${cause.extendedResultCode} ${cause.resultCode} '
+          expected_members='cause.extendedResultCode cause.resultCode cause?.runtimeType '
+          expected_errmembers='error.remoteCause '
+          expected_remote_cause_count=1
+          expected_return_error_count=1
+          expected_kdebugmode_lines=3
+          expected_debug_branch='if (kDebugMode) return error;'
+          expected_stacktrace_body='releaseSafeStackTrace(StackTrace? stackTrace) => kDebugMode ? stackTrace : null;'
+          # --- (a) lib/core/logging/app_logger.dart（D-04 §4.9 のコード片どおりに書く） ---
+          # app_logger_code_lines: app_logger.dart のコード行（説明コメント行は除外）
+          app_logger_code_lines() { grep -vE '^[[:space:]]*//' lib/core/logging/app_logger.dart; }
+          # (a-i) すべての文字列補間が許可リストと一致すること
+          interps=$(app_logger_code_lines | grep -oE '\$\{[A-Za-z_][A-Za-z0-9_.?]*\}|\$[A-Za-z_][A-Za-z0-9_]*' | LC_ALL=C sort -u | tr '\n' ' ')
+          if [ "$interps" != "$expected_interps" ]; then
+            echo "app_logger.dart の文字列補間が許可リストと異なる: ${interps}（D-04 §4.9・D-04 §8 #75）"; exit 1
+          fi
+          # (a-ii) 補間を伴わないメンバ参照（return cause.message; 等）も塞ぐ。
+          #     LC_ALL=C で並び順を固定する
+          members=$(app_logger_code_lines | grep -oE 'cause\??\.[A-Za-z]+' | LC_ALL=C sort -u | tr '\n' ' ')
+          if [ "$members" != "$expected_members" ]; then
+            echo "releaseSafeError が許可リスト外のメンバを参照している: ${members}（D-04 §4.9・D-04 §8 #75）"; exit 1
+          fi
+          # (a-iii) cause ではなく error 側のメンバ参照からも自由文に到達できるため、
+          #     同じ方式で error 側も固定する。許可は DriftRemoteException を 1 段開く error.remoteCause の 1 つだけ
+          errmembers=$(app_logger_code_lines | grep -oE 'error\??\.[A-Za-z]+' | LC_ALL=C sort -u | tr '\n' ' ')
+          if [ "$errmembers" != "$expected_errmembers" ]; then
+            echo "releaseSafeError が許可リスト外の error メンバを参照している: ${errmembers}（D-04 §4.9・D-04 §8 #75）"; exit 1
+          fi
+          # (a-iv) 上の字面はキャスト経由（return ... (error as DriftRemoteException).remoteCause;）に当たらず、
+          # cause 側の許可リストも補間も変わらないため、それだけでは remoteCause を生のまま返す 1 行の
+          # 追加を検出できない（実測済み）。remoteCause を開くのは cause への代入 1 か所だけなので
+          # 出現数を expected_remote_cause_count に固定する。ただし塞げるのはキャスト経由
+          # （(error as DriftRemoteException).remoteCause）だけで、パターン分解
+          # （DriftRemoteException(remoteCause: final x)）は .remoteCause の字面が増えないため
+          # 見えない（D-04 §4.8 (A) に未収載の限界。実測済み）。本体に return cause; を足す形も
+          # 同じ理由で見えない（D-04 §4.8 (A)-5「それ以外の構造変更」）。
+          # この出現数の固定はキャスト経由を塞ぐ唯一の検査なので外さない（上記の限界は別の検査で補う。
+          # 緩めるときはこの 2 つの step の冒頭に書いたとおり設計書を draft に戻す）
+          if [ "$(app_logger_code_lines | grep -oF '.remoteCause' | wc -l | tr -d '[:space:]')" != "$expected_remote_cause_count" ]; then
+            echo "releaseSafeError が remoteCause を ${expected_remote_cause_count} か所（cause への代入）以外で参照している（D-04 §4.9・D-04 §8 #75）"; exit 1
+          fi
+          # (a-v) 中間変数・キャスト経由（final m = (cause as SqliteException).message;）も塞ぐ。
+          # 5 語は SqliteException の自由文フィールド（D-04 §8 #75）。safeToString は
+          # Error.safeToString(cause)（toString() という字面にも cause のメンバ参照にも
+          # 当たらないのに自由文を返す）を塞ぐため。コメント行の除外は行番号の後ろに固定する
+          if grep -nE 'toString\(\)|safeToString|\b(message|explanation|causingStatement|parametersToStatement|operation)\b' lib/core/logging/app_logger.dart | grep -vE '^[0-9]+:[[:space:]]*//'; then
+            echo 'releaseSafeError が例外の自由文を読んでいる（D-04 §4.9・D-04 §8 #75）'; exit 1
+          fi
+          # (a-vi) 制御フロー（debug / release の分岐と return の位置）を固定する。(a-i)〜(a-v) は
+          # 字面だけを見るため、if (kDebugMode) を if (!kDebugMode) に 1 文字だけ反転させても補間・
+          # メンバ参照の集合が変わらず字面の判定はすべて緑になる
+          # （= D-04 §8 #75 の効果そのものを無効化できる。実測済み）。
+          # 改行と連続空白を 1 個の空白に潰してから照合するので、dart format の折り返しと
+          # インデントに依存しない（D-04 §4.9 のコード片の 2 行をそのまま照合する）。
+          # case のパターンは期待値を "..." で囲む＝ StackTrace? の ? をグロブではなく字面として扱う
+          flow=$(app_logger_code_lines | tr -s ' \t\n' ' ')
+          case "$flow" in
+            *"$expected_debug_branch"*) ;;
+            *) echo "releaseSafeError の debug 分岐が「${expected_debug_branch}」でない（D-04 §4.9・D-04 §8 #75）"; exit 1;;
+          esac
+          case "$flow" in
+            *"$expected_stacktrace_body"*) ;;
+            *) echo "releaseSafeStackTrace が「${expected_stacktrace_body}」の形でない（D-04 §4.9・D-04 §8 #75）"; exit 1;;
+          esac
+          # 分岐を 1 つ足す・return を増やす形（final x = error; return x; 等）も塞ぐ。
+          # コード行での出現数は expected_return_error_count（return error;）と
+          # expected_kdebugmode_lines（kDebugMode を含む行）で固定する。
+          # expected_kdebugmode_lines の内訳は createAppLogger の level: の行・
+          # releaseSafeStackTrace の 1 行式・releaseSafeError の if
+          # （いずれも D-04 §4.9 のコード片に載せてある。createAppLogger の return Logger( は
+          # 'return error;' に当たらないので expected_return_error_count は変わらない）
+          if [ "$(app_logger_code_lines | grep -cE 'return error;')" != "$expected_return_error_count" ] \
+            || [ "$(app_logger_code_lines | grep -cF 'kDebugMode')" != "$expected_kdebugmode_lines" ]; then
+            echo "app_logger.dart の return error; / kDebugMode の出現数が想定（${expected_return_error_count} 回 / ${expected_kdebugmode_lines} 行）と異なる（D-04 §4.9・D-04 §8 #75）"; exit 1
+          fi
+          # --- (b) lib/ 全体（'$e' だけを見る形より広い名前集合。限界は D-04 §4.8 末尾の一覧） ---
+          # 許すのは 2 つだけ。
+          # ・自前の例外・結果型が toString() で自分の cause フィールドを出す形
+          #   （$cause・${cause}。D-04 §4.3 の FeedOfflineException・FeedErrorException 等。原因フィールドの
+          #   名前は public の cause に固定する＝ $_cause 等にすると下の sed が名前に一致せず CI が
+          #   赤になる。D-04 §4.9）
+          # ・自前例外型の enum / 数値フィールドの 3 語（${e.reason}・${e.schemaVersion}・${e.offset}）。
+          # 許可形は「変数名が e で、かつ自前例外型のフィールド」に限る（型は検査できないので規約に
+          # 委ねる。D-04 §4.9 の表）。新しい enum / 数値フィールドを補間するときは下の sed に
+          # 同じ機会で 1 語足す。
+          # sed で許可形を消してから同じ式を当てるので、1 行に許可形と違反が混在しても検出できる。
+          # app_logger.dart は (a) で完全固定しているため二重に見ない（${cause.resultCode} を持つ）
+          # 下の sed の置換に \b（単語境界）を使わない。BSD sed（macOS）は \b を解釈せず置換が無効になり、
+          # toString() の正当な $cause が誤検出される（GNU sed では動くため CI と手元で挙動が変わる。実測）。
+          # 代わりに ([^A-Za-z0-9_]|$) を先読みの代用として置き、\1 で元の 1 文字を書き戻す。
+          # ${e.reason} 等と ${cause} は } で終わるため単語境界を必要としない（そのまま）
+          forbidden_interp='\$e\b|\$\{e\b|\$\{?[A-Za-z0-9_.]*([eE]rror|[eE]xception|[cC]ause|[sS]tackTrace)'
+          hits=$(grep -rnE --include='*.dart' "$forbidden_interp" lib \
+            | grep -vE '^lib/core/logging/app_logger\.dart:' \
+            | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' \
+            | sed -E 's/\$\{e\.(reason|schemaVersion|offset)\}//g; s/\$cause([^A-Za-z0-9_]|$)/\1/g; s/\$\{cause\}//g' \
+            | grep -E "$forbidden_interp" || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo '例外オブジェクト・その自由文を message 文字列に埋め込んでいる（D-04 §4.9・D-04 §8 #75）'; exit 1
+          fi
       - name: Info.plist に Chrome のクエリスキームがあること（D-05 §4.4）
         run: |
           for scheme in googlechrome googlechromes; do

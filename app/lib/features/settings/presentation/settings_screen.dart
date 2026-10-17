@@ -105,14 +105,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     }
   }
 
-  // 記録の整形（release でスタックトレースを出さない。D-04 §4.9）を 1 箇所に
-  // 集約する。例外を伴う記録はここを通す（error が無い記録は _logger.w を
-  // 直接呼ぶ）。FOLLOWUPS 4-3 で releaseSafeError を入れるときの変更点も
-  // ここだけ。
-  void _logWarn(String message, {Object? error, StackTrace? stackTrace}) =>
+  /// 記録の整形（release では例外オブジェクトもスタックトレースも出さない）を
+  /// 1 箇所に集約する。例外を伴う記録はここを通す（error が無い記録は
+  /// _logger.w を直接呼ぶ）。例外とスタックトレースを**位置引数**で受ける
+  /// ことと、`null` ガードを書かないことの理由はいずれも D-04 §4.9
+  /// （位置引数の規約と、`null` ガードを書かない理由の 2 段落）。
+  ///
+  /// 呼び出し側が間違えうる 1 点：`StackTrace` は `Object` の部分型なので、
+  /// 第 2 引数にスタックトレースを渡しても型が通る（release では型名だけが
+  /// 残り原因が分からなくなる）。
+  void _logWarn(String message, Object? error, StackTrace? stackTrace) =>
       _logger.w(
         message,
-        error: error,
+        error: releaseSafeError(error),
         stackTrace: releaseSafeStackTrace(stackTrace),
       );
 
@@ -130,7 +135,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     String message,
   ) {
     if (!next.hasError || (previous?.hasError ?? false)) return;
-    _logWarn(message, error: next.error, stackTrace: next.stackTrace);
+    _logWarn(message, next.error, next.stackTrace);
   }
 
   @override
@@ -419,7 +424,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             .read(updateNotificationSettingUseCaseProvider)
             .execute(companyId, enabled: enabled);
       } on Object catch (e, s) {
-        _logWarn('通知設定の更新に失敗', error: e, stackTrace: s);
+        _logWarn('通知設定の更新に失敗', e, s);
       }
     }());
   }
@@ -434,7 +439,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         // 例外は無いため整形不要。
         if (!ok) _logger.w('通知設定画面を開けなかった');
       } on Object catch (e, s) {
-        _logWarn('通知設定画面を開けなかった', error: e, stackTrace: s);
+        _logWarn('通知設定画面を開けなかった', e, s);
       }
     }());
   }
@@ -460,7 +465,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
           ref.invalidate(chromeAvailableProvider);
         }
       } on Object catch (e, s) {
-        _logWarn('ブラウザの選択に失敗', error: e, stackTrace: s);
+        _logWarn('ブラウザの選択に失敗', e, s);
       } finally {
         _selectingBrowser = false;
         final queued = _queuedBrowserChoice;
@@ -506,7 +511,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     try {
       await useCase.execute();
     } on Object catch (e, s) {
-      _logWarn('既読の一括クリアに失敗', error: e, stackTrace: s);
+      _logWarn('既読の一括クリアに失敗', e, s);
     } finally {
       if (mounted) setState(() => _clearing = false);
     }

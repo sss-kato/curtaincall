@@ -1,3 +1,4 @@
+import 'package:curtaincall/core/logging/app_logger.dart';
 import 'package:curtaincall/features/browser/domain/article_opener.dart';
 import 'package:curtaincall/features/settings/domain/browser_choice.dart';
 import 'package:logger/logger.dart';
@@ -31,7 +32,11 @@ class UrlLauncherArticleOpener implements ArticleOpener {
     try {
       return await canLaunchUrl(_chromeAvailabilityUri);
     } on Object catch (e, s) {
-      _logger.w('Chrome の有無を確認できなかった', error: e, stackTrace: s);
+      _logger.w(
+        'Chrome の有無を確認できなかった',
+        error: releaseSafeError(e),
+        stackTrace: releaseSafeStackTrace(s),
+      );
       return false;
     }
   }
@@ -63,7 +68,11 @@ class UrlLauncherArticleOpener implements ArticleOpener {
           );
       }
     } on Object catch (e, s) {
-      _logger.w('記事を開けなかった: url=$url', error: e, stackTrace: s);
+      _logger.w(
+        '記事を開けなかった: url=$url',
+        error: releaseSafeError(e),
+        stackTrace: releaseSafeStackTrace(s),
+      );
       return false;
     }
   }
@@ -74,7 +83,7 @@ class UrlLauncherArticleOpener implements ArticleOpener {
       await closeInAppWebView();
     } on Object catch (e) {
       // 表示していない場合を含め、ユーザー影響は無いため痕跡だけ残す（D-05 §4.4）。
-      _logger.d('アプリ内ブラウザを閉じられなかった（表示していない場合を含む）', error: e);
+      _logger.d('アプリ内ブラウザを閉じられなかった（表示していない場合を含む）', error: releaseSafeError(e));
     }
   }
 }

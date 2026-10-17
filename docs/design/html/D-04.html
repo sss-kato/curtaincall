@@ -3401,12 +3401,12 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>同じ通知が <code>takeInitialTap()</code> と <code>taps</code> の<strong>両方</strong>から届いた（プラットフォーム側の重複配送・ホット再起動と <code>onMessageOpenedApp</code> の競合）</td>
-<td><strong>2 回処理される</strong>（D-05 の <code>initialNotificationTapProvider</code> 経由と <code>notificationTapStreamProvider</code> 経由で S-01/ST-15 が各 1 回）。タブ選択と先頭スクロールは冪等で、取得は <code>SyncCoordinator</code> が後追い 1 回に畳む（<strong>S-01 §8 #12</strong>。§8 #31）ため害が無い。<strong><code>NotificationTap</code> は identity 比較（§8 #70）なので 2 件を同じタップとして畳むことはできず、畳む仕組みも入れない</strong>（畳むには「1 回のタップ」に値としての等価性を与えることになり #70 が塞いだ穴が開く）。対策は行わない</td>
+<td><strong>2 回処理される</strong>（D-05 の <code>initialNotificationTapProvider</code> 経由と <code>notificationTapStreamProvider</code> 経由で S-01/ST-15 が各 1 回）。タブ選択と先頭スクロールは冪等で、取得は<strong>どちらの経路も契機が <code>notificationTap</code> なので、2 つ目は実行中の取得の結果を待つ</strong>（新しい取得を始めず、後追いの予約もしない。§5.3 の <code>run</code> 手順 2 の前半（実行中の契機が <code>notificationTap</code> のとき）＝<strong>S-01 §8 #12</strong> の「通知タップが別の通知タップの取得中に起きた場合は実行中の取得の結果を待つ」側。§8 #31）ため害が無い（1 つ目の取得がすでに完了していれば 2 つ目は通常どおり 1 回取得するだけで、重なった場合に取得が 2 回になることは無い）。<strong><code>NotificationTap</code> は identity 比較（§8 #70）なので 2 件を同じタップとして畳むことはできず、畳む仕組みも入れない</strong>（畳むには「1 回のタップ」に値としての等価性を与えることになり #70 が塞いだ穴が開く）。対策は行わない</td>
 <td>presentation / D-05</td>
 </tr>
 <tr>
 <td><strong>同じ団体の通知を続けてタップした</strong>（<code>toho</code> → <code>toho</code>）／団体が交互に並ぶ連打（<code>toho, toho, shiki, shiki, toho</code>）</td>
-<td><code>notificationTapStreamProvider</code> の<strong>各発火が 1 回ずつ D-05 に届く</strong>（S-01 §6 A-07 が毎回 §5.3 ST-15 で開くと定めているため。D-05 §6 も同じ）。<code>NotificationTap</code> の <code>==</code> が identity なので <code>AsyncData</code> が前回値と等しくならず、Riverpod の <code>updateShouldNotify</code>（<code>previous != next</code>）に握り潰されない（§4.6・§5.7・§8 #70）。<strong>値としての <code>==</code>（<code>companyId</code> 比較）を持たせると 2 回目以降が届かない</strong>（<code>[toho, shiki, toho]</code> しか届かないことを flutter_riverpod 3.0.3 で実測）。取得（<code>sync(notificationTap)</code>）は <code>SyncCoordinator</code> が後追い 1 回に抑える（<strong>S-01 §8 #12</strong>「2 回以上タップしても後の取得は 1 回だけ」。§8 #31）ので、連打で HTTP が増えることは無い。<strong>畳まないのはタブ選択と先頭スクロール</strong>で、S-01 §5.3 ST-15 が「各回行う」と定めている</td>
+<td><code>notificationTapStreamProvider</code> の<strong>各発火が 1 回ずつ D-05 に届く</strong>（S-01 §6 A-07 が毎回 §5.3 ST-15 で開くと定めているため。D-05 §6 も同じ）。<code>NotificationTap</code> の <code>==</code> が identity なので <code>AsyncData</code> が前回値と等しくならず、Riverpod の <code>updateShouldNotify</code>（<code>previous != next</code>）に握り潰されない（§4.6・§5.7・§8 #70）。<strong>値としての <code>==</code>（<code>companyId</code> 比較）を持たせると 2 回目以降が届かない</strong>（<code>[toho, shiki, toho]</code> しか届かないことを flutter_riverpod 3.0.3 で実測）。取得（<code>sync(notificationTap)</code>）の重複は <code>SyncCoordinator</code> が抑える（<strong>実行中の契機が <code>notificationTap</code> なら実行中の取得の結果を待ち</strong>（2 回目以降のタップが 1 回目のタップの取得中に来た場合。§5.3 の <code>run</code> 手順 2 の前半）、<strong>引っ張り・復帰・再試行・起動の取得中にタップが来たときは後に 1 回だけ後追いする</strong>（同手順 2 の後半。2 回以上タップしても後の取得は 1 回だけ）。<strong>S-01 §8 #12</strong>。§8 #31）ので、連打で HTTP が増えることは無い。<strong>畳まないのはタブ選択と先頭スクロール</strong>で、S-01 §5.3 ST-15 が「各回行う」と定めている</td>
 <td>domain（<code>NotificationTap</code>）/ presentation</td>
 </tr>
 <tr>
@@ -3679,7 +3679,7 @@ class TabReselect extends _$TabReselect {
 <p><strong><code>SyncCoordinator</code> — <code>group(&#39;通知タップの後追い&#39;)</code></strong>（§8 #31・#39）：</p>
 <ul>
 <li><code>launch</code> 実行中に <code>run(notificationTap)</code> → <code>launch</code> の完了後に <code>execute(notificationTap)</code> が 1 回呼ばれ、その結果で完了する</li>
-<li>実行中にさらに <code>run(notificationTap)</code> を呼ぶ → 後追いは 1 回のまま</li>
+<li><code>launch</code> 実行中にさらに <code>run(notificationTap)</code> を呼ぶ（計 2 回以上） → 後追いは 1 回のまま</li>
 <li><code>notificationTap</code> 実行中の <code>run(notificationTap)</code> → 後追いせず実行中の Future を返す</li>
 <li>後追いの予約中 → <code>isRunning</code> は後追いの完了まで true（<code>isRunning</code> は <code>@visibleForTesting</code>。この 2 ケースが唯一の読み手。§5.3・§8 #53）</li>
 <li><code>launch</code> の <code>Completer</code> を完了させた直後（後追いの開始と同じマイクロタスク内）に <code>run(pullToRefresh)</code> → <code>execute(notificationTap)</code> は 1 回だけで、<code>isRunning</code> はその間 false にならない（後追い開始前の窓）</li>
@@ -4863,6 +4863,10 @@ class TabReselect extends _$TabReselect {
 <tr>
 <td>2026-10-04</td>
 <td>画面定義書 S-01 の改訂（2026-10-04 approved）に追随。§2.1 の <code>(a)(b)(c)</code> 読み替え宣言（3 帰結の転記）を削り <code>S-01 §8 #30</code> の <strong>ID 参照だけ</strong>にし、§8.1 の S-01 宛 3 行（連続タップの明文化・#23 の判定不能時・#30 の枝番）を「<strong>反映済み（2026-10-04）</strong>」に畳んだ。<strong>§5.3 末尾の「E-21 は消えない」を実態に訂正</strong>（<code>SyncCompleted(launch)</code> → 抑止判定の <code>await</code>（drift は background isolate）→ <code>SyncStarted(notificationTap)</code> の間は <code>inProgress</code> が false で <strong>E-21 が一瞬消えうる</strong>。同じ同期処理で流れるという記述は <code>_start</code> 手順 2・3 と矛盾していた。司令塔が実測で発見）し、§6 に許容の 1 行を追加（順序は §8 #64 のため変えられない）。取得の重複（後追い 1 回）の<strong>上流根拠として S-01 §8 #12</strong> を §5.3（<code>run</code> の docstring・<code>run</code> ステップ 1・2）・§6 の 3 行・§8 #31・#33 に明記。§8 #73 と §6 の fail-open 行を S-01 §8 #23 の但し書き（判断できないときは従来どおり取得し、結果に応じて E-21・<strong>E-23</strong>・E-25 が出る）と一致させた。§9 は「該当なし」のまま</td>
+</tr>
+<tr>
+<td>2026-10-17</td>
+<td>D-05 のレビューで見つかった同型の誤りを訂正。§6 の「同じ通知が <code>takeInitialTap()</code> と <code>taps</code> の両方から届いた」行は<strong>どちらの経路も契機が <code>notificationTap</code></strong> なので「後追い 1 回に畳む」ではなく<strong>実行中の取得の結果を待つ</strong>（§5.3 の <code>run</code> 手順 2 の前半。S-01 §8 #12 の「待つ」側）に直し、§6 の「<strong>同じ団体の通知を続けてタップした</strong>」行も同じ誤りだったので両枝（待つ／後追い）の粒度にそろえた（D-05 §6 と同形）。§7 の後追いテスト 1 件の文言を「<code>launch</code> 実行中」と明示。§5.3 の <code>run</code> の docstring・手順 1・2、§8 #31・#33 は<strong>既に両枝で正しく無修正</strong>（design-writer が §2.1・§5.3・§6・§7・§8 の計 12 箇所を 1 件ずつ確認）。§8 の決定の内容は変えていない。§9 は「該当なし」のまま</td>
 </tr>
 </tbody></table>
 

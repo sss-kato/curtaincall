@@ -1,7 +1,37 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-16T20:12:45+09:00",
+  "generatedAt": "2026-10-17T10:14:16+09:00",
   "articles": [
+    {
+      "id": "190844fbe07f2a55",
+      "companyId": "takarazuka",
+      "title": "（再）「阪急17番街presents 心躍る宝塚歌劇衣装展」開催について",
+      "url": "https://kageki.hankyu.co.jp/news/20260818_001.html",
+      "category": "other",
+      "publishedAt": "2026-10-17T00:00:00+09:00",
+      "contentHash": "7fbfedc0f701763a",
+      "fetchedAt": "2026-10-17T10:14:16+09:00"
+    },
+    {
+      "id": "5fbf32b2303433f5",
+      "companyId": "takarazuka",
+      "title": "＜タカラヅカ・スカイ・ステージ＞『エリザベート－愛と死の輪舞－』20作品 12ヵ月連続放送！のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261017_004.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-17T00:00:00+09:00",
+      "contentHash": "8716c780b5cf5b0d",
+      "fetchedAt": "2026-10-17T10:14:16+09:00"
+    },
+    {
+      "id": "98c725f0efb939c1",
+      "companyId": "takarazuka",
+      "title": "＜カスタマイズCD＞花組新曲追加のお知らせ（キャトルレーヴ宝塚店）",
+      "url": "https://kageki.hankyu.co.jp/news/20261017_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-17T00:00:00+09:00",
+      "contentHash": "18e6d0b4a1a98626",
+      "fetchedAt": "2026-10-17T10:14:16+09:00"
+    },
     {
       "id": "89032087bd43e028",
       "companyId": "takarazuka",
@@ -983,36 +1013,6 @@
       "publishedAt": "2026-08-23T00:00:00+09:00",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "e4d9c8e0ca9a7222"
-    },
-    {
-      "id": "6c05c3529272ad1f",
-      "companyId": "takarazuka",
-      "title": "星組 宝塚大劇場公演 休演者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260823_002.html",
-      "category": "other",
-      "publishedAt": "2026-08-23T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "f497da4a17f77166"
-    },
-    {
-      "id": "721af286733f4f68",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場各施設の営業体制（星組公演期間）について",
-      "url": "https://kageki.hankyu.co.jp/news/20260823_003.html",
-      "category": "schedule",
-      "publishedAt": "2026-08-23T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "1a4bda6cb793bec7"
-    },
-    {
-      "id": "7b4a3f24af42bbe7",
-      "companyId": "takarazuka",
-      "title": "聴覚に障がいのあるお客様へのライブ配信鑑賞サポートの対象公演拡大について",
-      "url": "https://kageki.hankyu.co.jp/news/20260822_004.html",
-      "category": "streaming",
-      "publishedAt": "2026-08-22T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "0cc8827001c8b2f3"
     },
     {
       "id": "0ab16a6f364c9d0e",

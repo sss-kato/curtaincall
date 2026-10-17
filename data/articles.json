@@ -1,7 +1,545 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T16:59:32+09:00",
+  "generatedAt": "2026-10-17T10:14:16+09:00",
   "articles": [
+    {
+      "id": "190844fbe07f2a55",
+      "companyId": "takarazuka",
+      "title": "（再）「阪急17番街presents 心躍る宝塚歌劇衣装展」開催について",
+      "url": "https://kageki.hankyu.co.jp/news/20260818_001.html",
+      "category": "other",
+      "publishedAt": "2026-10-17T00:00:00+09:00",
+      "contentHash": "7fbfedc0f701763a",
+      "fetchedAt": "2026-10-17T10:14:16+09:00"
+    },
+    {
+      "id": "5fbf32b2303433f5",
+      "companyId": "takarazuka",
+      "title": "＜タカラヅカ・スカイ・ステージ＞『エリザベート－愛と死の輪舞－』20作品 12ヵ月連続放送！のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261017_004.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-17T00:00:00+09:00",
+      "contentHash": "8716c780b5cf5b0d",
+      "fetchedAt": "2026-10-17T10:14:16+09:00"
+    },
+    {
+      "id": "98c725f0efb939c1",
+      "companyId": "takarazuka",
+      "title": "＜カスタマイズCD＞花組新曲追加のお知らせ（キャトルレーヴ宝塚店）",
+      "url": "https://kageki.hankyu.co.jp/news/20261017_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-17T00:00:00+09:00",
+      "contentHash": "18e6d0b4a1a98626",
+      "fetchedAt": "2026-10-17T10:14:16+09:00"
+    },
+    {
+      "id": "89032087bd43e028",
+      "companyId": "takarazuka",
+      "title": "（追）＜動画配信サービス “TAKARAZUKA SQUARE【タカスク】\"＞公演連動タカスクおためしキャンペーンスタート！",
+      "url": "https://www.tca-pictures.net/square_cp/campaign/",
+      "category": "streaming",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "2d4472f3bdec4ac0",
+      "fetchedAt": "2026-10-16T20:12:45+09:00"
+    },
+    {
+      "id": "bc3e0e2504b5720b",
+      "companyId": "takarazuka",
+      "title": "タイ大手映像配信プラットフォーム「TrueID」にて宝塚歌劇の動画コンテンツの配信開始！",
+      "url": "https://kageki.hankyu.co.jp/news/20261016_006.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "73d1491089b25465",
+      "fetchedAt": "2026-10-16T20:12:45+09:00"
+    },
+    {
+      "id": "679fc24020c8b6d1",
+      "companyId": "takarazuka",
+      "title": "宝塚大劇場レストラン 花組公演特別メニューについて",
+      "url": "https://kageki.hankyu.co.jp/news/20261016_001.html",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "2845059a23b4ab48",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
+      "id": "94ab593ec270516d",
+      "companyId": "takarazuka",
+      "title": "モロゾフ「宝塚大劇場オリジナル アーモンドスカッチクッキー」「宝塚大劇場オリジナル フェイバリット」発売のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261016_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "2b80b28b342daccf",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
+      "id": "9e9e1bfac6a48cbf",
+      "companyId": "takarazuka",
+      "title": "宝塚大劇場内「レビューショップ」「劇場売店」期間限定商品の販売について",
+      "url": "https://kageki.hankyu.co.jp/news/20261016_002.html",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "50368c0464c4d799",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
+      "id": "644bfec7cc461a57",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞雪組公演『ポーの一族』",
+      "url": "https://kageki.hankyu.co.jp/news/20260613_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "ec19915adc3bc013",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "0c2ba1ad7ce872bc",
+      "companyId": "takarazuka",
+      "title": "（追）＜TAKARAZUKA REVUE MUSIC＞10月配信のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261013_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-15T00:00:00+09:00",
+      "contentHash": "9c12ab1f301397df",
+      "fetchedAt": "2026-10-14T00:51:18+09:00",
+      "updatedAt": "2026-10-15T18:46:09+09:00"
+    },
+    {
+      "id": "c558a60694b06a07",
+      "companyId": "takarazuka",
+      "title": "（追）＜動画配信サービス タカラヅカ・オン・デマンド＞10月15日配信開始のラインアップ（ROBIN THE HERO（'25年雪組・東京・千秋楽）1789 －バスティーユの恋人たち－（'23年星組・宝塚・千秋楽）他）",
+      "url": "https://kageki.hankyu.co.jp/news/20261001_005.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-15T00:00:00+09:00",
+      "contentHash": "d624fff4718fdbd4",
+      "fetchedAt": "2026-10-01T17:43:00+09:00",
+      "updatedAt": "2026-10-15T18:46:09+09:00"
+    },
+    {
+      "id": "4c943fabb0370d57",
+      "companyId": "takarazuka",
+      "title": "（再）株式会社 宝塚歌劇団 音楽助手（作曲・編曲家志望）の募集について",
+      "url": "https://kageki.hankyu.co.jp/news/20261001_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-15T00:00:00+09:00",
+      "contentHash": "b4e197928c812e45",
+      "fetchedAt": "2026-10-01T17:43:00+09:00",
+      "updatedAt": "2026-10-15T13:23:13+09:00"
+    },
+    {
+      "id": "5bed923b67f6ae35",
+      "companyId": "takarazuka",
+      "title": "（追）「ザ・タカラヅカIX 雪組」好評発売中！",
+      "url": "https://kageki.hankyu.co.jp/news/20260901_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-15T00:00:00+09:00",
+      "contentHash": "c31412ab82c06e94",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-15T13:23:13+09:00"
+    },
+    {
+      "id": "73be3c98085633cb",
+      "companyId": "takarazuka",
+      "title": "（追）美穂圭子 ディナーショー",
+      "url": "https://kageki.hankyu.co.jp/news/20260520_009.html",
+      "category": "other",
+      "publishedAt": "2026-10-15T00:00:00+09:00",
+      "contentHash": "4754219192ffd247",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "7a989ab99c77c7d1",
+      "companyId": "takarazuka",
+      "title": "公演ラインアップ【Kanadevia Hall公演／梅田芸術劇場メインホール公演】＜2027年4月・花組『Ave Mare!』＞",
+      "url": "https://kageki.hankyu.co.jp/news/20261014_005.html",
+      "category": "new_work",
+      "publishedAt": "2026-10-14T00:00:00+09:00",
+      "contentHash": "d89cd28aa06e8a92",
+      "fetchedAt": "2026-10-14T20:40:13+09:00"
+    },
+    {
+      "id": "35959fa80f788bbd",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
+      "url": "https://kageki.hankyu.co.jp/news/20261014_004.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-14T00:00:00+09:00",
+      "contentHash": "f406c990ffa40fa2",
+      "fetchedAt": "2026-10-14T15:02:42+09:00"
+    },
+    {
+      "id": "88071af352b554c3",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「抽選方式」＞雪組 梅田芸術劇場メインホール公演『Monte-Cristo －le spectacle musical－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261014_002.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-14T00:00:00+09:00",
+      "contentHash": "75bf3ec7fa15a58a",
+      "fetchedAt": "2026-10-14T10:04:48+09:00"
+    },
+    {
+      "id": "b10aed9a3b2613a0",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「抽選方式」＞宝塚友の会 会員様限定 特別イベント『ステージトークin東京』星組",
+      "url": "https://kageki.hankyu.co.jp/news/20261014_003.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-14T00:00:00+09:00",
+      "contentHash": "245d2ab476ebe026",
+      "fetchedAt": "2026-10-14T10:04:48+09:00"
+    },
+    {
+      "id": "ff8737118c825360",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第2抽選方式」＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261014_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-14T00:00:00+09:00",
+      "contentHash": "572c8a95d747529e",
+      "fetchedAt": "2026-10-14T10:04:48+09:00"
+    },
+    {
+      "id": "1ed2a0640db9ce6c",
+      "companyId": "takarazuka",
+      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261013_002.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "contentHash": "50923bfce1e9c91a",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
+    },
+    {
+      "id": "28b909af71cb9963",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第3抽選方式」＞月組 宝塚大劇場公演『天穹のアルテミス』『Belle Époque』",
+      "url": "https://kageki.hankyu.co.jp/news/20261013_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "contentHash": "95fd7cbe257c90db",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
+    },
+    {
+      "id": "6cc13e56a4ef56e8",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞花組 宝塚大劇場公演",
+      "url": "https://kageki.hankyu.co.jp/news/20261013_005.html",
+      "category": "schedule",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "contentHash": "d7bd94675cf31870",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
+    },
+    {
+      "id": "86bb28380e4f6a9e",
+      "companyId": "takarazuka",
+      "title": "宙組 KAAT神奈川芸術劇場公演『酔いどれ御免！』の追加販売について",
+      "url": "https://kageki.hankyu.co.jp/news/20261013_004.html",
+      "category": "other",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "contentHash": "5c986e88d4944299",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
+    },
+    {
+      "id": "cc6c35455ed0c25a",
+      "companyId": "takarazuka",
+      "title": "（追）＜一般前売＞宙組 KAAT神奈川芸術劇場公演『酔いどれ御免！』",
+      "url": "https://kageki.hankyu.co.jp/news/20261010_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-12T00:00:00+09:00",
+      "contentHash": "4c11c46fa7df808b",
+      "fetchedAt": "2026-10-10T22:31:31+09:00",
+      "updatedAt": "2026-10-12T16:13:37+09:00"
+    },
+    {
+      "id": "2ba11d72168666cd",
+      "companyId": "takarazuka",
+      "title": "宝塚大劇場各施設の営業体制（花組公演期間）について",
+      "url": "https://kageki.hankyu.co.jp/news/20261011_002.html",
+      "category": "schedule",
+      "publishedAt": "2026-10-11T00:00:00+09:00",
+      "contentHash": "ff7895be0ac59932",
+      "fetchedAt": "2026-10-11T17:39:36+09:00"
+    },
+    {
+      "id": "a1cdb77b340163f2",
+      "companyId": "takarazuka",
+      "title": "＜ライブ中継・ライブ配信＞宙組 全国ツアー 市川市文化会館公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
+      "url": "https://kageki.hankyu.co.jp/news/20261010_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-10T00:00:00+09:00",
+      "contentHash": "901c37ed2ae3fde2",
+      "fetchedAt": "2026-10-10T15:55:34+09:00"
+    },
+    {
+      "id": "d0790ba20de7e4c9",
+      "companyId": "takarazuka",
+      "title": "＜ライブ配信＞宙組 梅田芸術劇場シアター・ドラマシティ公演『酔いどれ御免！』",
+      "url": "https://kageki.hankyu.co.jp/news/20261010_004.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-10T00:00:00+09:00",
+      "contentHash": "deea632194ceffff",
+      "fetchedAt": "2026-10-10T15:55:34+09:00"
+    },
+    {
+      "id": "07b81ac8c5dc8a32",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』",
+      "url": "https://kageki.hankyu.co.jp/news/20260801_005.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-10T00:00:00+09:00",
+      "contentHash": "6b916718c732d365",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "ed19e8acf7bdf7f8",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞花組公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20260919_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-09T00:00:00+09:00",
+      "contentHash": "4e15daebc74ed307",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-09T17:51:06+09:00"
+    },
+    {
+      "id": "e1b86a95e01aa0f8",
+      "companyId": "takarazuka",
+      "title": "＜CD-BOX発売のご案内＞「Culmination An HOZUKI -history of songs in 2010～2026-」",
+      "url": "https://shop.tca-pictures.net/shop/g/gTCAC-733-735/",
+      "category": "other",
+      "publishedAt": "2026-10-09T00:00:00+09:00",
+      "contentHash": "a4e3117805e18e76",
+      "fetchedAt": "2026-10-09T10:57:20+09:00"
+    },
+    {
+      "id": "4db906bd56144630",
+      "companyId": "takarazuka",
+      "title": "チケットの不正転売禁止について",
+      "url": "https://kageki.hankyu.co.jp/news/20261008_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-08T00:00:00+09:00",
+      "contentHash": "28fba6016600a9b5",
+      "fetchedAt": "2026-10-08T10:46:24+09:00"
+    },
+    {
+      "id": "9956c87df6d36f6a",
+      "companyId": "takarazuka",
+      "title": "宝塚歌劇オーケストラ楽員募集のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261008_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-08T00:00:00+09:00",
+      "contentHash": "ed6a384a193a278b",
+      "fetchedAt": "2026-10-08T10:46:24+09:00"
+    },
+    {
+      "id": "17891212ff21b4fd",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第2抽選方式」＞月組 宝塚大劇場公演『天穹のアルテミス』『Belle Époque』",
+      "url": "https://kageki.hankyu.co.jp/news/20261007_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-07T00:00:00+09:00",
+      "fetchedAt": "2026-10-07T10:23:48+09:00",
+      "contentHash": "74237c2270cae6f1"
+    },
+    {
+      "id": "d716c4f6b3c0e7e0",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第1抽選方式」＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261007_002.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-07T00:00:00+09:00",
+      "fetchedAt": "2026-10-07T10:23:48+09:00",
+      "contentHash": "b17e684b95b2c257"
+    },
+    {
+      "id": "3552b8c3b559b63d",
+      "companyId": "takarazuka",
+      "title": "Le CINQ（ル・サンク）vol.257『RRR × TAKA”R”AZUKA ～√Rama～』発売【電子版同時発売！】",
+      "url": "https://kageki.hankyu.co.jp/news/20260901_004.html",
+      "category": "other",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "d52c549d313198cb",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-06T11:52:22+09:00"
+    },
+    {
+      "id": "9b14899c0c410247",
+      "companyId": "takarazuka",
+      "title": "「歌劇10月号」発売【ebooksタカラヅカでも同時発売！】",
+      "url": "https://shop.tca-pictures.net/shop/c/cbook/",
+      "category": "other",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "d3ac7d5e8630118c",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-06T11:52:22+09:00"
+    },
+    {
+      "id": "f3f1c4742db5ba4b",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
+      "url": "https://kageki.hankyu.co.jp/news/20261006_006.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "fetchedAt": "2026-10-06T19:04:31+09:00",
+      "contentHash": "f406c990ffa40fa2"
+    },
+    {
+      "id": "dd6c594b5803c345",
+      "companyId": "takarazuka",
+      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞月組 宝塚大劇場公演『天穹のアルテミス』『Belle Époque』",
+      "url": "https://kageki.hankyu.co.jp/news/20261006_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "720032ee4ceced9d",
+      "fetchedAt": "2026-10-06T11:52:22+09:00"
+    },
+    {
+      "id": "14a8d8c0a174a01f",
+      "companyId": "takarazuka",
+      "title": "メディア出演情報",
+      "url": "https://kageki.hankyu.co.jp/news/tv_radio.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "8b95bc28f2e1ffe9",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "d5fbd88d685d003a",
+      "companyId": "takarazuka",
+      "title": "（追）外部出演「HiGH&LOW THE 戦国 LOVE&HATE」",
+      "url": "https://kageki.hankyu.co.jp/news/20260704_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "contentHash": "4e6d2f4e43e65b04",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "5ab87eb9de7c2238",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞月組 KAAT神奈川芸術劇場公演",
+      "url": "https://kageki.hankyu.co.jp/news/20261004_001.html",
+      "category": "schedule",
+      "publishedAt": "2026-10-04T00:00:00+09:00",
+      "fetchedAt": "2026-10-04T14:39:24+09:00",
+      "contentHash": "4f29148f6ccb7a50"
+    },
+    {
+      "id": "590f15c3f87477b9",
+      "companyId": "takarazuka",
+      "title": "＜一般前売＞宙組 全国ツアー 福岡サンパレス ホテル＆ホール公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
+      "url": "https://kageki.hankyu.co.jp/news/20261003_002.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-03T00:00:00+09:00",
+      "contentHash": "1adc9e71dca8e5cb",
+      "fetchedAt": "2026-10-03T21:26:58+09:00"
+    },
+    {
+      "id": "46386a0e44becd79",
+      "companyId": "takarazuka",
+      "title": "宝塚歌劇公式アプリ「宝塚歌劇Pocket」における推奨動作環境の変更について",
+      "url": "https://kageki.hankyu.co.jp/news/20261003_001.html",
+      "category": "other",
+      "publishedAt": "2026-10-03T00:00:00+09:00",
+      "contentHash": "49ea22002ed903de",
+      "fetchedAt": "2026-10-03T15:20:25+09:00"
+    },
+    {
+      "id": "150aec75ce3df439",
+      "companyId": "takarazuka",
+      "title": "＜ブルーレイ予約受付開始のお知らせ＞月組兵庫県立芸術文化センター公演『稲妻開化譚－イナズマカイカタン－』",
+      "url": "https://www.tca-pictures.net/stage/2026/inazumakaikatan/",
+      "category": "ticket",
+      "publishedAt": "2026-10-02T00:00:00+09:00",
+      "contentHash": "d84a7a2d225775e3",
+      "fetchedAt": "2026-10-02T10:32:31+09:00"
+    },
+    {
+      "id": "9c1b2b85a9bced2a",
+      "companyId": "takarazuka",
+      "title": "＜出演者決定＞雪組 宝塚大劇場／東京宝塚劇場公演『陽炎のごとく』『Buena Vista!!』",
+      "url": "https://kageki.hankyu.co.jp/revue/2027/kageronogotoku/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-10-02T00:00:00+09:00",
+      "fetchedAt": "2026-10-02T10:32:31+09:00",
+      "contentHash": "3142898259e7a800"
+    },
+    {
+      "id": "4827fa1e45fff030",
+      "companyId": "takarazuka",
+      "title": "宝塚友の会「チケット先行販売のお知らせ」について",
+      "url": "https://kageki.hankyu.co.jp/news/20261001_004.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-01T00:00:00+09:00",
+      "fetchedAt": "2026-10-01T10:59:58+09:00",
+      "contentHash": "f4c86768d7df206e"
+    },
+    {
+      "id": "7b2d221235bb9314",
+      "companyId": "takarazuka",
+      "title": "＜タカラヅカ・スカイ・ステージ＞11月ラインアップのお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261001_002.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-01T00:00:00+09:00",
+      "contentHash": "ca0bb75ef7bf0713",
+      "fetchedAt": "2026-10-01T10:59:58+09:00"
+    },
+    {
+      "id": "108cc6bec9fb9a1d",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第1抽選方式」＞月組 宝塚大劇場公演『天穹のアルテミス』『Belle Époque』",
+      "url": "https://kageki.hankyu.co.jp/news/20260930_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-30T15:34:30+09:00",
+      "contentHash": "df6aaf599c5456b9"
+    },
+    {
+      "id": "064082137320c604",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
+      "url": "https://kageki.hankyu.co.jp/news/20260929_006.html",
+      "category": "streaming",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-29T17:18:55+09:00",
+      "contentHash": "f406c990ffa40fa2"
+    },
+    {
+      "id": "0b6f82066ba75e5e",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞雪組公演『ポーの一族』新人公演",
+      "url": "https://kageki.hankyu.co.jp/news/20260929_003.html",
+      "category": "schedule",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-29T17:18:55+09:00",
+      "contentHash": "48acd282cc555de7"
+    },
+    {
+      "id": "ba54a8f580f222cd",
+      "companyId": "takarazuka",
+      "title": "【テレビ】日本テレビ「ヒルナンデス！」出演のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20260929_004.html",
+      "category": "streaming",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "contentHash": "7e78e04bff170268",
+      "fetchedAt": "2026-09-29T17:18:55+09:00"
+    },
+    {
+      "id": "56374204b59baccc",
+      "companyId": "takarazuka",
+      "title": "＜出演者決定＞星組 東京国際フォーラム ホールC／梅田芸術劇場メインホール公演『大奥』",
+      "url": "https://kageki.hankyu.co.jp/revue/2027/ooku/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-29T10:45:14+09:00",
+      "contentHash": "13f320f9a0d81845"
+    },
+    {
+      "id": "b670cb358027499b",
+      "companyId": "takarazuka",
+      "title": "＜出演者決定＞星組 東京建物 Brillia HALL／梅田芸術劇場シアター・ドラマシティ公演『I am Heathcliff』",
+      "url": "https://kageki.hankyu.co.jp/revue/2027/iamheathcliff/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-29T10:45:14+09:00",
+      "contentHash": "bad7d7d979ca7aa3"
+    },
     {
       "id": "530fb01c36eeec52",
       "companyId": "takarazuka",
@@ -40,8 +578,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260919_002.html",
       "category": "other",
       "publishedAt": "2026-09-25T00:00:00+09:00",
-      "contentHash": "4bc573bf6f07ec45",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "4bc573bf6f07ec45",
       "updatedAt": "2026-09-25T22:36:45+09:00"
     },
     {
@@ -51,8 +589,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260915_004.html",
       "category": "streaming",
       "publishedAt": "2026-09-25T00:00:00+09:00",
-      "contentHash": "f96fdc2c341e708a",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "f96fdc2c341e708a",
       "updatedAt": "2026-09-25T22:36:45+09:00"
     },
     {
@@ -92,8 +630,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260613_001.html",
       "category": "streaming",
       "publishedAt": "2026-09-25T00:00:00+09:00",
-      "contentHash": "212e27c03b299d7c",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "212e27c03b299d7c"
     },
     {
       "id": "63954331275ad261",
@@ -113,8 +651,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260924_003.html",
       "category": "other",
       "publishedAt": "2026-09-24T00:00:00+09:00",
-      "contentHash": "86b02f98c8dd6ab7",
-      "fetchedAt": "2026-09-24T18:52:44+09:00"
+      "fetchedAt": "2026-09-24T18:52:44+09:00",
+      "contentHash": "86b02f98c8dd6ab7"
     },
     {
       "id": "d1bacf64650e9573",
@@ -123,8 +661,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260924_001.html",
       "category": "schedule",
       "publishedAt": "2026-09-24T00:00:00+09:00",
-      "contentHash": "94d541e06cc6a197",
-      "fetchedAt": "2026-09-24T13:32:13+09:00"
+      "fetchedAt": "2026-09-24T13:32:13+09:00",
+      "contentHash": "94d541e06cc6a197"
     },
     {
       "id": "9fb72b21be9f5375",
@@ -133,8 +671,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2026/elisabeth/cast.html",
       "category": "cast",
       "publishedAt": "2026-09-23T00:00:00+09:00",
-      "contentHash": "161a31e777b996f9",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "161a31e777b996f9"
     },
     {
       "id": "673b8f76b88a3d76",
@@ -153,8 +691,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2026/yoidoregomen/cast.html",
       "category": "cast",
       "publishedAt": "2026-09-22T00:00:00+09:00",
-      "contentHash": "9804ada53fb75cae",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "9804ada53fb75cae"
     },
     {
       "id": "d4986b32a4421de2",
@@ -163,8 +701,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260922_003.html",
       "category": "streaming",
       "publishedAt": "2026-09-22T00:00:00+09:00",
-      "contentHash": "f406c990ffa40fa2",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "f406c990ffa40fa2"
     },
     {
       "id": "6983602598cd6199",
@@ -183,8 +721,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260920_3.html",
       "category": "other",
       "publishedAt": "2026-09-20T00:00:00+09:00",
-      "contentHash": "a670a71ef9f89b2f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "a670a71ef9f89b2f"
     },
     {
       "id": "973b24d45eec648f",
@@ -197,24 +735,14 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "ed19e8acf7bdf7f8",
-      "companyId": "takarazuka",
-      "title": "＜ライブ中継・ライブ配信＞花組公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20260919_003.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-19T00:00:00+09:00",
-      "contentHash": "4f105e459cc53035",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "3b2d2a782ca777d5",
       "companyId": "takarazuka",
       "title": "【テレビ】フジテレビ「STAR」（FNS歌謡祭 アーカイブ映像）",
       "url": "https://kageki.hankyu.co.jp/news/20260918_001.html",
       "category": "streaming",
       "publishedAt": "2026-09-18T00:00:00+09:00",
-      "contentHash": "45d7f3c815d2ae8f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "45d7f3c815d2ae8f"
     },
     {
       "id": "6ed6e627e66be0f6",
@@ -257,16 +785,6 @@
       "contentHash": "cadc510b6ccdca11"
     },
     {
-      "id": "9b14899c0c410247",
-      "companyId": "takarazuka",
-      "title": "「宝塚GRAPH10月号」発売【ebooksタカラヅカでも同時発売！】",
-      "url": "https://shop.tca-pictures.net/shop/c/cbook/",
-      "category": "other",
-      "publishedAt": "2026-09-17T00:00:00+09:00",
-      "contentHash": "1069f3a48a11d1a8",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "6ce63a844202b94f",
       "companyId": "takarazuka",
       "title": "＜宝塚友の会 チケット先行販売「抽選方式」＞宝塚友の会 会員様限定 特別イベント『トークスペシャルin宝塚』花組",
@@ -293,8 +811,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260901_007.html",
       "category": "streaming",
       "publishedAt": "2026-09-15T00:00:00+09:00",
-      "contentHash": "b8985347eed50521",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "b8985347eed50521"
     },
     {
       "id": "cec692ffc97b71b0",
@@ -303,8 +821,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260913_002.html",
       "category": "ticket",
       "publishedAt": "2026-09-13T00:00:00+09:00",
-      "contentHash": "ea16eed411cc6cf2",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "ea16eed411cc6cf2"
     },
     {
       "id": "bf03e4212d47ca5e",
@@ -317,24 +835,14 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "73be3c98085633cb",
-      "companyId": "takarazuka",
-      "title": "（追）美穂圭子 ディナーショー",
-      "url": "https://kageki.hankyu.co.jp/news/20260520_009.html",
-      "category": "other",
-      "publishedAt": "2026-09-11T00:00:00+09:00",
-      "contentHash": "4754219192ffd247",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "9fa0082625e4ceaa",
       "companyId": "takarazuka",
       "title": "＜公演時間＞月組 東急シアターオーブ公演",
       "url": "https://kageki.hankyu.co.jp/news/20260910_001.html",
       "category": "schedule",
       "publishedAt": "2026-09-10T00:00:00+09:00",
-      "contentHash": "b12568fae42d5641",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "b12568fae42d5641"
     },
     {
       "id": "1ccbb4990a59eca1",
@@ -387,16 +895,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "14a8d8c0a174a01f",
-      "companyId": "takarazuka",
-      "title": "メディア出演情報",
-      "url": "https://kageki.hankyu.co.jp/news/tv_radio.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-04T00:00:00+09:00",
-      "contentHash": "8b95bc28f2e1ffe9",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "5bf3bb6dd2d0f016",
       "companyId": "takarazuka",
       "title": "（宝塚友の会会員様対象）宝塚歌劇カスタマープログラムWチャンスについて",
@@ -407,26 +905,6 @@
       "contentHash": "52b5b6cfc120de95"
     },
     {
-      "id": "644bfec7cc461a57",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞雪組公演『ポーの一族』",
-      "url": "https://kageki.hankyu.co.jp/news/20260613_003.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-04T00:00:00+09:00",
-      "contentHash": "ec19915adc3bc013",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "3552b8c3b559b63d",
-      "companyId": "takarazuka",
-      "title": "Le CINQ（ル・サンク）vol.257『RRR × TAKA”R”AZUKA ～√Rama～』発売のご案内",
-      "url": "https://kageki.hankyu.co.jp/news/20260901_004.html",
-      "category": "other",
-      "publishedAt": "2026-09-01T00:00:00+09:00",
-      "contentHash": "30265b8f521158c6",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "57ac457577bcfeaf",
       "companyId": "takarazuka",
       "title": "外部出演 タイ・バンコクで最大の訪日観光PRイベント「Visit Japan FIT Fair＃18」",
@@ -434,16 +912,6 @@
       "category": "other",
       "publishedAt": "2026-09-01T00:00:00+09:00",
       "contentHash": "22e793ac6251cae1",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "5bed923b67f6ae35",
-      "companyId": "takarazuka",
-      "title": "「ザ・タカラヅカIX 雪組」発売のご案内",
-      "url": "https://kageki.hankyu.co.jp/news/20260901_003.html",
-      "category": "other",
-      "publishedAt": "2026-09-01T00:00:00+09:00",
-      "contentHash": "6032d0ff3cbbd41f",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
@@ -493,18 +961,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260829_002.html",
       "category": "other",
       "publishedAt": "2026-08-29T00:00:00+09:00",
-      "contentHash": "f46792b937cca78f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "07b81ac8c5dc8a32",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260801_005.html",
-      "category": "streaming",
-      "publishedAt": "2026-08-28T00:00:00+09:00",
-      "contentHash": "6b916718c732d365",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "f46792b937cca78f"
     },
     {
       "id": "1e0983d80931a408",
@@ -513,8 +971,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260828_001.html",
       "category": "other",
       "publishedAt": "2026-08-28T00:00:00+09:00",
-      "contentHash": "f1e073029191029b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "f1e073029191029b"
     },
     {
       "id": "59fdbd8b044f5f1d",
@@ -523,8 +981,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260828_003.html",
       "category": "other",
       "publishedAt": "2026-08-28T00:00:00+09:00",
-      "contentHash": "50368c0464c4d799",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "50368c0464c4d799"
     },
     {
       "id": "57d3da30008603cb",
@@ -533,8 +991,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260825_004.html",
       "category": "schedule",
       "publishedAt": "2026-08-25T00:00:00+09:00",
-      "contentHash": "85c02f9d1f6e6398",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "85c02f9d1f6e6398"
     },
     {
       "id": "5ac372eef7a9355a",
@@ -543,8 +1001,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260825_003.html",
       "category": "other",
       "publishedAt": "2026-08-25T00:00:00+09:00",
-      "contentHash": "dfe422d3f6f9fa93",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "dfe422d3f6f9fa93"
     },
     {
       "id": "54d4537bfa723ed3",
@@ -553,458 +1011,228 @@
       "url": "https://kageki.hankyu.co.jp/news/20260822_001.html",
       "category": "ticket",
       "publishedAt": "2026-08-23T00:00:00+09:00",
-      "contentHash": "e4d9c8e0ca9a7222",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "e4d9c8e0ca9a7222"
     },
     {
-      "id": "6c05c3529272ad1f",
-      "companyId": "takarazuka",
-      "title": "星組 宝塚大劇場公演 休演者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260823_002.html",
+      "id": "0ab16a6f364c9d0e",
+      "companyId": "shiki",
+      "title": "『バック・トゥ・ザ・フューチャー』東京公演 公演グッズのご紹介",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/036717.html",
       "category": "other",
-      "publishedAt": "2026-08-23T00:00:00+09:00",
-      "contentHash": "f497da4a17f77166",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2024/01/BTTF_news_thmn-thumb-500x373-35153.jpg",
+      "contentHash": "a7b7cf27ef9a7a62",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
     },
     {
-      "id": "721af286733f4f68",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場各施設の営業体制（星組公演期間）について",
-      "url": "https://kageki.hankyu.co.jp/news/20260823_003.html",
-      "category": "schedule",
-      "publishedAt": "2026-08-23T00:00:00+09:00",
-      "contentHash": "1a4bda6cb793bec7",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "7b4a3f24af42bbe7",
-      "companyId": "takarazuka",
-      "title": "聴覚に障がいのあるお客様へのライブ配信鑑賞サポートの対象公演拡大について",
-      "url": "https://kageki.hankyu.co.jp/news/20260822_004.html",
-      "category": "streaming",
-      "publishedAt": "2026-08-22T00:00:00+09:00",
-      "contentHash": "0cc8827001c8b2f3",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "c0c4fef2050067b6",
-      "companyId": "takarazuka",
-      "title": "花組 宝塚大劇場／東京宝塚劇場公演 出演予定者の変更について",
-      "url": "https://kageki.hankyu.co.jp/news/20260820_002.html",
+      "id": "dab2bea7724d80e4",
+      "companyId": "shiki",
+      "title": "『オペラ座の怪人』名古屋公演 公演グッズのご紹介",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/037818.html",
       "category": "other",
-      "publishedAt": "2026-08-20T00:00:00+09:00",
-      "contentHash": "16c5d56ee27c89d5",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/36189a2185a3b440b2866909a5d4dc1206902f10-thumb-500x373-40278.jpg",
+      "contentHash": "4922c3472e321472",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "190844fbe07f2a55",
-      "companyId": "takarazuka",
-      "title": "「阪急17番街presents 心躍る宝塚歌劇衣装展」開催について",
-      "url": "https://kageki.hankyu.co.jp/news/20260818_001.html",
+      "id": "639530587e1e92f4",
+      "companyId": "shiki",
+      "title": "2027年度＜技術スタッフ＞新卒・中途採用のお知らせ（映像／音楽）",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038056.html",
       "category": "other",
-      "publishedAt": "2026-08-18T00:00:00+09:00",
-      "contentHash": "b48e2a639bec4297",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
+      "contentHash": "0b9fe12165c880b4",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
     },
     {
-      "id": "b005f1ecd290b7cb",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞星組 東京宝塚劇場公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260818_003.html",
+      "id": "d46766c1e75f5af8",
+      "companyId": "shiki",
+      "title": "『オペラ座の怪人』がロンドン初演から40周年を迎えました",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038053.html",
+      "category": "new_work",
+      "publishedAt": "2026-10-13T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/261013_pha_london40th_thum-thumb-500x373-41710.jpg",
+      "contentHash": "e75c107bdbc030ff",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
+    },
+    {
+      "id": "14cb771d1a340b1b",
+      "companyId": "shiki",
+      "title": "『アナと雪の女王』『アラジン』『ライオンキング』劇場グッズ売店ノベルティキャンペーンのお知らせ",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/036642.html",
+      "category": "other",
+      "publishedAt": "2026-10-09T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
+      "contentHash": "f9ed6518abf9aa20",
+      "fetchedAt": "2026-10-09T17:51:06+09:00"
+    },
+    {
+      "id": "6d5c1bd0186bbef9",
+      "companyId": "shiki",
+      "title": "【中途採用情報】名古屋営業部・演出部・広報宣伝部・カスタマー部（劇場運営）・人事部 正社員（11/1締切）",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038054.html",
+      "category": "other",
+      "publishedAt": "2026-10-09T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
+      "contentHash": "f58e896bb1230636",
+      "fetchedAt": "2026-10-09T17:51:06+09:00"
+    },
+    {
+      "id": "8d40a884a7641829",
+      "companyId": "shiki",
+      "title": "『コーラスライン』全国公演 明日10日（土）「四季の会」会員先行予約開始！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038052.html",
       "category": "ticket",
-      "publishedAt": "2026-08-18T00:00:00+09:00",
-      "contentHash": "852d48a1cdb146ab",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-10-09T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/05/3bf0bab97df29e1ca6a2c710cebc0f5a1fb42520-thumb-500x373-40769.jpg",
+      "contentHash": "b9cd8a65d6e7f508",
+      "fetchedAt": "2026-10-09T17:51:06+09:00"
     },
     {
-      "id": "d5fbd88d685d003a",
-      "companyId": "takarazuka",
-      "title": "（追）外部出演「HiGH&LOW THE 戦国 LOVE&HATE」",
-      "url": "https://kageki.hankyu.co.jp/news/20260704_003.html",
+      "id": "7ea1a2da504b7f55",
+      "companyId": "shiki",
+      "title": "『ノートルダムの鐘』大阪公演 公演グッズのご紹介",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/037849.html",
       "category": "other",
-      "publishedAt": "2026-08-18T00:00:00+09:00",
-      "contentHash": "4e6d2f4e43e65b04",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-10-09T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/09ce5ab2e3d25cb0f135ae6a502d0fff8f65049e-thumb-500x373-40451.jpg",
+      "contentHash": "ae386293456bc66c",
+      "fetchedAt": "2026-10-09T10:57:20+09:00"
     },
     {
-      "id": "1ab970a626fdf482",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞花組 宝塚大劇場公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20260811_001.html",
+      "id": "ec5192600c3ad1f2",
+      "companyId": "shiki",
+      "title": "『ノートルダムの鐘』海外クリエイティブスタッフによる稽古が行われました",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038048.html",
+      "category": "other",
+      "publishedAt": "2026-10-07T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/261007_hnd_osaka_thum-thumb-500x373-41704.jpg",
+      "contentHash": "2dfcf96ba40cb57a",
+      "fetchedAt": "2026-10-07T17:31:45+09:00"
+    },
+    {
+      "id": "0b324c9b9211a732",
+      "companyId": "shiki",
+      "title": "『マンマ・ミーア！』広島公演が開幕しました！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038045.html",
+      "category": "other",
+      "publishedAt": "2026-10-04T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/MMhiroshima_news00-thumb-500x373-41679.jpg",
+      "contentHash": "bf8ccc7fef137f77",
+      "fetchedAt": "2026-10-04T21:13:27+09:00"
+    },
+    {
+      "id": "bbbeefa71444489b",
+      "companyId": "shiki",
+      "title": "『マンマ・ミーア！』広島公演 公演グッズのご紹介",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038027.html",
+      "category": "other",
+      "publishedAt": "2026-10-01T00:00:00+09:00",
+      "fetchedAt": "2026-10-01T10:59:58+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/04/f201c3f95fe1f5d5fc64bd93d8145c00fbe4223e-thumb-500x373-40589.jpg",
+      "contentHash": "2489b61cfc525b03"
+    },
+    {
+      "id": "1adfe7d5f22ad4e5",
+      "companyId": "shiki",
+      "title": "劇場グッズ売店 営業時間・お支払い方法のご案内",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/033713.html",
+      "category": "other",
+      "publishedAt": "2026-10-01T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
+      "contentHash": "3f01562971ffac15"
+    },
+    {
+      "id": "1da85b0dce1fd8e3",
+      "companyId": "shiki",
+      "title": "まもなく開幕！『マンマ・ミーア！』広島公演の稽古が進んでいます",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038025.html",
+      "category": "other",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-30T15:34:30+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/MM00_DSC_1797_thum-thumb-500x373-41670.jpg",
+      "contentHash": "2f476e7acc84a168"
+    },
+    {
+      "id": "51e710482e8cb7af",
+      "companyId": "shiki",
+      "title": "『キャッツ』福岡公演開幕記念「四季の会」会員限定リピートキャンペーン実施！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038005.html",
       "category": "ticket",
-      "publishedAt": "2026-08-11T00:00:00+09:00",
-      "contentHash": "da11d0e9b1992a04",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-30T15:34:30+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/cats_mtthmn_2603-thumb-500x373-40319.jpg",
+      "contentHash": "5782e29423c48dd2"
     },
     {
-      "id": "c44d6673adcc1f6d",
-      "companyId": "takarazuka",
-      "title": "（追）＜一般前売＞雪組 東京宝塚劇場公演『ポーの一族』",
-      "url": "https://kageki.hankyu.co.jp/news/20260808_001.html",
+      "id": "7c6287a3bad24401",
+      "companyId": "shiki",
+      "title": "「四季の会」会員限定『キャッツ』福岡公演 事前抽選販売について",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038004.html",
       "category": "ticket",
-      "publishedAt": "2026-08-09T00:00:00+09:00",
-      "contentHash": "3bc8d0f8cf71409e",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-30T15:34:30+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/cats_mtthmn_2603-thumb-500x373-40319.jpg",
+      "contentHash": "18ec3757ef5897c3"
     },
     {
-      "id": "e4a3b8bb26049da9",
-      "companyId": "takarazuka",
-      "title": "（追）瀬央ゆりあ ディナーショー",
-      "url": "https://kageki.hankyu.co.jp/news/20260730_002.html",
+      "id": "93e2bf470fb06135",
+      "companyId": "shiki",
+      "title": "『オペラ座の怪人』名古屋公演 2027年8月8日（日）千秋楽決定！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038023.html",
       "category": "other",
-      "publishedAt": "2026-08-09T00:00:00+09:00",
-      "contentHash": "ff34692d9b246a1b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-30T15:34:30+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/06/operaza_mtthmn_2025-thumb-500x373-38718.jpg",
+      "contentHash": "447c6285fa1eeb98"
     },
     {
-      "id": "4ca2e8a901373d49",
-      "companyId": "takarazuka",
-      "title": "＜一般前売＞星組 宝塚大劇場公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260807_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-08-07T00:00:00+09:00",
-      "contentHash": "c32c6d14c5bf61bb",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "602d2424263128f0",
-      "companyId": "takarazuka",
-      "title": "＜人物相関図 公開＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/revue/2026/rrr/correlation.html",
+      "id": "cb3ba1aee882a371",
+      "companyId": "shiki",
+      "title": "「台本タブレット端末」貸出サービスのお知らせ",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/036752.html",
       "category": "other",
-      "publishedAt": "2026-08-05T00:00:00+09:00",
-      "contentHash": "06da220fb9e5bccb",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
+      "contentHash": "b5819ec5b6d4c625"
     },
     {
-      "id": "8052e77cb5f9804b",
-      "companyId": "takarazuka",
-      "title": "＜ブルーレイ・DVD・CD予約受付開始のお知らせ＞雪組宝塚大劇場公演『ポーの一族』",
-      "url": "https://www.tca-pictures.net/stage/2026/ponoichizoku/",
-      "category": "ticket",
-      "publishedAt": "2026-08-05T00:00:00+09:00",
-      "contentHash": "50aa78b13331a65a",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "539e21eedf26d974",
-      "companyId": "takarazuka",
-      "title": "【お詫び】STACIAカードのタッチ決済ご利用における一部カードへの「STACIAクレジットポイントプラス」ポイント進呈漏れについて",
-      "url": "https://kageki.hankyu.co.jp/news/20260804_001.html",
+      "id": "f759d128bcc66e5f",
+      "companyId": "shiki",
+      "title": "開場中の写真撮影について",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/033709.html",
       "category": "other",
-      "publishedAt": "2026-08-04T00:00:00+09:00",
-      "contentHash": "7a6b78b65c1b7c5d",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
+      "contentHash": "d6367bed67e650c8"
     },
     {
-      "id": "3e6793520f4a1842",
-      "companyId": "takarazuka",
-      "title": "＜タカラヅカ・スカイ・ステージ＞9月ラインアップのお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260801_001.html",
-      "category": "streaming",
-      "publishedAt": "2026-08-01T00:00:00+09:00",
-      "contentHash": "9b9ef61124eafe37",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "772271c6a6d7bc31",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場公演 立見の販売再開について",
-      "url": "https://kageki.hankyu.co.jp/news/20260801_004.html",
+      "id": "a0ac42898cec5270",
+      "companyId": "shiki",
+      "title": "ツアー最北の離島へ――「こころの劇場」『はじまりの樹の神話～こそあどの森の物語～』利尻公演レポート",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038015.html",
       "category": "other",
-      "publishedAt": "2026-08-01T00:00:00+09:00",
-      "contentHash": "708db877a2470ca9",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-30T00:39:06+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260925_kokoro_rishiri_thum_s-thumb-500x373-41626.jpg",
+      "contentHash": "b58c3ebbce98363b"
     },
     {
-      "id": "c128e3b21f7e973e",
-      "companyId": "takarazuka",
-      "title": "（追）外部出演 阪神甲子園球場「阪急阪神不動産冠協賛試合（阪神×巨人）」始球式",
-      "url": "https://kageki.hankyu.co.jp/news/20260623_001.html",
+      "id": "b0860e14e236fb16",
+      "companyId": "shiki",
+      "title": "『ロボット・イン・ザ・ガーデン』東京公演に向けて――稽古が始まりました！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038009.html",
       "category": "other",
-      "publishedAt": "2026-08-01T00:00:00+09:00",
-      "contentHash": "f3689757d20146ab",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "3324ec62f4bf624c",
-      "companyId": "takarazuka",
-      "title": "月組 退団者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260731_002.html",
-      "category": "person",
-      "publishedAt": "2026-07-31T00:00:00+09:00",
-      "contentHash": "ae7a74255c78e5c1",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "1002a9794625c57c",
-      "companyId": "takarazuka",
-      "title": "＜ブルーレイ予約受付開始のお知らせ＞『EXCITER‼』 Blu-ray BOX",
-      "url": "https://shop.tca-pictures.net/shop/g/gTCAB-308/",
-      "category": "ticket",
-      "publishedAt": "2026-07-30T00:00:00+09:00",
-      "contentHash": "ef12ac8a454ec855",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "158e815d2c9e3164",
-      "companyId": "takarazuka",
-      "title": "＜PR映像＞花組公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://youtu.be/cJQ8PGw7Unc",
-      "category": "other",
-      "publishedAt": "2026-07-29T00:00:00+09:00",
-      "contentHash": "e2d5cd63998b647b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "affdc8032d6da004",
-      "companyId": "takarazuka",
-      "title": "（追）＜一般前売＞月組 東急シアターオーブ公演『NINE』",
-      "url": "https://kageki.hankyu.co.jp/news/20260725_002.html",
-      "category": "ticket",
-      "publishedAt": "2026-07-26T00:00:00+09:00",
-      "contentHash": "43c6e8d17c903a82",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "fb869e5e84d914cf",
-      "companyId": "takarazuka",
-      "title": "＜初日舞台映像（ロング）＞雪組公演『ポーの一族』",
-      "url": "https://youtu.be/phgAFs8aUWk",
-      "category": "other",
-      "publishedAt": "2026-07-24T00:00:00+09:00",
-      "contentHash": "65fb9f045b19e721",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "072cec96636b9f19",
-      "companyId": "takarazuka",
-      "title": "（追）雪組 宝塚大劇場公演『ポーの一族』の初日を原作者の萩尾望都氏が観劇",
-      "url": "https://kageki.hankyu.co.jp/news/20260712_1.html",
-      "category": "other",
-      "publishedAt": "2026-07-17T00:00:00+09:00",
-      "contentHash": "c0a035fdffde49fc",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "89032087bd43e028",
-      "companyId": "takarazuka",
-      "title": "＜動画配信サービス “TAKARAZUKA SQUARE【タカスク】\"＞公演連動タカスクおためしキャンペーンスタート！",
-      "url": "https://www.tca-pictures.net/square_cp/campaign/",
-      "category": "streaming",
-      "publishedAt": "2026-07-11T00:00:00+09:00",
-      "contentHash": "e70b8a44db8e594b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "32255cc25e8e71a7",
-      "companyId": "takarazuka",
-      "title": "星組 副組長の就任について",
-      "url": "https://kageki.hankyu.co.jp/news/20260710_008.html",
-      "category": "person",
-      "publishedAt": "2026-07-10T00:00:00+09:00",
-      "contentHash": "c3a74cbcb8e2dda9",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "9e81c69c6f05495b",
-      "companyId": "takarazuka",
-      "title": "星組 退団者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260710_002.html",
-      "category": "person",
-      "publishedAt": "2026-07-10T00:00:00+09:00",
-      "contentHash": "4bc3c9c7372b5bcc",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "b6a3b3662e7b85e5",
-      "companyId": "takarazuka",
-      "title": "組替え（異動）について",
-      "url": "https://kageki.hankyu.co.jp/news/20260710_007.html",
-      "category": "person",
-      "publishedAt": "2026-07-10T00:00:00+09:00",
-      "contentHash": "b26dfd873e7d5793",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "14b5a46ed3f3288a",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞雪組 東京宝塚劇場公演『ポーの一族』",
-      "url": "https://kageki.hankyu.co.jp/news/20260707_003.html",
-      "category": "ticket",
-      "publishedAt": "2026-07-07T00:00:00+09:00",
-      "contentHash": "dc9244ff670998e8",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "93f94891e78cae35",
-      "companyId": "takarazuka",
-      "title": "ブルーレイ、DVD、CDの商品価格改定について",
-      "url": "https://shop.tca-pictures.net/shop/t/t1713/",
-      "category": "streaming",
-      "publishedAt": "2026-07-07T00:00:00+09:00",
-      "contentHash": "4c6e94e1d964b02c",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "8945467c5b0df2b9",
-      "companyId": "takarazuka",
-      "title": "（追）【テレビ】「2026 FNS歌謡祭 夏」花組生出演",
-      "url": "https://kageki.hankyu.co.jp/news/20260617_005.html",
-      "category": "streaming",
-      "publishedAt": "2026-07-01T00:00:00+09:00",
-      "contentHash": "467dc9e121ffd0f8",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "2dd087b41e0b0a61",
-      "companyId": "takarazuka",
-      "title": "＜ブルーレイ予約受付開始のお知らせ＞星組御園座公演『花より男子II』－Shooting STAR－",
-      "url": "https://www.tca-pictures.net/stage/2026/hanayoridango2/",
-      "category": "ticket",
-      "publishedAt": "2026-06-30T00:00:00+09:00",
-      "contentHash": "f6c9343866fb1155",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "8b114f1c2f6ec084",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞星組 宝塚大劇場公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260630_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-06-30T00:00:00+09:00",
-      "contentHash": "384a4b362b3159ea",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "e501b64feb28ea56",
-      "companyId": "takarazuka",
-      "title": "（追）花組公演『エリザベート－愛と死の輪舞－』役替わり実施について",
-      "url": "https://kageki.hankyu.co.jp/news/20260526_003.html",
-      "category": "cast",
-      "publishedAt": "2026-06-28T00:00:00+09:00",
-      "contentHash": "31bcf705cd6e2529",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "154127af779036db",
-      "companyId": "takarazuka",
-      "title": "第112期初舞台生 班編成について",
-      "url": "https://kageki.hankyu.co.jp/news/20260618_003.html",
-      "category": "other",
-      "publishedAt": "2026-06-18T00:00:00+09:00",
-      "contentHash": "b76ff90dd3ca5308",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "8a4117cffc224949",
-      "companyId": "takarazuka",
-      "title": "＜人物相関図 公開＞雪組公演『ポーの一族』",
-      "url": "https://kageki.hankyu.co.jp/revue/2026/ponoichizoku/correlation.html",
-      "category": "other",
-      "publishedAt": "2026-06-18T00:00:00+09:00",
-      "contentHash": "8506f8858c9b58a3",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "6f515105b6f0cf6f",
-      "companyId": "takarazuka",
-      "title": "（追）新サービス「ebooksタカラヅカ定期購読」スタートのお知らせ ＜タカラットキャンペーンも実施！＞",
-      "url": "https://shop.tca-pictures.net/shop/t/t1688/",
-      "category": "other",
-      "publishedAt": "2026-06-06T00:00:00+09:00",
-      "contentHash": "29c436c5a6d1dcab",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "efd9560829d9eca4",
-      "companyId": "takarazuka",
-      "title": "東京宝塚劇場 喫茶・ラウンジ「Café de Repos（カフェ ド ルポ）」20周年記念ドリンクについて",
-      "url": "https://kageki.hankyu.co.jp/news/20260605_003.html",
-      "category": "other",
-      "publishedAt": "2026-06-05T00:00:00+09:00",
-      "contentHash": "fd0b8d27944376f2",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "3b635003ed780eec",
-      "companyId": "takarazuka",
-      "title": "「ル・サンク」定価改定のお知らせ",
-      "url": "https://shop.tca-pictures.net/shop/t/t1691/",
-      "category": "other",
-      "publishedAt": "2026-06-04T00:00:00+09:00",
-      "contentHash": "04f955642af288fa",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "51c4882eb732f1d7",
-      "companyId": "takarazuka",
-      "title": "公演プログラムの価格改定について",
-      "url": "https://kageki.hankyu.co.jp/news/20260604_003.html",
-      "category": "other",
-      "publishedAt": "2026-06-04T00:00:00+09:00",
-      "contentHash": "603ea4171780c892",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "9b244850743b9029",
-      "companyId": "takarazuka",
-      "title": "東京宝塚劇場における視覚・聴覚に障がいのあるお客様への新たな鑑賞サポート導入について",
-      "url": "https://kageki.hankyu.co.jp/news/20260524_003.html",
-      "category": "other",
-      "publishedAt": "2026-05-24T00:00:00+09:00",
-      "contentHash": "441a0fcee5756f29",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "8937d40871266eef",
-      "companyId": "takarazuka",
-      "title": "宝塚歌劇オリジナル菓子「宝塚歌劇 2026年ビジュアル缶」の販売について",
-      "url": "https://kageki.hankyu.co.jp/news/20260522_002.html",
-      "category": "other",
-      "publishedAt": "2026-05-22T00:00:00+09:00",
-      "contentHash": "2888711d01030889",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "1c33e5ae60958d6a",
-      "companyId": "takarazuka",
-      "title": "専科 退団者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260520_002.html",
-      "category": "person",
-      "publishedAt": "2026-05-20T00:00:00+09:00",
-      "contentHash": "f02a42d2934bafbc",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "3cd43ffed784c2fa",
-      "companyId": "takarazuka",
-      "title": "月組トップ娘役・天紫珠李 退団記者会見",
-      "url": "https://kageki.hankyu.co.jp/news/20260518_002.html",
-      "category": "person",
-      "publishedAt": "2026-05-20T00:00:00+09:00",
-      "contentHash": "aa5b2d06007665be",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "9e2d24d3343cd4b8",
-      "companyId": "takarazuka",
-      "title": "月組トップスター・鳳月杏 退団記者会見",
-      "url": "https://kageki.hankyu.co.jp/news/20260518_001.html",
-      "category": "person",
-      "publishedAt": "2026-05-20T00:00:00+09:00",
-      "contentHash": "3e017727230fcaeb",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "00081473d811a78e",
-      "companyId": "takarazuka",
-      "title": "外部出演「2027年国際園芸博覧会（GREEN×EXPO 2027）」応援メッセージ",
-      "url": "https://kageki.hankyu.co.jp/news/20260428_006.html",
-      "category": "other",
-      "publishedAt": "2026-04-28T00:00:00+09:00",
-      "contentHash": "fada90c2893f0269",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "publishedAt": "2026-09-28T00:00:00+09:00",
+      "fetchedAt": "2026-09-29T00:17:02+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/umekomi_DSC_7232_thum-thumb-500x373-41622.jpg",
+      "contentHash": "30e65b35d31def75"
     },
     {
       "id": "e7fb49f7fd664a6d",
@@ -1013,9 +1241,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037994.html",
       "category": "other",
       "publishedAt": "2026-09-26T00:00:00+09:00",
+      "fetchedAt": "2026-09-26T21:58:37+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260926LK5th_thmb-thumb-500x373-41585.jpg",
-      "contentHash": "b9ba72a5021dbb86",
-      "fetchedAt": "2026-09-26T21:58:37+09:00"
+      "contentHash": "b9ba72a5021dbb86"
     },
     {
       "id": "96f632b0ac849e4e",
@@ -1024,9 +1252,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038001.html",
       "category": "other",
       "publishedAt": "2026-09-25T00:00:00+09:00",
+      "fetchedAt": "2026-09-25T22:36:45+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260925_ALW_news00-thumb-500x373-41580.jpg",
-      "contentHash": "b6243213fbbd0cde",
-      "fetchedAt": "2026-09-25T22:36:45+09:00"
+      "contentHash": "b6243213fbbd0cde"
     },
     {
       "id": "6a2f18026cd04e0b",
@@ -1035,9 +1263,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037991.html",
       "category": "ticket",
       "publishedAt": "2026-09-25T00:00:00+09:00",
+      "fetchedAt": "2026-09-25T16:37:31+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/12/lk_mtthmn_2512-thumb-500x373-39833.jpg",
-      "contentHash": "8935f2b2b6002137",
-      "fetchedAt": "2026-09-25T16:37:31+09:00"
+      "contentHash": "8935f2b2b6002137"
     },
     {
       "id": "bd5abf779b51a3b1",
@@ -1046,9 +1274,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037993.html",
       "category": "other",
       "publishedAt": "2026-09-20T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/00_roba_kaimaku0920_-thumb-500x373-41574.jpg",
-      "contentHash": "e46b8bb95cfa9278",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "e46b8bb95cfa9278"
     },
     {
       "id": "4003190ea5bb8411",
@@ -1057,9 +1285,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037986.html",
       "category": "ticket",
       "publishedAt": "2026-09-18T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/07/hajimari_roba_mtthmn-thumb-500x373-41224.jpg",
-      "contentHash": "e1d9c4767ae33856",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "e1d9c4767ae33856"
     },
     {
       "id": "5da0b4d10b235a81",
@@ -1068,20 +1296,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037990.html",
       "category": "other",
       "publishedAt": "2026-09-18T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/09/260916_roba_zenkoku_00_thum-thumb-500x373-41557.jpg",
-      "contentHash": "15d5675ed7d0fefb",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "dab2bea7724d80e4",
-      "companyId": "shiki",
-      "title": "『オペラ座の怪人』名古屋公演 公演グッズのご紹介",
-      "url": "https://www.shiki.jp/navi/news/renewinfo/037818.html",
-      "category": "other",
-      "publishedAt": "2026-09-18T00:00:00+09:00",
-      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/36189a2185a3b440b2866909a5d4dc1206902f10-thumb-500x373-40278.jpg",
-      "contentHash": "4922c3472e321472",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "15d5675ed7d0fefb"
     },
     {
       "id": "6f8fd8fcf1a19e92",
@@ -1090,9 +1307,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037987.html",
       "category": "other",
       "publishedAt": "2026-09-17T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/04/roba_mtthmn_2026-thumb-500x373-40576.jpg",
-      "contentHash": "5d973bdcde89090f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "5d973bdcde89090f"
     },
     {
       "id": "92e603fecae3656d",
@@ -1101,9 +1318,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037988.html",
       "category": "other",
       "publishedAt": "2026-09-17T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "c81c5891f9204aa1",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "c81c5891f9204aa1"
     },
     {
       "id": "c5089340b31c6982",
@@ -1112,9 +1329,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037984.html",
       "category": "ticket",
       "publishedAt": "2026-09-12T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2024/01/BTTF_news_thmn-thumb-500x373-35153.jpg",
-      "contentHash": "31423038f38708a0",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "31423038f38708a0"
     },
     {
       "id": "e3850848381609c6",
@@ -1170,28 +1387,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/07/7be9e045156424cf2a9b349eb67ab9a1ebd81cdb-thumb-500x373-38880.jpg",
       "contentHash": "dece01f008ab8ceb"
-    },
-    {
-      "id": "cb3ba1aee882a371",
-      "companyId": "shiki",
-      "title": "「台本タブレット端末」貸出サービスのお知らせ",
-      "url": "https://www.shiki.jp/navi/news/renewinfo/036752.html",
-      "category": "other",
-      "publishedAt": "2026-08-31T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "b5819ec5b6d4c625"
-    },
-    {
-      "id": "f759d128bcc66e5f",
-      "companyId": "shiki",
-      "title": "開場中の写真撮影について",
-      "url": "https://www.shiki.jp/navi/news/renewinfo/033709.html",
-      "category": "other",
-      "publishedAt": "2026-08-31T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "d6367bed67e650c8"
     },
     {
       "id": "566de6bd92d2ebe1",
@@ -1313,17 +1508,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2021/11/43617a2768254738eecc1081f718457269a4c168-thumb-500x375-30963.jpg",
       "contentHash": "875564f9157ab875"
-    },
-    {
-      "id": "1adfe7d5f22ad4e5",
-      "companyId": "shiki",
-      "title": "劇場グッズ売店 営業時間・お支払い方法のご案内",
-      "url": "https://www.shiki.jp/navi/news/renewinfo/033713.html",
-      "category": "other",
-      "publishedAt": "2026-08-20T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "3f01562971ffac15"
     },
     {
       "id": "b06399434820318f",
@@ -1590,6 +1774,66 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "367e4ac3541b385b",
+      "companyId": "horipro",
+      "title": "ダンスエンターテイメント演劇『PASSION ― 北斎の描く夢 ―』ご来場のお客様へのご案内",
+      "url": "https://horipro-stage.jp/news/passion2026_information/",
+      "category": "other",
+      "publishedAt": "2026-10-16T17:59:00+09:00",
+      "contentHash": "80f3c43cba01e016",
+      "fetchedAt": "2026-10-16T20:12:45+09:00"
+    },
+    {
+      "id": "1245a7e905f1e42e",
+      "companyId": "horipro",
+      "title": "【抽選でご招待】ミュージカル『ファインディング・ネバーランド』製作発表11月11日(水)開催決定！",
+      "url": "https://horipro-stage.jp/news/findingneverland20271016/",
+      "category": "new_work",
+      "publishedAt": "2026-10-16T12:00:00+09:00",
+      "contentHash": "53c1e4cf2f2acd92",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
+      "id": "c0601170f9c0c606",
+      "companyId": "horipro",
+      "title": "ミュージカル『キングアーサー』東京公演チケット販売詳細",
+      "url": "https://horipro-stage.jp/news/kingarthur2027_ticket/",
+      "category": "ticket",
+      "publishedAt": "2026-10-13T16:59:00+09:00",
+      "contentHash": "ab1dfcc7965bec39",
+      "fetchedAt": "2026-10-14T00:51:18+09:00"
+    },
+    {
+      "id": "52d7ef6c59402c1b",
+      "companyId": "horipro",
+      "title": "舞台『ヘッダ・ガブラー』チケット販売詳細",
+      "url": "https://horipro-stage.jp/news/heddagabler2027_ticket/",
+      "category": "ticket",
+      "publishedAt": "2026-10-09T04:59:00+09:00",
+      "contentHash": "391ea97ebf300088",
+      "fetchedAt": "2026-10-09T06:58:35+09:00"
+    },
+    {
+      "id": "cf7e956b310919b8",
+      "companyId": "horipro",
+      "title": "『This is the Moment！～フランク・ワイルドホーン JAPAN 25th anniversary concert～』ご来場のお客様へのご案内",
+      "url": "https://horipro-stage.jp/news/thisisthemoment2026_information/",
+      "category": "other",
+      "publishedAt": "2026-10-02T16:11:31+09:00",
+      "contentHash": "69c63ab697ec894e",
+      "fetchedAt": "2026-10-02T17:22:01+09:00"
+    },
+    {
+      "id": "35278bb3e553390d",
+      "companyId": "horipro",
+      "title": "ミュージカル『スウィーニー・トッド フリート街の悪魔の理髪師』東京公演チケット販売詳細",
+      "url": "https://horipro-stage.jp/news/sweeneytodd2027_ticket/",
+      "category": "ticket",
+      "publishedAt": "2026-09-29T10:59:00+09:00",
+      "contentHash": "8acf0e4917ca694e",
+      "fetchedAt": "2026-09-29T17:18:55+09:00"
+    },
+    {
       "id": "e5c13c9cbf0a76d6",
       "companyId": "horipro",
       "title": "【重要】舞台『ハリー・ポッターと呪いの子』公演中止のお詫びと払い戻し対応実施のお知らせ（2026年9月8日発表）",
@@ -1636,8 +1880,8 @@
       "url": "https://horipro-stage.jp/news/ticket-info20260723/",
       "category": "ticket",
       "publishedAt": "2026-07-23T17:59:00+09:00",
-      "contentHash": "8e3788f90a95b8d3",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "8e3788f90a95b8d3"
     },
     {
       "id": "b77c6df20bb03cf9",
@@ -1646,8 +1890,8 @@
       "url": "https://horipro-stage.jp/news/dearevanhansen2026_info0723/",
       "category": "other",
       "publishedAt": "2026-07-23T17:59:00+09:00",
-      "contentHash": "668326bd26bf07dc",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "668326bd26bf07dc"
     },
     {
       "id": "2a81472b3c66f95e",
@@ -1656,8 +1900,8 @@
       "url": "https://horipro-stage.jp/news/findingneverland2027_ticket/",
       "category": "ticket",
       "publishedAt": "2026-07-23T10:59:00+09:00",
-      "contentHash": "e5870c33913ab416",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "e5870c33913ab416"
     },
     {
       "id": "10207302269dfa98",
@@ -1666,8 +1910,8 @@
       "url": "https://horipro-stage.jp/news/info20260717/",
       "category": "other",
       "publishedAt": "2026-07-17T14:59:00+09:00",
-      "contentHash": "7106830586cc2919",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "7106830586cc2919"
     },
     {
       "id": "3db137c16262692a",
@@ -1676,18 +1920,118 @@
       "url": "https://horipro-stage.jp/news/dearevanhansen2026_information/",
       "category": "ticket",
       "publishedAt": "2026-07-15T16:59:00+09:00",
-      "contentHash": "0831ddf44a688a39",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "0831ddf44a688a39"
+    },
+    {
+      "id": "431cbb85822e1391",
+      "companyId": "toho",
+      "title": "『レジェンド・オブ・ミュージカル』第9回の開催が決定しました！",
+      "url": "https://www.tohostage.com/legend/",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_legend2026.jpg",
+      "contentHash": "322c45bdc5373aca",
+      "fetchedAt": "2026-10-16T20:12:45+09:00"
+    },
+    {
+      "id": "7cd7211b324471df",
+      "companyId": "toho",
+      "title": "2027年夏 EXシアター有明『ムーラン・ルージュ！ザ・ミュージカル』キャスト解禁！",
+      "url": "https://www.tohostage.com/moulinmusical_japan/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-10-14T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_moulinmusical_japan2027_2.jpg",
+      "contentHash": "3b8206540a3be8d8",
+      "fetchedAt": "2026-10-14T20:40:13+09:00"
+    },
+    {
+      "id": "4e4ecd07ad23c850",
+      "companyId": "toho",
+      "title": "ミュージカル『民王』博多座公演のアーカイブ付きLIVE配信が決定いたしました！",
+      "url": "https://www.tohostage.com/tamiou/stream.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-06T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_tamiou2026_3.jpg",
+      "contentHash": "e777de59c745edb7",
+      "fetchedAt": "2026-10-06T19:04:31+09:00"
+    },
+    {
+      "id": "e81e9fb7b82e8343",
+      "companyId": "toho",
+      "title": "VOICARION10周年記念展示会が本日10月2日(金)より 日比谷シャンテ３階にて開催されます。",
+      "url": "https://www.tohostage.com/voicarion/10th/exhibition.html",
+      "category": "other",
+      "publishedAt": "2026-10-02T00:00:00+09:00",
+      "contentHash": "9a30941fcb55f1a9",
+      "fetchedAt": "2026-10-02T10:32:31+09:00"
     },
     {
       "id": "31fb73b081216883",
       "companyId": "toho",
-      "title": "海外ツアー公演 制作スタッフ募集のお知らせ",
+      "title": "海外ツアー公演 制作スタッフ募集のお知らせ【応募終了】",
       "url": "https://www.tohostage.com/recruit/tour_seisaku.html",
       "category": "other",
       "publishedAt": "2026-09-04T00:00:00+09:00",
-      "contentHash": "bfa4cdd9d952cc6a",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "1b32f9b2facb1fdf",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-01T17:43:00+09:00"
+    },
+    {
+      "id": "0fe693549026dd3c",
+      "companyId": "toho",
+      "title": "2027年7月 東京ガーデンシアター ミュージカル『十二国記 -月の影 影の海-』ARENA LIVE開催決定！",
+      "url": "https://www.tohostage.com/12kokuki_Live/",
+      "category": "new_work",
+      "publishedAt": "2026-09-30T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_12kokuki_Live2027.jpg",
+      "contentHash": "b9288ac73c075226",
+      "fetchedAt": "2026-09-30T22:34:15+09:00"
+    },
+    {
+      "id": "94795fd1a2dc5834",
+      "companyId": "toho",
+      "title": "2027年2・3月 日生劇場 ミュージカル『モーツァルト！』追加キャスト、公演の詳細が決定しました！",
+      "url": "https://www.tohostage.com/mozart/",
+      "category": "cast",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_mozart2027_2.jpg",
+      "contentHash": "db6e6b445e1f15c4",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-09-29T17:18:55+09:00"
+    },
+    {
+      "id": "32ebd653af77f21b",
+      "companyId": "toho",
+      "title": "舞台『キングダムII -継承-』の博多座公演アーカイブ付きLIVE配信が決定いたしました！",
+      "url": "https://www.tohostage.com/kingdom2/stream2.html",
+      "category": "streaming",
+      "publishedAt": "2026-09-29T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_kingdom2_2026.jpg",
+      "contentHash": "57a0dcf48608e868",
+      "fetchedAt": "2026-09-29T17:18:55+09:00"
+    },
+    {
+      "id": "c89e1a49365622d5",
+      "companyId": "toho",
+      "title": "2027年1･2月シアタークリエ公演としまして、 ケラリーノ・サンドロヴィッチ作・演出による「新作」（タイトル未定） の上演が決定しました。",
+      "url": "https://www.tohostage.com/freedom_of_choice/",
+      "category": "new_work",
+      "publishedAt": "2026-09-28T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_kera2027.jpg",
+      "contentHash": "9ebc90fad518bdf6",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
+    },
+    {
+      "id": "678c511707332ac0",
+      "companyId": "toho",
+      "title": "2027年1･2月シアタークリエ公演としまして、 ケラリーノ・サンドロヴィッチ作・演出による「新作」（タイトル未定） の上演が決定しました。",
+      "url": "https://www.tohostage.com/kera/",
+      "category": "new_work",
+      "publishedAt": "2026-09-28T00:00:00+09:00",
+      "fetchedAt": "2026-09-29T10:45:14+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_kera2027.jpg",
+      "contentHash": "9ebc90fad518bdf6"
     },
     {
       "id": "da8f22abec2a116e",
@@ -1723,17 +2067,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
-      "id": "94795fd1a2dc5834",
-      "companyId": "toho",
-      "title": "2027年2・3月 日生劇場 ミュージカル『モーツァルト！』上演決定！",
-      "url": "https://www.tohostage.com/mozart/",
-      "category": "new_work",
-      "publishedAt": "2026-07-21T00:00:00+09:00",
-      "thumbnail": "https://www.toho.co.jp/images/a4e5d8f19590c16d4cd4a06e883c41ad6b7d1fb885666f729c29e265bbf60a91.jpg",
-      "contentHash": "fc7044b14889594d",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "183fb828a0066086",
       "companyId": "toho",
       "title": "2026年9・10月公演 ミュージカル『民王』第3弾ビジュアル解禁！",
@@ -1762,9 +2095,9 @@
       "url": "https://www.tohostage.com/meoto/",
       "category": "new_work",
       "publishedAt": "2026-06-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/9ba5e812c55ef75db078711b7ee45a2bf275d66553f83af7c17a6b373caf7c07.jpg",
-      "contentHash": "2244b11ab0ca6f9c",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "2244b11ab0ca6f9c"
     },
     {
       "id": "01d567fee3f3888a",
@@ -1773,9 +2106,9 @@
       "url": "https://www.voicemonster.jp/",
       "category": "new_work",
       "publishedAt": "2026-06-24T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/5b6fe769b68c2f28da7ccc5ee5d54638de0da549c86ac1f662e60e77d785e944.jpg",
-      "contentHash": "2a73b583a9502e6a",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "2a73b583a9502e6a"
     },
     {
       "id": "e8da79cfa4649127",
@@ -1784,9 +2117,9 @@
       "url": "https://www.tohostage.com/relatively_speaking/",
       "category": "new_work",
       "publishedAt": "2026-06-16T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/b16ebd2ba78bff4995a95c252ee8fb638785ba028709941664af09c2cc92e0b9.jpg",
-      "contentHash": "6e27429b71afab78",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "6e27429b71afab78"
     },
     {
       "id": "6a430969540f35a9",
@@ -1795,9 +2128,9 @@
       "url": "https://horipro-stage.jp/stage/thisisthemoment2026/",
       "category": "new_work",
       "publishedAt": "2026-06-15T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/642af80a80fd3cbd2bbf96b4c6fe3e25912177a9af98ec717620ed86b943b625.jpg",
-      "contentHash": "f191e5c33031464b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "f191e5c33031464b"
     },
     {
       "id": "2a11c11d3013509e",
@@ -1806,9 +2139,9 @@
       "url": "https://www.tohostage.com/ever_after/",
       "category": "new_work",
       "publishedAt": "2026-05-24T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/dde9ab273e1d3bd61b9fefc8bedd24f412643f78548e1a13f0a4c6436d40847b.jpg",
-      "contentHash": "23a2c614d904a6c2",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "23a2c614d904a6c2"
     },
     {
       "id": "711d22717727b060",
@@ -1817,9 +2150,9 @@
       "url": "https://www.tohostage.com/rent2026/",
       "category": "cast",
       "publishedAt": "2026-04-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-24T13:32:13+09:00",
       "thumbnail": "https://www.toho.co.jp/images/93c656ccaef585315ee23a17bdbf4ad76eccc51dbf5d200d674ab4903815bf7e.jpg",
-      "contentHash": "38cec487ce8b7a45",
-      "fetchedAt": "2026-09-24T13:32:13+09:00"
+      "contentHash": "38cec487ce8b7a45"
     },
     {
       "id": "383842644c13922d",
@@ -1850,6 +2183,26 @@
       "publishedAt": "2026-03-03T00:00:00+09:00",
       "contentHash": "a49e549006df1557",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "103f8ee64feb95e6",
+      "companyId": "shinkansen",
+      "title": "／DOKURO77／オリジナルグッズ WEB販売決定！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=13935",
+      "category": "other",
+      "publishedAt": "2026-10-05T12:00:00+09:00",
+      "contentHash": "26b4f2e8b716bdd9",
+      "fetchedAt": "2026-10-05T15:50:36+09:00"
+    },
+    {
+      "id": "50e9998d8d953926",
+      "companyId": "shinkansen",
+      "title": "／DOKURO77／『髑髏城の七人』花鳥風月極BD-BOX 10/2(金)正午WEB予約開始！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=13931",
+      "category": "ticket",
+      "publishedAt": "2026-10-01T18:00:00+09:00",
+      "contentHash": "a0cf3bf32214336a",
+      "fetchedAt": "2026-10-02T01:17:23+09:00"
     },
     {
       "id": "be367a0cefd258ba",
@@ -1938,8 +2291,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13704",
       "category": "other",
       "publishedAt": "2026-08-31T12:00:00+09:00",
-      "contentHash": "8eddb6f2393124de",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "8eddb6f2393124de"
     },
     {
       "id": "70f4f68708628a86",
@@ -1948,8 +2301,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13676",
       "category": "other",
       "publishedAt": "2026-08-30T16:58:02+09:00",
-      "contentHash": "5744b9b77c2d8ddb",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "5744b9b77c2d8ddb"
     },
     {
       "id": "eda7f3dff532a7db",

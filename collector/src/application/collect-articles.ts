@@ -12,22 +12,54 @@ import { normalizeTitle, truncateUtf16 } from "../domain/text.js";
 import { InvalidArticleUrlError, normalizeUrl } from "../domain/url.js";
 
 /**
- * Source 由来の生値をログに載せる際の上限（UTF-16 コード単位）。Source は infrastructure なので
- * 型契約に反する値（想定外の長さ・非 string）を返しうる。ログを 1 行に収めるための防衛
+ * Source 由来の値をログに載せる際の上限（§5.1 手順 6 の「200 コードポイント」）。Source は
+ * infrastructure なので型契約に反する長さの値を返しうる。ログフィールドの長さを抑えるための防衛
+ * （1 行性は ConsoleLogger の値の引用に依存する。§4.7）。
+ *
+ * 切り詰めには truncateUtf16（UTF-16 コード単位）を使う。§8 #55 のとおりコードポイント単位の
+ * 切り詰めをここに書かない。これで「200 コードポイント」の上限を守れる根拠は経路ごとに異なる：
+ * (1) formatShapeIssues の出力は issue の path（RawArticleShapeSchema の固定キー名）と zod の
+ *     型名・code だけで ASCII のみ。UTF-16 の 200 単位 = 200 コードポイントで、上限と一致する
+ * (2) previewRawValue の入力（companyId・publishedAt・category・thumbnail の値）は非 ASCII・
+ *     サロゲートペアを含みうる。それでも UTF-16 で 200 単位以下に切れば 200 コードポイント以下に
+ *     なり、上限を超えない（1 コードポイントは 1〜2 単位。truncateUtf16 は切れ目が高サロゲートなら
+ *     1 つ手前で切るのでペアを分割しない。非 ASCII を含むと 200 コードポイントより短く切れうる）
+ * (1) の出力に非 ASCII が混ざる形に変えるときは、§8 #55 のとおり D-01 の reopen
+ * （domain/text.ts への truncateCodePoints の追加。FOLLOWUPS 1-18）が必要になる
  */
 const MAX_LOG_VALUE_LENGTH = 200;
 
 /**
- * Source 由来の生値を安全にログへ載せる文字列に変換する（非 string でも例外を投げない）。
- * String(value) 自体が例外を投げる値（Symbol.toPrimitive／toString で throw する等）も想定し、
- * ログ出力のためだけに収集全体を失敗させないよう固定文字列にフォールバックする
+ * Source 由来の生値をログへ載せる文字列に切り詰める。呼び出し元は checkRawShape が検証して返した
+ * 値（RawArticleShape）だけを渡すので、非 string の防御は型で済ませる
  */
-function previewRawValue(value: unknown): string {
-  try {
-    return truncateUtf16(String(value), MAX_LOG_VALUE_LENGTH);
-  } catch {
-    return "[unprintable]";
-  }
+function previewRawValue(value: string): string {
+  return truncateUtf16(value, MAX_LOG_VALUE_LENGTH);
+}
+
+/** 形検査の失敗理由が組み立てられないとき（getter の例外・issue が空）に error へ載せる既定の文言 */
+const UNKNOWN_SHAPE_VIOLATION = "unknown shape violation";
+
+/**
+ * §5.1 手順 6 の warn("invalid raw article") の error フィールドを組み立てる。
+ * 「どのフィールドがどう外れたか」だけを 1 行で示す（zod の message の代わり。message は値を
+ * 含みうるので使わない）。
+ * 載せるのは issue の path（RawArticleShapeSchema が持つ自前のフィールド名）と zod が付けた
+ * 型名（expected / received。値ではなく "number" / "object" 等の種別）だけなので、記事本文・HTML
+ * 断片が混ざる経路が無い（要件 §7「記事本文は保持しない」）。全体を MAX_LOG_VALUE_LENGTH に切り詰める
+ */
+function formatShapeIssues(issues: readonly z.ZodIssue[]): string {
+  const parts = issues.map((issue) => {
+    const path = issue.path.length > 0 ? issue.path.join(".") : "(root)";
+    // invalid_type 以外の code（本スキーマでは発生しない）は、文言に値が含まれうるので code だけを載せる
+    return issue.code === "invalid_type"
+      ? `${path}: expected ${issue.expected}, received ${issue.received}`
+      : `${path}: ${issue.code}`;
+  });
+  // zod の失敗は実際には 1 件以上の issue を持つが、型（ZodIssue[]）は空配列を排除しない。
+  // 空文字だとログから原因が読めないため、既定の文言を置く
+  if (parts.length === 0) return UNKNOWN_SHAPE_VIOLATION;
+  return truncateUtf16(parts.join("; "), MAX_LOG_VALUE_LENGTH);
 }
 
 /**
@@ -43,6 +75,33 @@ const RawArticleShapeSchema = z.object({
   category: z.string(),
   thumbnail: z.string().optional(),
 }) satisfies z.ZodObject<{ [K in keyof RawArticle]-?: z.ZodTypeAny }>;
+
+type RawArticleShape = z.infer<typeof RawArticleShapeSchema>;
+
+/** checkRawShape の結果。ok なら value は検証済みの値（Source が返した元の値とは別の plain object） */
+type ShapeCheck =
+  | { readonly ok: true; readonly value: RawArticleShape }
+  | { readonly ok: false; readonly error: string };
+
+/**
+ * §5.1 手順 6 のとおり、Source が返した 1 件の形を実行時検査する（Source は infrastructure なので
+ * 型契約を信用しない）。zod の object parse は各キーを 1 回だけ読んで新しい plain object を作るので、
+ * 後段は value だけを読めば元の値の getter を読み直さない（2 回目の読み出しで値が変わる・例外を
+ * 投げる要素でも、検査した値と使う値が一致する）。
+ * プロパティの getter が例外を投げる値（Source のバグ・Proxy）では safeParse がそれを伝播させる。
+ * 捕捉しないと 1 件で execute() 全体が reject し他団体の記事も失われる（要件 R-2）ため、形に反する
+ * 1 件として扱う
+ */
+function checkRawShape(raw: unknown): ShapeCheck {
+  try {
+    const result = RawArticleShapeSchema.safeParse(raw);
+    return result.success
+      ? { ok: true, value: result.data }
+      : { ok: false, error: formatShapeIssues(result.error.issues) };
+  } catch {
+    return { ok: false, error: UNKNOWN_SHAPE_VIOLATION };
+  }
+}
 
 /**
  * Source と Company の対応付け（D-01 §8.1）。main.ts が companies.json の配列順に組み立てる。
@@ -273,21 +332,22 @@ export class CollectArticles implements CollectArticlesUseCase {
     let adopted = 0;
     let discarded = 0;
     for (const raw of rawArticles) {
-      // §5.1 手順 6 のとおり：RawArticle の形を実行時検査する（Source は infrastructure な
-      // ので型契約を信用しない）。形に反する記事は値として 1 件ずつ落とし、他の記事・他団体には
-      // 影響させない。形の契約を満たした後の buildCollectedArticle 内の例外（hasher 等の依存の故障）
-      // は記事の不良ではなく依存・application 側の不良なので、ここでは捕捉せず execute() を reject
-      // させる
-      const shapeResult = RawArticleShapeSchema.safeParse(raw);
-      if (!shapeResult.success) {
+      // 形に反する記事は値として 1 件ずつ落とし、他の記事・他団体には影響させない。形の契約を
+      // 満たした後の buildCollectedArticle 内の例外（hasher 等の依存の故障）は記事の不良ではなく
+      // 依存・application 側の不良なので、ここでは捕捉せず execute() を reject させる
+      const shape = checkRawShape(raw);
+      if (!shape.ok) {
         discarded += 1;
+        // ログのフィールドは 3 つとも必須（§5.1 手順 6）。companyId が無いとどの団体の Source が
+        // 壊れ始めたかを切り分けられない（sourceId だけでは 1 団体に複数 Source がある場合に追えない）
         this.logger.warn("invalid raw article", {
+          companyId: target.company.id,
           sourceId,
-          error: previewRawValue(shapeResult.error.message),
+          error: shape.error,
         });
         continue;
       }
-      const article = this.buildCollectedArticle(raw, target.company, sourceId);
+      const article = this.buildCollectedArticle(shape.value, target.company, sourceId);
       if (article === undefined) {
         discarded += 1;
         continue;
@@ -302,18 +362,18 @@ export class CollectArticles implements CollectArticlesUseCase {
     return { adopted, discarded };
   }
 
-  /** §5.1 手順 6 の確定結果。捨てた記事は undefined */
+  /** §5.1 手順 6 の確定結果。shape は checkRawShape が検証して返した値。捨てた記事は undefined */
   private buildCollectedArticle(
-    raw: RawArticle,
+    shape: RawArticleShape,
     company: Company,
     sourceId: string,
   ): CollectedArticle | undefined {
     // 6.1 companyId の突合
-    if (raw.companyId !== company.id) {
+    if (shape.companyId !== company.id) {
       this.logger.warn("companyId mismatch", {
         sourceId,
         expected: company.id,
-        actual: previewRawValue(raw.companyId),
+        actual: previewRawValue(shape.companyId),
       });
       return undefined;
     }
@@ -321,7 +381,7 @@ export class CollectArticles implements CollectArticlesUseCase {
     // 6.2〜6.3 url の正規化と id
     let url: string;
     try {
-      url = normalizeUrl(raw.url);
+      url = normalizeUrl(shape.url);
     } catch (e) {
       if (e instanceof InvalidArticleUrlError) {
         this.logger.warn("invalid article url", { sourceId, error: formatError(e) });
@@ -332,26 +392,26 @@ export class CollectArticles implements CollectArticlesUseCase {
     const id = buildArticleId(this.hasher, url);
 
     // 6.4 見出し
-    const title = normalizeTitle(raw.title);
+    const title = normalizeTitle(shape.title);
     if (title.length === 0) {
       this.logger.warn("empty title after normalization", { sourceId, url });
       return undefined;
     }
 
     // 6.5 publishedAt
-    const publishedAtResult = DateTimeSchema.safeParse(raw.publishedAt);
+    const publishedAtResult = DateTimeSchema.safeParse(shape.publishedAt);
     if (!publishedAtResult.success) {
       this.logger.warn("invalid publishedAt", {
         sourceId,
         url,
-        publishedAt: previewRawValue(raw.publishedAt),
+        publishedAt: previewRawValue(shape.publishedAt),
       });
       return undefined;
     }
     const publishedAt = publishedAtResult.data;
 
     // 6.6 category（記事は残す。型では保証されるが Source は infrastructure なので実行時の防衛を置く）
-    const categoryResult = CategorySchema.safeParse(raw.category);
+    const categoryResult = CategorySchema.safeParse(shape.category);
     let category: Category;
     if (categoryResult.success) {
       category = categoryResult.data;
@@ -360,21 +420,21 @@ export class CollectArticles implements CollectArticlesUseCase {
       this.logger.warn("unknown category", {
         sourceId,
         url,
-        category: previewRawValue(raw.category),
+        category: previewRawValue(shape.category),
       });
     }
 
     // 6.7 thumbnail
     let thumbnail: string | undefined;
-    if (raw.thumbnail !== undefined && raw.thumbnail.length > 0) {
-      const thumbnailResult = HttpUrlSchema.safeParse(raw.thumbnail);
+    if (shape.thumbnail !== undefined && shape.thumbnail.length > 0) {
+      const thumbnailResult = HttpUrlSchema.safeParse(shape.thumbnail);
       if (thumbnailResult.success) {
         thumbnail = thumbnailResult.data;
       } else {
         this.logger.debug("invalid thumbnail url", {
           sourceId,
           url,
-          thumbnail: previewRawValue(raw.thumbnail),
+          thumbnail: previewRawValue(shape.thumbnail),
         });
       }
     }

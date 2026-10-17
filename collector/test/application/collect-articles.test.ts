@@ -695,6 +695,160 @@ describe("部分破棄（§8 #33）", () => {
     );
     expect(result.discardedByCompany.co_allbad).toBe(5);
   });
+
+  it('title が数値の要素（RawArticle の型から外れる）を 1 件含む Source → その記事だけが捨てられ、warn("invalid raw article") に companyId・sourceId・error の 3 フィールドが載る', async () => {
+    const shapeLogger = new RecordingLogger();
+    // 捨てられる記事の url に HTML 断片を入れておき、警告に零れた値が載らないことも併せて確かめる
+    const numericTitle = {
+      ...rawArticle({ companyId: "co_shape" }),
+      title: 123,
+      url: 'https://example.com/leak#<div class="news">記事本文の断片</div>',
+    } as unknown as RawArticle;
+    const uc = useCase(
+      [
+        bindingOf(company("co_shape"), {
+          // companyId と別の sourceId を与え、2 つのフィールドが別の値として載ることを確かめる
+          id: "co_shape_news",
+          articles: [
+            numericTitle,
+            rawArticle({ companyId: "co_shape", url: "https://example.com/shape-ok" }),
+          ],
+        }),
+      ],
+      shapeLogger,
+    );
+    const shapeResult = await uc.execute(NO_FULL_CRAWL);
+
+    expect(shapeResult.articles).toHaveLength(1);
+    expect(at(shapeResult.articles, 0).url).toBe("https://example.com/shape-ok");
+    expect(shapeResult.discardedByCompany.co_shape).toBe(1);
+    expect(shapeResult.failures.find((f) => f.companyId === "co_shape")).toBeUndefined();
+
+    const warns = findWarn(shapeLogger.entries, "invalid raw article");
+    expect(warns).toHaveLength(1);
+    const fields = at(warns, 0).fields;
+    expect(Object.keys(fields ?? {}).sort()).toEqual(["companyId", "error", "sourceId"]);
+    expect(fields?.companyId).toBe("co_shape");
+    expect(fields?.sourceId).toBe("co_shape_news");
+    // error は「どのフィールドがどう外れたか」。記事本文・HTML 断片は載らない（要件 §7）
+    expect(String(fields?.error)).toContain("title");
+    expect(String(fields?.error)).toContain("received number");
+    expect(String(fields?.error)).not.toContain("記事本文");
+    expect(String(fields?.error)).not.toContain("<div");
+  });
+
+  // 6 フィールド分の issue を "; " で連結すると 200 を超える（現状約 270）ことが前提。下で前提も確かめる
+  it("6 フィールドすべてが型から外れた要素 → issue の連結（200 超）が error で 200 文字に切り詰められ、ASCII のみで記事本文・HTML 断片を含まない", async () => {
+    const shapeLogger = new RecordingLogger();
+    const allFieldsBroken = {
+      companyId: 1,
+      title: { html: '<div class="news">記事本文の断片をここに詰める</div>'.repeat(20) },
+      url: null,
+      publishedAt: [],
+      category: false,
+      thumbnail: {},
+    } as unknown as RawArticle;
+    const uc = useCase(
+      [bindingOf(company("co_shape2"), { articles: [allFieldsBroken] })],
+      shapeLogger,
+    );
+    const shapeResult = await uc.execute(NO_FULL_CRAWL);
+
+    expect(shapeResult.articles).toHaveLength(0);
+    expect(shapeResult.discardedByCompany.co_shape2).toBe(1);
+    const error = String(at(findWarn(shapeLogger.entries, "invalid raw article"), 0).fields?.error);
+    expect(Array.from(error)).toHaveLength(200);
+    // 切り詰めが実際に働いた（連結が 200 を超えた）ことの確認：末尾の thumbnail の issue まで届いていない
+    expect(error).not.toContain("thumbnail");
+    // error は issue の path（スキーマの固定キー名）と zod の型名・code だけなので ASCII のみ。
+    // この前提が MAX_LOG_VALUE_LENGTH の UTF-16 切り詰めを「200 コードポイント」と一致させている
+    // （崩れたら §8 #55 のとおり D-01 の reopen が必要）
+    expect(Array.from(error).filter((ch) => (ch.codePointAt(0) ?? 0) > 0x7f)).toEqual([]);
+    expect(error).not.toContain("記事本文");
+    expect(error).not.toContain("<div");
+  });
+
+  it("title の getter が例外を投げる要素を 1 件含む Source → その記事だけが捨てられ、execute() は reject せず他団体の記事と failures が返る（要件 R-2）", async () => {
+    const throwingLogger = new RecordingLogger();
+    const throwingGetter = {
+      companyId: "co_throw",
+      url: "https://example.com/throw",
+      get title(): string {
+        throw new Error("getter boom");
+      },
+      category: "other",
+      publishedAt: "2026-09-13T00:00:00+09:00",
+    } as unknown as RawArticle;
+    const uc = useCase(
+      [
+        bindingOf(company("co_throw"), {
+          articles: [
+            throwingGetter,
+            rawArticle({ companyId: "co_throw", url: "https://example.com/throw-ok" }),
+          ],
+        }),
+        bindingOf(company("co_healthy"), {
+          articles: [rawArticle({ companyId: "co_healthy", url: "https://example.com/healthy" })],
+        }),
+        unimplementedBindingOf(company("co_unimpl")),
+      ],
+      throwingLogger,
+    );
+    const throwResult = await uc.execute(NO_FULL_CRAWL);
+
+    expect(throwResult.articles.map((a) => a.url)).toEqual([
+      "https://example.com/throw-ok",
+      "https://example.com/healthy",
+    ]);
+    expect(throwResult.discardedByCompany.co_throw).toBe(1);
+    expect(throwResult.failures).toEqual([
+      expect.objectContaining({ companyId: "co_unimpl", reason: "not_implemented" }),
+    ]);
+    const warns = findWarn(throwingLogger.entries, "invalid raw article");
+    expect(warns).toHaveLength(1);
+    expect(at(warns, 0).fields).toMatchObject({
+      companyId: "co_throw",
+      error: "unknown shape violation",
+    });
+  });
+
+  it("title の getter が 1 回目は string・2 回目以降は例外を投げる要素 → 形検査で読んだ値が使われ（再読み込みしない）、その記事は採用され execute() は reject しない（要件 R-2）", async () => {
+    const onceLogger = new RecordingLogger();
+    let titleReads = 0;
+    const throwsOnSecondRead = {
+      companyId: "co_once",
+      url: "https://example.com/once",
+      get title(): string {
+        titleReads += 1;
+        if (titleReads > 1) throw new Error("getter boom on re-read");
+        return "一度だけ読める見出し";
+      },
+      category: "other",
+      publishedAt: "2026-09-13T00:00:00+09:00",
+    } as unknown as RawArticle;
+    const uc = useCase(
+      [
+        bindingOf(company("co_once"), { articles: [throwsOnSecondRead] }),
+        bindingOf(company("co_healthy"), {
+          articles: [rawArticle({ companyId: "co_healthy", url: "https://example.com/healthy" })],
+        }),
+      ],
+      onceLogger,
+    );
+    const onceResult = await uc.execute(NO_FULL_CRAWL);
+
+    expect(onceResult.articles.map((a) => [a.url, a.title])).toEqual([
+      ["https://example.com/once", "一度だけ読める見出し"],
+      ["https://example.com/healthy", "見出し"],
+    ]);
+    expect(onceResult.discardedByCompany.co_once).toBe(0);
+    expect(onceResult.failures).toEqual([]);
+    expect(findWarn(onceLogger.entries, "invalid raw article")).toEqual([]);
+    // zod の object parse が各キーを 1 回だけ読む前提のアサーション。
+    // zod の更新でこの行だけが赤になったら、checkRawShape の TOCTOU 対策
+    // （検証済みの値を使う）が成り立つかを見直す
+    expect(titleReads).toBe(1);
+  });
 });
 
 describe("未実装団体", () => {

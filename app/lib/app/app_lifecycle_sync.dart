@@ -75,11 +75,7 @@ class _AppLifecycleSyncState extends ConsumerState<AppLifecycleSync>
       // （§8 #49）。
       ref.listenManual(articleCountProvider, (previous, next) {
         if (!shouldLogCountError(previous, next)) return;
-        _logger.w(
-          '記事件数の購読に失敗',
-          error: next.error,
-          stackTrace: releaseSafeStackTrace(next.stackTrace),
-        );
+        _warn('記事件数の購読に失敗', next.error, next.stackTrace);
       }, fireImmediately: true);
       // 件数の初回読み出しが値もエラーも返さないまま止まった場合の記録
       // （D-04 §8 #66）。articleCountStallLogDelay 後に 1 度だけ状態を読み、
@@ -89,7 +85,7 @@ class _AppLifecycleSyncState extends ConsumerState<AppLifecycleSync>
         if (!mounted) return; // タイマー発火前に破棄された。
         final count = ref.read(articleCountProvider);
         if (count.hasValue || count.hasError) return;
-        _logger.w(
+        _warn(
           '記事件数の初回読み出しが '
           '${articleCountStallLogDelay.inSeconds} 秒以内に返らない',
         );
@@ -213,12 +209,20 @@ class _AppLifecycleSyncState extends ConsumerState<AppLifecycleSync>
     }
   }
 
-  // ログの定型（クラス doc 参照）。release ビルドではスタックトレースを
-  // 出さない（D-04 §4.9）。
-  void _warn(String message, Object error, StackTrace stackTrace) {
+  /// ログの定型（クラス doc 参照）。整形関数を通すのはこの本体 1 か所だけで、
+  /// 呼び出し側は生の error・stackTrace を渡す。例外とスタックトレースを
+  /// **位置引数**で受けることと、`null` ガードを書かないことの理由はいずれも
+  /// D-04 §4.9（位置引数の規約と、`null` ガードを書かない理由の 2 段落）。
+  /// 例外を伴わない 1 行（件数の滞留ログ）も同じヘルパで出せるよう
+  /// 省略可能にする。
+  ///
+  /// 呼び出し側が間違えうる 1 点：`StackTrace` は `Object` の部分型なので
+  /// `_warn('…', s)` のようにスタックトレースを第 2 引数へ渡しても型が通る
+  /// （release では型名だけが残り原因が分からなくなる）。
+  void _warn(String message, [Object? error, StackTrace? stackTrace]) {
     _logger.w(
       message,
-      error: error,
+      error: releaseSafeError(error),
       stackTrace: releaseSafeStackTrace(stackTrace),
     );
   }

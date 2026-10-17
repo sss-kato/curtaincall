@@ -1,3 +1,4 @@
+import 'package:curtaincall/core/logging/app_logger.dart';
 import 'package:curtaincall/features/notifications/domain/notification_settings_opener.dart';
 import 'package:logger/logger.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -23,7 +24,11 @@ class UrlLauncherNotificationSettingsOpener
         mode: LaunchMode.externalApplication,
       );
     } on Object catch (e, s) {
-      _logger.w('設定アプリを開けなかった', error: e, stackTrace: s);
+      _logger.w(
+        '設定アプリを開けなかった',
+        error: releaseSafeError(e),
+        stackTrace: releaseSafeStackTrace(s),
+      );
       return false;
     }
   }

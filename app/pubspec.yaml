@@ -13,6 +13,9 @@ dependencies:
   # CupertinoIcons のフォント本体。クラスは Flutter SDK にあるため
   # analyze は通るが、このパッケージが無いとアイコンが欠損グリフで描画される。
   cupertino_icons: ^1.0.8
+  # 版を上げたら core/logging/app_logger.dart 冒頭の実測 1（isolate.dart の再 export）を再確認する
+  # （D-04 §4.9・D-04 §8 #75）。この行と下の logger の行は pub upgrade では読まれない
+  # （pub upgrade は pubspec.lock だけを書き換える）。lock の解決版を検査する案は FOLLOWUPS 4-22
   drift: ^2.20.0
   drift_flutter: ^0.2.0
   flutter:
@@ -23,12 +26,19 @@ dependencies:
   # riverpod 系を更新するときは analysis_options.yaml の plugins: riverpod_lint も同時に上げる（完全一致固定のため）
   flutter_riverpod: ^3.0.0
   http: ^1.2.0
+  # 版を上げたら core/logging/app_logger.dart 冒頭の実測 2・3（filter / printer の挙動）を再確認する
+  # （D-04 §4.9・D-04 §8 #75。pub upgrade では読まれない点は drift の行の注記を参照）
   logger: ^2.4.0
   # TODO(T-18): D-04 §4.1・§4.8 に @immutable / meta 依存を追記したら
   # このコメントを消す。
   meta: ^1.18.0
   package_info_plus: ^10.2.1
   riverpod_annotation: ^3.0.0
+  # SqliteException の結果コードだけを release のログに載せる
+  # （D-04 §4.8・§4.9・§8 #75）。drift の推移的依存だが
+  # core/logging/app_logger.dart が import するため明示する
+  # （depend_on_referenced_packages）。
+  sqlite3: ^2.4.0
   url_launcher: ^6.3.2
 
 dev_dependencies:

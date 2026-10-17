@@ -1,3 +1,4 @@
+import 'package:curtaincall/core/logging/app_logger.dart';
 import 'package:curtaincall/features/articles/domain/article.dart';
 import 'package:curtaincall/features/browser/application/open_article_use_case.dart';
 import 'package:curtaincall/features/browser/domain/open_article_result.dart';
@@ -29,7 +30,11 @@ final class LoggingOpenArticleAction {
       // OpenArticleUseCase は「例外を投げない（結果型）」契約（D-05 §5.3）
       // だが、破られても unawaited された Future の未処理の非同期エラーに
       // しない（D-04 §8 #41 と同じ理由）。
-      logger.w('記事を開く処理が例外で終了: id=${article.id}', error: e, stackTrace: s);
+      logger.w(
+        '記事を開く処理が例外で終了: id=${article.id}',
+        error: releaseSafeError(e),
+        stackTrace: releaseSafeStackTrace(s),
+      );
       return false;
     }
     switch (result) {

@@ -62,7 +62,7 @@
 | T-52 | D-02 | J | 収集ワークフローを main で実測確認する | collector | T-48 | in_progress |
 | T-53 | D-04 | T-F5a | ログの例外整形（releaseSafeError の追加と lib/ への一括適用） | app | — | done |
 | T-54 | D-04 | T-F5b | 通知タップの等価性・抑止判定の依存と診断を反映する | app | T-53 | done |
-| T-55 | D-05 | T-S | URL 検証に userInfo の条件を追加する | app | — | in_progress |
+| T-55 | D-05 | T-S | URL 検証に userInfo の条件を追加する | app | — | done |
 | T-56 | D-05 | T-T | E-18（バージョン行）の折り返しに対応する | app | T-53 | done |
 | T-57 | — | FOLLOWUPS 4-1 | minute_clock.g.dart の生成物の鮮度を回復する | app | — | done（取り下げ） |
 | T-58 | — | FOLLOWUPS 4-4 | git の子プロセスへ渡す環境変数を必要なものだけに絞る | collector | — | todo |

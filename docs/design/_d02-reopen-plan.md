@@ -141,6 +141,7 @@ D-02 の外で同じ前提に立つ記述（D-02 の reopen では直さない�
 - **案 C**：D-02 が所有する新しい domain モジュール（`domain/truncate.ts`）に置き、D-01 の reopen を避ける（#55 が「次の実装者がどちらへ足すか判断できない」として既に採らなかった案）
 - **推奨：A**。#55 自身が 3 つ目で D-01 を reopen すると定めており、B は「設計書の文を実装の回避策に合わせる」ことになる。D-01 側の変更は公開物 1 つの追加で既存の決定を覆さない
 - **開発者確認**：**推奨**（D-01 の決定は覆さないが、approved の D-01 を reopen して review をやり直すため範囲が広がる）
+- **詳細計画**：「J-2 詳細計画：コードポイント切り詰めの共通化（D-01 同時 reopen）」節（3 か所の現状比較・`truncateCodePoints` の契約・D-01 / D-02 の文言の修正案・テスト・新たな要判断 J-14〜J-17）
 
 ### J-3 `formatErrorChain` の `instanceof` が `try` の外（#54(a)）
 
@@ -272,6 +273,203 @@ reopen の本文に書く前に一次資料（該当 SHA の `action.yml`・READ
 |---|---|---|
 | 4-11 | `RawArticleShapeSchema` を `domain/source.ts` へ寄せるか | J-5・P-08（推奨案 A なら「採らない（D-02 §8 #78）」で閉じる） |
 | 4-14 | FOLLOWUPS §4 の冒頭は「印の無い **4-14** は D-02 の reopen とセットの未処理項目」と書くが、4-14 の行自体は「✅ 起票済み（2026-10-17）：`T-51`」 | 冒頭の文が古い（D-02 側の作業は無い）。FOLLOWUPS の冒頭文の修正を司令塔へ |
+
+## J-2 詳細計画：コードポイント切り詰めの共通化（D-01 同時 reopen）
+
+- **前提**：J-2 の推奨案 A（D-01 を同じサイクルで reopen し、`domain/text.ts` に `truncateCodePoints` を足して 3 か所から呼ぶ）。本節は本表の P-04・P-07・P-09・P-40・P-43・P-44 (xx) を具体化し、食い違う点は本節の案で**上書き**する（各行の「本表との関係」列に書いた）
+- **引用元**：コードは main（`/Users/shunpei/orca/projects/CurtainCall`）と T-48 の worktree（`/Users/shunpei/orca/projects/CurtainCall-T-48`）。行番号は「main / T-48」の順で、同じなら 1 つだけ書いた。D-01.md・D-02.md の行番号は本ブランチ（= main 7a8e01b）。**コード・D-01.md・D-02.md は未編集**
+- **「3 か所」の数え方**：`collect-articles.ts` は切り詰めを 2 つの非公開関数（`formatShapeIssues`・`previewRawValue`）で呼ぶので、表では 3 か所 = 4 行になる
+
+### J2-1 切り詰め 3 か所の現状
+
+| # | 場所（ファイル:行） | 対応する設計書の規定（§・上限） | 現状の式（逐語） | 単位 | 上限値 | 省略記号 | サロゲートペア | 前後の処理（順序） |
+|---|---|---|---|---|---|---|---|---|
+| C-1 | `collector/src/application/run-collection.ts:134-138`（`sanitizeFailureMessage`。定数は `:124` `const MAX_FAILURE_MESSAGE_LENGTH = 200;`） | D-02 §4.8 規則表 手順 3（`MAX_FAILURE_MESSAGE_LENGTH` = 200、「単位は**コードポイント**（`Array.from(...).slice(0, 200).join("")`）」）、§8 #50・#55 | `return Array.from(collapsed).slice(0, MAX_FAILURE_MESSAGE_LENGTH).join("");`（main `:137` / T-48 `:138`） | コードポイント | 200 | なし | 分断しない（`Array.from` はペアを 1 要素にする）。入力に元からある片割れサロゲートは 1 要素として残る | (1) 置換 → (2) `trim` → (3) 切り詰め。(1) の式は main `:136` が ``message.replace(/[\u0000-\u001f\u007f-\u009f  ]+/g, " ").trim()``、T-48 `:137` が ``message.replace(/[\u0000-\u001f\u007f-\u009f  `]+/g, " ").trim()``（バックティックを足した。§4.8 手順 1 に一致するのは T-48）。切り詰めの後に `trim` しないので、200 コードポイント目が空白なら末尾に空白が残る |
+| C-2 | `collector/src/infrastructure/storage/sanitize-git-output.ts:94-97`（`sanitizeGitOutput`。定数は `:4` `export const STDERR_LOG_LIMIT = 500;`） | D-02 §4.10 規則表「切り詰め」行（`STDERR_LOG_LIMIT` = 500、「マスク後の文字列を `Array.from` でコードポイント単位に分け、先頭 `STDERR_LOG_LIMIT` 個までにする」）、§8 #55 | `return Array.from(masked).slice(0, STDERR_LOG_LIMIT).join("");`（`:96`。T-48 も同じ） | コードポイント | 500 | なし | 分断しない（C-1 と同じ） | (1) `maskCredentials`（URL 形式 → extraheader 形式の順に `replace`）→ (2) 切り詰め。制御文字の置換・`trim` はしない（1 行性は `ConsoleLogger` の値の引用に依存。§4.7）。呼び出し側（`git-articles-publisher.ts`）が切り詰め後に診断接尾辞 ` (code=<code>, signal=<signal>)` を付ける（D-02 §5.3 手順 3-5。接尾辞は上限の外） |
+| C-3a | `collector/src/application/collect-articles.ts:51-63`（`formatShapeIssues`。定数は `:30` `const MAX_LOG_VALUE_LENGTH = 200;`） | D-02 §5.1 手順 6（`warn("invalid raw article")` の `error`：「**記事本文・HTML 断片は載せず**、200 コードポイントに切り詰める」）、§8.1 実装行 (v) | `return truncateUtf16(parts.join("; "), MAX_LOG_VALUE_LENGTH);`（`:62`。T-48 も同じ） | **UTF-16 コード単位**（設計はコードポイント） | 200 | なし | `truncateUtf16` は切れ目が高サロゲートなら 1 つ手前で切るので分断しない。ただし入力は ASCII のみ（issue の `path` は `RawArticleShapeSchema` の固定キー名、`expected` / `received` は zod の型名）で、実際にはサロゲートが現れない | (1) issue ごとに `` `${path}: expected ${issue.expected}, received ${issue.received}` ``（`invalid_type` 以外は `` `${path}: ${issue.code}` ``）→ (2) 空なら `UNKNOWN_SHAPE_VIOLATION`（`"unknown shape violation"`）を切り詰めずに返す → (3) `"; "` で連結 → (4) 切り詰め。制御文字の置換・`trim` はしない |
+| C-3b | `collector/src/application/collect-articles.ts:36-38`（`previewRawValue`。呼び出しは `:376` `actual`・`:407` `publishedAt`・`:423` `category`・`:437` `thumbnail`） | **設計書に規定なし**。D-02 §5.1 手順 6-1 は `logger.warn("companyId mismatch", { sourceId, expected, actual })` とだけ書き、6-5〜6-7 は「捨てて `warn`」「`logger.debug`」でフィールドを決めていない。実装コメント（`:15`）が「§5.1 手順 6 の「200 コードポイント」」を準用している | `return truncateUtf16(value, MAX_LOG_VALUE_LENGTH);`（`:37`。T-48 も同じ） | **UTF-16 コード単位** | 200 | なし | 分断しない（C-3a と同じ）。入力は Source 由来の生値で非 ASCII・サロゲートペアを含みうるので、非 ASCII を含むと 200 コードポイントより**短く**切れる（例：`"😀".repeat(150)` → 100 コードポイント） | 前処理なし（`checkRawShape` が string と確かめた値をそのまま渡す）→ 切り詰め → `logger` のフィールドへ |
+| 参考 R-1 | `collector/src/domain/notification.ts:60`（`buildNotificationText`） | D-01 §4.8 表「文面の切り詰め」（`body` 全体が 120 文字（UTF-16 コード単位）以内） | `: truncateUtf16(head, NOTIFICATION_BODY_MAX - suffix.length - ELLIPSIS.length) +`（続く行で `ELLIPSIS + suffix`） | UTF-16 コード単位 | 120（接尾辞・「…」込み） | **あり**（`ELLIPSIS`。呼び出し側で `max` から長さを引いて付ける） | 分断しない | 本件の対象外（UTF-16 の上限は D-01 §4.8 の規定どおり）。「省略記号は呼び出し側が付ける」形の先例として載せた |
+| 参考 R-2 | `.github/workflows/collect.yml` の `実行サマリ` ステップ（D-02 §5.6 の jq） | D-02 §4.8 表の直後の段落（「§5.6 の jq にも…同じ上限（200）を書く」）、§8 #61 | ``gsub("[[:cntrl:][:space:]`]"; " ") \| .[0:200]`` | jq の文字列スライスの単位（**未検証**。V-1） | 200 | なし | 未検証（V-1） | 本件の対象外（collector の外）。§4.8 が「文字列の長さは一致しない」と既に限界を書いている |
+
+**差の要約**
+
+| 観点 | C-1 | C-2 | C-3a / C-3b | 共通関数で吸収するか |
+|---|---|---|---|---|
+| 単位 | コードポイント | コードポイント | UTF-16（設計はコードポイント） | **吸収する**（3 か所とも `truncateCodePoints`） |
+| 上限 | 200 | 500 | 200 | 引数 `max`（定数は呼び出し側に残す） |
+| 省略記号 | なし | なし | なし | 吸収不要（3 か所とも無い。関数に持たせない。J2-2） |
+| 前処理 | 制御文字の置換 → `trim` | 認証情報のマスク | issue の整形・連結／なし | **吸収しない**。目的が違い（§8 #55「制御文字の潰し方・`trim` の有無という他の差分は目的が違う…ため統一しない」）、C-2 は順序（マスク → 切り詰め）自体が規定（§4.10） |
+| 後処理 | なし | 呼び出し側が診断接尾辞を足す | なし | 吸収しない |
+| 素の式の重複 | `Array.from` の式 | `Array.from` の式（C-1 と同一） | `truncateUtf16` で回避（`:19-28` の自己申告） | 吸収する（素の式を 0 か所にする） |
+
+### J2-2 `truncateCodePoints` の契約案（D-01 §4.8 の `text.ts` 抜粋に置く）
+
+```ts
+// collector/src/domain/text.ts（抜粋。truncateUtf16 の直後に置く）
+/**
+ * コードポイント単位で先頭 max 個までにする。サロゲートペアを分割しない（D-02 §8 #55・#75）。
+ * - 省略記号は付けない（付けるなら呼び出し側が max から長さを引いて足す。buildNotificationText と同じ形）
+ * - 書記素クラスタは考慮しない：結合文字（例：e + U+0301）・異体字セレクタ・ZWJ で連結した絵文字は
+ *   途中で分かれてよい（ログ・サマリへ出す前の長さの抑制が目的で、表示用の切り詰めではない）
+ * - 対になっていないサロゲート（片割れ）は 1 コードポイントとして数え、そのまま残す（修復も除去もしない）
+ * @param max 上限（コードポイント数）。0 以下・NaN なら空文字を返す。非整数は小数部を切り捨てる。
+ *            Infinity なら s をそのまま返す
+ * @returns s と同じか、s の先頭の部分文字列（コードポイント数は min(max の整数部, s のコードポイント数)）
+ */
+export function truncateCodePoints(s: string, max: number): string {
+  // 0・負数・NaN（NaN との比較は常に偽）。素の式 Array.from(s).slice(0, max) は負数で
+  // 「末尾から数えた位置まで」を返すので、ここで空文字に固定する
+  if (!(max > 0)) return "";
+  // UTF-16 の長さ ≧ コードポイント数なので、この時点で上限内（配列を作らない）
+  if (s.length <= max) return s;
+  return Array.from(s).slice(0, Math.trunc(max)).join("");
+}
+```
+
+**境界の契約**
+
+| 入力 | 戻り値 | 素の式 `Array.from(s).slice(0, max).join("")` との差 |
+|---|---|---|
+| `max` = 0 | `""` | 同じ |
+| `max` = -1（負数） | `""` | **違う**（素の式は「最後の 1 コードポイントを除いた全体」を返す） |
+| `max` = `NaN` | `""` | 同じ（`slice` は `NaN` を 0 とみなす） |
+| `max` = 2.7（非整数） | 先頭 2 コードポイント | 同じ（`slice` も小数部を切り捨てる） |
+| `max` = `Infinity` | `s` | 同じ |
+| `s` = `""` | `""`（`max` によらず。`max` ≦ 0 なら 1 行目、そうでなければ 2 行目で返る） | 同じ |
+| `s` がちょうど `max` コードポイント | `s` | 同じ |
+| `s` が `max` + 1 コードポイント | 先頭 `max` コードポイント | 同じ |
+| `"a".repeat(199) + "😀" + "b"`、`max` = 200 | `"a".repeat(199) + "😀"`（200 コードポイント・201 UTF-16 単位） | 同じ（`truncateUtf16(…, 200)` なら `"a".repeat(199)`） |
+| `"\uD83D"`（高サロゲートの片割れだけ）、`max` = 1 | `"\uD83D"` | 同じ |
+| `"\uD83Dx"`、`max` = 1 | `"\uD83D"`（片割れは 1 コードポイントとして数える） | 同じ |
+| `"é"`（結合文字）、`max` = 1 | `"e"`（分かれてよい） | 同じ |
+
+**省略記号を関数に含めるか**
+
+| 案 | 内容 | 評価 |
+|---|---|---|
+| **A（推奨）** | 関数は省略記号を持たない。必要な呼び出し側が `max` から記号の長さを引いて自分で足す | 3 か所（C-1〜C-3b）はどれも省略記号を付けておらず、そのまま置き換えられる。`max` の意味が「戻り値の長さの上限」の 1 つに定まる。D-01 の既存の先例（`buildNotificationText` が `truncateUtf16` の外で `ELLIPSIS` を足す。R-1）と同じ形 |
+| B | 第 3 引数 `ellipsis?: string` を足し、切り詰めたときだけ付ける | 使う呼び出し側が 0 か所（YAGNI）。`max` に記号を含むか含まないかの規定が 1 つ増え、テストが要る境界（記号の長さ ≧ `max`）も増える |
+| C | 戻り値を `{ text, truncated }` にする | 呼び出し側 3 か所とも `truncated` を使わない。`truncateUtf16` と形が揃わない |
+
+### J2-3 設計書の文言の修正案
+
+「本表との関係」が「上書き」の行は、本表の該当行（P-nn）の「修正後の文」を本節の文に差し替える。
+
+| # | 文書・§（行） | 現在の文（逐語） | 修正後の文 | 本表との関係 |
+|---|---|---|---|---|
+| T-1 | D-01 §3.2 ツリー（80 行） | `      text.ts               normalizeTitle（格納用）・foldText（比較用）・truncateUtf16（§5.2・§4.8）` | `      text.ts               normalizeTitle（格納用）・foldText（比較用）・truncateUtf16・truncateCodePoints（§5.2・§4.8）` | P-43 の「D-01 §3.2 の `text.ts` の説明に…足し」を具体化 |
+| T-2 | D-01 §4.8 `text.ts` の抜粋（581〜590 行） | ```// collector/src/domain/text.ts（抜粋）```<br>```/** UTF-16 コード単位 max で切る。切れ目がサロゲートペアの途中（高サロゲートで終わる）なら 1 つ手前で切る */```<br>```export function truncateUtf16(s: string, max: number): string {```<br>```  if (s.length <= max) return s;```<br>（以下 `let end = max;` 〜 `return s.slice(0, end);` `}`） | (1) `truncateUtf16` の doc に `@param max 0 以上。0 以下なら空文字を返す` を足し、1 行目に `if (max <= 0) return "";` を足す（実装 `text.ts:8`・`:14` に合わせる。J-15）<br>(2) その直後に J2-2 のコード片（`truncateCodePoints`）を足す<br>(3) コード片の直後に 1 文足す：「`truncateCodePoints` は D-02 がログ・ステップサマリへ出す値の長さを抑えるために使う（D-02 §4.8・§4.10・§5.1 手順 6）。本書の契約（`articles.json`・通知）の上限はいずれも UTF-16 コード単位で数えるので `truncateUtf16` を使い、`truncateCodePoints` を使わない（§8 #35）」 | P-43 の「§4.x にシグネチャ…（`Array.from(s).slice(0, max).join("")`。`max` 以下ならそのまま返す）」を**上書き**（置き場を §4.8 に、本体を J2-2 の契約に） |
+| T-3 | D-01 §7 冒頭の 2.（815 行） | 「2. **純粋関数のロジック**（`normalizeUrl`・`buildArticleId`・`normalizeTitle`・`foldText`・`buildContentHash`・`resolveCategory`・`compareArticles`・`buildNotificationText`・§5.2 の更新判定）は、D-02 の UseCase テスト（`collect-articles`・`detect-diff`・`notify`）を入口として検証する。」 | 「2. **純粋関数のロジック**（`normalizeUrl`・`buildArticleId`・`normalizeTitle`・`foldText`・`buildContentHash`・`resolveCategory`・`compareArticles`・`buildNotificationText`・`truncateCodePoints`・§5.2 の更新判定）は、D-02 の UseCase テスト（`collect-articles`・`detect-diff`・`notify`・`run-collection`）を入口として検証する（`truncateCodePoints` は D-02 §7.3 の `sanitizeGitOutput` のテストからも通る）。」（以降の文は同じ） | 新規（J-14 推奨案 A。共通関数の直接テストを置かない） |
+| T-4 | D-01 §8 の表の末尾（#34 が最後。891 行） | （該当行なし） | 新しい行：**#35** 決定「コードポイント単位の切り詰め `truncateCodePoints(s, max)` を `text.ts` に置き、`truncateUtf16` と並べる（§4.8）。省略記号は付けず、`max` が 0 以下・`NaN` なら空文字。本書の契約の上限（`title` 300・`url` 2048・通知 `body` 120）は UTF-16 コード単位のまま `truncateUtf16` を使う」／採らなかった案「D-02 が所有する `domain/truncate.ts`／`truncateUtf16` に単位の引数を足して 1 関数にする／D-02 の各ファイルに素の式を置く（D-02 §8 #55 の旧状態）」／理由「文字列処理が `text.ts` に集まっており、別ファイルにすると次の実装者がどちらへ足すか判断できない（D-02 §8 #55 の理由）。UTF-16 の上限は zod の `.max(n)`（`String.prototype.length` で数える）と一致させる必要があり、コードポイントの上限はログ・サマリでサロゲートペアを割らないためのもので、目的が違うので 1 関数にしない。D-02 の 3 か所（`sanitizeFailureMessage`・`sanitizeGitOutput`・`collect-articles` のログ値）が使う」 | 新規（P-43 には D-01 側の §8 が無い） |
+| T-5 | D-01 変更履歴（末尾） | （該当行なし） | 「2026-10-xx \| 再開：D-02 の reopen と同時に `text.ts` へ `truncateCodePoints` を追加（§3.2・§4.8・§7・§8 #35。D-02 §8 #75、FOLLOWUPS 1-18）。§4.8 の `truncateUtf16` の抜粋を実装（`max <= 0` のガード）に合わせた」 | 新規 |
+| T-6 | D-02 §8 #55 決定欄の末尾（1843 行） | 「…対象は `sanitizeFailureMessage`（`MAX_FAILURE_MESSAGE_LENGTH` = 200。§4.8）と `sanitizeGitOutput`（`STDERR_LOG_LIMIT` = 500。§4.10）」 | 「…対象は `sanitizeFailureMessage`（`MAX_FAILURE_MESSAGE_LENGTH` = 200。§4.8）と `sanitizeGitOutput`（`STDERR_LOG_LIMIT` = 500。§4.10）。**→ #75 で改訂**」（理由欄は変えない。書式は #50 の「**→ #55 で改訂**」（1838 行）に合わせる） | P-40 と同じ（書式だけ具体化） |
+| T-7 | D-02 §8 #75（新規。付録 B の下書き） | 付録 B #75 の決定「コードポイント単位の切り詰めを `domain/text.ts` の `truncateCodePoints(s, max)`（D-01）に寄せ、`sanitizeFailureMessage`（200）・`sanitizeGitOutput`（500）・§5.1 手順 6 のログ値（200）の 3 か所から呼ぶ。#55 の「素の式の重複を当面受容する」を撤回する」 | 決定を次に差し替える：「コードポイント単位の切り詰めを `domain/text.ts` の `truncateCodePoints(s, max)`（D-01 §4.8・D-01 §8 #35）に寄せ、`sanitizeFailureMessage`（`MAX_FAILURE_MESSAGE_LENGTH` = 200。§4.8）・`sanitizeGitOutput`（`STDERR_LOG_LIMIT` = 500。§4.10）・`collect-articles` のログ値（`MAX_LOG_VALUE_LENGTH` = 200。§5.1 手順 6・6-1）の 3 か所から呼ぶ。素の式（`Array.from(...).slice(...)`）を書かない。前処理（制御文字の置換・`trim`・認証情報のマスク）は各呼び出し側に残す（#55 の「目的が違うので統一しない」のまま）。#55 の「素の式の重複を当面受容する」を撤回する」。採らなかった案・理由は付録 B のまま。理由に 1 文足す：「T-50 の `collect-articles.ts` は `truncateUtf16` で回避していたため、非 ASCII を含む値が 200 コードポイントより短く切れていた（設計の単位と違う）」 | 付録 B #75 を**上書き**（C-3b を含め、前処理を残すことを明記） |
+| T-8 | D-02 §5.1 手順 6（1031 行） | 「`error` は「どのフィールドがどう外れたか」を示す短い文字列＝零れた値のプレビュー（zod の `message` 相当）で、**記事本文・HTML 断片は載せず**、200 コードポイントに切り詰める）。」 | 「`error` は「どのフィールドがどう外れたか」を示す短い文字列＝零れた値のプレビュー（zod の `message` 相当）で、**記事本文・HTML 断片は載せず**、`truncateCodePoints(…, MAX_LOG_VALUE_LENGTH)`（`MAX_LOG_VALUE_LENGTH` = 200。`domain/text.ts`、D-01 §4.8）で 200 コードポイントに切り詰める）。」 | P-09 を**上書き**（定数名を足した。内容は同じ） |
+| T-9 | D-02 §5.1 手順 6-1（1032 行） | 「1. `companyId` の突合：`raw.companyId !== target.company.id` → 捨てて `logger.warn("companyId mismatch", { sourceId, expected, actual })`（D-01 §4.2・#32）」 | 末尾に足す：「。`actual` と、6-5〜6-7 の `warn` / `debug` に載せる Source 由来の値（`publishedAt`・`category`・`thumbnail`）は、手順 6 の `error` と同じ `truncateCodePoints(…, MAX_LOG_VALUE_LENGTH)` で 200 コードポイントに切り詰めてから載せる（非公開関数 `previewRawValue` 1 つに閉じる。§8 #75）」 | 新規（J-16 推奨案 A） |
+| T-10 | D-02 §7.1 `collect-articles`「`companyId`」行（1712 行） | 「`companyId`：未知 ID は捨てて `warn`／全記事が該当なら Source 失敗で他団体は無事／既知 ID の取り違え（`shiki` に配線したスタブが `toho` を返す）で全件破棄・`expected` / `actual` がログに出る・`toho` の記事は無傷／混在なら一致分だけ残る」 | 末尾に足す：「／未知 ID が `"a".repeat(199) + "😀" + "b".repeat(50)`（250 コードポイント）→ `warn("companyId mismatch")` の `actual` が `"a".repeat(199) + "😀"`（200 コードポイント）」 | 新規（J2-5 の K-7） |
+| T-11 | D-02 §7.1 `collect-articles`「部分破棄」行（1714 行） | 「部分破棄（§8 #33）：24 件中 12 件の `publishedAt` が書式外の Source は…」（行末まで変えない） | 末尾に足す：「／6 フィールドすべてが型から外れた要素（`title` に記事本文と HTML 断片を詰めたオブジェクト）→ `error` が 200 コードポイントに切り詰められ（issue の連結は 200 を超える）、末尾の `thumbnail` の issue を含まず、記事本文・HTML 断片を含まない」（T-50 の実装済みテスト `collect-articles.test.ts:741` を表に載せる） | 新規（J2-5 の K-6） |
+| T-12 | D-02 §4.8 手順 3（793 行）・§4.10「切り詰め」行（989 行） | （本表 P-04・P-07 の「現在の文」と同じ） | P-04・P-07 の「修正後の文」のまま | 変更なし（本節で確かめた結果、上書き不要） |
+| T-13 | D-02 §8.1「D-01（reopen とセットで行う。単独では着手しない）」行（1877 行） | （本表 P-43 の「現在の文」と同じ） | P-43 の宛先の改め（「D-01（同じサイクルで reopen して反映）」）はそのまま。内容は「D-01 §3.2・§4.8・§7・§8 #35 を本書 #75 に合わせて改訂する（`truncateCodePoints` の契約は D-01 §4.8 が正）」に差し替える | P-43 を**上書き**（契約の正を D-01 に置き、D-02 側にシグネチャを複写しない） |
+
+**§5.1 手順 6 の「200 コードポイント」と実装（`truncateUtf16`）の食い違いの解消**
+
+| 案 | 内容 | 影響 |
+|---|---|---|
+| **A（推奨。T-8・T-9）** | 実装を設計に合わせる：`formatShapeIssues`・`previewRawValue` の `truncateUtf16` を `truncateCodePoints` にする | C-3a は入力が ASCII のみなので**出力は変わらない**。C-3b は非 ASCII を含む値が今より長く残る（最大 200 コードポイント = 最大 400 UTF-16 単位。上限の意味は設計どおりになる）。`collect-articles.ts:11` の import から `truncateUtf16` が消え、`:14-29` のコメント（「§8 #55 のとおりコードポイント単位の切り詰めをここに書かない」以下の (1)(2) の根拠説明）を次に差し替える：`/** Source 由来の値をログに載せる際の上限（コードポイント単位。§5.1 手順 6・6-1）。Source は infrastructure なので型契約に反する長さの値を返しうる。ログフィールドの長さを抑えるための防衛（1 行性は ConsoleLogger の値の引用に依存する。§4.7）。切り詰めは truncateCodePoints（domain/text.ts。§8 #75）で行い、サロゲートペアを分割しない */` |
+| B | 設計を実装に合わせる：§5.1 手順 6 を「200 UTF-16 コード単位」にする | J-2 案 B と同じ。§8 #55 が単位をコードポイントに統一した理由（取り違えの防止）に逆らい、同じ目的の 3 か所で単位が割れる |
+
+### J2-4 既存の `text.ts` との関係
+
+**既存の公開物**（`collector/src/domain/text.ts`。main と T-48 で同一）
+
+| 公開物 | 実装の契約（逐語） | D-01 の規定 | 差 |
+|---|---|---|---|
+| `TITLE_MAX` | `export const TITLE_MAX = 300;`（`:4`。doc「Article.title の上限（UTF-16 コード単位）。ArticleSchema.title の .max(300) と同じ（§5.2 手順 1）」） | §5.2 手順 1（300 文字・UTF-16） | なし（D-01 §3.2 の列挙には無いが §5.2 の抜粋の内側の定数） |
+| `truncateUtf16(s, max)` | doc「UTF-16 コード単位 max で切る。切れ目がサロゲートペアの途中（高サロゲートで終わる）なら 1 つ手前で切る（§4.8）。」「@param max 0 以上。0 以下なら空文字を返す」。本体 `if (max <= 0) return "";` → `if (s.length <= max) return s;` → `let end = max;` → `const last = s.charCodeAt(end - 1);` → `if (last >= 0xd800 && last <= 0xdbff) end -= 1;` → `return s.slice(0, end);`（`:6-20`） | D-01 §4.8 の抜粋（581〜590 行）。**`if (max <= 0) return "";` と `@param` が無い** | 実装が防御のガードを 1 行多く持つ（`:11-13` のコメント「normalizeTitle（TITLE_MAX=300）からは到達しない防御的なガード」）。T-2 (1)・J-15 で D-01 を実装に合わせる |
+| `normalizeTitle(raw)` | `raw.normalize("NFC").replace(/\s+/g, " ").trim()` → `truncateUtf16(collapsed, TITLE_MAX)`（`:27-30`） | D-01 §5.2 手順 1 | なし |
+| `foldText(s)` | `s.normalize("NFKC").toLowerCase()`（`:36-38`） | D-01 §5.2 手順 2 | なし |
+
+**流用・一般化・並置**
+
+| 案 | 内容 | 評価 |
+|---|---|---|
+| 流用 | 3 か所とも既存の `truncateUtf16` を呼ぶ（T-50 の C-3a・C-3b の形） | 採らない。単位が UTF-16 になり、§8 #55 の「コードポイントに統一」と §4.8 手順 3・§4.10 の規定に反する。C-1・C-2 の既存テスト（K-3・K-4）が赤くなる |
+| 一般化 | `truncate(s, max, unit: "utf16" \| "codePoint")` の 1 関数にし、`truncateUtf16` を置き換える | 採らない。UTF-16 の上限（`title` 300・`url` 2048・通知 `body` 120）は zod の `.max(n)` と同じ数え方であることが契約で（D-01 §5.2 手順 1「zod の `.max(300)` と同じ数え方」）、コードポイントの上限とは目的が違う。引数 1 つの取り違えで契約違反の `articles.json` を書きうる。既存の呼び出し 4 か所（下表）も書き換えになる |
+| **並置（推奨）** | `truncateUtf16` を残し、`truncateCodePoints` を隣に足す | 既存の呼び出しを変えない（D-01 の既存決定を覆さない＝J-2 の前提）。名前で単位が分かり、呼び出し側が数え方を選ぶ。D-01 §8 #35（T-4）に「契約の上限は `truncateUtf16`、ログ・サマリは `truncateCodePoints`」の使い分けを残す |
+
+**並置後も `truncateUtf16` を使い続ける箇所**（main を grep。T-48 も同じ）
+
+| 箇所 | 上限 | 単位が UTF-16 である理由 |
+|---|---|---|
+| `collector/src/domain/text.ts:29`（`normalizeTitle`） | `TITLE_MAX` = 300 | `ArticleSchema.title` の `.max(300)`（D-01 §5.2 手順 1） |
+| `collector/src/domain/notification.ts:60`（`buildNotificationText`） | `NOTIFICATION_BODY_MAX` − 接尾辞 − 「…」 | 通知 `body` 120 文字（UTF-16。D-01 §4.8） |
+| `collector/src/infrastructure/sources/shiki.ts:347`・`:361`（ページ送りの `warn` の `next`） | `URL_MAX` = 2048 | `ArticleSchema.url` の `.max(2048)` と同じ定数（D-03 の所有。本件で変えない） |
+| `collector/test/infrastructure/sources/shiki.test.ts:650`（期待値の算出） | 同上 | 同上 |
+
+**置き換え後に `truncateUtf16` を使わなくなる箇所**：`collector/src/application/collect-articles.ts:37`・`:62`（import `:11` から `truncateUtf16` を外す）。
+
+### J2-5 置き換え後にテストで固定するケース
+
+テストの単位は CLAUDE.md「テスト方針」のまま：C-1 は UseCase（`run-collection`）、C-3a・C-3b は UseCase（`collect-articles`）、C-2 は CLAUDE.md の純粋関数の例外（`sanitizeGitOutput`。`test/infrastructure/storage/`）を入口にする。「区別する誤実装」は、そのケースが赤くなる置き換えの誤り。
+
+| # | ファイル | `describe`（既存の名前） | `it`（既存 / 新規） | 入力 → 期待結果 | 区別する誤実装 |
+|---|---|---|---|---|---|
+| K-1 | `collector/test/application/run-collection.test.ts` | `sourceFailures の無害化（§8 #50）`（`:483`） | 既存 `:484`「C0/C1 制御文字（ESC・DEL・CSI を含む）・U+2028/U+2029・前後の空白を含む 500 字超の message → …200 コードポイントに切り詰められる（…）」 | 500 字超の `message` → `Array.from(sanitized).length` が 200 | 上限の取り違え（`STDERR_LOG_LIMIT` を渡す）・切り詰めの欠落 |
+| K-2 | 同上 | 同上 | 既存 `:532`「200 コードポイント以下の message はそのまま」 | `"a".repeat(150)` → 同じ文字列 | `max` 以下で文字列を変える誤り |
+| K-3 | 同上 | 同上 | 既存 `:547`「200 コードポイント目がサロゲートペアの message → ペアが分割されない」 | `"a".repeat(199) + "😀" + "b".repeat(50)` → 200 コードポイントで `"😀"` で終わる | `truncateUtf16` への置き換え（199 コードポイントで終わる）・素の UTF-16 `slice`（片割れが残り `Array.from` で 200 だが `endsWith("😀")` が偽） |
+| K-4 | `collector/test/infrastructure/storage/sanitize-git-output.test.ts` | `sanitizeGitOutput`（`:189`） | 既存 `:213`「切り詰めはコードポイント単位（サロゲートペアを分割しない）」 | `"🎭".repeat(501)` → `"🎭".repeat(500)` | `truncateUtf16` への置き換え（`"🎭".repeat(250)`） |
+| K-5 | 同上 | 同上 | 既存 `:190`「500 文字（コードポイント単位）以下ならそのまま（マスクのみ適用）」・`:194`「501 文字以上なら 500 文字に切り詰める」・`:200`「マスクしてから切り詰める（切り詰めが先だと認証情報の断片が残りうる）」 | （既存の期待値のまま） | 上限の取り違え（200 を渡す）・マスクと切り詰めの順序の逆転 |
+| K-6 | `collector/test/application/collect-articles.test.ts` | `部分破棄（§8 #33）`（`:625`） | 既存 `:741`「6 フィールドすべてが型から外れた要素 → issue の連結（200 超）が error で 200 文字に切り詰められ、ASCII のみで記事本文・HTML 断片を含まない」 | 期待値は変えない（`Array.from(error)` が 200・`thumbnail` を含まない・非 ASCII が 0 個・`記事本文` と `<div` を含まない）。**`:763-765` のコメントだけ差し替える**：「error は issue の path（スキーマの固定キー名）と zod の型名・code だけなので ASCII のみ。非 ASCII が現れたら Source の値が error に混入した徴候（要件 §7）」（UTF-16 と一致させる前提の説明を消す） | 切り詰めの欠落・値の混入 |
+| K-7 | 同上 | `companyId`（`:369`） | **新規**「未知 ID が 250 コードポイント（200 コードポイント目がサロゲートペア）→ warn("companyId mismatch") の actual が 200 コードポイントで 😀 で終わる」 | `companyId: "a".repeat(199) + "😀" + "b".repeat(50)` の記事 1 件を返す Source → `warn("companyId mismatch")` の `fields.actual` が `"a".repeat(199) + "😀"` と完全一致 | C-3b を `truncateUtf16` のまま残す（`"a".repeat(199)`）・切り詰めの欠落 |
+
+C-3a は入力が ASCII のみなので、`truncateUtf16` のままでも K-6 は通る（区別できない）。C-3a の置き換え漏れは**テストでは検知できず**、§8 #75 の記述と PR レビューで担保する（`collect-articles.ts` の import から `truncateUtf16` が消えたことで確かめられる）。
+
+**共通関数そのもののテストの置き場**
+
+| 案 | 内容 | CLAUDE.md・設計書との関係 |
+|---|---|---|
+| **A（推奨）** | `truncateCodePoints` の直接テストを置かない。K-1〜K-7 の呼び出し側のテストで固定する | CLAUDE.md「テスト方針」の純粋関数の例外は「設計書 §7 に列挙したものに限る」で、collector の列挙（CLAUDE.md 66 行）は `formatError`・`maskCredentials`・`sanitizeGitOutput` だけ。D-01 §7 1. は `contract.test.ts` を「スキーマとフィクスチャの整合性」だけに限り「個別関数の振る舞いは検証しない」（D-01 §8 #21）。A はどちらも変えない。代償：J2-2 の境界のうち `max` が 0・負数・`NaN`・非整数・`Infinity` の 5 つは、呼び出し側の上限が定数（200・500）なので**どのテストからも到達しない**（防御のガードとして無検証で残す。`truncateUtf16` の `max <= 0` も同じ扱い＝`text.ts:11-13` のコメント） |
+| B | `collector/test/domain/text.test.ts` を新設し、J2-2 の境界の表をテーブル駆動で検証する | CLAUDE.md 66 行の列挙に `truncateCodePoints` を足す変更と、D-01 §7 に「純粋関数の例外」の段落と §8 #21 の改訂（または新しい決定）を伴う。**開発者確認：要**（CLAUDE.md の変更） |
+
+### J2-6 新たな要判断（J-14〜J-17）
+
+#### J-14 `truncateCodePoints` の直接テストを置くか【開発者確認：B を採るなら要】
+
+- **案 A**：置かない（J2-5 の表の A。K-1〜K-7 で固定し、`max` の異常値 5 つは防御のガードとして無検証）
+- **案 B**：`collector/test/domain/text.test.ts` を置く（CLAUDE.md 66 行と D-01 §7・§8 #21 の変更）
+- **推奨：A**。3 か所の上限はいずれも正の定数で、異常値の境界に実際に到達する経路が無い。B は CLAUDE.md の例外を 1 関数広げるが、得る回帰（到達しない境界）が小さい。サロゲートペアの境界・上限ちょうど・上限以下は K-2〜K-4・K-7 で 2 つの上限（200・500）について固定される
+- **補足（実測）**：`collector/test/domain/category.test.ts` が既に存在し、冒頭コメントは「本テストは domain の純粋関数そのものを対象にした契約テスト（T-03 の申し送り）」。CLAUDE.md 66 行の列挙にも D-01 §7 1. の範囲にも無い直接テストで、**承認の経緯を確かめていない**（V-2）。B を採る場合も A を採る場合も、この先例をどう扱うか（CLAUDE.md へ追記するか、規約外として FOLLOWUPS に積むか）は司令塔が判断する
+
+#### J-15 D-01 §4.8 の `truncateUtf16` の抜粋を実装に合わせるか
+
+- **案 A**：同じ reopen で、抜粋に `if (max <= 0) return "";` と `@param max 0 以上。0 以下なら空文字を返す` を足す（T-2 (1)）
+- **案 B**：抜粋は変えない（抜粋なので省略とみなす）
+- **推奨：A**。`truncateCodePoints` を隣に置くと「0 以下なら空文字」の契約が片方にだけ書かれた状態になり、2 関数の契約の差に読める。D-01 を開くのはこの reopen だけなので、ついでに一致させる費用が最小
+- **開発者確認**：不要（D-01 の決定を覆さない。J-2 の承認に含まれる）
+
+#### J-16 `previewRawValue`（`actual`・`publishedAt`・`category`・`thumbnail` のログ値）の切り詰めを §5.1 に規定するか
+
+- **案 A**：§5.1 手順 6-1 に規定し（T-9）、`truncateCodePoints` に寄せる。§7.1 に K-7 を足す（T-10）
+- **案 B**：設計書には書かず、実装の裁量として `truncateCodePoints` に置き換えるだけにする
+- **案 C**：設計書には書かず、`truncateUtf16` のまま残す
+- **推奨：A**。C-3b は T-50 が設計書に無い防衛として足したもので、`MAX_LOG_VALUE_LENGTH` を C-3a と共有している。C-3a だけを置き換えると 1 つの定数に 2 つの単位が結び付く（C）。B は設計書に無い切り詰めが残り、#75 の「3 か所」の数え方と実装の呼び出しが合わない
+- **開発者確認**：不要
+
+#### J-17 他の素の UTF-16 `slice` によるログ値の切り詰めを本 reopen で寄せるか
+
+- **現状（実測）**：`collector/src/domain/url.ts:44`・`:49`（`input.slice(0, ERROR_INPUT_PREVIEW)`。200。`InvalidArticleUrlError` のメッセージ）、`collector/src/infrastructure/http/fetch-http-client.ts:238`（`finalUrl.slice(0, LOG_URL_PREVIEW)`。200）、`collector/src/infrastructure/sources/horipro.ts:288`・`shinkansen.ts:287`（`(asText(item.link) ?? "").slice(0, 200)`）。いずれも UTF-16 単位でサロゲートペアの片割れが残りうる。`url.ts` の入力は Source 由来の生の URL 文字列で非 ASCII を含みうる。`fetch-http-client.ts` の `finalUrl` は `Response.url`（WHATWG URL の直列化で非 ASCII はパーセント符号化される）
+- **案 A**：含める。`url.ts`（D-01）・`fetch-http-client.ts`（D-02 §5.7）・Source 2 本（D-03）を `truncateCodePoints` にする
+- **案 B**：含めない。FOLLOWUPS に「ログ値の素の `slice` を `truncateCodePoints` に寄せるか」として積む
+- **推奨：B**。#55・#75 の対象は「コードポイント単位で切ると規定した箇所」で、これらは単位を規定していない任意の上限（`url.ts:19` のコメント「異常に長い入力がログへ丸ごと出るのを避ける任意値」）。片割れが残っても `ConsoleLogger` の `JSON.stringify` が `\udXXX` に escape して 1 行性は保たれる（§4.7）。A は D-03 も reopen 対象に加え、範囲が J-2 の前提（D-01・D-02 の 2 冊）を超える
+- **開発者確認**：不要
+
+### J2-7 未検証事項
+
+| # | 事項 | 確認先 | 影響する箇所 |
+|---|---|---|---|
+| V-1 | jq 1.7.1 の文字列スライス `.[0:200]` の単位（コードポイントか、UTF-8 バイトか）と、サロゲートペア（jq 内部では 1 コードポイント）を割らないこと | 手元の jq 1.7.1 で `printf '"%s"' "$(printf '😀%.0s' {1..201})" \| jq '.[0:200] \| length'` 等を実行（U-9 と同じ方法） | 参考 R-2 の単位の列。本件の結論には影響しない（collector の外。§4.8 が長さの不一致を既に限界として書いている） |
+| V-2 | `collector/test/domain/category.test.ts` が CLAUDE.md・D-01 §7 のどこで認められたか（T-03 の申し送りの経緯） | `git log --follow collector/test/domain/category.test.ts`、T-03 のタスクファイル・PR、FOLLOWUPS | J-14 の補足（推奨には影響しない） |
+| V-3 | D-02 §5.1 手順 6-5〜6-7 の `warn` / `debug` のフィールド名（`publishedAt`・`category`・`thumbnail`）が設計書のどこにも無いこと（本節は 1031〜1038 行を読んで「無い」と判断した） | D-02 §4.7 の経路表・§6 を `"invalid publishedAt"`・`"unknown category"`・`"invalid thumbnail url"` で grep（本節執筆時の grep では 0 件） | T-9 の書き方（フィールド名を設計書に初めて書くことになる） |
 
 ## 付録
 

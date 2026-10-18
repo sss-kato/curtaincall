@@ -21,6 +21,38 @@ const PUBLISH_BRANCH = "main";
 /** execFile に渡すタイムアウト（ミリ秒）。push のハング対策（§4.9・§8 #39） */
 const GIT_TIMEOUT_MS = 60_000;
 
+/** git の子プロセスへ写す環境変数の名前（完全一致）。§5.3 手順 3、§8 #74 */
+const GIT_ENV_ALLOWLIST: ReadonlySet<string> = new Set([
+  "PATH",
+  "HOME",
+  "TMPDIR",
+  "LANG",
+  "LC_ALL",
+  "XDG_CONFIG_HOME",
+  "HTTP_PROXY",
+  "http_proxy",
+  "HTTPS_PROXY",
+  "https_proxy",
+  "NO_PROXY",
+  "no_proxy",
+  "SSL_CERT_FILE",
+  "SSL_CERT_DIR",
+]);
+
+/** この接頭辞で始まる名前も写す（git 自身が読む GIT_DIR・GIT_CONFIG_*・GIT_SSH_COMMAND 等） */
+const GIT_ENV_PREFIX = "GIT_";
+
+/** process.env から許可リストだけを写し、GIT_TERMINAL_PROMPT=0 を最後に上書きする */
+function buildGitEnv(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [name, value] of Object.entries(source)) {
+    if (value === undefined) continue; // 未定義はキーごと落とす
+    if (GIT_ENV_ALLOWLIST.has(name) || name.startsWith(GIT_ENV_PREFIX)) env[name] = value;
+  }
+  env.GIT_TERMINAL_PROMPT = "0"; // 呼び出し元の値を採らない（§8 #39）
+  return env;
+}
+
 /** git diff --quiet が「差分あり」で返す終了コード */
 const GIT_DIFF_EXIT_CODE_CHANGED = 1;
 
@@ -152,7 +184,7 @@ export class GitArticlesPublisher implements ArticlesPublisher {
       await execFile("git", [...args], {
         cwd: this.repoRoot,
         timeout: GIT_TIMEOUT_MS,
-        env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+        env: buildGitEnv(process.env),
       });
     } catch (error) {
       throw new GitCommandError(error instanceof Error ? error : new Error(String(error)));

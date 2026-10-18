@@ -370,6 +370,29 @@ describe("publish", () => {
     }
   });
 
+  it("許可リスト外の変数（FIREBASE_SERVICE_ACCOUNT）が execFile の env に載らない（§8 #74）", async () => {
+    vi.stubEnv("FIREBASE_SERVICE_ACCOUNT", "dummy-secret");
+    try {
+      stubGit((args) => {
+        if (gitSubcommand(args) === "diff")
+          return gitFailure("git diff --cached --quiet", { code: 1, signal: null });
+        return undefined;
+      });
+      const publisher = createPublisher();
+
+      await expect(publisher.publish(COMMIT_NOTE)).resolves.toBe("published");
+
+      const calls = vi.mocked(childProcess.execFile).mock.calls;
+      expect(calls).toHaveLength(4);
+      for (const call of calls) {
+        expect(call[2]?.env?.GIT_TERMINAL_PROMPT).toBe("0");
+        expect(call[2]?.env).not.toHaveProperty("FIREBASE_SERVICE_ACCOUNT");
+      }
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("復元（checkout）自体が失敗しても warn を 1 件出すだけで、元の PublishFailedError をそのまま投げる", async () => {
     stubGit((args) => {
       const sub = gitSubcommand(args);

@@ -250,7 +250,7 @@ class CountRetryRequested extends _$CountRetryRequested {
 }
 
 /// **自動リトライを切る**（`noRetry`。D-04 §8 #61）。切らないと「値なし
-/// × `isLoading` × `hasError`」が自動リトライ中（約 50 秒）と A-12 の
+/// × `isLoading` × `hasError`」が自動リトライ中（約 38 秒）と A-12 の
 /// 再購読中の両方で成立し、区別できない。`noRetry` は
 /// `lib/core/di/no_retry.dart` の共有定数関数
 /// （`initialNotificationTapProvider` と共有。D-04 §8 #67）。

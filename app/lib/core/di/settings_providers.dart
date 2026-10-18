@@ -4,6 +4,7 @@
 /// 行わない。
 library;
 
+import 'package:curtaincall/core/di/no_retry.dart';
 import 'package:curtaincall/core/di/providers.dart';
 import 'package:curtaincall/features/settings/application/toggle_unread_filter_use_case.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -12,7 +13,13 @@ part 'settings_providers.g.dart';
 
 /// 未読フィルタの現在値（S-01/ST-11・ST-12）。ホーム（articles/presentation）
 /// と設定の両方が使うため `core/di` に置く（D-05 §4.6・§8 #9）。
-@Riverpod(keepAlive: true)
+///
+/// **自動リトライを切る**（`noRetry`。D-04 §8 #61・#67 と同じ理由）。切らない
+/// と settings の読み出しの Exception で最大 10 回再購読し、そのたびに状態が
+/// 変わって、本 Provider を watch する全ページの `homeArticlesProvider` が
+/// 張り直される。エラーのときは `homeArticlesProvider` が既定 OFF で一覧を
+/// 張る（D-05 §6）。
+@Riverpod(keepAlive: true, retry: noRetry)
 Stream<bool> unreadFilter(Ref ref) =>
     ref.watch(settingsRepositoryProvider).watchUnreadFilter();
 

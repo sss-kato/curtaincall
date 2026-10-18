@@ -49,6 +49,10 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 |---|---|
 | 1-13 | **`formatError` と `FirebaseNotificationGateway` の契約テストを置けるようにするか。** §8 #48 が「秘密漏洩の経路」として警戒している `cause` の再帰連結が、collector 全体で**1 本も直接テストされていない**（連結子を変える変異が 486 テスト全通過した実績がある）。UseCase テストで「cause あり」の経路は固定したが、**深さ上限・循環参照・`[unprintable]` は依然無検証**。`test/domain/` に契約テストを置くには **CLAUDE.md のテスト方針の例外列挙と D-02 §7.3 の両方**に追加が要る。退行しても品質ゲートは緑のまま（静かな失敗）で、結果が**公開リポジトリの Actions ログへの秘密鍵流出**という不可逆な形になる |
 | 1-23 | §5.1 手順 6・§6・§7.1 | **#53（T-50）の `checkRawShape` に対応する行が設計書に無い。** getter が例外を投げる要素は、`try`/`catch` で 1 件の破棄に留める（`warn("invalid raw article")` の `error` は `unknown shape violation`、他団体に波及させない。要件 R-2）。検証済みの値（zod が作る plain object）を後段に渡して、再読み込み（TOCTOU）を防ぐ。この 2 点を §5.1 手順 6・§6・§7.1 の `collect-articles`「部分破棄」行に追記する（T-50 spec [R-2]・adversarial [R-1]） |
+| 1-24 | §4.7 | **`formatErrorChain` の `instanceof Error` が try の外にある。** Proxy の `getPrototypeOf` トラップ等で TypeError が漏れる（実装は §4.7 のコード片どおり）。try の中へ移すか、§7 冒頭の無検証に理由を書く（PR #54・T-48 残課題 1） |
+| 1-25 | §5.6 | **実行サマリのステップサマリ本文の一部フィールドが gsub / コードスパンを通らない。** `.companyId`・`discardedByCompany` のキー・`.notificationGateway`・`fullCrawlCompanyIds` が対象。値はリポジトリ管理の companies.json と固定語彙由来なので現状は悪用できないが、多層防御の穴。§5.6 の jq 式を改訂する（PR #54・T-48 残課題 2） |
+| 1-26 | §7.3・§8 #73 | **`FirebaseNotificationGateway.close()` の冪等（2 回呼んで `deleteApp` が 1 回）が無検証。** §8 #73 で B 案を採らなかった結果（PR #54・T-48 残課題 3） |
+| 1-27 | §7.1・§7.2 | **§7.1「送信の基本」に `send` の同期 throw のケースが無い。** §7.2 どおり `"throw"` モードを削除し 2 モード化した結果。現行実装は try 内で `await` するので実害はない（PR #54・T-48 残課題 4） |
 
 ---
 

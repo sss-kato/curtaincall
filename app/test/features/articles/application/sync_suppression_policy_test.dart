@@ -1,3 +1,9 @@
+/// `SyncSuppressionPolicy` のテスト。D-04 §7 の UseCase テストの表の
+/// `SyncSuppressionPolicy` の行と、group('対応外スキーマの抑止判定') の
+/// ケース一覧と 1 対 1（§5.2.1・§8 #64・#71）。ケースを増やすときは §7 の
+/// group('対応外スキーマの抑止判定') のケース一覧にも行を足す。
+library;
+
 import 'package:curtaincall/features/articles/application/sync_result.dart';
 import 'package:curtaincall/features/articles/application/sync_suppression_policy.dart';
 import 'package:curtaincall/features/articles/domain/unsupported_schema_reader.dart';

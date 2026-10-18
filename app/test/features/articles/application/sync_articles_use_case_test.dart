@@ -1,3 +1,10 @@
+/// `SyncArticlesUseCase` のテスト。D-04 §7 の UseCase テストの表の
+/// `SyncArticlesUseCase` の行と、group('読み取り')・group('対応外スキーマの記録')・
+/// group('失敗の分類')・group('差分反映')・group('後退防止')・
+/// group('切り詰めと重複')・group('保存の失敗') の各ケース一覧と 1 対 1。
+/// ケースを増やすときは §7 の該当 group のケース一覧にも行を足す。
+library;
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';

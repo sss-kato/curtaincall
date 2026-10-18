@@ -1,3 +1,9 @@
+/// `WatchHomeArticlesUseCase` のテスト。D-05 §7 の UseCase テストの表の
+/// `WatchHomeArticlesUseCase` の行と、group('団体タブ')・group('未読フィルタ')・
+/// group('並び順')・group('再発火')・group('表示・遷移') の各ケース一覧と 1 対 1。
+/// ケースを増やすときは §7 の該当 group のケース一覧にも行を足す。
+library;
+
 import 'package:curtaincall/features/articles/application/watch_home_articles_use_case.dart';
 import 'package:curtaincall/features/articles/domain/article_sync_repository.dart';
 import 'package:curtaincall/features/articles/domain/category.dart';

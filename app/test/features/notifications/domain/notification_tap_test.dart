@@ -1,3 +1,10 @@
+/// `parseNotificationTap` のテーブル駆動テスト。D-04 §7「純粋関数の直接テスト
+/// （例外）」の表の `parseNotificationTap` の行に対応する（§4.6・§8 #70）。
+/// ケースを増やすときは §7 の表の同じ行にも足す。
+///
+/// §7 との差分（§7 に無いケース等）は docs/tasks/FOLLOWUPS.md 2-20 を参照。
+library;
+
 import 'package:curtaincall/features/notifications/domain/notification_tap.dart';
 import 'package:flutter_test/flutter_test.dart';
 

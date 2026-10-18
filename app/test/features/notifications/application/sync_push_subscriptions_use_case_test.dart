@@ -1,10 +1,18 @@
+/// `SyncPushSubscriptionsUseCase` のテスト。D-04 §7 の UseCase テストの表の
+/// `SyncPushSubscriptionsUseCase` の行と、group('購読の同期') のケース一覧に
+/// 対応する（§5.6.1）。ケースを増やすときは §7 の group('購読の同期') の
+/// ケース一覧にも行を足す。
+///
+/// §7 との差分（欠落ケース等）は docs/tasks/FOLLOWUPS.md 2-20 を参照。
+library;
+
 import 'package:curtaincall/features/companies/infrastructure/asset_company_repository.dart';
 import 'package:curtaincall/features/notifications/application/sync_push_subscriptions_use_case.dart';
-import 'package:curtaincall/features/settings/domain/browser_choice.dart';
 import 'package:curtaincall/features/settings/domain/settings_repository.dart';
 import 'package:curtaincall/features/settings/infrastructure/drift_settings_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../helpers/delegating_settings_repository.dart';
 import '../../../helpers/fake_push_gateway.dart';
 import '../../../helpers/in_memory_database.dart';
 
@@ -30,42 +38,15 @@ _Env _buildEnv() {
 }
 
 /// [SettingsRepository.notificationSettings] が常に例外を投げるテストダブル
-/// （D-04 §5.6「`notificationSettings` の失敗も伝播」の検証用）。
-class _ThrowingSettingsRepository implements SettingsRepository {
+/// （D-04 §5.6「`notificationSettings` の失敗も伝播」の検証用）。転送先を
+/// 持たないため、他のメソッドを呼ぶと `UnimplementedError` になる
+/// （[DelegatingSettingsRepository] の `inner` 省略時の挙動）。
+final class _NotificationSettingsFailingSettingsRepository
+    extends DelegatingSettingsRepository {
   @override
   Future<Map<String, bool>> notificationSettings() async {
     throw StateError('settings unavailable');
   }
-
-  @override
-  Future<void> setNotificationEnabled(
-    String companyId, {
-    required bool enabled,
-  }) => throw UnimplementedError();
-
-  @override
-  Stream<Map<String, bool>> watchNotificationSettings() =>
-      throw UnimplementedError();
-
-  @override
-  Future<BrowserChoice> browserChoice() => throw UnimplementedError();
-
-  @override
-  Stream<BrowserChoice> watchBrowserChoice() => throw UnimplementedError();
-
-  @override
-  Future<void> setBrowserChoice(BrowserChoice choice) =>
-      throw UnimplementedError();
-
-  @override
-  Future<bool> unreadFilter() => throw UnimplementedError();
-
-  @override
-  Stream<bool> watchUnreadFilter() => throw UnimplementedError();
-
-  @override
-  Future<void> setUnreadFilter({required bool enabled}) =>
-      throw UnimplementedError();
 }
 
 void main() {
@@ -174,7 +155,7 @@ void main() {
     test('settings.notificationSettings() が失敗 → そのまま伝播する', () async {
       final useCase = SyncPushSubscriptionsUseCase(
         companies: AssetCompanyRepository(),
-        settings: _ThrowingSettingsRepository(),
+        settings: _NotificationSettingsFailingSettingsRepository(),
         push: FakePushGateway(),
       );
 

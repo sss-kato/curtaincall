@@ -23,8 +23,10 @@ class OpenArticleUseCase {
   /// [article] を開き、開けたら [now]（既読日時）で既読にする。
   ///
   /// 手順（D-05 §5.3）：
-  /// 1. URL スキーム検証：`http` / `https` 以外・host 無しは
-  ///    [ArticleNotOpened]（[OpenFailure.invalidUrl]）を返す（既読にしない）
+  /// 1. URL 検証：(a) `Uri.tryParse` が null、(b) scheme が `http` /
+  ///    `https` でない、(c) host が空、(d) userInfo が空でない、のいずれかなら
+  ///    [ArticleNotOpened]（[OpenFailure.invalidUrl]）を返す（既読にしない）。
+  ///    (d) は詐称対策（§8 #48）
   /// 2. ブラウザ設定を読む。drift の例外は捕捉し [BrowserChoice.inApp]
   ///    （既定）で続行する（捕捉しないと `unawaited` された Future の
   ///    未処理の非同期エラーになり、タップしても何も起きずログも残らない）
@@ -33,6 +35,12 @@ class OpenArticleUseCase {
   /// 4. OS へ起動を渡す。失敗なら [ArticleNotOpened]
   ///    （[OpenFailure.launchFailed]）を返す（既読にしない）
   /// 5. 既読化する。drift の例外は捕捉して `markedAsRead = false` にする
+  ///
+  /// URL 検証の補足：§4.4 の契約で、URL の検証はここで行い `ArticleOpener` 側
+  /// では再検証しない。(d) について、`@` だけで userInfo が空の形
+  /// （`https://@host/`）は詐称の文字列を持たないので通す。パス・クエリ中の
+  /// `@` は userInfo に入らない。host 内のパーセントエンコード（`%40` 等）は
+  /// 対象外。
   Future<OpenArticleResult> execute(
     Article article, {
     required DateTime now,
@@ -40,7 +48,8 @@ class OpenArticleUseCase {
     final uri = Uri.tryParse(article.url);
     if (uri == null ||
         (uri.scheme != 'http' && uri.scheme != 'https') ||
-        uri.host.isEmpty) {
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty) {
       return const ArticleNotOpened(OpenFailure.invalidUrl);
     }
 

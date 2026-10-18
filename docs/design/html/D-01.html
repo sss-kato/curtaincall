@@ -45,7 +45,7 @@ a{color:var(--accent)}
 <a class="home" href="index.html">CurtainCall 設計書</a>
 <a href="index.html">目次</a><a href="D-01.html" style="color:var(--accent)">D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</a><a href="D-02.html">D-02 collector 設計（層構成・Source 契約・http ラッパー・collect / detect-diff / storage・GitHub Actions・FCM 送信）</a><a href="D-03.html">D-03 Source 詳細設計（5 団体のセレクタ・URL 規則・日付・カテゴリ対応）</a><a href="D-04.html">D-04 app 基盤設計（feature 構成・drift スキーマ・Riverpod / DI・HTTP・FCM 購読・100 件保持・通知許可）</a><a href="D-05.html">D-05 app 機能設計（UseCase 一覧・画面遷移・S-00〜S-03 の対応表・既読 / 保存 / フィルタ / ブラウザ選択）</a>
 <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
-<a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 契約の流れ</a><a class="d3" href="#sec-3-2">3.2 collector 側のファイル配置（本書が所有する部分）</a><a class="d3" href="#sec-3-3">3.3 app 側で本書が要求すること（配置は D-04 が決める）</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Article（要件 §7.1）</a><a class="d3" href="#sec-4-2">4.2 articles.json（ファイル全体）</a><a class="d3" href="#sec-4-3">4.3 companies.json（団体定義）</a><a class="d3" href="#sec-4-4">4.4 category の値（要件 §7.1・§3.3、S-00 §7.2）</a><a class="d3" href="#sec-4-5">4.5 並び替えキー（S-01 §7.1 と同一）</a><a class="d3" href="#sec-4-6">4.6 バージョニング</a><a class="d3" href="#sec-4-7">4.7 配信 URL とキャッシュ</a><a class="d3" href="#sec-4-8">4.8 通知ペイロード（要件 §6.3、S-01 §8 #20）</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 ID 算出（<code>normalizeUrl</code> → <code>buildArticleId</code>）</a><a class="d3" href="#sec-5-2">5.2 contentHash 算出と更新判定（<code>normalizeTitle</code> → <code>foldText</code> → <code>buildContentHash</code> → 突合）</a><a class="d3" href="#sec-5-3">5.3 category 判定（<code>matchCategoryTags</code> → <code>matchCategoryKeywords</code> → <code>resolveCategory</code>）</a><a class="d3" href="#sec-5-4">5.4 thumbnail の検証</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d3" href="#sec-7-1">7.1 契約テスト（<code>test/domain/contract.test.ts</code>）</a><a class="d3" href="#sec-7-2">7.2 D-02 の UseCase テストで検証すべきケース（申し送り）</a><a class="d3" href="#sec-7-3">7.3 app 側（D-04・D-05 の UseCase テストで検証する）</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
+<a class="d2" href="#sec-1">1. 目的と範囲</a><a class="d2" href="#sec-2">2. 要件との対応</a><a class="d3" href="#sec-2-1">2.1 画面定義との対応（scope: app のみ）</a><a class="d2" href="#sec-3">3. 構成</a><a class="d3" href="#sec-3-1">3.1 契約の流れ</a><a class="d3" href="#sec-3-2">3.2 collector 側のファイル配置（本書が所有する部分）</a><a class="d3" href="#sec-3-3">3.3 app 側で本書が要求すること（配置は D-04 が決める）</a><a class="d2" href="#sec-4">4. データ</a><a class="d3" href="#sec-4-1">4.1 Article（要件 §7.1）</a><a class="d3" href="#sec-4-2">4.2 articles.json（ファイル全体）</a><a class="d3" href="#sec-4-3">4.3 companies.json（団体定義）</a><a class="d3" href="#sec-4-4">4.4 category の値（要件 §7.1・§3.3、S-00 §7.2）</a><a class="d3" href="#sec-4-5">4.5 並び替えキー（S-01 §7.1 と同一）</a><a class="d3" href="#sec-4-6">4.6 バージョニング</a><a class="d3" href="#sec-4-7">4.7 配信 URL とキャッシュ</a><a class="d3" href="#sec-4-8">4.8 通知ペイロード（要件 §6.3、S-01 §8 #20）</a><a class="d2" href="#sec-5">5. 処理フロー（正常系）</a><a class="d3" href="#sec-5-1">5.1 ID 算出（<code>normalizeUrl</code> → <code>buildArticleId</code>）</a><a class="d3" href="#sec-5-2">5.2 contentHash 算出と更新判定（<code>normalizeTitle</code> → <code>foldText</code> → <code>buildContentHash</code> → 突合）</a><a class="d3" href="#sec-5-3">5.3 category 判定（<code>matchCategoryTags</code> → <code>matchCategoryKeywords</code> → <code>resolveCategory</code>）</a><a class="d3" href="#sec-5-4">5.4 thumbnail の検証</a><a class="d2" href="#sec-6">6. 異常系・境界</a><a class="d2" href="#sec-7">7. テスト方針</a><a class="d3" href="#sec-7-1">7.1 契約テスト（<code>test/domain/contract.test.ts</code>・<code>test/domain/category.test.ts</code>）</a><a class="d3" href="#sec-7-2">7.2 D-02 の UseCase テストで検証すべきケース（申し送り）</a><a class="d3" href="#sec-7-3">7.3 app 側（D-04・D-05 の UseCase テストで検証する）</a><a class="d2" href="#sec-8">8. 決定事項と根拠</a><a class="d3" href="#sec-8-1">8.1 他設計書への申し送り</a><a class="d2" href="#sec-9">9. 未決定事項</a><a class="d2" href="#sec-10">10. タスク分割の目安</a><a class="d2" href="#h-変更履歴">変更履歴</a>
 </nav>
 <main>
 <header><h1>D-01 共通仕様設計（articles.json スキーマ・companies.json・ID とハッシュの規則・カテゴリ・配信 URL・通知ペイロード）</h1><div class="meta"><b>status</b><span><span class="badge draft">draft</span></span><b>scope</b><span>shared</span><b>risks</b><span>R-5, R-8, R-9</span><b>review_rounds</b><span>5</span></div></header>
@@ -203,7 +203,7 @@ a{color:var(--accent)}
       category-keywords.ts  CategoryKeywordTable 型・COMMON_CATEGORY_KEYWORDS（全団体共通キーワード表。§4.4・§5.3。具体値は D-03。sources/ の外に置き Source 間 import を避ける。§8.1）
       url.ts                normalizeUrl（汎用正規化。§5.1）・TRACKING_PARAMS・InvalidArticleUrlError
       hasher.ts             Hasher インターフェース
-      text.ts               normalizeTitle（格納用）・foldText（比較用）・truncateUtf16（§5.2・§4.8）
+      text.ts               normalizeTitle（格納用）・foldText（比較用）・truncateUtf16・truncateCodePoints（§5.2・§4.8）
       article-id.ts         buildArticleId（§5.1）
       content-hash.ts       buildContentHash（§5.2）
       article-order.ts      compareArticles（§4.5）
@@ -214,6 +214,7 @@ a{color:var(--accent)}
   test/
     domain/
       contract.test.ts      §7.1 の契約テスト（スキーマとフィクスチャの整合性のみ）
+      category.test.ts      §7.1 の契約テスト（category 判定の domain 関数。§8 #37）
     fixtures/
       contract/
         articles.sample.json     §4.2 のサンプル（app のテストにもコピーして使う）
@@ -828,14 +829,88 @@ export function buildNotificationText(companyName: string, headlines: readonly s
   return { title, body };
 }</code></pre>
 <pre><code class="language-ts">// collector/src/domain/text.ts（抜粋）
-/** UTF-16 コード単位 max で切る。切れ目がサロゲートペアの途中（高サロゲートで終わる）なら 1 つ手前で切る */
+/**
+ * UTF-16 コード単位 max で切る。切れ目がサロゲートペアの途中（高サロゲートで終わる）なら 1 つ手前で切る
+ * @param max 0 以上。0 以下なら空文字を返す
+ */
 export function truncateUtf16(s: string, max: number): string {
+  // normalizeTitle（TITLE_MAX = 300）・buildNotificationText からは通常到達しない防御的なガード
+  if (max &lt;= 0) return &quot;&quot;;
   if (s.length &lt;= max) return s;
   let end = max;
   const last = s.charCodeAt(end - 1);
   if (last &gt;= 0xd800 &amp;&amp; last &lt;= 0xdbff) end -= 1;
   return s.slice(0, end);
+}
+
+/**
+ * コードポイント単位で先頭 max 個までにする。サロゲートペアを分割しない（§8 #35、D-02 §8 #55・#75）。
+ * - 省略記号は付けない（付けるなら呼び出し側が max から長さを引いて足す。buildNotificationText と同じ形）
+ * - 書記素クラスタは考慮しない：結合文字（例：e + U+0301）・異体字セレクタ・ZWJ で連結した絵文字は
+ *   途中で分かれてよい（ログ・サマリへ出す前の長さの抑制が目的で、表示用の切り詰めではない）
+ * - 対になっていないサロゲート（片割れ）は 1 コードポイントとして数え、そのまま残す（修復も除去もしない）
+ * @param max 上限（コードポイント数）。0 以下・NaN なら空文字を返す。非整数は小数部を切り捨てる。
+ *            Infinity なら s をそのまま返す
+ * @returns s と同じか、s の先頭の部分文字列（コードポイント数は min(max の整数部, s のコードポイント数)）
+ */
+export function truncateCodePoints(s: string, max: number): string {
+  // 0・負数・NaN（NaN との比較は常に偽）。素の式 Array.from(s).slice(0, max) は負数で
+  // 「末尾から数えた位置まで」を返すので、ここで空文字に固定する
+  if (!(max &gt; 0)) return &quot;&quot;;
+  // UTF-16 の長さ ≧ コードポイント数なので、この時点で上限内（配列を作らない）
+  if (s.length &lt;= max) return s;
+  return Array.from(s).slice(0, Math.trunc(max)).join(&quot;&quot;);
 }</code></pre>
+<p><code>truncateCodePoints</code> の境界の契約：</p>
+<table>
+<thead>
+<tr>
+<th>入力</th>
+<th>戻り値</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>max</code> = 0・負数（例：-1）・<code>NaN</code></td>
+<td><code>&quot;&quot;</code>（素の式 <code>Array.from(s).slice(0, max).join(&quot;&quot;)</code> は負数で「末尾から数えた位置まで」を返すので、ここだけ素の式と違う）</td>
+</tr>
+<tr>
+<td><code>max</code> = 2.7（非整数）</td>
+<td>先頭 2 コードポイント</td>
+</tr>
+<tr>
+<td><code>max</code> = <code>Infinity</code></td>
+<td><code>s</code></td>
+</tr>
+<tr>
+<td><code>s</code> = <code>&quot;&quot;</code></td>
+<td><code>&quot;&quot;</code>（<code>max</code> によらない）</td>
+</tr>
+<tr>
+<td><code>s</code> がちょうど <code>max</code> コードポイント</td>
+<td><code>s</code></td>
+</tr>
+<tr>
+<td><code>s</code> が <code>max</code> + 1 コードポイント</td>
+<td>先頭 <code>max</code> コードポイント</td>
+</tr>
+<tr>
+<td><code>&quot;a&quot;.repeat(199) + &quot;😀&quot; + &quot;b&quot;</code>、<code>max</code> = 200</td>
+<td><code>&quot;a&quot;.repeat(199) + &quot;😀&quot;</code>（200 コードポイント・201 UTF-16 単位。<code>truncateUtf16(…, 200)</code> なら <code>&quot;a&quot;.repeat(199)</code>）</td>
+</tr>
+<tr>
+<td><code>&quot;\uD83D&quot;</code>（高サロゲートの片割れだけ）、<code>max</code> = 1</td>
+<td><code>&quot;\uD83D&quot;</code></td>
+</tr>
+<tr>
+<td><code>&quot;\uD83Dx&quot;</code>、<code>max</code> = 1</td>
+<td><code>&quot;\uD83D&quot;</code>（片割れは 1 コードポイントとして数える）</td>
+</tr>
+<tr>
+<td><code>&quot;é&quot;</code>（結合文字）、<code>max</code> = 1</td>
+<td><code>&quot;e&quot;</code>（分かれてよい）</td>
+</tr>
+</tbody></table>
+<p><code>truncateCodePoints</code> は D-02 がログ・ステップサマリへ出す値の長さを抑えるために使う（D-02 §4.8 <code>sanitizeFailureMessage</code>・§4.10 <code>sanitizeGitOutput</code>・§5.1 手順 6 のログ値の 3 か所）。本書の契約（<code>articles.json</code>・通知）の上限（<code>title</code> 300・<code>url</code> 2048・通知 <code>body</code> 120）はいずれも UTF-16 コード単位で数えるので <code>truncateUtf16</code> を使い、<code>truncateCodePoints</code> を使わない（§8 #35）。</p>
 <p>送信例：</p>
 <pre><code class="language-json">{
   &quot;topic&quot;: &quot;shinkansen&quot;,
@@ -1325,11 +1400,16 @@ export function buildContentHash(hasher: Hasher, title: string): string {
 <h2 id="sec-7">7. テスト方針<a class="anchor" href="#sec-7">#</a></h2>
 <p>本書には UseCase が無い。テストは 2 種類に分ける。</p>
 <ol>
-<li><strong>契約テスト</strong>（<code>collector/test/domain/contract.test.ts</code>、§7.1）：範囲は「スキーマとフィクスチャの整合性」だけ。app と collector をまたぐ契約の逸脱（フィールドの追加・削除、日時書式の変更、団体定義の同梱コピーの乖離）を検知する。個別関数の振る舞いは検証しない（CLAUDE.md「個別クラスのユニットテストは書かない」。§8 #21）</li>
-<li><strong>純粋関数のロジック</strong>（<code>normalizeUrl</code>・<code>buildArticleId</code>・<code>normalizeTitle</code>・<code>foldText</code>・<code>buildContentHash</code>・<code>resolveCategory</code>・<code>compareArticles</code>・<code>buildNotificationText</code>・§5.2 の更新判定）は、D-02 の UseCase テスト（<code>collect-articles</code>・<code>detect-diff</code>・<code>notify</code>）を入口として検証する。§7.2 はその<strong>ケース一覧の申し送り</strong>で、D-02 はこれをテストケースに含めなければならない。app 側は §7.3（§6 の担当層が app（D-04）／app（D-05）の行を含む）を D-04・D-05 の UseCase テストに含めなければならない</li>
+<li><strong>契約テスト</strong>（<code>collector/test/domain/</code> の 2 ファイル、§7.1）：<ul>
+<li><code>contract.test.ts</code>：範囲は「スキーマとフィクスチャの整合性」だけ。app と collector をまたぐ契約の逸脱（フィールドの追加・削除、日時書式の変更、団体定義の同梱コピーの乖離）を検知する。個別関数の振る舞いは検証しない（CLAUDE.md「個別クラスのユニットテストは書かない」。§8 #21）</li>
+<li><code>category.test.ts</code>：5 つの Source が共有する category 判定の domain 関数（<code>resolveCategory</code>・<code>matchCategoryTags</code>・<code>matchCategoryKeywords</code>）と共通キーワード表 <code>COMMON_CATEGORY_KEYWORDS</code> の形を、Source を介さずに固定する（既存。T-03 の申し送り。§8 #37）。本書の契約テストで domain の関数を直接呼ぶのはこのファイルだけ</li>
+</ul>
+</li>
+<li><strong>純粋関数のロジック</strong>（<code>normalizeUrl</code>・<code>buildArticleId</code>・<code>normalizeTitle</code>・<code>foldText</code>・<code>buildContentHash</code>・<code>resolveCategory</code>・<code>compareArticles</code>・<code>buildNotificationText</code>・<code>truncateCodePoints</code>・§5.2 の更新判定）は、D-02 の UseCase テスト（<code>collect-articles</code>・<code>detect-diff</code>・<code>notify</code>・<code>run-collection</code>）を入口として検証する（<code>truncateCodePoints</code> は D-02 §7.3 の <code>sanitizeGitOutput</code> のテストからも通る。直接テストは置かない。§8 #36）。§7.2 はその<strong>ケース一覧の申し送り</strong>で、D-02 はこれをテストケースに含めなければならない。app 側は §7.3（§6 の担当層が app（D-04）／app（D-05）の行を含む）を D-04・D-05 の UseCase テストに含めなければならない</li>
 </ol>
 <p>いずれもネットワークは使わない。<code>Hasher</code> は本物の <code>Sha256Hasher</code>（I/O を持たない）を使ってよい。</p>
-<h3 id="sec-7-1">7.1 契約テスト（<code>test/domain/contract.test.ts</code>）<a class="anchor" href="#sec-7-1">#</a></h3>
+<h3 id="sec-7-1">7.1 契約テスト（<code>test/domain/contract.test.ts</code>・<code>test/domain/category.test.ts</code>）<a class="anchor" href="#sec-7-1">#</a></h3>
+<p>最終行（category 判定）だけが <code>category.test.ts</code>、他の行は <code>contract.test.ts</code>。</p>
 <table>
 <thead>
 <tr>
@@ -1358,6 +1438,11 @@ export function buildContentHash(hasher: Hasher, title: string): string {
 <td><code>data/companies.json</code> と <code>app/assets/companies.json</code> がバイト単位で同一（両方をファイルとして読み比較）</td>
 <td><code>data/companies.json</code>、<code>app/assets/companies.json</code></td>
 </tr>
+<tr>
+<td>category 判定（§4.4・§5.3。<code>category.test.ts</code>）</td>
+<td>§7.2 の category 行の 9 ケース（<code>resolveCategory</code> の優先順位 4 例・タグ段階で確定したらキーワード段階の候補を混ぜない・タグ対応表に無いタグを無視・見出し側と表側の両方の fold・共通表と団体別追加表の候補の合成・空文字と空白のみのキーワードは一致しない）と、<code>COMMON_CATEGORY_KEYWORDS</code> が 7 キー・<code>other</code> が空・空白のみの語が無い・fold 後に重複が無いこと</td>
+<td>テスト内で組んだ <code>CategoryTagMap</code>・<code>CategoryKeywordTable</code>、<code>COMMON_CATEGORY_KEYWORDS</code> の実値、<code>foldText</code></td>
+</tr>
 </tbody></table>
 <h3 id="sec-7-2">7.2 D-02 の UseCase テストで検証すべきケース（申し送り）<a class="anchor" href="#sec-7-2">#</a></h3>
 <table>
@@ -1385,7 +1470,7 @@ export function buildContentHash(hasher: Hasher, title: string): string {
 </tr>
 <tr>
 <td><code>collect-articles</code></td>
-<td>category：候補なし → <code>other</code>／<code>[&quot;ticket&quot;,&quot;new_work&quot;]</code> → <code>new_work</code>／<code>[&quot;person&quot;,&quot;cast&quot;]</code> → <code>cast</code>／<code>[&quot;other&quot;,&quot;schedule&quot;]</code> → <code>schedule</code>／タグ段階（<code>matchCategoryTags</code>）で写像できたらキーワード段階に進まない／タグ対応表に無いタグは無視される／キーワード照合（<code>matchCategoryKeywords</code>）が全角半角・大文字小文字を無視する／共通表と団体別追加表の両方の候補が <code>resolveCategory</code> に渡る／空文字のキーワードは一致しない</td>
+<td>category：候補なし → <code>other</code>／<code>[&quot;ticket&quot;,&quot;new_work&quot;]</code> → <code>new_work</code>／<code>[&quot;person&quot;,&quot;cast&quot;]</code> → <code>cast</code>／<code>[&quot;other&quot;,&quot;schedule&quot;]</code> → <code>schedule</code>／タグ段階（<code>matchCategoryTags</code>）で写像できたらキーワード段階に進まない／タグ対応表に無いタグは無視される／キーワード照合（<code>matchCategoryKeywords</code>）が全角半角・大文字小文字を無視する／共通表と団体別追加表の両方の候補が <code>resolveCategory</code> に渡る／空文字のキーワードは一致しない（この行は D-02 §8.1 で D-03 の Source テストへ移管済み。D-03 §8 #9。domain の関数そのものは §7.1 の <code>category.test.ts</code> でも固定する。§8 #37）</td>
 <td>Source スタブ（<code>siteTags</code>・<code>CategoryTagMap</code>・<code>CategoryKeywordTable</code> を渡す）</td>
 </tr>
 <tr>
@@ -1593,7 +1678,7 @@ export function buildContentHash(hasher: Hasher, title: string): string {
 <td>21</td>
 <td>契約テスト（<code>test/domain/contract.test.ts</code>）を置くが、範囲を「スキーマとフィクスチャの整合性」（<code>ArticlesFileSchema</code>・<code>buildArticlesFileWriteSchema</code>・<code>CompaniesFileSchema</code>・同梱コピーの一致）に限定し、純粋関数のロジックは D-02 の UseCase テストで検証する（§7.2 に申し送る）</td>
 <td>契約テストで <code>normalizeUrl</code>・<code>buildContentHash</code> 等の関数も直接検証する／契約テストを置かず UseCase テストだけに任せる</td>
-<td>CLAUDE.md は「テストの単位は UseCase。個別クラスのユニットテストは書かない」とし、例外はパーサーのフィクスチャテストだけである。関数の直接検証はこの禁止事項に当たり、D-02 の UseCase テストとの二重検証にもなる。一方、<code>articles.json</code> の形と <code>companies.json</code> の同梱コピーは UseCase を経由しない静的な契約（app と collector の境界）で、UseCase テストでは「フィクスチャが今のスキーマを通るか」「2 つの JSON が同一か」を検証する入口が無い。この 2 点だけを契約テストに残す</td>
+<td>CLAUDE.md は「テストの単位は UseCase。個別クラスのユニットテストは書かない」とし、例外はパーサーのフィクスチャテストだけである。関数の直接検証はこの禁止事項に当たり、D-02 の UseCase テストとの二重検証にもなる。一方、<code>articles.json</code> の形と <code>companies.json</code> の同梱コピーは UseCase を経由しない静的な契約（app と collector の境界）で、UseCase テストでは「フィクスチャが今のスキーマを通るか」「2 つの JSON が同一か」を検証する入口が無い。この 2 点だけを契約テストに残す（category 判定の domain 関数の <code>category.test.ts</code> を契約テストに加えたのは #37。本決定の <code>contract.test.ts</code> の範囲は変えない）</td>
 </tr>
 <tr>
 <td>22</td>
@@ -1673,6 +1758,24 @@ export function buildContentHash(hasher: Hasher, title: string): string {
 <td>継続として扱う：押し出された記事の <code>id</code>・<code>fetchedAt</code>・<code>updatedAt</code> を別ファイル（例：<code>data/seen-ids.json</code>）に残して再出現時に引き継ぎ、通知しない</td>
 <td>再掲載は稀（四季・宝塚の一覧は新しい順で、古い記事が再び上位に来るのはサイト側の日付付け直しのみ。調査レポート §3・§4）で、実害は通知が 1 通余分に出る程度。継続案は D-02 に storage の台帳と <code>detect-diff</code> の入力が 1 つ増え、<code>articles.json</code> の外に状態を持つことになり、台帳の上限・掃除規則も要る。#33 の「前回 = 実行開始時の <code>main</code> のスナップショット」という単一の根拠を保てる（開発者回答 2026-09-19、旧 Q-8）</td>
 </tr>
+<tr>
+<td>35</td>
+<td>コードポイント単位の切り詰め <code>truncateCodePoints(s, max)</code> を <code>text.ts</code> に置き、<code>truncateUtf16</code> と並べる（§4.8）。省略記号は付けず、<code>max</code> が 0 以下・<code>NaN</code> なら空文字、非整数は切り捨て。本書の契約の上限（<code>title</code> 300・<code>url</code> 2048・通知 <code>body</code> 120）は UTF-16 コード単位のまま <code>truncateUtf16</code> を使う。呼び出し側は D-02 の 3 か所（<code>sanitizeFailureMessage</code>・<code>sanitizeGitOutput</code>・<code>collect-articles</code> のログ値。D-02 §8 #75）。同じ reopen で <code>truncateUtf16</code> の抜粋に実装の <code>max &lt;= 0</code> ガードと <code>@param</code> を足した。app には対応物を置かない</td>
+<td>D-02 が所有する <code>domain/truncate.ts</code> に置く／<code>truncateUtf16</code> に単位の引数（<code>&quot;utf16&quot; | &quot;codePoint&quot;</code>）を足して 1 関数にする／D-02 の各ファイルに素の式 <code>Array.from(...).slice(...)</code> を置く（D-02 §8 #55 の旧状態）／第 3 引数で省略記号を付ける／戻り値を <code>{ text, truncated }</code> にする</td>
+<td>文字列処理が <code>text.ts</code> に集まっており、別ファイルにすると次の実装者がどちらへ足すか判断できない（D-02 §8 #55 の理由）。UTF-16 の上限は zod の <code>.max(n)</code>（<code>String.prototype.length</code> で数える。§5.2 手順 1）と一致させる必要があり、コードポイントの上限はログ・サマリでサロゲートペアを割らないためのもので目的が違う。1 関数にすると引数 1 つの取り違えで契約違反の <code>articles.json</code> を書きうるうえ、既存の <code>truncateUtf16</code> の呼び出し（<code>normalizeTitle</code>・<code>buildNotificationText</code>・D-03 の <code>shiki.ts</code>）も書き換えになる。素の式は負数の <code>max</code> で末尾から数えた位置まで返し、同じ式が 2 ファイルに重複する。3 か所とも省略記号を付けず <code>truncated</code> も使わない（YAGNI）。省略記号を呼び出し側で足す形は <code>buildNotificationText</code> の先例と同じ。抜粋を実装に合わせたのは、隣に置く <code>truncateCodePoints</code> だけが「0 以下なら空文字」を明記すると 2 関数の契約の差に読めるため。app は D-04・D-05 にコードポイント単位の上限を持つ値が無く（app は <code>articles.json</code> の値を受け取るだけで、その上限は collector が UTF-16 で保証する。ログ値の切り詰めも規定していない）、移植が要らない（開発者判断 J-2・J-15、2026-10-19）</td>
+</tr>
+<tr>
+<td>36</td>
+<td><code>truncateCodePoints</code> の直接テストを置かない。呼び出し側のテスト（D-02 の <code>run-collection</code>・<code>collect-articles</code> の UseCase テストと <code>sanitizeGitOutput</code> のテスト）で、上限を超える・上限以下・上限の位置がサロゲートペアに当たるケースを 2 つの上限（200・500）について固定する</td>
+<td><code>collector/test/domain/text.test.ts</code> を新設して §4.8 の境界の表をテーブル駆動で検証する</td>
+<td>CLAUDE.md「テスト方針」の純粋関数の例外は設計書 §7 に列挙したものに限り、本書の <code>contract.test.ts</code> は個別関数を検証しない（#21）。呼び出し側の上限はいずれも正の定数で、<code>max</code> が 0・負数・<code>NaN</code>・非整数・<code>Infinity</code> の境界に到達する経路が無い（防御のガードとして無検証で残す。<code>truncateUtf16</code> の <code>max &lt;= 0</code> と同じ扱い）。直接テストを置くと CLAUDE.md の例外の列挙を広げる変更が要り、得る回帰（到達しない境界）が小さい（開発者判断 J-14、2026-10-19）</td>
+</tr>
+<tr>
+<td>37</td>
+<td>既存の <code>collector/test/domain/category.test.ts</code>（T-03 の申し送りで作られた、category 判定の domain 関数の直接テスト）を本書の契約テストとして §7.1 に収載する。範囲は §7.2 の category 行の 9 ケースと <code>COMMON_CATEGORY_KEYWORDS</code> の形に限る。§7.2 の category 行（D-03 の Source テストへ移管済み）は残す</td>
+<td>規約外のテストとして削除する／規約外のまま残して FOLLOWUPS に積む／CLAUDE.md の純粋関数の例外の列挙に加える</td>
+<td><code>resolveCategory</code>・<code>matchCategoryTags</code>・<code>matchCategoryKeywords</code> と <code>COMMON_CATEGORY_KEYWORDS</code> は 5 つの Source が共有する domain の契約（§4.4・§5.3。D-03 §8.1 は Source 内に照合ロジックを書かせない）で、Source テストは各団体の表を通してしか検証できず、共通表の形（7 キー・<code>other</code> 空・fold 後の重複無し）を検証する入口が無い。CLAUDE.md は <code>collector/test/domain/</code> を「D-01 の契約テスト」と定めているので、本書 §7.1 に載せれば規約の変更なしに位置付けが定まる。削除すると共通表の形の検証が失われる（開発者判断 V-2、2026-10-19）</td>
+</tr>
 </tbody></table>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
 <table>
@@ -1727,6 +1830,11 @@ export function buildContentHash(hasher: Hasher, title: string): string {
 <td>D-02</td>
 <td>§7.2 のケース一覧を <code>collect-articles</code>・<code>detect-diff</code>・<code>notify</code> の UseCase テストに含める</td>
 <td>#21、§7.2</td>
+</tr>
+<tr>
+<td>D-02</td>
+<td>ログ・ステップサマリへ出す値をコードポイント単位で切り詰める箇所（<code>sanitizeFailureMessage</code>・<code>sanitizeGitOutput</code>・<code>collect-articles</code> のログ値）は <code>domain/text.ts</code> の <code>truncateCodePoints</code> を呼び、素の式 <code>Array.from(...).slice(...)</code> を書かない。契約は §4.8 が正で、D-02 にシグネチャを複写しない。<code>truncateCodePoints</code> の振る舞いは呼び出し側のテストで固定する（上限を超える・上限以下・上限の位置がサロゲートペアに当たる）</td>
+<td>#35、#36、§4.8</td>
 </tr>
 <tr>
 <td>D-03</td>
@@ -1837,6 +1945,7 @@ export function buildContentHash(hasher: Hasher, title: string): string {
 </tr>
 </tbody></table>
 <p>A と B を分けるのは、A が「app と collector の境界の契約（スキーマ・データ・契約テスト）」、B が「collector 内部の純粋関数」で変更理由が異なるためと、1 タスクを 10 ファイル以内に収めるため。B の関数は A の型にだけ依存し、A は B に依存しないので、A → B の順で 1 dev-loop ずつ進める。</p>
+<p>2026-10-19 の再開で足した分は本書単独のタスクにしない。<code>text.ts</code> への <code>truncateCodePoints</code> の追加（§4.8）は、呼び出し側 3 か所の置き換えと同じタスクで行う（D-02 §10 の該当タスク。<code>truncateCodePoints</code> を足しただけでは使う箇所が無く、置き換えと分けると片方だけの PR で D-02 §8 #75 の状態にならないため）。<code>category.test.ts</code>（§7.1・#37）は既存のため作業は無い。</p>
 <h2 id="h-変更履歴">変更履歴<a class="anchor" href="#h-変更履歴">#</a></h2>
 <table>
 <thead>
@@ -1880,6 +1989,10 @@ export function buildContentHash(hasher: Hasher, title: string): string {
 <tr>
 <td>2026-10-19</td>
 <td>再開：D-02 の再開と同時に、<code>truncateCodePoints(s, max)</code> を §4.8 <code>text.ts</code> に共通化し（開発者判断 J-2）、<code>collector/test/domain/category.test.ts</code> を §7 の契約テスト一覧に収載する（開発者判断 V-2）。status を draft に戻す</td>
+</tr>
+<tr>
+<td>2026-10-19</td>
+<td>再開の反映：§4.8 に <code>truncateCodePoints</code> の抜粋と境界の契約を追加し、<code>truncateUtf16</code> の抜粋を実装（<code>max &lt;= 0</code> のガード・<code>@param</code>）に合わせた（J-2・J-15）。§3.2 に <code>truncateCodePoints</code>・<code>category.test.ts</code> を追加、§7 冒頭・§7.1 に <code>category.test.ts</code> を収載、§7.2 の category 行に移管先の注記、§8 #35〜#37 を新設（#21 に #37 への参照を追記。#21 の範囲は不変）、§8.1 に D-02 への申し送り、§10 に実装は D-02 §10 のタスクで行う旨を追記（J-14・V-2）</td>
 </tr>
 </tbody></table>
 

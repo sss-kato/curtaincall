@@ -48,6 +48,7 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 | # | 内容 |
 |---|---|
 | 1-13 | **`formatError` と `FirebaseNotificationGateway` の契約テストを置けるようにするか。** §8 #48 が「秘密漏洩の経路」として警戒している `cause` の再帰連結が、collector 全体で**1 本も直接テストされていない**（連結子を変える変異が 486 テスト全通過した実績がある）。UseCase テストで「cause あり」の経路は固定したが、**深さ上限・循環参照・`[unprintable]` は依然無検証**。`test/domain/` に契約テストを置くには **CLAUDE.md のテスト方針の例外列挙と D-02 §7.3 の両方**に追加が要る。退行しても品質ゲートは緑のまま（静かな失敗）で、結果が**公開リポジトリの Actions ログへの秘密鍵流出**という不可逆な形になる |
+| 1-23 | §5.1 手順 6・§6・§7.1 | **#53（T-50）の `checkRawShape` に対応する行が設計書に無い。** getter が例外を投げる要素は、`try`/`catch` で 1 件の破棄に留める（`warn("invalid raw article")` の `error` は `unknown shape violation`、他団体に波及させない。要件 R-2）。検証済みの値（zod が作る plain object）を後段に渡して、再読み込み（TOCTOU）を防ぐ。この 2 点を §5.1 手順 6・§6・§7.1 の `collect-articles`「部分破棄」行に追記する（T-50 spec [R-2]・adversarial [R-1]） |
 
 ---
 
@@ -80,7 +81,7 @@ dev-loop・design-review の途中で見つかったが、**そのタスクの�
 | # | 対象 | 内容 |
 |---|---|---|
 | 2-12 | §4.8 | **抜粋の step 名が不正 YAML。** `- name: logger の error: / stackTrace: が整形関数を通っているか` は `: ` を含むのにクォートが無く、そのまま貼ると `ScannerError: mapping values are not allowed here` で**ワークフローが読めず CI が起動しない**（実測）。`- name: "..."` と二重引用符で囲む |
-| 2-13 | §4.8 | **抜粋を現行の `app-ci.yml` に合わせる。** step1 は 3 判定 → **7 判定**（`(0)` 自己検査・`(1)` 番兵・`(2)` 折り返し禁止・`(3)` 破綻検知・`(4)(5)` 出現数突合・`(6)` ヘルパ宣言禁止）とヘルパ 4 つ、step2 は `(a-i)〜(a-vi)` と期待値 8 変数に育っている。`grep` に `-a` が付いた（NUL バイトのバイナリ扱いで違反が見えなくなる。実測）。**ヘルパ改名**：抜粋が名指しする `code()` → `app_logger_code_lines`、`danger` → `forbidden_interp`。`strip_strings`・`occurrences`・`unwrapped`・`lib_code_lines` は設計書に対応物が無い |
+| 2-13 | §4.8 | **抜粋を現行の `app-ci.yml` に合わせる。** step1 は 3 判定 → **7 判定**（`(0)` 自己検査・`(1)` 番兵・`(2)` 折り返し禁止・`(3)` 破綻検知・`(4)(5)` 出現数突合・`(6)` ヘルパ宣言禁止）とヘルパ 4 つ、step2 は `(a-i)〜(a-vi)` と期待値 8 変数に育っている。`grep` に `-a` が付いた（NUL バイトのバイナリ扱いで違反が見えなくなる。実測）。**ヘルパ改名**：抜粋が名指しする `code()` → `app_logger_code_lines`、`danger` → `forbidden_interp`。`strip_strings`・`occurrences`・`unwrapped`・`lib_code_lines` は設計書に対応物が無い。**T-54 でも再確認**（3 つ目の step はファイル・クラス宣言の存在確認と `@([A-Za-z0-9_]+\.)?[Ii]mmutable` で抜粋より強い。`const /* x */ NotificationTap(` は未検出で、限界の一覧に足すかブロックコメントを除去する。T-54 spec [R-1]・adversarial [R-1]） |
 | 2-14 | §4.8 (A)(B) | **限界一覧に 6 項目追加。** (A) 側：`error:` の直後が整形関数なら三項・`??`・キャストで同じ式に生の例外を混ぜた形は緑／`remoteCause` の**パターン分解**と本体への `return cause;` の追加は `.remoteCause` の字面が増えないため見えない／走査対象の消失（`(0)(1)` で塞いだ）／**引用符が偶数で残骸が再び対になる形**（`_logger.w("a's", error: e, stackTrace: traces["x's"]);` は strip 後の引用符が 0 個で揃うため `(3)` を通過。実測）。(B) 側：生成物が `error`/`exception`/`cause`/`stackTrace` を含む識別子を補間した場合（drift の生成 `toString()` は全列を補間するため `lastError` のような列名で確実に赤になる）。対処は列名・テーブル名・Provider 名の変更 |
 | 2-15 | §4.9 | **末尾の「同じ変更で直す」手順に 3 件が未収載。** 現在は「§4.8 (a) の期待値文字列」と「`kDebugMode` の期待行数」の 2 つだけだが、T-53 で `errmembers`（許可は `error.remoteCause` のみ）・`.remoteCause` の出現数 1 固定・制御フローの照合文字列が増えた。実装からの辿り先は `app-ci.yml` の step2 冒頭の期待値一覧（8 変数） |
 | 2-16 | §3.1・§4.9・§8.2.4 | **import の字面を `package:drift/isolate.dart' show DriftRemoteException` に改める。** `@experimental` は `remote.dart` の library 宣言に付き型自体には付かないため、注釈のない `isolate.dart` の再 export（drift 2.31.0 `lib/isolate.dart:17`）経由なら `// ignore: experimental_member_use` が不要になる（実測）。**`isolate.dart` は `dart:isolate` を引き込み web 非対応**（iOS 専用なので現状は影響なし）という注記も入れる |

@@ -22,9 +22,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'saved_list_controller.g.dart';
 
-/// 保存の解除・再保存の確定に失敗したときのログ（[SavedListController]）。
-const String _commitFailedMessage = '保存の解除の確定に失敗';
-
 /// 保存済みの記事全件（`SavedArticleRepository.watchAll()`）。
 ///
 /// **keepAlive は必須**（D-04 §8.1）。自動破棄にすると保存タブを離れて戻る
@@ -261,16 +258,16 @@ class SavedListController extends _$SavedListController {
     } on CommitSavedChangesFailure catch (e) {
       // DB から実際に消えた id だけを受け取る（§8 #44）。
       committed = e.committed;
-      _logCommitFailure(
-        logger,
+      logger.w(
+        '保存の解除の確定に失敗',
         error: releaseSafeError(e.cause),
         stackTrace: releaseSafeStackTrace(e.causeStackTrace),
       );
     } on Object catch (e, stackTrace) {
       // 確定できた範囲が分からないので _fromDb を触らない（空集合）。
       committed = const <String>{};
-      _logCommitFailure(
-        logger,
+      logger.w(
+        '保存の解除の確定に失敗',
         error: releaseSafeError(e),
         stackTrace: releaseSafeStackTrace(stackTrace),
       );
@@ -292,16 +289,6 @@ class SavedListController extends _$SavedListController {
     _pendingUnsave.clear();
     _resaveAt.clear();
     _recompute();
-  }
-
-  /// 確定の失敗を 1 行記録する。[error]・[stackTrace] は呼び出し側で
-  /// `releaseSafeError`・`releaseSafeStackTrace` を通した値を渡す（D-04 §8 #75）。
-  void _logCommitFailure(
-    Logger logger, {
-    required Object? error,
-    required StackTrace? stackTrace,
-  }) {
-    logger.w(_commitFailedMessage, error: error, stackTrace: stackTrace);
   }
 
   /// [_fromDb] と [_pendingUnsave] から一覧を作り直す。

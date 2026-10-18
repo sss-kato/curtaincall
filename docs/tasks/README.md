@@ -68,7 +68,7 @@
 | T-58 | — | FOLLOWUPS 4-4 | git の子プロセスへ渡す環境変数を必要なものだけに絞る | collector | — | todo |
 | T-59 | — | FOLLOWUPS 4-5・4-6・4-9 | app テストの重複を整理する | app | — | done |
 | T-60 | — | docs の乖離（A2） | README.md と docs/workflow.md を CLAUDE.md・スキル定義・コードの実態に合わせて改訂する | docs | — | done |
-| T-61 | — | FOLLOWUPS 4-27・4-28 | riverpod 3 の既定リトライを無効化する（ホーム側） | app | T-33, T-34 | in_progress |
+| T-61 | — | FOLLOWUPS 4-27・4-28 | riverpod 3 の既定リトライを無効化する（ホーム側） | app | T-33, T-34 | done |
 
 ## 並行の組
 

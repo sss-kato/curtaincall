@@ -55,16 +55,16 @@
 | T-45 | D-02 | §8.1 (d) | 通知ゲートウェイの秘密情報の扱いを D-02 に合わせる | collector | — | done |
 | T-46 | D-02 | §8.1 (b)(c)(f) | RunSummary と 2 つの静かな停止の検知を D-02 に合わせる | collector | T-45 | done |
 | T-47 | D-02 | §8.1 (g)(h) | 規定が入った実装コメントを整理する | collector | — | done |
-| T-48 | D-02 | D・H・I | collect.yml・通知ゲートウェイの close()・domain / application の追随をまとめて入れる | collector | — | in_progress |
+| T-48 | D-02 | D・H・I | collect.yml・通知ゲートウェイの close()・domain / application の追随をまとめて入れる | collector | — | done |
 | T-49 | D-02 | E | http ラッパーのタイムアウトの例外名を TimeoutError に直す | collector | — | done |
 | T-50 | D-02 | F | collect-articles の invalid raw article の警告に companyId を足す | collector | — | done |
-| T-51 | D-02 | G | git 出力のマスク対象を AUTH_SCHEMES として定数化し §7.3 のケースを足す | collector | — | in_progress |
+| T-51 | D-02 | G | git 出力のマスク対象を AUTH_SCHEMES として定数化し §7.3 のケースを足す | collector | — | done |
 | T-52 | D-02 | J | 収集ワークフローを main で実測確認する | collector | T-48 | todo |
 | T-53 | D-04 | T-F5a | ログの例外整形（releaseSafeError の追加と lib/ への一括適用） | app | — | done |
-| T-54 | D-04 | T-F5b | 通知タップの等価性・抑止判定の依存と診断を反映する | app | T-53 | in_progress |
+| T-54 | D-04 | T-F5b | 通知タップの等価性・抑止判定の依存と診断を反映する | app | T-53 | done |
 | T-55 | D-05 | T-S | URL 検証に userInfo の条件を追加する | app | — | in_progress |
 | T-56 | D-05 | T-T | E-18（バージョン行）の折り返しに対応する | app | T-53 | todo |
-| T-57 | — | FOLLOWUPS 4-1 | minute_clock.g.dart の生成物の鮮度を回復する | app | — | in_progress |
+| T-57 | — | FOLLOWUPS 4-1 | minute_clock.g.dart の生成物の鮮度を回復する | app | — | done（取り下げ） |
 | T-58 | — | FOLLOWUPS 4-4 | git の子プロセスへ渡す環境変数を必要なものだけに絞る | collector | — | todo |
 | T-59 | — | FOLLOWUPS 4-5・4-6・4-9 | app テストの重複を整理する | app | — | in_progress |
 | T-60 | — | docs の乖離（A2） | README.md と docs/workflow.md を CLAUDE.md・スキル定義・コードの実態に合わせて改訂する | docs | — | in_progress |

@@ -41,7 +41,7 @@
 | T-31 | D-05 | T-K | settings / notifications の UseCase | app | T-27 | done |
 | T-32 | D-05 | T-L | browser の UseCase | app | T-27 | done |
 | T-33 | D-05 | T-M | ホーム画面（S-01） | app | T-28, T-29, T-30, T-31, T-32, T-39, T-53, T-54 | done |
-| T-34 | D-05 | T-N | 保存画面（S-02） | app | T-28, T-30, T-32, T-33, T-39, T-53, T-54 | in_progress |
+| T-34 | D-05 | T-N | 保存画面（S-02） | app | T-28, T-30, T-32, T-33, T-39, T-53, T-54 | done |
 | T-35 | D-05 | T-O | 設定画面（S-03） | app | T-28, T-29, T-31, T-32 | done |
 | T-36 | D-04 | T-G | FCM 実装（フェーズ 5、Apple Developer Program 加入後） | app | T-23 | todo |
 | T-39 | D-04 | T-F3 | app 基盤の追随（判定・共通 Widget・自動リトライ） | app | T-23, T-24, T-28 | done |
@@ -59,7 +59,7 @@
 | T-49 | D-02 | E | http ラッパーのタイムアウトの例外名を TimeoutError に直す | collector | — | done |
 | T-50 | D-02 | F | collect-articles の invalid raw article の警告に companyId を足す | collector | — | done |
 | T-51 | D-02 | G | git 出力のマスク対象を AUTH_SCHEMES として定数化し §7.3 のケースを足す | collector | — | done |
-| T-52 | D-02 | J | 収集ワークフローを main で実測確認する | collector | T-48 | in_progress |
+| T-52 | D-02 | J | 収集ワークフローを main で実測確認する | collector | T-48 | done |
 | T-53 | D-04 | T-F5a | ログの例外整形（releaseSafeError の追加と lib/ への一括適用） | app | — | done |
 | T-54 | D-04 | T-F5b | 通知タップの等価性・抑止判定の依存と診断を反映する | app | T-53 | done |
 | T-55 | D-05 | T-S | URL 検証に userInfo の条件を追加する | app | — | done |
@@ -68,6 +68,7 @@
 | T-58 | — | FOLLOWUPS 4-4 | git の子プロセスへ渡す環境変数を必要なものだけに絞る | collector | — | todo |
 | T-59 | — | FOLLOWUPS 4-5・4-6・4-9 | app テストの重複を整理する | app | — | done |
 | T-60 | — | docs の乖離（A2） | README.md と docs/workflow.md を CLAUDE.md・スキル定義・コードの実態に合わせて改訂する | docs | — | done |
+| T-61 | — | FOLLOWUPS 4-27・4-28 | riverpod 3 の既定リトライを無効化する（ホーム側） | app | T-33, T-34 | in_progress |
 
 ## 並行の組
 

@@ -300,12 +300,15 @@ class _TabRowState extends State<_TabRow> {
 
   @override
   Widget build(BuildContext context) {
-    // Text の幅に効く MediaQuery の値はこの 2 つ（Dynamic Type の textScaler
-    // と「文字を太くする」の boldText）。aspect 単位で依存し、MediaQuery の
-    // 文字倍率と太字指定、親から渡る labels・textStyle・selectedIndex の
-    // 変化で再実測する。
+    // Text.build が読む MediaQuery の値（文字倍率・太字・行高・字間・語間の
+    // 上書き）と同じ aspect に依存し、その変化と、親から渡る labels・
+    // textStyle・selectedIndex の変化で再実測する。Flutter を上げたら
+    // Text.build の読む値を確かめ直す。
     MediaQuery.textScalerOf(context);
     MediaQuery.boldTextOf(context);
+    MediaQuery.maybeLineHeightScaleFactorOverrideOf(context);
+    MediaQuery.maybeLetterSpacingOverrideOf(context);
+    MediaQuery.maybeWordSpacingOverrideOf(context);
     _scheduleMeasure();
     final underline = _underlineFor(widget.underlinePosition);
     return Stack(

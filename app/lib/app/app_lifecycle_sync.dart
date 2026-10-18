@@ -4,6 +4,7 @@ library;
 
 import 'dart:async';
 
+import 'package:curtaincall/app/notification_tap_handler.dart';
 import 'package:curtaincall/app/resume_sync_policy.dart';
 import 'package:curtaincall/app/root_tabs.dart';
 import 'package:curtaincall/core/di/notifications_providers.dart';
@@ -227,6 +228,9 @@ class _AppLifecycleSyncState extends ConsumerState<AppLifecycleSync>
     );
   }
 
+  // 通知タップの配線（D-05 §5.7）を子に挟む：AppLifecycleSync →
+  // NotificationTapHandler → RootTabs。
   @override
-  Widget build(BuildContext context) => const RootTabs();
+  Widget build(BuildContext context) =>
+      const NotificationTapHandler(child: RootTabs());
 }

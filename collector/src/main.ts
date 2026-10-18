@@ -20,7 +20,10 @@ import type { ArticlesPublisher } from "./domain/articles-publisher.js";
 import type { Company } from "./domain/company.js";
 import type { HttpClient } from "./domain/http-client.js";
 import { formatError, parseLogLevel, type Logger } from "./domain/logger.js";
-import type { NotificationGateway } from "./domain/notification-gateway.js";
+import type {
+  NotificationGateway,
+  NotificationGatewayCloser,
+} from "./domain/notification-gateway.js";
 import type { Source, SourceOptions } from "./domain/source.js";
 import { SystemClock } from "./infrastructure/clock/system-clock.js";
 import { FirebaseNotificationGateway } from "./infrastructure/fcm/firebase-notification-gateway.js";
@@ -116,10 +119,11 @@ function resolveSummaryPath(repoRoot: string): string {
   );
 }
 
-interface NotificationSetup {
-  readonly gateway: NotificationGateway;
-  readonly kind: NotificationGatewayKind;
-}
+/**
+ * 手順 5 が生成した通知ゲートウェイ。送信（NotificationGateway）と解放（NotificationGatewayCloser）の
+ * 両方を main.ts だけが握る（UseCase には NotificationGateway としてだけ渡す。§4.5）。
+ */
+type ClosableNotificationGateway = NotificationGateway & NotificationGatewayCloser;
 
 /**
  * FIREBASE_SERVICE_ACCOUNT を JSON.parse した結果（unknown）を FirebaseNotificationGateway に
@@ -197,39 +201,38 @@ async function main(): Promise<void> {
     serviceAccount = parsed;
   }
 
-  // CURTAINCALL_DRY_RUN の解釈はここ 1 回だけ行う（§8 #44・#45）。手順 4b の拒否判定と手順 7 の
-  // Noop 差し替えの両方がこの値を参照する（実行の意図は 1 つ。二重解釈を避ける）
-  const isDryRun = process.env.CURTAINCALL_DRY_RUN === "1";
+  // CURTAINCALL_DRY_RUN の解釈はここ 1 回だけ行う（§8 #44・#45）。手順 4b の拒否判定と手順 5・7・8 が
+  // この値だけを読む（§8 #69。実行の意図は 1 つ。二重解釈を避ける）
+  const dryRun = process.env.CURTAINCALL_DRY_RUN === "1";
 
   // 手順 4b：Actions 上での DRY_RUN の誤設定を起動時に拒否する（§8 #44）。ワークフローは DRY_RUN を
   // 使わないため、Actions 上でこの値が "1" なのは設定の誤りだけである。放置すると書き出し・push・
   // 通知がすべて Noop に縮退したままジョブが緑で通り、配信も通知も静かに止まる（§6）。
-  if (process.env.GITHUB_ACTIONS === "true" && isDryRun) {
+  if (process.env.GITHUB_ACTIONS === "true" && dryRun) {
     logger.error("CURTAINCALL_DRY_RUN must not be set on GitHub Actions");
     process.exitCode = 1;
     return;
   }
 
-  // 手順 5（の一部）：通知ゲートウェイの生成。serviceAccount が無ければ Noop（FCM 初期化とは無関係の
-  // 経路なので try の外で生成する）。ある場合だけ FirebaseNotificationGateway の生成を try で囲み、
-  // cert() / initializeApp の失敗も固定文言だけを出す（message も cause もログに出さない。
-  // §4.7、§5.4、§8 #48）。
-  let notificationSetup: NotificationSetup;
-  if (serviceAccount === undefined) {
-    notificationSetup = { gateway: new NoopNotificationGateway(logger), kind: "noop" };
+  // 手順 5（の一部）：通知ゲートウェイの生成（3 分岐。資源を確保した実装を生成するのは 3 つ目だけ。§8 #69）。
+  // notificationGatewayKind は分岐ではなく手順 4a の結果（パース済みのオブジェクトの有無）だけで決める。
+  // dryRun で Noop を生成した場合も "firebase" のままにする（サマリの目的は Secret の未設定・タイポの検知。§8 #32・#45）
+  const notificationGatewayKind: NotificationGatewayKind =
+    serviceAccount === undefined ? "noop" : "firebase";
+  let notificationGateway: ClosableNotificationGateway;
+  if (dryRun) {
+    // 試走では送らないので App も HTTP コネクションも確保しない（FirebaseNotificationGateway を生成しない）
+    logger.debug("dry run: skip FCM initialization");
+    notificationGateway = new NoopNotificationGateway(logger);
+  } else if (serviceAccount === undefined) {
+    notificationGateway = new NoopNotificationGateway(logger);
   } else {
     try {
-      notificationSetup = {
-        gateway: new FirebaseNotificationGateway(serviceAccount, logger),
-        kind: "firebase",
-      };
+      notificationGateway = new FirebaseNotificationGateway(serviceAccount, logger);
     } catch (e) {
-      // message・cause は出さない（秘密の断片を含みうる。§4.7）。errorName（Error.name。クラス名の
-      // みで入力由来の断片を含まない）だけを添え、切り分けの手がかりにする。想定内（鍵不正等）は
-      // ゲートウェイ側が Error で throw するため "Error" になり、想定外（実装バグ）は TypeError 等
-      // 別の名前になって区別できる。直前に出る 3 つの warn（ゲートウェイ側）が切り分け用の一次情報
-      // で、warn が無ければ想定外の例外という読み方になる。errorName フィールド自体も §5.5 手順 5・
-      // §6 には無い追加。D-02 側の追随が必要。
+      // message・cause は出さない（秘密の断片を含みうる。§4.7）。errorName（Error.name。クラス名のみで
+      // 入力由来の断片を含まない）だけを添え、切り分けの手がかりにする（§5.5 main.ts 手順 5）。
+      // 生成に失敗した経路ではインスタンスが無いので解放しない（手順 11）
       logger.error("failed to initialize FCM with FIREBASE_SERVICE_ACCOUNT", {
         errorName: e instanceof Error ? e.name : "unknown",
       });
@@ -238,90 +241,94 @@ async function main(): Promise<void> {
     }
   }
 
-  // 手順 5（続き）：残りの具象の生成
-  const clock = new SystemClock();
-  const hasher = new Sha256Hasher();
-  const http = new FetchHttpClient(
-    { ...DEFAULT_FETCH_HTTP_CLIENT_OPTIONS, userAgent: USER_AGENT },
-    logger,
-  );
-  const articlesFileStore = new ArticlesFileStore(repoRoot, logger);
-  const gitPublisher = new GitArticlesPublisher(repoRoot, logger);
-
-  // 手順 6
-  const bindings = buildSourceBindings(companies, { http, logger });
-  const knownCompanyIds = new Set(companies.map((c) => c.id));
-
-  // 手順 7：CURTAINCALL_DRY_RUN=1 のときは書き出し・確定・通知を Noop に差し替える
-  // （ArticleReader は ArticlesFileStore のまま。kind は差し替え前の値を保つ。isDryRun は手順 4b で求めた値を使う）
-  const writer: ArticleWriter = isDryRun ? new NoopArticleWriter(logger) : articlesFileStore;
-  const publisher: ArticlesPublisher = isDryRun ? new NoopArticlesPublisher(logger) : gitPublisher;
-  const notificationGateway: NotificationGateway = isDryRun
-    ? new NoopNotificationGateway(logger)
-    : notificationSetup.gateway;
-  // publisherKind はサマリへの記録専用（§4.8。判定には使わない。§8 #45）。差し替えの有無に従う
-  const publisherKind: PublisherKind = isDryRun ? "noop" : "git";
-
-  // 手順 8：UseCase と RunCollection の組み立て
-  const runCollection = new RunCollection({
-    collectArticles: new CollectArticles(bindings, hasher, logger),
-    detectDiff: new DetectDiff(logger),
-    publishArticles: new PublishArticles(writer, publisher, knownCompanyIds, logger),
-    notify: new NotifyNewArticles(notificationGateway, logger),
-    reader: articlesFileStore,
-    clock,
-    companies,
-    notificationGatewayKind: notificationSetup.kind,
-    publisherKind,
-    logger,
-  });
-
-  const summaryStore = new RunSummaryStore(resolveSummaryPath(repoRoot));
-
-  let summary: CompletedRunSummary;
+  // 手順 11：手順 5 でゲートウェイを生成した後に終わるすべての経路（手順 6 の失敗など、手順 10 を通らない
+  // 経路を含む）で 1 回だけ解放する。close() は例外を投げず有限時間で解決し、終了コードは変えない（§4.5・§5.4）
   try {
-    summary = await runCollection.execute({
-      forceFullCrawl: process.env.CURTAINCALL_FULL_CRAWL === "1",
-      dryRun: isDryRun,
-    });
-  } catch (e) {
-    // 手順 10（catch のため手順 9 より先に書く）：致命的失敗。サマリに書ける範囲だけを書き、終了コード 1。
-    // FailedRunSummary の全フィールドの値と error の種類による分岐は buildFailureSummary（application）
-    // が決める。main.ts は error をそのまま渡すだけで instanceof を書かない（§8 #46）
-    logger.error("collection failed", { error: formatError(e) });
-    await writeSummary(
-      summaryStore,
-      buildFailureSummary({
-        clock,
-        error: e,
-        publisherKind,
-        notificationGatewayKind: notificationSetup.kind,
-      }),
+    // 手順 5（続き）：残りの具象の生成
+    const clock = new SystemClock();
+    const hasher = new Sha256Hasher();
+    const http = new FetchHttpClient(
+      { ...DEFAULT_FETCH_HTTP_CLIENT_OPTIONS, userAgent: USER_AGENT },
       logger,
     );
-    process.exitCode = 1;
-    return;
-  }
+    const articlesFileStore = new ArticlesFileStore(repoRoot, logger);
+    const gitPublisher = new GitArticlesPublisher(repoRoot, logger);
 
-  // 手順 9
-  await writeSummary(summaryStore, summary, logger);
-  logger.info("done", {
-    // 意図的な固定サブセット（§4.8 の RunSummary 全フィールドではなく、運用で確認する頻度が高いものだけを
-    // 列挙する。フィールド追加のたびに追随する必要はない）
-    publishOutcome: summary.publishOutcome,
-    changed: summary.changed,
-    collected: summary.collected,
-    discarded: summary.discarded,
-    created: summary.created,
-    updated: summary.updated,
-    dropped: summary.dropped,
-    survivingChanges: summary.survivingChanges,
-    sourceFailures: summary.sourceFailures.length,
-    notificationsSent: summary.notificationsSent,
-    notificationsFailed: summary.notificationsFailed,
-    durationMs: summary.durationMs,
-  });
-  process.exitCode = 0;
+    // 手順 6
+    const bindings = buildSourceBindings(companies, { http, logger });
+    const knownCompanyIds = new Set(companies.map((c) => c.id));
+
+    // 手順 7：CURTAINCALL_DRY_RUN=1 のときは書き出し・確定を Noop に差し替える
+    // 通知ゲートウェイは差し替えの対象に含めない（手順 5 が dryRun のとき最初から Noop を生成する。§8 #69）。
+    // ArticleReader は ArticlesFileStore のまま。dryRun は手順 4b で求めた値を使う
+    const writer: ArticleWriter = dryRun ? new NoopArticleWriter(logger) : articlesFileStore;
+    const publisher: ArticlesPublisher = dryRun ? new NoopArticlesPublisher(logger) : gitPublisher;
+    // publisherKind はサマリへの記録専用（§4.8。判定には使わない。§8 #45）。差し替えの有無に従う
+    const publisherKind: PublisherKind = dryRun ? "noop" : "git";
+
+    // 手順 8：UseCase と RunCollection の組み立て
+    const runCollection = new RunCollection({
+      collectArticles: new CollectArticles(bindings, hasher, logger),
+      detectDiff: new DetectDiff(logger),
+      publishArticles: new PublishArticles(writer, publisher, knownCompanyIds, logger),
+      notify: new NotifyNewArticles(notificationGateway, logger),
+      reader: articlesFileStore,
+      clock,
+      companies,
+      notificationGatewayKind,
+      publisherKind,
+      logger,
+    });
+
+    const summaryStore = new RunSummaryStore(resolveSummaryPath(repoRoot));
+
+    let summary: CompletedRunSummary;
+    try {
+      summary = await runCollection.execute({
+        forceFullCrawl: process.env.CURTAINCALL_FULL_CRAWL === "1",
+        dryRun,
+      });
+    } catch (e) {
+      // 手順 10（catch のため手順 9 より先に書く）：致命的失敗。サマリに書ける範囲だけを書き、終了コード 1。
+      // FailedRunSummary の全フィールドの値と error の種類による分岐は buildFailureSummary（application）
+      // が決める。main.ts は error をそのまま渡すだけで instanceof を書かない（§8 #46）
+      logger.error("collection failed", { error: formatError(e) });
+      await writeSummary(
+        summaryStore,
+        buildFailureSummary({
+          clock,
+          error: e,
+          publisherKind,
+          notificationGatewayKind,
+        }),
+        logger,
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    // 手順 9
+    await writeSummary(summaryStore, summary, logger);
+    logger.info("done", {
+      // 意図的な固定サブセット（§4.8 の RunSummary 全フィールドではなく、運用で確認する頻度が高いものだけを
+      // 列挙する。フィールド追加のたびに追随する必要はない）
+      publishOutcome: summary.publishOutcome,
+      changed: summary.changed,
+      collected: summary.collected,
+      discarded: summary.discarded,
+      created: summary.created,
+      updated: summary.updated,
+      dropped: summary.dropped,
+      survivingChanges: summary.survivingChanges,
+      sourceFailures: summary.sourceFailures.length,
+      notificationsSent: summary.notificationsSent,
+      notificationsFailed: summary.notificationsFailed,
+      durationMs: summary.durationMs,
+    });
+    process.exitCode = 0;
+  } finally {
+    await notificationGateway.close();
+  }
 }
 
 // process.exit() は呼ばず process.exitCode を設定して自然終了させる（stdout のフラッシュを待つため）

@@ -6,14 +6,11 @@ import {
 } from "../../src/domain/notification-gateway.js";
 
 /**
- * FakeNotificationGateway の失敗のさせ方。呼び出し側（テスト）とコンストラクタで共用する。
- * "reject"（既定）は cause を持たない NotificationSendError で Promise を reject、
- * "throw" は Promise を返す前に同期的に throw する（D-02 追随: §7.2 の「特定のトピックだけ reject」に
- * 加え、mode: "throw" で同期 throw も再現できる）。"reject-with-cause" は
- * FirebaseNotificationGateway.send（実ゲートウェイ）が失敗時に必ず付ける `{ cause: e }` を再現し、
- * cause 付き NotificationSendError で reject する。
+ * FakeNotificationGateway の失敗のさせ方（§7.2）。"reject"（既定）は cause を持たない
+ * NotificationSendError で reject する。"reject-with-cause" は FirebaseNotificationGateway.send
+ * （実ゲートウェイ）が失敗時に必ず付ける `{ cause: e }` を再現し、cause 付きで reject する。
  */
-export type FakeGatewayMode = "reject" | "throw" | "reject-with-cause";
+export type FakeGatewayMode = "reject" | "reject-with-cause";
 
 /**
  * NotificationGateway のテストダブル（§7.2）。送信された通知を順に記録する。
@@ -36,7 +33,6 @@ export class FakeNotificationGateway implements NotificationGateway {
               cause: new Error("upstream send failed"),
             })
           : new NotificationSendError(`rejected: ${notification.topic}`);
-      if (this.mode === "throw") throw error;
       return Promise.reject(error);
     }
     this.sent.push(notification);

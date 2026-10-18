@@ -30,10 +30,9 @@ const FORMAT_ERROR_MAX_DEPTH = 5;
  *
  * §4.7 の formatError（コード片）のとおり：cause が循環参照・異常に深い連鎖・String() できない値
  * であっても例外を投げず 1 行に収める（連鎖の深さは FORMAT_ERROR_MAX_DEPTH、循環は訪問済み Error の
- * seen で打ち切り、String() が投げたら "[unprintable]" にする。ログ整形自体が失敗して元のエラーが
- * 握りつぶされる事態を避けるため）。
- * D-02 追随: コード片は MAX_CAUSE_DEPTH のみで深さを打ち切り、seen（循環参照対策）を持たない。
- * 名前と循環対策の差は D-02 側の追随が必要。
+ * seen で打ち切り、String() が投げたら "[unprintable]" にする。Error 本体の name / message が文字列化
+ * できなければ "[unprintable]"、cause の読み取りだけが失敗したときは head までを返す。ログ整形自体が
+ * 失敗して元のエラーが握りつぶされる事態を避けるため）。
  */
 export function formatError(e: unknown): string {
   return formatErrorChain(e, new Set(), 0);
@@ -42,11 +41,24 @@ export function formatError(e: unknown): string {
 /** formatError の再帰本体。seen（訪問済み Error）と depth（連鎖の深さ）は公開 API には出さない内部状態 */
 function formatErrorChain(e: unknown, seen: ReadonlySet<unknown>, depth: number): string {
   if (e instanceof Error) {
-    const head = `${e.name}: ${e.message}`;
-    if (e.cause == null || depth >= FORMAT_ERROR_MAX_DEPTH || seen.has(e)) return head;
+    let head: string;
+    try {
+      // name / message は任意の値・getter でありうる（message が Symbol なら TypeError、
+      // null プロトタイプのオブジェクトなら toString が無く TypeError）
+      head = `${e.name}: ${e.message}`;
+    } catch {
+      return "[unprintable]";
+    }
+    let cause: unknown;
+    try {
+      cause = e.cause; // cause も throw する getter でありうる
+    } catch {
+      return head; // head だけは読めているので捨てない
+    }
+    if (cause == null || depth >= FORMAT_ERROR_MAX_DEPTH || seen.has(e)) return head;
     const nextSeen = new Set(seen);
     nextSeen.add(e);
-    return `${head} <- ${formatErrorChain(e.cause, nextSeen, depth + 1)}`;
+    return `${head} <- ${formatErrorChain(cause, nextSeen, depth + 1)}`;
   }
   try {
     return String(e);

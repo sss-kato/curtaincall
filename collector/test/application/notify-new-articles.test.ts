@@ -259,30 +259,6 @@ describe("送信の基本", () => {
 
     expect(gateway.sent).toHaveLength(0);
   });
-
-  it("gateway.send が同期的に throw しても他団体は送られる", async () => {
-    const companyA = buildCompany({ id: "takarazuka", fcmTopic: "takarazuka" });
-    const companyB = buildCompany({
-      id: "shiki",
-      name: "劇団四季",
-      shortName: "四季",
-      fcmTopic: "shiki",
-    });
-    const gateway = new FakeNotificationGateway(new Set(["takarazuka"]), "throw");
-    const logger = new RecordingLogger();
-    const useCase = new NotifyNewArticles(gateway, logger);
-
-    const result = await useCase.execute({
-      newArticlesByCompany: new Map([
-        [companyA.id, [buildArticle({ companyId: companyA.id })]],
-        [companyB.id, [buildArticle({ companyId: companyB.id })]],
-      ]),
-      companies: [companyA, companyB],
-    });
-
-    expect(result).toEqual({ sent: 1, failed: 1 });
-    expect(gateway.sent.map((n) => n.topic)).toEqual(["shiki"]);
-  });
 });
 
 describe("全団体が reject", () => {

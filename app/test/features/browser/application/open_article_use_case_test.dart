@@ -2,12 +2,7 @@
 /// `group('URL 検証')`・`group('ブラウザの選択')`・`group('既読化')` と
 /// 1 対 1（§5.3 手順 1〜5）。ケースを増やすときは §7 の表にも行を足す。
 ///
-/// `group('URL 検証')` には §7 に無い 2 ケース
-/// （`javascript://example.com/%0aalert(1)`・`ftp://example.com/a`）を
-/// 追加している。どちらも host ありの非 http スキームで、§7 の行が使う
-/// `javascript:alert(1)`（host 無し）だけでは検知できない
-/// `uri.scheme` 判定（手順 1 の `(uri.scheme != 'http' && uri.scheme !=
-/// 'https')`）の識別点を補うもの。
+/// 識別点のケースの理由は各行のコメントを参照。
 library;
 
 import 'package:curtaincall/core/database/app_database.dart';
@@ -87,6 +82,10 @@ void main() {
       '/relative',
       '',
       'https://',
+      // userInfo あり（詐称。scheme は `https`・host は `evil.com` で手順 1 の
+      // (a)〜(c) をすべて通るため、(d) の回帰を検知できる唯一のケース。
+      // D-05 §8 #48）。
+      'https://takarazuka.jp@evil.com/x',
     ]) {
       final label = invalidUrl.isEmpty ? '空文字' : invalidUrl;
       test('$label → ArticleNotOpened(invalidUrl)、open は呼ばれず '

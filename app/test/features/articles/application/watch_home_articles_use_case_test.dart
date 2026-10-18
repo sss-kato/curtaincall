@@ -1,12 +1,32 @@
+/// `WatchHomeArticlesUseCase` のテスト。D-05 §7 の UseCase テストの表の
+/// `WatchHomeArticlesUseCase` の行と、group('団体タブ')・group('未読フィルタ')・
+/// group('並び順')・group('再発火')・group('表示・遷移') の各ケース一覧と 1 対 1。
+/// ケースを増やすときは §7 の該当 group のケース一覧にも行を足す。
+///
+/// group('自動リトライ') だけは §7 に行が無い（T-61。設計書への反映は
+/// FOLLOWUPS 3-32 の D-05 reopen で行う）。本 UseCase を包む
+/// `homeArticlesProvider` と、その入力の `unreadFilterProvider` が
+/// `retry: noRetry` を持つこと（D-04 §8 #61・#67）を、Repository が Exception
+/// を投げたときの状態と呼び出し回数で固定する。
+library;
+
+import 'package:curtaincall/core/di/providers.dart';
+import 'package:curtaincall/core/di/settings_providers.dart';
 import 'package:curtaincall/features/articles/application/watch_home_articles_use_case.dart';
+import 'package:curtaincall/features/articles/domain/article_list_item.dart';
+import 'package:curtaincall/features/articles/domain/article_query_repository.dart';
 import 'package:curtaincall/features/articles/domain/article_sync_repository.dart';
 import 'package:curtaincall/features/articles/domain/category.dart';
 import 'package:curtaincall/features/articles/infrastructure/drift_article_repository.dart';
 import 'package:curtaincall/features/articles/infrastructure/drift_read_state_repository.dart';
+import 'package:curtaincall/features/articles/presentation/home_providers.dart';
 import 'package:curtaincall/features/saved/infrastructure/drift_saved_article_repository.dart';
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/collect_stream.dart';
+import '../../../helpers/delegating_settings_repository.dart';
 import '../../../helpers/in_memory_database.dart';
 import '../../../helpers/seed_articles.dart';
 import '../../../helpers/test_articles.dart';
@@ -362,4 +382,132 @@ void main() {
       },
     );
   });
+
+  group('自動リトライ', () {
+    // Riverpod 3 の既定のリトライ（ProviderContainer.defaultRetry）は全 10 回の
+    // 待ちの合計が約 38 秒。仮想時間でそれを超えて進めても呼び出しが 1 回の
+    // ままなら、再試行していない。最初の検査の前は Duration.zero だけ進め、
+    // マイクロタスクに加えて 0 秒のタイマーも消化して最初の失敗まで落ち着かせる
+    // （flushMicrotasks だけでは AsyncLoading のまま）。
+    const beyondDefaultRetries = Duration(seconds: 40);
+
+    test('watchInFeed() が Exception を流す → homeArticlesProvider は 1 回で '
+        'AsyncError（isLoading: false）になり、watchInFeed() を再び呼ばない', () {
+      fakeAsync((async) {
+        final articles = _CountingArticleQueryRepository(
+          () => Stream.error(Exception('watchInFeed failed')),
+        );
+        final container = ProviderContainer.test(
+          overrides: [
+            articleQueryRepositoryProvider.overrideWithValue(articles),
+            settingsRepositoryProvider.overrideWithValue(
+              _FixedUnreadFilterSettings(),
+            ),
+          ],
+        );
+        final provider = homeArticlesProvider(companyId: null);
+        container.listen(provider, (_, _) {});
+
+        async.elapse(Duration.zero);
+        final state = container.read(provider);
+        expect(state, isA<AsyncError<HomeArticles>>());
+        expect(state.isLoading, isFalse);
+
+        async.elapse(beyondDefaultRetries);
+        expect(articles.watchInFeedCalls, 1);
+        final after = container.read(provider);
+        expect(after, isA<AsyncError<HomeArticles>>());
+        expect(after.isLoading, isFalse);
+      });
+    });
+
+    /// 未読フィルタの購読が毎回失敗し、記事は空の一覧を流す状態で
+    /// homeArticlesProvider を購読し、最初の失敗まで落ち着かせる。
+    ({
+      ProviderContainer container,
+      _FailingUnreadFilterSettings settings,
+      _CountingArticleQueryRepository articles,
+    })
+    listenWithFailingUnreadFilter(FakeAsync async) {
+      final settings = _FailingUnreadFilterSettings();
+      final articles = _CountingArticleQueryRepository(
+        () => Stream.value(const []),
+      );
+      final container = ProviderContainer.test(
+        overrides: [
+          articleQueryRepositoryProvider.overrideWithValue(articles),
+          settingsRepositoryProvider.overrideWithValue(settings),
+        ],
+      )..listen(homeArticlesProvider(companyId: null), (_, _) {});
+      async.elapse(Duration.zero);
+      return (container: container, settings: settings, articles: articles);
+    }
+
+    test('watchUnreadFilter() が Exception を流す → unreadFilterProvider は 1 回で '
+        'AsyncError（isLoading: false）になり、再購読しない', () {
+      fakeAsync((async) {
+        final (:container, :settings, articles: _) =
+            listenWithFailingUnreadFilter(async);
+
+        final filter = container.read(unreadFilterProvider);
+        expect(filter, isA<AsyncError<bool>>());
+        expect(filter.isLoading, isFalse);
+
+        async.elapse(beyondDefaultRetries);
+        expect(settings.watchUnreadFilterCalls, 1);
+        final filterAfter = container.read(unreadFilterProvider);
+        expect(filterAfter, isA<AsyncError<bool>>());
+        expect(filterAfter.isLoading, isFalse);
+      });
+    });
+
+    test('未読フィルタがエラーでも homeArticlesProvider は既定 OFF で '
+        '1 度だけ張られる（D-05 §6）', () {
+      fakeAsync((async) {
+        final (:container, settings: _, :articles) =
+            listenWithFailingUnreadFilter(async);
+
+        async.elapse(beyondDefaultRetries);
+        expect(articles.watchInFeedCalls, 1);
+        final after = container.read(homeArticlesProvider(companyId: null));
+        expect(after, isA<AsyncData<HomeArticles>>());
+        expect(after.isLoading, isFalse);
+      });
+    });
+  });
+}
+
+/// `watchInFeed()` が毎回 [_feed] の Stream を返し、呼ばれた回数を数える
+/// [ArticleQueryRepository]。
+final class _CountingArticleQueryRepository implements ArticleQueryRepository {
+  _CountingArticleQueryRepository(this._feed);
+
+  final Stream<List<ArticleListItem>> Function() _feed;
+  int watchInFeedCalls = 0;
+
+  @override
+  Stream<int> watchCount() => throw UnimplementedError();
+
+  @override
+  Stream<List<ArticleListItem>> watchInFeed() {
+    watchInFeedCalls++;
+    return _feed();
+  }
+}
+
+/// 未読フィルタ OFF を流す SettingsRepository（他のメソッドは呼ばれない）。
+final class _FixedUnreadFilterSettings extends DelegatingSettingsRepository {
+  @override
+  Stream<bool> watchUnreadFilter() => Stream.value(false);
+}
+
+/// `watchUnreadFilter()` が毎回 Exception を流す SettingsRepository。
+final class _FailingUnreadFilterSettings extends DelegatingSettingsRepository {
+  int watchUnreadFilterCalls = 0;
+
+  @override
+  Stream<bool> watchUnreadFilter() {
+    watchUnreadFilterCalls++;
+    return Stream.error(Exception('watchUnreadFilter failed'));
+  }
 }

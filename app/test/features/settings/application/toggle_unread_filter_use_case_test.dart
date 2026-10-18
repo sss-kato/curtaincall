@@ -1,4 +1,4 @@
-/// `ToggleUnreadFilterUseCase` のテスト。D-05 §7 group('切替') の 4 ケースと
+/// `ToggleUnreadFilterUseCase` のテスト。D-05 §7 group('切替') のケース一覧と
 /// 1 対 1。ケースを増やすときは §7 の group('切替') のケース一覧にも行を足す。
 library;
 

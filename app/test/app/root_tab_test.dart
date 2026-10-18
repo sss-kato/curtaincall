@@ -1,3 +1,11 @@
+/// `shouldNotifyReselect` のテスト。D-04 §7「純粋関数の直接テスト（例外）」の
+/// 表の `shouldNotifyReselect` の行に対応する（S-00 §8 #8・D-04 §5.8）。
+/// ケースを増やすときは §7 の表の同じ行にも足す。
+///
+/// `group('RootTab.notifiesReselect')` は §7 の表に行が無い（判定が参照する
+/// enum の getter の確認。D-04 §5.8）。
+library;
+
 import 'package:curtaincall/app/root_tab.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -1,3 +1,11 @@
+/// `PushSubscriptionCoordinator` のテスト。D-04 §7 の UseCase テストの表の
+/// `PushSubscriptionCoordinator` の行と、group('直列化')・group('失敗') の
+/// ケース一覧に対応する（§8 #41）。ケースを増やすときは §7 の該当 group の
+/// ケース一覧にも行を足す。
+///
+/// §7 との差分（欠落ケース等）は docs/tasks/FOLLOWUPS.md 2-20 を参照。
+library;
+
 import 'dart:async';
 
 import 'package:curtaincall/features/notifications/application/push_subscription_coordinator.dart';

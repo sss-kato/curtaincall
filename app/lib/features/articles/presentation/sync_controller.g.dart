@@ -53,7 +53,7 @@ final class SyncControllerProvider
   }
 }
 
-String _$syncControllerHash() => r'0789026e78cf7129d2a0e416e13e160880b7c8b3';
+String _$syncControllerHash() => r'a20c176214034b281543ffc7d99213ad08bf9b5e';
 
 /// `SyncCoordinator.events` を `SyncStatus` に写すだけの Notifier
 /// （D-04 §5.3）。状態を更新するのは [_onEvent] だけ。配線と写しだけを

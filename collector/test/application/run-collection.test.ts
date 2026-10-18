@@ -563,6 +563,23 @@ describe("sourceFailures の無害化（§8 #50）", () => {
     expect(Array.from(sanitized).length).toBe(200);
     expect(sanitized.endsWith("😀")).toBe(true);
   });
+
+  it("バックティックを含む message → 結果にバックティックが 1 つも残らない（§5.6 がコードスパンで囲むため。§4.8 手順 1）", async () => {
+    const message = 'parse failed at `<div class="news">` and ``x``';
+    const failures: readonly SourceFailure[] = [
+      { companyId: "co_b", sourceId: "co_b", reason: "error", message },
+    ];
+    const { runCollection } = setup({
+      previous: buildArticlesFile([buildArticle()]),
+      collectResult: { articles: [buildCollectedArticle()], failures, discardedByCompany: {} },
+    });
+
+    const summary = await runCollection.execute({ forceFullCrawl: false, dryRun: false });
+
+    const sanitized = summary.sourceFailures[0]?.message ?? "";
+    expect(sanitized).not.toContain("`");
+    expect(sanitized).toBe('parse failed at  <div class="news">  and  x');
+  });
 });
 
 describe("安全条件（§8 #29）", () => {

@@ -1,3 +1,9 @@
+/// `ToggleSavedUseCase` のテスト。D-05 §7 の UseCase テストの表の
+/// `ToggleSavedUseCase` の行と、group('保存と解除') のケース一覧と 1 対 1
+/// （S-00/A-11、S-02 §7.1）。ケースを増やすときは §7 の group('保存と解除')
+/// のケース一覧にも行を足す。
+library;
+
 import 'package:curtaincall/features/saved/application/toggle_saved_use_case.dart';
 import 'package:curtaincall/features/saved/infrastructure/drift_saved_article_repository.dart';
 import 'package:drift/native.dart' show SqliteException;

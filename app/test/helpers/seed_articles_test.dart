@@ -1,18 +1,24 @@
-// `test/helpers/seed_articles.dart` 自身の契約テスト（CLAUDE.md「テスト方針」の
-// 例外。D-05 §7・§8 #36）。`seedArticles` は多くの UseCase テストの前提を
-// 作る単一障害点のため、D-05 §7 の `ArgumentError` 全ケースと `StateError`
-// 1 ケースの引数検証を直接テストする。件数の担保は `group('引数の検証')`
-// 内の meta テスト（[_buildArgumentErrorCases] 参照）に置く。
-//
-// D-05 §7 の各ケースを [_buildArgumentErrorCases] で表（[_ArgumentErrorCase]
-// のフラットなリスト）に展開し、[main] で `caseText` ごとにまとめて
-// group / test に変換している（複数経路のケースは group 名が `caseText`、
-// test 名が `branch`。単一経路のケースは `branch` が無く、そのまま
-// `caseText` が test 名）。同一メッセージで複数の入力パターン（id 重複が
-// inserts・outOfFeed・withUpdateBadge・readIds のどこで起きたか等）から
-// 発火しうるケースは、パターンごとに独立した test に展開して fail
-// isolation を確保する（1 つの test の中でループすると、先頭のパターンが
-// 落ちた周では残りが一度も実行されない）。
+/// `test/helpers/seed_articles.dart` 自身の契約テスト（CLAUDE.md「テスト方針」の
+/// 例外）。D-05 §7 の UseCase テストの表の `seedArticles`（テストヘルパの契約。
+/// §8 #36）の行と、group('引数の検証')・group('1 回だけ') のケース一覧に対応
+/// する。ケースを増やすときは §7 の該当 group のケース一覧にも行を足す。
+///
+/// `seedArticles` は多くの UseCase テストの前提を作る単一障害点のため、
+/// D-05 §7 の `ArgumentError` 全ケースと `StateError` 1 ケースの引数検証を
+/// 直接テストする。件数の担保は `group('引数の検証')` 内の meta テスト
+/// （[_buildArgumentErrorCases] 参照）に置く。
+///
+/// D-05 §7 の各ケースを [_buildArgumentErrorCases] で表（[_ArgumentErrorCase]
+/// のフラットなリスト）に展開し、[main] で `caseText` ごとにまとめて
+/// group / test に変換している（複数経路のケースは group 名が `caseText`、
+/// test 名が `branch`。単一経路のケースは `branch` が無く、そのまま
+/// `caseText` が test 名）。同一メッセージで複数の入力パターン（id 重複が
+/// inserts・outOfFeed・withUpdateBadge・readIds のどこで起きたか等）から
+/// 発火しうるケースは、パターンごとに独立した test に展開して fail
+/// isolation を確保する（1 つの test の中でループすると、先頭のパターンが
+/// 落ちた周では残りが一度も実行されない）。
+library;
+
 import 'package:collection/collection.dart';
 import 'package:curtaincall/core/database/app_database.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -1,6 +1,6 @@
 /// `UpdateNotificationSettingUseCase` のテスト。D-05 §7 group('トグル') の
-/// 6 ケースと 1 対 1。ケースを増やすときは §7 の group('トグル') のケース一覧
-/// にも行を足す。
+/// ケース一覧と 1 対 1。ケースを増やすときは §7 の group('トグル') のケース
+/// 一覧にも行を足す。
 library;
 
 import 'package:curtaincall/core/database/app_database.dart';
@@ -12,6 +12,7 @@ import 'package:curtaincall/features/settings/infrastructure/drift_settings_repo
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/collect_stream.dart';
+import '../../../helpers/delegating_settings_repository.dart';
 import '../../../helpers/in_memory_database.dart';
 
 class _Env {
@@ -38,6 +39,18 @@ _Env _buildEnv({
 
 SettingsRepository _identity(SettingsRepository settings) => settings;
 
+/// `settings` テーブルのうち `notification.*` 以外の行（key → value）。
+/// UseCase が通知設定以外の行（browser・未読フィルタ・feed_etag 等）に
+/// 触れていないことを実行前後の比較で確かめるために使う。
+Future<Map<String, String>> _nonNotificationRows(AppDatabase db) async {
+  final rows = await db.select(db.settings).get();
+  return {
+    for (final row in rows)
+      if (!row.key.startsWith(SettingKeys.notificationPrefix))
+        row.key: row.value,
+  };
+}
+
 Future<PushSubscriptionSyncResult> _emptySync() async =>
     PushSubscriptionSyncResult(
       subscribed: const [],
@@ -45,18 +58,12 @@ Future<PushSubscriptionSyncResult> _emptySync() async =>
       failed: const [],
     );
 
-/// [SettingsRepository.setNotificationEnabled] が常に例外を投げるテストダブル
-/// （他は [DriftSettingsRepository] に委譲する。本テストで使わない browser 系は
-/// `UnimplementedError`）。
-class _SetNotificationEnabledFailingSettingsRepository
-    implements SettingsRepository {
-  _SetNotificationEnabledFailingSettingsRepository(this._delegate);
-
-  final SettingsRepository _delegate;
-
-  @override
-  Future<Map<String, bool>> notificationSettings() =>
-      _delegate.notificationSettings();
+/// [SettingsRepository] の実物ラッパ。`setNotificationEnabled()` で常に例外を
+/// 投げ、他のメソッドは [DriftSettingsRepository] へ転送する
+/// （`UpdateNotificationSettingUseCase` 手順 1 の失敗を再現する。D-05 §7）。
+final class _SetNotificationEnabledFailingSettingsRepository
+    extends DelegatingSettingsRepository {
+  _SetNotificationEnabledFailingSettingsRepository(super.inner);
 
   @override
   Future<void> setNotificationEnabled(
@@ -65,32 +72,6 @@ class _SetNotificationEnabledFailingSettingsRepository
   }) async {
     throw StateError('setNotificationEnabled に失敗');
   }
-
-  @override
-  Stream<Map<String, bool>> watchNotificationSettings() =>
-      _delegate.watchNotificationSettings();
-
-  @override
-  Future<BrowserChoice> browserChoice() =>
-      throw UnimplementedError('本テストでは使わない');
-
-  @override
-  Stream<BrowserChoice> watchBrowserChoice() =>
-      throw UnimplementedError('本テストでは使わない');
-
-  @override
-  Future<void> setBrowserChoice(BrowserChoice choice) =>
-      throw UnimplementedError('本テストでは使わない');
-
-  @override
-  Future<bool> unreadFilter() => _delegate.unreadFilter();
-
-  @override
-  Stream<bool> watchUnreadFilter() => _delegate.watchUnreadFilter();
-
-  @override
-  Future<void> setUnreadFilter({required bool enabled}) =>
-      _delegate.setUnreadFilter(enabled: enabled);
 }
 
 void main() {
@@ -167,12 +148,22 @@ void main() {
     test('他の団体の行は変わらない', () async {
       final env = _buildEnv(syncSubscriptions: _emptySync);
       await env.settings.setNotificationEnabled('shiki', enabled: false);
+      // 行が無いと前後とも空で削除を見逃すため実際に置く。browser は既定値
+      // （inApp）以外にして、既定値への書き戻しも検知できるようにする。
+      await env.db.upsertSetting(
+        SettingKeys.browser,
+        BrowserChoice.chrome.value,
+      );
+      await env.db.upsertSetting(SettingKeys.unreadFilter, '0');
+      await env.db.upsertSetting(SettingKeys.feedEtag, 'etag-1');
+      final otherRowsBefore = await _nonNotificationRows(env.db);
 
       await env.useCase.execute('toho', enabled: false);
 
       final saved = await env.settings.notificationSettings();
       expect(saved['shiki'], isFalse);
       expect(saved['toho'], isFalse);
+      expect(await _nonNotificationRows(env.db), otherRowsBefore);
     });
 
     test("watchNotificationSettings() を購読 → execute('toho', enabled: false) → "

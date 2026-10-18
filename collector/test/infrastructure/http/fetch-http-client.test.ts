@@ -12,7 +12,7 @@ import { stubFetch } from "../../helpers/stub-fetch.js";
 const USER_AGENT =
   "CurtainCall/1.0 (personal news reader; +https://github.com/sss-kato/curtaincall)";
 
-// D-02 追随: 実装の既定値（DEFAULT_FETCH_HTTP_CLIENT_OPTIONS）をそのままテストの基準値にする
+// 実装の既定値（DEFAULT_FETCH_HTTP_CLIENT_OPTIONS。§5.7 のコード片）をテストの基準値にする
 const BASE_OPTIONS: FetchHttpClientOptions = {
   ...DEFAULT_FETCH_HTTP_CLIENT_OPTIONS,
   userAgent: USER_AGENT,
@@ -36,6 +36,11 @@ function concatBytes(...parts: readonly Uint8Array[]): Uint8Array {
 // "テスト" の Shift_JIS / EUC-JP バイト列（python3 の str.encode で確認した固定値）
 const SHIFT_JIS_TEST_WORD = Uint8Array.from([131, 101, 131, 88, 131, 103]);
 const EUC_JP_TEST_WORD = Uint8Array.from([165, 198, 165, 185, 165, 200]);
+
+// real timers で実タイムアウトを起こすための値。STUB_DELAY_MS > REAL_TIMEOUT_MS を保つ
+// （stub の応答が timeoutMs より先に返るとタイムアウトが起きず、検証にならない）
+const REAL_TIMEOUT_MS = 50;
+const STUB_DELAY_MS = 200;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -106,8 +111,7 @@ describe("リトライ", () => {
     expect(controller.calls).toHaveLength(2);
   });
 
-  // §7.3 は "AbortError（タイムアウト）" と表記するが、Node 22 の AbortSignal.timeout は
-  // "TimeoutError" を投げる
+  // タイムアウトは AbortSignal.timeout が投げる DOMException の name === "TimeoutError"（§5.7 手順 4・§7.3）
   it("タイムアウト（TimeoutError）はリトライ対象になる", async () => {
     const controller = stubFetch({
       "https://a.example.com/x": [
@@ -123,7 +127,8 @@ describe("リトライ", () => {
     expect(controller.calls).toHaveLength(2);
   });
 
-  // 設計書表記（AbortError）への保険。stub が明示的に abort する経路も対象になることを確認する
+  // リトライ判定は例外名ではなく status の有無で決まる（§5.7 手順 4）。収集の経路では出ない
+  // AbortController.abort() 由来の "AbortError" も同じく対象になることを固定する
   it("AbortError（明示的な中断）もリトライ対象になる", async () => {
     const controller = stubFetch({
       "https://a.example.com/x": [
@@ -137,6 +142,54 @@ describe("リトライ", () => {
     await vi.advanceTimersByTimeAsync(BASE_OPTIONS.retryDelayMs);
     await expect(promise).resolves.toBe("ok");
     expect(controller.calls).toHaveLength(2);
+  });
+
+  it("タイムアウトが 2 回続けば cause が TimeoutError の HttpError になる（呼び出し 2 回）", async () => {
+    const controller = stubFetch({
+      "https://a.example.com/x": [{ kind: "timeout" }, { kind: "timeout" }],
+    });
+    const client = new FetchHttpClient(BASE_OPTIONS, new RecordingLogger());
+
+    const promise = client.getText("https://a.example.com/x");
+    // 拒否値の待ち受けをタイマー進行より先に取り付ける（advanceTimersByTimeAsync の途中で
+    // reject されるため、先に catch を付けないと未処理の拒否になる）。
+    // cause は構造一致で済ませず DOMException であることまで固定する（素のオブジェクトや
+    // name を差し替えた別クラスを通さない。Node 22 の実例は §5.7 手順 4）
+    const settled = promise.catch((cause: unknown) => cause);
+    await vi.advanceTimersByTimeAsync(BASE_OPTIONS.retryDelayMs);
+    const error = await settled;
+    expect(error).toBeInstanceOf(HttpError);
+    if (!(error instanceof HttpError)) throw new Error("unreachable");
+    expect(error.message).toBe("request failed");
+    expect(error.status).toBeUndefined();
+    expect(error.cause).toBeInstanceOf(DOMException);
+    expect(error.cause).toMatchObject({ name: "TimeoutError" });
+    expect(controller.calls).toHaveLength(2);
+  });
+
+  // AbortSignal.timeout の内部タイマーは vitest の fake timers で進まないため、real timers で実経路を通す。
+  // AbortSignal.timeout は試行ごとに作る必要がある（中断済みの signal を渡した fetch は送信せず
+  // 即 TimeoutError になるため、使い回すとタイムアウト後のリトライが必ず失敗する。§5.7 手順 4・5、R-2）
+  it("実タイムアウトが 2 回続いても 2 回目は新しい AbortSignal で送信される（real timers）", async () => {
+    vi.useRealTimers();
+    const controller = stubFetch({
+      "https://a.example.com/x": [
+        { kind: "response", status: 200, body: utf8("ok"), delayMs: STUB_DELAY_MS },
+        { kind: "response", status: 200, body: utf8("ok"), delayMs: STUB_DELAY_MS },
+      ],
+    });
+    const client = new FetchHttpClient(
+      { ...BASE_OPTIONS, timeoutMs: REAL_TIMEOUT_MS, retryDelayMs: 10, maxRetries: 1 },
+      new RecordingLogger(),
+    );
+
+    await expect(client.getText("https://a.example.com/x")).rejects.toMatchObject({
+      message: "request failed",
+      cause: { name: "TimeoutError" },
+    });
+    expect(controller.calls).toHaveLength(2);
+    // 2 回目の signal は 1 回目と別オブジェクト（試行ごとに AbortSignal.timeout を作る）
+    expect(controller.calls[1]?.signal).not.toBe(controller.calls[0]?.signal);
   });
 
   it("本文読み取り中のタイムアウトもリトライ対象になる（呼び出し 2 回）", async () => {
@@ -197,17 +250,17 @@ describe("リトライ", () => {
     expect(signal?.aborted).toBe(false);
   });
 
-  // stub の遅延（200ms）は timeoutMs（50ms）より必ず長くする。AbortSignal.timeout の内部タイマーは
-  // vitest の fake timers で差し替えられないため、この 1 件だけ real timers で実経路を通す
+  // AbortSignal.timeout の内部タイマーは vitest の fake timers で進まないため、実タイムアウトを
+  // 検証するケースに限って real timers で実経路を通す
   it("timeoutMs を過ぎると本文読み取り前に実際にタイムアウトし、HttpError になる（real timers）", async () => {
     vi.useRealTimers();
     const controller = stubFetch({
       "https://a.example.com/x": [
-        { kind: "response", status: 200, body: utf8("ok"), delayMs: 200 },
+        { kind: "response", status: 200, body: utf8("ok"), delayMs: STUB_DELAY_MS },
       ],
     });
     const client = new FetchHttpClient(
-      { ...BASE_OPTIONS, timeoutMs: 50, maxRetries: 0 },
+      { ...BASE_OPTIONS, timeoutMs: REAL_TIMEOUT_MS, maxRetries: 0 },
       new RecordingLogger(),
     );
 

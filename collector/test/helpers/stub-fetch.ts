@@ -13,13 +13,17 @@ interface StubFetchResponseOutcome {
 }
 
 interface StubFetchTimeoutOutcome {
-  /** AbortSignal.timeout によるタイムアウトを模す（Node 22 の実際は DOMException("...", "TimeoutError")） */
+  /** AbortSignal.timeout の発火を模す（DOMException の name === "TimeoutError"。§7.2・§5.7 手順 4） */
   readonly kind: "timeout";
   readonly delayMs?: number;
 }
 
 interface StubFetchAbortOutcome {
-  /** 呼び出し側の明示的な中断を模す（DOMException("...", "AbortError")。設計書表記の旧称） */
+  /**
+   * AbortController.abort() による明示的な中断を模す（DOMException の name === "AbortError"）。
+   * 収集の経路では発火しない（§5.7 手順 4 のタイムアウトは "TimeoutError"）が、リトライ判定が
+   * 例外名ではなく status の有無で決まることを固定するために残す。
+   */
   readonly kind: "abort";
   readonly delayMs?: number;
 }
@@ -113,7 +117,7 @@ function delayOrAbort(ms: number, signal: AbortSignal | undefined): Promise<void
   });
 }
 
-/** signal.reason は lib.dom.d.ts 上 any 型のため unknown で受けて型ガードする */
+/** signal.reason は @types/node（web-globals/abortcontroller.d.ts）で any 型のため unknown で受けて型ガードする */
 function toError(reason: unknown): Error {
   return reason instanceof Error ? reason : new Error(String(reason));
 }
@@ -126,30 +130,37 @@ function extractHeaders(headers: RequestInit["headers"]): Readonly<Record<string
   return result;
 }
 
+// kind ごとの分岐は switch + never の網羅性チェックにする。StubFetchOutcome に kind を足したとき、
+// status? / body? を持つ形でも暗黙に "response" 分岐（200 の空応答）へ落ちずコンパイルエラーになる
 function resolveOutcome(outcome: StubFetchOutcome, url: string): Response {
-  if (outcome.kind === "network-error") {
-    throw new TypeError(`stubFetch: network error for ${url}`);
+  switch (outcome.kind) {
+    case "network-error":
+      throw new TypeError(`stubFetch: network error for ${url}`);
+    case "timeout":
+      throw new DOMException("stubFetch: timed out", "TimeoutError");
+    case "abort":
+      throw new DOMException("stubFetch: aborted", "AbortError");
+    case "body-error": {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(new DOMException("stubFetch: body read timed out", "TimeoutError"));
+        },
+      });
+      return new Response(body, { status: outcome.status ?? 200 });
+    }
+    case "response": {
+      const response = new Response(outcome.body ?? new Uint8Array(), {
+        status: outcome.status,
+        headers: new Headers(outcome.headers),
+      });
+      if (outcome.finalUrl !== undefined) {
+        Object.defineProperty(response, "url", { value: outcome.finalUrl });
+      }
+      return response;
+    }
+    default: {
+      const exhaustive: never = outcome;
+      throw new Error(`stubFetch: unknown outcome ${String(exhaustive)}`);
+    }
   }
-  if (outcome.kind === "timeout") {
-    throw new DOMException("stubFetch: timed out", "TimeoutError");
-  }
-  if (outcome.kind === "abort") {
-    throw new DOMException("stubFetch: aborted", "AbortError");
-  }
-  if (outcome.kind === "body-error") {
-    const body = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.error(new DOMException("stubFetch: body read timed out", "TimeoutError"));
-      },
-    });
-    return new Response(body, { status: outcome.status ?? 200 });
-  }
-  const response = new Response(outcome.body ?? new Uint8Array(), {
-    status: outcome.status,
-    headers: new Headers(outcome.headers),
-  });
-  if (outcome.finalUrl !== undefined) {
-    Object.defineProperty(response, "url", { value: outcome.finalUrl });
-  }
-  return response;
 }

@@ -124,16 +124,17 @@ export class SnapshotMissingError extends Error {
 const MAX_FAILURE_MESSAGE_LENGTH = 200;
 
 /**
- * SourceFailure.message を RunSummary へ載せる前の無害化（§4.8）。C0/C1 制御文字（改行・タブ含む）と
- * Unicode の行区切り・段落区切りの連続を半角スペース 1 つに潰す（正規表現に通常の空白を含めないため、
+ * SourceFailure.message を RunSummary へ載せる前の無害化（§4.8）。C0/C1 制御文字（改行・タブ含む）・
+ * Unicode の行区切り・段落区切り・バックティックの連続を半角スペース 1 つに潰す（バックティックは
+ * ワークフローのコードスパンを閉じさせないため。正規表現に通常の空白を含めないので、
  * 制御文字を伴わない半角スペースの連続はそのまま残る）。そのうえで前後の空白を除去し、
  * MAX_FAILURE_MESSAGE_LENGTH（200）コードポイントに切り詰める（サロゲートペアを分割しない。§8 #55）。
  * ワークフロー側の jq でも同様の処理を行う多層防御（collect.yml）。ファイル外に利用者がいないため
  * export しない（§8 #54）。
  */
 function sanitizeFailureMessage(message: string): string {
-  // eslint-disable-next-line no-control-regex -- C0/C1 制御文字（改行含む）を空白へ潰すために意図的に使用
-  const collapsed = message.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ").trim();
+  // eslint-disable-next-line no-control-regex -- C0/C1 制御文字（改行含む）とバックティックを空白へ潰すために意図的に使用
+  const collapsed = message.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029`]+/g, " ").trim();
   return Array.from(collapsed).slice(0, MAX_FAILURE_MESSAGE_LENGTH).join("");
 }
 

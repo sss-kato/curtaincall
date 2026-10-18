@@ -1,5 +1,12 @@
 // 参照する § は特記なき限り docs/design/D-02.md（§5.4）
-import { cert, getApps, initializeApp, type App, type Credential } from "firebase-admin/app";
+import {
+  cert,
+  deleteApp,
+  getApps,
+  initializeApp,
+  type App,
+  type Credential,
+} from "firebase-admin/app";
 import { getMessaging } from "firebase-admin/messaging";
 import { z } from "zod";
 import type { Logger } from "../../domain/logger.js";
@@ -7,6 +14,7 @@ import type { NewArticlesNotification } from "../../domain/notification.js";
 import {
   NotificationSendError,
   type NotificationGateway,
+  type NotificationGatewayCloser,
 } from "../../domain/notification-gateway.js";
 
 // firebase-admin の ServiceAccount への型ガード。main.ts が JSON.parse した結果
@@ -46,7 +54,7 @@ const ServiceAccountSchema = z.union([
 // ここでも throw 直前に固定文言だけを logger.warn へ出し（権威ある error は main.ts 側の 1 本に
 // 一本化する。同じ事象を 2 本の error として出さない）、かつ throw する Error の message も
 // 固定文言に差し替えておくことで、万一 message や cause がどこかでログへ渡っても秘密情報の断片が
-// 出ない（多層防御）。warn を追加した経緯・D-02 側の追随の要否はコンストラクタ冒頭のコメントを参照。
+// 出ない（多層防御）。warn は §5.4 の初期化手順 1〜3 に規定がある。
 const MISSING_SERVICE_ACCOUNT_FIELDS_MESSAGE =
   "FIREBASE_SERVICE_ACCOUNT does not have project_id/client_email/private_key";
 const INVALID_SERVICE_ACCOUNT_KEY_MESSAGE =
@@ -62,6 +70,9 @@ const FAILED_TO_INITIALIZE_APP_MESSAGE = "failed to initialize firebase app";
  */
 const DEFAULT_FIREBASE_APP_NAME = "[DEFAULT]";
 
+/** deleteApp の待機上限（ミリ秒）。settle しない解放で main.ts 手順 11 が止まるのを防ぐ（§5.4、§8 #68） */
+const CLOSE_TIMEOUT_MS = 5_000;
+
 /**
  * NotificationGateway の firebase-admin 実装（§5.4）。
  * サービスアカウントは main.ts が FIREBASE_SERVICE_ACCOUNT を JSON.parse した結果を
@@ -70,26 +81,24 @@ const DEFAULT_FIREBASE_APP_NAME = "[DEFAULT]";
  * ServiceAccount への絞り込みはここで行い、絞り込めなければ cert() / initializeApp と同じ扱いで
  * 例外にする（main.ts 手順 5 が固定文言で捕まえる）。
  * 初期化はコンストラクタで行い、send() へは遅延させない。生成・再利用した App はフィールドに保持し、
- * send() は既定アプリ（getMessaging() の引数なし解決）ではなくこの App を明示して呼ぶ（§4.7。
- * D-02 §5.4 は `getMessaging()`（引数なし）を想定しているが、既定アプリの取り違えを避けるため
- * 生成・解決した App を明示して渡す。D-02 側の追随が必要）。
- * 既定アプリの探索も getApps() を name: DEFAULT_FIREBASE_APP_NAME で絞り込んで行う（D-02 §5.4 は
- * `getApps().length === 0` での判定を想定するが、名前付きアプリだけが登録された状態を誤って
- * "初期化済み" と扱わないための差分。理由は getApps().find 呼び出し直前のコメントを参照。
- * D-02 側の追随が必要）。
+ * send() は既定アプリ（getMessaging() の引数なし解決）ではなくこの App を明示して呼ぶ
+ * （既定アプリの取り違えを避けるため。§5.4）。既定アプリの探索も getApps() を
+ * name: DEFAULT_FIREBASE_APP_NAME で絞り込んで行う（名前付きアプリだけが登録された状態を誤って
+ * "初期化済み" と扱わないため。理由は getApps().find 呼び出し直前のコメントを参照）。
+ * close() は NotificationGatewayCloser（§4.5）。
  * サービスアカウントの内容はいかなる経路でもログに出さない。
  * firebase-admin の import はこのファイルに閉じる（§8 #17）。
  */
-export class FirebaseNotificationGateway implements NotificationGateway {
+export class FirebaseNotificationGateway implements NotificationGateway, NotificationGatewayCloser {
   private readonly app: App;
+  private closePromise: Promise<void> | undefined;
 
   constructor(
     serviceAccount: Readonly<Record<string, unknown>>,
     private readonly logger: Logger,
   ) {
-    // D-02 §5.4・§6 には warn の記述が無い。ここから 3 段（スキーマ不正 / cert() 失敗 /
-    // App 解決失敗）のどの throw も、投げる直前に固定文言だけを logger.warn へ出す。
-    // Actions のログでどこまで進んで落ちたかを切り分けるための実装側の追加で、D-02 側の追随が必要。
+    // ここから 3 段（スキーマ不正 / cert() 失敗 / App 解決失敗）のどの throw も、投げる直前に
+    // 固定文言だけを logger.warn へ出す（Actions のログでどこまで進んで落ちたかを切り分けるため。§5.4）。
     const result = ServiceAccountSchema.safeParse(serviceAccount);
     if (!result.success) {
       this.logger.warn(MISSING_SERVICE_ACCOUNT_FIELDS_MESSAGE);
@@ -131,6 +140,40 @@ export class FirebaseNotificationGateway implements NotificationGateway {
       await getMessaging(this.app).send(notification);
     } catch (e) {
       throw new NotificationSendError("failed to send notification", { cause: e });
+    }
+  }
+
+  /**
+   * deleteApp と上限タイマー（CLOSE_TIMEOUT_MS）を競わせ、先に解決した方で終わる（§5.4 の close() 手順 1〜3）。
+   * 例外も無限の待機も外へ出さない。deleteApp の例外は Promise.race の外側で呑み、打ち切り後に遅れて
+   * reject した場合は追加のログを出さない。上限タイマーは finally で必ず clearTimeout する
+   * （unref では代えない。§4.5 の契約 2）。
+   */
+  close(): Promise<void> {
+    // 冪等（§4.5）：2 回目以降は同じ Promise を返す（deleteApp の再実行で偽の warn を出さない）
+    this.closePromise ??= this.doClose();
+    return this.closePromise;
+  }
+
+  private async doClose(): Promise<void> {
+    let timer: NodeJS.Timeout | undefined;
+    const timedOut = new Promise<"timeout">((resolve) => {
+      timer = setTimeout(() => {
+        resolve("timeout");
+      }, CLOSE_TIMEOUT_MS);
+    });
+    try {
+      const result = await Promise.race([
+        deleteApp(this.app).then(() => "closed" as const),
+        timedOut,
+      ]);
+      if (result === "timeout") {
+        this.logger.warn("fcm gateway close timed out");
+      }
+    } catch {
+      this.logger.warn("failed to close fcm gateway");
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

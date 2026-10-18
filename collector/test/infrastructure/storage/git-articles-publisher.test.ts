@@ -14,6 +14,13 @@ import { RecordingLogger } from "../../helpers/recording-logger.js";
 // 実体を通す必要がある姉妹ファイル articles-file-store.test.ts とは異なり、このファイルは
 // execFile しか使わないため、既定実装は必ず失敗させる（実 git を起動する経路を残さない）。
 // 各テストは publish の前に必ず stubGit を呼ぶこと。
+//
+// 前テストの stubGit の実装を捨てて上の既定実装（必ず throw）へ戻しているのは afterEach の
+// vi.restoreAllMocks()（vi.fn の元実装へのフォールバック）であり、beforeEach の vi.clearAllMocks() は
+// 呼び出し履歴を消すだけで実装は残す。afterEach を外すと前テストのスタブが漏れ、stubGit() を
+// 呼び忘れたテストが静かに通ってしまう。vi.resetAllMocks() への置き換えも不可（vitest 2 の
+// mockReset は実装を `() => undefined` にするため、コールバックが呼ばれず publish が完了しなくなる）。
+// vitest のメジャー更新時はこの前提を確認し直すこと。
 vi.mock("node:child_process", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:child_process")>();
   return {
@@ -97,12 +104,19 @@ function gitSubcommand(args: readonly string[]): string | undefined {
   return undefined;
 }
 
-function calledCommands(): string[][] {
+function calledCommands(): (readonly string[])[] {
   return vi.mocked(childProcess.execFile).mock.calls.map((call) => call[1] as string[]);
 }
 
 function calledSubcommand(sub: string): boolean {
   return calledCommands().some((c) => gitSubcommand(c) === sub);
+}
+
+/** 記録された呼び出しのうち、指定したサブコマンドの最初の引数列を返す（呼ばれていなければ失敗させる） */
+function commandArgs(sub: string): readonly string[] {
+  const found = calledCommands().find((c) => gitSubcommand(c) === sub);
+  if (found === undefined) throw new Error(`git ${sub} が呼ばれていない`);
+  return found;
 }
 
 /** GitCommandError が message に付ける診断接尾辞（先頭の空白を含む ` (code=..., signal=...)`）の書式 */
@@ -118,6 +132,18 @@ const ERROR_LOG_NAME_PREFIX = "GitCommandError: ";
 const ABSENT_EXIT_VALUE = "undefined";
 /** 実装の GIT_TIMEOUT_MS（非公開定数）と対。ずれたらどちらかの変更漏れ */
 const EXPECTED_GIT_TIMEOUT_MS = 60_000;
+/**
+ * §4.10 の ARTICLES_JSON_RELATIVE_PATH の実値と対。定数を import せず実値を書くのは、
+ * 定数が別の値へ書き換わったときに（＝配信されるファイルが静かに変わったときに）赤くするため
+ */
+const EXPECTED_ARTICLES_PATH = "data/articles.json";
+/** 実装の非公開定数 PUBLISH_BRANCH（"main"）に対応する push の refspec。同じ理由で実値を書く */
+const EXPECTED_PUSH_REFSPEC = "HEAD:main";
+/** 同じく復元（checkout）が指すリモート追跡ブランチ */
+const EXPECTED_RESTORE_REF = "origin/main";
+/** 実装の非公開定数 GIT_AUTHOR_NAME / GIT_AUTHOR_EMAIL と対（commit の -c に渡す作者） */
+const EXPECTED_GIT_AUTHOR_NAME = "github-actions[bot]";
+const EXPECTED_GIT_AUTHOR_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com";
 
 let logger: RecordingLogger;
 
@@ -368,6 +394,65 @@ describe("publish", () => {
       expect(call[2]).toMatchObject({ cwd: REPO_ROOT, timeout: EXPECTED_GIT_TIMEOUT_MS });
       expect(call[2]?.env?.GIT_TERMINAL_PROMPT).toBe("0");
     }
+  });
+
+  // いずれも §7.3 の「含む」より強い、引数列全体の完全一致で固定する（-a / --all / -f のような
+  // フラグの追加や pathspec の欠落で、配信対象やブランチが静かに変わるのを赤くするため）
+  it.each<[sub: string, expected: readonly string[]]>([
+    // add・diff の対象が data/articles.json 1 件だけであること
+    ["add", ["add", "--", EXPECTED_ARTICLES_PATH]],
+    ["diff", ["diff", "--cached", "--quiet", "--", EXPECTED_ARTICLES_PATH]],
+    // commit が pathspec を経由しない取り込み（-a / --all）を持たず、ステージ済みの内容だけを確定すること
+    [
+      "commit",
+      [
+        "-c",
+        `user.name=${EXPECTED_GIT_AUTHOR_NAME}`,
+        "-c",
+        `user.email=${EXPECTED_GIT_AUTHOR_EMAIL}`,
+        "commit",
+        "-m",
+        COMMIT_NOTE,
+      ],
+    ],
+    // push 先が origin の HEAD:main であること（PUBLISH_BRANCH は非公開なので引数列で固定する）
+    ["push", ["push", "origin", EXPECTED_PUSH_REFSPEC]],
+  ])(
+    "publish が成功する経路で git %s の引数列が対象 data/articles.json とブランチ main に固定されている（§4.10・§8 #59）",
+    async (sub, expected) => {
+      stubGit((args) => {
+        if (gitSubcommand(args) === "diff")
+          return gitFailure("git diff --cached --quiet", { code: 1, signal: null });
+        return undefined;
+      });
+      const publisher = createPublisher();
+
+      await expect(publisher.publish(COMMIT_NOTE)).resolves.toBe("published");
+
+      expect(commandArgs(sub)).toEqual(expected);
+    },
+  );
+
+  it("失敗経路の復元（checkout）が origin/main を指し、data/articles.json を -- の後に含む（§4.10・§8 #59）", async () => {
+    stubGit((args) => {
+      const sub = gitSubcommand(args);
+      // diff は「差分あり」（code=1・signal=null）を返し、commit を経て push まで進ませる
+      if (sub === "diff") return gitFailure("git diff --cached --quiet", { code: 1, signal: null });
+      if (sub === "push")
+        return gitFailure("git push origin HEAD:main", { code: 128, signal: null });
+      return undefined;
+    });
+    const publisher = createPublisher();
+
+    await expect(publisher.publish(COMMIT_NOTE)).rejects.toBeInstanceOf(PublishFailedError);
+
+    // 成功経路と同じく引数列全体の完全一致で固定する（§7.3 の「含む」より強い固定）
+    expect(commandArgs("checkout")).toEqual([
+      "checkout",
+      EXPECTED_RESTORE_REF,
+      "--",
+      EXPECTED_ARTICLES_PATH,
+    ]);
   });
 
   it("復元（checkout）自体が失敗しても warn を 1 件出すだけで、元の PublishFailedError をそのまま投げる", async () => {

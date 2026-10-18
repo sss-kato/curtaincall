@@ -1,6 +1,9 @@
 // git の stderr に含まれる認証情報のマスクと切り詰め（純粋関数。§4.10 のマスク規則表）
 
-/** ログに含める stderr の上限文字数（コードポイント単位）。長大な出力でログを埋めないため */
+/**
+ * ログに含める、stderr を含む git の出力の上限文字数（コードポイント単位）。長大な出力でログを
+ * 埋めないため。名前は歴史的経緯で STDERR だが、stderr に限らず git の出力全般に使う
+ */
 export const STDERR_LOG_LIMIT = 500;
 
 /**
@@ -18,12 +21,39 @@ const VERTICAL_WS = "\\n\\r\\u000b\\f\\u2028\\u2029";
 const SEP = `[^\\S${VERTICAL_WS}]`;
 
 /**
+ * マスク対象の認証スキーム（§4.10「対象スキーム」）。スキームを増やすときはこの配列に 1 語足す
+ * だけにし、`SEP` と tempered greedy token（後述）には触らない（§8 #62）。
+ * 語は正規表現のメタ文字を含まない小文字の英字のみ（エスケープ不要であることが前提）。
+ * メタ文字を含む語を足す場合はエスケープが必要になるため、そのときは §4.10 の改訂を伴う。
+ */
+const AUTH_SCHEMES = ["basic", "bearer", "token"] as const;
+
+/**
+ * AUTH_SCHEMES の各語が §4.10「対象スキーム」の前提（メタ文字を含まない小文字の英字）を満たすことを
+ * モジュール読み込み時に検査する。前提を破る語（`.` 入り・`|` 入りで空の選択肢を生む・`(` 等）は、
+ * 過剰マスク・スキーム語なしの `AUTHORIZATION: <値>` へのマッチ（§4.10「対象外」の破れ）・正規表現の
+ * 構文エラーを静かに起こすため、黙って組み立てずに起動時に失敗させる。
+ * 定数が編集されたときの防御であり、相手がリテラル定数なのでテストではこの throw を通らない
+ * （通常の実行では到達しない）。
+ */
+for (const scheme of AUTH_SCHEMES) {
+  if (!/^[a-z]+$/.test(scheme)) throw new Error(`invalid auth scheme: ${scheme}`);
+}
+
+/** 正規表現ソースに埋め込むスキームの選択肢（`basic|bearer|token`）。AUTH_SCHEMES から組み立てる */
+const AUTH_SCHEME_ALTERNATION = AUTH_SCHEMES.join("|");
+
+/**
  * `http.extraheader` に埋め込まれた認証情報（`AUTHORIZATION: basic <base64>` /
- * `AUTHORIZATION: bearer <token>`）に一致する。`AUTHORIZATION` と `basic` / `bearer` は
- * 大小文字を区別しない。区切り（`AUTHORIZATION` と `:` の間、`:` と `basic`/`bearer` の間、
- * `basic`/`bearer` と値の間）で区切りとして認めないのは**垂直方向の空白**（`\n` `\r` `\v`
+ * `AUTHORIZATION: bearer <token>` / `AUTHORIZATION: token <token>`）に一致する。スキーム語は
+ * `AUTH_SCHEMES` から組み立てた選択肢（`AUTH_SCHEME_ALTERNATION`）で表し、`AUTHORIZATION` と
+ * スキーム語はいずれも大小文字を区別しない（`i` フラグ）。スキーム語を伴わない
+ * `AUTHORIZATION: <値>` は対象外（§4.10「対象外」。同一行に続く診断まで伏せないため）。
+ * 区切り（`AUTHORIZATION` と `:` の間、`:` とスキーム語の間、
+ * スキーム語と値の間）で区切りとして認めないのは**垂直方向の空白**（`\n` `\r` `\v`
  * `\f` U+2028 U+2029）だけで、それ以外の空白（半角スペース・タブ・NBSP・全角空白など）は
- * 区切りとして認める（§4.10「次の空白または行末まで」＝行内で閉じる規定）。
+ * 区切りとして認める（§4.10「次の区切りまたは行末、あるいは次のヘッダ名（`authorization` +
+ * 区切り + `:`）の手前まで」＝行内で閉じる規定）。
  *
  * キャプチャグループ 1 に前置き（`AUTHORIZATION: basic` 等 + 直後の非垂直空白の連続）を残し、
  * 値部分（キャプチャグループ 2。非空白の連続だが、次のヘッダ名の手前で止まる）だけを置換で
@@ -31,11 +61,12 @@ const SEP = `[^\\S${VERTICAL_WS}]`;
  *
  * - 垂直方向の空白を区切りに含めてしまうと、値が空の `AUTHORIZATION: basic` 行の直後に無関係な
  *   診断行（別のヘッダ行を含む）が続いた場合、その行まで値に取り込んでしまい、本来残すべき
- *   後続の診断内容まで伏せてしまう過剰マスクになる（§4.10「次の空白または行末まで」＝行内で
- *   閉じる規定に反する）。また、ヘッダ名とコロンの間が改行で分かれる行跨ぎヘッダ（本来対象外）
- *   までマッチしてしまう。`\r` `\n` に加えて `\v`・`\f`・U+2028・U+2029 も ECMAScript の `\s` に
- *   含まれるため、これらも明示的に除外している（食い潰し・飛び越えの構造については後述の
- *   同一行 2 件・前置文字の項を参照）。
+ *   後続の診断内容まで伏せてしまう過剰マスクになる（§4.10「次の区切りまたは行末、あるいは次の
+ *   ヘッダ名（`authorization` + 区切り + `:`）の手前まで」＝行内で閉じる規定に反する）。また、
+ *   ヘッダ名とコロンの間が改行で分かれる行跨ぎヘッダ（本来対象外）までマッチしてしまう。
+ *   `\r` `\n` に加えて `\v`・`\f`・U+2028・U+2029 も ECMAScript の `\s` に含まれるため、
+ *   これらも明示的に除外している（食い潰し・飛び越えの構造については後述の同一行 2 件・
+ *   前置文字の項を参照）。
  * - 逆に区切りを半角スペース・タブだけに狭めると、NBSP・全角空白が区切りに使われている入力で
  *   マッチせずトークンが素通りしてしまう（秘密情報が漏れる方向の不具合）ため、垂直方向の
  *   空白以外はすべて区切りとして認める必要がある。
@@ -60,7 +91,7 @@ const SEP = `[^\\S${VERTICAL_WS}]`;
  *   U+FEFF（BOM）は ECMAScript の `\s` に含まれるため区切りとして機能し、マスク対象になる。
  *   git の stderr はヘッダ値をそのまま出すため区切りは通常の半角スペースであり、これらの文字が
  *   区切り位置に現れる経路は無い。境界値は test/infrastructure/storage/sanitize-git-output.test.ts
- *   の NUL・BOM の各テスト（名前付き `it`）を参照。
+ *   の NUL・U+0085・BOM の各テスト（名前付き `it`）を参照。
  * - **値の途中に `authorization${SEP}*:` を含む形は、その位置以降がマスク対象外**（過小マスク
  *   方向。値が `authorization:` で始まる形に限らない）。ただし base64（`A-Za-z0-9+/=`）・
  *   Bearer トークン（RFC 6750）・GitHub の `ghs_`/`ghp_` トークン（`[A-Za-z0-9_]`）はいずれも
@@ -68,13 +99,13 @@ const SEP = `[^\\S${VERTICAL_WS}]`;
  *   （名前付き `it`）を参照。
  * - 語頭に `\b` は付けない：直前が単語文字（例：`xauthorization`）でもマスクを効かせる、
  *   漏れない側に倒すための意図的な選択。
- * - **D-02 §4.10 との差分**：規則表は値の終端を「次の空白または行末」とだけ書いており、上記の
- *   次のヘッダ名での終端（食い潰し防止）・語頭に `\b` を付けないこと・区切りに垂直空白以外の
- *   全空白を認めることは規則表に無い実装側の決定（いずれも漏れない側に倒すため。D-02 追随・
- *   D-02 reopen 待ち）。
+ * - 上記のうち「値の終端を各文字位置で否定先読みする」「区切りは垂直空白以外のすべての `\s`」
+ *   「語頭に `\b` を付けない」「スキームの一覧を `AUTH_SCHEMES` に置く」は、いずれも §4.10 の
+ *   規則表の規定である。正規表現の見た目を整えるリファクタで最初に失われやすく、崩すと秘密情報が
+ *   漏れる側へ倒れるため、変更するときは §4.10 の改訂を伴う（§8 #59・#62）。
  */
 const EXTRAHEADER_AUTH_PATTERN = new RegExp(
-  `(authorization${SEP}*:${SEP}*(?:basic|bearer)${SEP}+)((?:(?!authorization${SEP}*:)\\S)+)`,
+  `(authorization${SEP}*:${SEP}*(?:${AUTH_SCHEME_ALTERNATION})${SEP}+)((?:(?!authorization${SEP}*:)\\S)+)`,
   "gi",
 );
 
@@ -87,11 +118,11 @@ export function maskCredentials(text: string): string {
 }
 
 /**
- * stderr をログへ出す前にマスク・切り詰める。マスクを先に行ってから切り詰める（順序が逆だと、
+ * git の出力（stderr）をログへ出す前にマスク・切り詰める。マスクを先に行ってから切り詰める（順序が逆だと、
  * 切り詰め位置が認証情報の途中に来た場合に生のトークンの断片がログへ残る）。
  * 切り詰めはコードポイント単位（`Array.from`）で行い、サロゲートペアを途中で分割しない。
  */
-export function sanitizeGitOutput(stderr: string): string {
-  const masked = maskCredentials(stderr);
+export function sanitizeGitOutput(text: string): string {
+  const masked = maskCredentials(text);
   return Array.from(masked).slice(0, STDERR_LOG_LIMIT).join("");
 }

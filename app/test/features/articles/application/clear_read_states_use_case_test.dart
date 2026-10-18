@@ -1,3 +1,9 @@
+/// `ClearReadStatesUseCase` のテスト。D-05 §7 の UseCase テストの表の
+/// `ClearReadStatesUseCase` の行と、group('一括クリア') のケース一覧と 1 対 1
+/// （S-03 §7.4、S-00 §8 #22）。ケースを増やすときは §7 の group('一括クリア')
+/// のケース一覧にも行を足す。
+library;
+
 import 'package:curtaincall/core/database/app_database.dart';
 import 'package:curtaincall/features/articles/application/clear_read_states_use_case.dart';
 import 'package:curtaincall/features/articles/application/watch_home_articles_use_case.dart';

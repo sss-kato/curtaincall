@@ -1,6 +1,6 @@
 /// `OpenNotificationSettingsUseCase` のテスト。D-05 §7 group('設定アプリ') の
-/// 2 ケースと 1 対 1。ケースを増やすときは §7 の group('設定アプリ') のケース
-/// 一覧にも行を足す。
+/// ケース一覧と 1 対 1。ケースを増やすときは §7 の group('設定アプリ') の
+/// ケース一覧にも行を足す。
 library;
 
 import 'package:curtaincall/features/notifications/application/open_notification_settings_use_case.dart';

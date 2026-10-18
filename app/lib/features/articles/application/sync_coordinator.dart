@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:curtaincall/features/articles/application/sync_result.dart';
-import 'package:curtaincall/features/articles/application/sync_suppression_policy.dart';
 import 'package:meta/meta.dart';
 
 /// `SyncArticlesUseCase.execute` と同じ形の関数型。[SyncCoordinator] は
@@ -11,8 +10,17 @@ typedef SyncExecutor = Future<SyncResult> Function(
   required bool Function() isCancelled,
 });
 
+/// `SyncSuppressionPolicy.shouldSuppress` と同じ形の関数型（D-04 §5.2.1）。
+/// [SyncCoordinator] は具象クラスに依存しない。
+///
+/// **注入口の関数型は注入を受ける側（利用側＝Coordinator）のファイルに
+/// 置く**：抽象を必要としているのは利用側で、具象の側
+/// （`sync_suppression_policy.dart`）に置くと Coordinator が具象のファイルを
+/// import することになる（[SyncExecutor] と同じ扱いに揃える。D-04 §8 #72）。
+typedef SyncSuppressionCheck = Future<bool> Function(SyncTrigger trigger);
+
 /// 完了通知（D-04 §8 #40）。`SyncController` はこれだけを購読して
-/// `SyncStatus` を更新する。
+/// `SyncStatus` を更新し、診断のログを出す。
 @immutable
 sealed class SyncEvent {
   const SyncEvent();
@@ -59,6 +67,33 @@ final class SyncCompleted extends SyncEvent {
   int get hashCode => Object.hash(trigger, result);
 }
 
+/// 抑止判定（`shouldSuppress`）が例外または `Error` で失敗したことの通知
+/// （D-04 §5.2.1「失敗時」。§8 #73）。application は `Logger` を持てない
+/// （D-04 §4.9）ため、記録は `SyncController` に委ねる。
+///
+/// **状態（`SyncStatus`）は変えない**：通常はこの後 `execute` が走り
+/// [SyncStarted] / [SyncCompleted] が続く（全体タイムアウト後に判定が例外で
+/// 解決した場合は、完了済みの実行について本イベントだけが流れる。D-04 §6）。
+///
+/// `==` / `hashCode` は定義しない（テストは [SyncCoordinator.events] の型と
+/// [error] で確かめる。出来事であって値ではない。D-04 §8 #70 と同じ考え方）。
+/// ただし `@immutable`（基底から効く）と `const` コンストラクタは残す
+/// （`NotificationTap` と異なる理由は D-04 §4.1 の表：Stream の add は `==`
+/// で重複排除しないため `const` 正規化されても事象が握り潰されない）。
+final class SyncSuppressionCheckFailed extends SyncEvent {
+  /// [SyncSuppressionCheckFailed] を作る。
+  const SyncSuppressionCheckFailed(this.trigger, this.error, this.stackTrace);
+
+  /// 判定に失敗した実行の契機。
+  final SyncTrigger trigger;
+
+  /// `shouldSuppress` が投げた例外または `Error`。
+  final Object error;
+
+  /// [error] のスタックトレース。
+  final StackTrace stackTrace;
+}
+
 /// `SyncArticlesUseCase` の実行を 1 つに絞る（S-01 §8 #12。D-04 §5.3）。
 /// Riverpod・Flutter に依存しない。
 final class SyncCoordinator {
@@ -87,7 +122,8 @@ final class SyncCoordinator {
   final StreamController<SyncEvent> _events =
       StreamController<SyncEvent>.broadcast();
 
-  /// 実行の開始（[SyncStarted]）と完了（[SyncCompleted]）を流す broadcast
+  /// 実行の開始（[SyncStarted]）と完了（[SyncCompleted]）、および抑止判定の
+  /// 失敗（[SyncSuppressionCheckFailed]。D-04 §8 #73）を流す broadcast
   /// Stream。契約は「**[SyncStarted] が流れた実行には必ず [SyncCompleted]
   /// が 1 回流れる**」（`inProgress` が戻らない状態を作らない）。同じ実行を
   /// 複数の [run] が共有しても 1 回しか流れない。タイムアウトで諦めた実行の
@@ -99,6 +135,14 @@ final class SyncCoordinator {
   /// [run] と、`shouldSuppress` の完了前に [dispose] された実行はどちらも
   /// 流さない。実行中（[SyncStarted] 済み）に [dispose] された場合も、
   /// その実行の [SyncCompleted] は流さない（[dispose] 参照）。
+  ///
+  /// **[SyncSuppressionCheckFailed] は上の列挙とは独立**に、[dispose] されて
+  /// いない限り抑止判定の失敗ごとに 1 回流れる。判定が全体タイムアウト後に
+  /// 例外で解決した場合は、**すでに完了した実行について後から 1 件だけ**
+  /// 流れる（その実行の events は `SyncCompleted(timeout)` →
+  /// [SyncSuppressionCheckFailed] の 2 件になる。D-04 §6）。[SyncStarted] /
+  /// [SyncCompleted] の対応関係はこれに影響されない（`SyncStatus` も変えない。
+  /// D-04 §8 #73）。
   ///
   /// broadcast Stream のため、購読前に流れたイベントは届かない
   /// （`SyncController` は `run` を呼ぶより先にこの Stream を購読する）。
@@ -116,7 +160,9 @@ final class SyncCoordinator {
   /// **[SyncStarted] を流さない** = `inProgress` が true にならず E-21 が
   /// 出ない。D-04 §5.2.1・§8 #64）。false なら（破棄も全体タイムアウトも
   /// していなければ）[SyncStarted] を流して `execute(trigger,
-  /// isCancelled)` を始める。
+  /// isCancelled)` を始める。`shouldSuppress` が例外（`Error` を含む）で
+  /// 終わった場合は「抑止しない」扱いで false と同じ経路に進み、直前に
+  /// [SyncSuppressionCheckFailed] を流す（D-04 §8 #73）。
   ///
   /// 実行中なら新しい取得を始めず、実行中の Future を返す（trigger は
   /// 捨てる）。ただし `trigger == notificationTap` で実行中の契機が
@@ -211,7 +257,8 @@ final class SyncCoordinator {
 
   /// 抑止判定（[_shouldSuppress]）を行い、抑止しなければ [SyncStarted] を
   /// 流して [_execute] を呼ぶ（D-04 §5.2.1・§5.3 `_start` 手順 3・§8
-  /// #64）。
+  /// #64）。判定が失敗したら [SyncSuppressionCheckFailed] を流し、抑止しない
+  /// 扱いで進む（§8 #73）。
   Future<SyncResult> _executeUnlessSuppressed(
     SyncTrigger trigger,
     bool Function() isCancelled,
@@ -224,15 +271,23 @@ final class SyncCoordinator {
       // （[_start]）の `_current` への代入がこの catch より必ず先に
       // 終わるようにする（D-04 §5.3 手順 3）。
       suppress = await Future<bool>.sync(() => _shouldSuppress(trigger));
-    } on Object {
+    } on Object catch (e, s) {
       // 抑止判定そのものの失敗は抑止しない扱いにする（D-04 §5.2.1
       // 「失敗時」。同じ DB 障害は続く execute が SyncFailed(storage) と
       // して返す）。drift は close 済み DB への操作に StateError
-      // （Exception ではなく Error）を投げるため、Exception だけを
-      // 捕捉すると「判定が失敗しても取得は試す」という契約を満たせない。
-      // Error も含めて捕捉する（avoid_catching_errors は on Object では
-      // 発火しない）。（ここでログは残さない：SyncCoordinator は Logger
-      // を持たない設計。D-04 §5.3）
+      // （Exception ではなく Error）を投げ、判定ロジック自身の欠陥
+      // （TypeError 等）も Error で現れるため、Exception だけを捕捉すると
+      // 「判定が失敗しても取得は試す」という契約を満たせない。Error も
+      // 含めて捕捉する（avoid_catching_errors は on Object では発火しない）。
+      //
+      // 抑止が効かないまま毎回取得している状態が結果からは見えないため、
+      // 事象として流して SyncController に記録させる（SyncCoordinator は
+      // Logger を持たない設計。D-04 §4.9・§5.3 _start 手順 3 (a)・§8 #73）。
+      // 閉じたコントローラには add しない（dispose 後は流さない）。
+      // 全体タイムアウト後に解決した場合も流す（診断は捨てない。§6）。
+      if (!_disposed) {
+        _events.add(SyncSuppressionCheckFailed(trigger, e, s));
+      }
       suppress = false;
     }
     if (suppress) {
@@ -269,8 +324,8 @@ final class SyncCoordinator {
 
   /// [events] の `StreamController` を閉じる（Provider の `onDispose`
   /// から）。同時に破棄済みにし、世代番号を進めて実行中の `execute` を
-  /// 無効化し、以後の [SyncStarted] / [SyncCompleted] の通知を捨てる
-  /// （閉じたコントローラに add しない）。
+  /// 無効化し、以後の [events] の通知（[SyncSuppressionCheckFailed] を
+  /// 含む）を捨てる（閉じたコントローラに add しない）。
   ///
   /// 実行中の [run] の Future はそのまま完了させる（呼び出し側の await
   /// を宙に浮かせない）。後追いの予約があれば、その Completer を

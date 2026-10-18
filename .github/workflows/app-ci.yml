@@ -317,6 +317,31 @@ jobs:
             echo "$hits"
             echo '例外オブジェクト・その自由文を message 文字列に埋め込んでいる（D-04 §4.9・D-04 §8 #75）'; exit 1
           fi
+      # NotificationTap の const 禁止（D-04 §4.6・§8 #70）。対象を宣言ファイル 1 つに限るため
+      # 宣言自身との衝突が無く、違反が無ければ 0 行で通る（lib・test 全体を見る広い grep は置かない）。
+      # 「再追加」は品質ゲートでは検出できない（const コンストラクタの追加はコンパイルエラーでも lint でもなく、
+      # @immutable を書き戻すと prefer_const_constructors_in_immutables が const を要求して穴が再び開く）ため常設する。
+      # 行頭が // の行（dartdoc・説明コメント）は除外する（grep -n の 1 ファイル出力は <行番号>: で始まる）。
+      # @Immutable()・接頭辞つき import の @meta.immutable も同じ注釈なので拾う。
+      # 照合の前に 1 行内のブロックコメント（/* … */・/** … */）を空白 1 つに置き換える。置き換えないと
+      # const /* x */ NotificationTap( が素通りする（実測）。空でなく空白にするのは
+      # const/* x */NotificationTap( を const NotificationTap( として拾うため。
+      # sed は行単位なので grep -n の行番号は元ファイルのまま。sed は前段なので終了コードは
+      # 最後の grep -v のもの（1 行でも残れば 0 ＝ 赤）で、パイプで判定が消えない。
+      # 対象ファイルの移動・改名やクラス名の変更で grep が 0 行になり黙って緑になる（vacuous pass）のを防ぐため、
+      # 先にファイルとクラス宣言があることを確かめる（既定シェルに pipefail が無く、パイプ前段の
+      # 「ファイルが無い」は終了コードに出ない）
+      - name: NotificationTap に @immutable と const コンストラクタが無いか
+        run: |
+          f=lib/features/notifications/domain/notification_tap.dart
+          if ! grep -qE '^final class NotificationTap([^A-Za-z0-9_]|$)' "$f"; then
+            echo "::error file=app/$f::final class NotificationTap の宣言が見つからない。移動・改名したらこの step の対象も同じ変更で直す（D-04 §4.8）" >&2; exit 1
+          fi
+          if sed -E 's#/\*([^*]|\*+[^*/])*\*+/# #g' "$f" \
+            | grep -nE '@([A-Za-z0-9_]+\.)?[Ii]mmutable|const[[:space:]]+(factory[[:space:]]+)?NotificationTap' \
+            | grep -vE '^[0-9]+:[[:space:]]*//'; then
+            echo 'NotificationTap に @immutable / const コンストラクタが復活している（D-04 §4.6・§8 #70）'; exit 1
+          fi
       - name: Info.plist に Chrome のクエリスキームがあること（D-05 §4.4）
         run: |
           for scheme in googlechrome googlechromes; do

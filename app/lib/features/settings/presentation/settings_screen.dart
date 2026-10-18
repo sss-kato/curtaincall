@@ -13,8 +13,13 @@
 ///   1, overflow: ellipsis)` で包む（`_wrappableText`）
 /// - `CupertinoListTile` は `onTap` の `Future` を await して押下ハイライト
 ///   （`_tapped`）を保持する（`_onTapClearReadStates`）
-/// - `additionalInfo` は `Row` の非 flex 子で、ラッパーが `overflow` を渡さない
-///   ため既定 `clip`（`_buildVersionRow`）
+/// - `title` は `Row` の `Expanded` の中に置かれ、`additionalInfo` / `trailing`
+///   を渡さなければ行の残り幅をそのまま有界な `maxWidth` として受け取る
+///   （`_versionTitle`）。`additionalInfo` は `Row` の非 flex 子で
+///   `DefaultTextStyle(maxLines: 1)` に包まれ折り返せないため E-18 では使わない
+/// - `Text` は描画時に `MediaQuery.boldTextOf` の太字・行高／字間／語間の上書き
+///   を style に merge し、`locale ?? Localizations.maybeLocaleOf` を
+///   `RichText` に渡す（`_singleLineWidth` が同じ条件で実測する）
 /// - 本文開始は `_kPadding.start` = 20.0（`subtitle` がある行は
 ///   `_kPaddingWithSubtitle.start` だが同値 20.0。`_buildNotificationSection`
 ///   ほか `hasLeading: false` の全セクションに共通）
@@ -24,6 +29,9 @@
 ///   右。実装は base 型の `CupertinoListTile`（5 箇所、`.notched` は無い））
 /// - `CupertinoListSection` の `backgroundColor` はセクション矩形の内側のみを
 ///   塗る（外側は scaffold の背景が見える）（`build`）
+/// - `TextPainter.computeWidth` は `locale:` 引数で段落ロケールを決め
+///   （`TextSpan.locale` はレイアウトに効かない）、内部で dispose する
+///   （`_singleLineWidth`）
 ///
 /// SDK の前提は Flutter 3.47.4（stable）で確認。Flutter を上げたときはこの節の
 /// 各項目を再確認する。目視手順は D-05 §10 の T-O 目視項目（未整備。
@@ -279,10 +287,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   // に留める。2 ファイル目が使い始めたら core/ui/ へ寄せる（D-05 §3.2 の
   // core/ui/ の区分を増やす必要があるため、その時点で D-05 の reopen が要る。
   // 共通化の閾値・進め方は FOLLOWUPS 4-12 で起票済み）。
-  Widget _wrappableText(Widget child) => Builder(
+  //
+  // maxLines と overflow を「渡さない」ことが目的なので、DefaultTextStyle.merge
+  // に書き換えてはならない（merge は maxLines: maxLines ?? parent.maxLines
+  // なので親の 1 が残る。SDK の doc が明文で禁じている）。style は手で合成し、
+  // textAlign は Text に渡す（D-05 §5.9・§8 #51・#53）。
+  Widget _wrappableText(
+    String data, {
+    TextStyle? style,
+    TextAlign? textAlign,
+  }) => Builder(
     builder: (context) => DefaultTextStyle(
-      style: DefaultTextStyle.of(context).style,
-      child: child,
+      // 親（CupertinoListTile）の色・太さに、呼び出し側の style を上書きで
+      // 重ねる。_singleLineWidth の実測でも同じ合成にすること（変えるときは
+      // 両方）。
+      style: DefaultTextStyle.of(context).style.merge(style),
+      child: Text(data, textAlign: textAlign),
     ),
   );
 
@@ -293,13 +313,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         CupertinoIcons.bell_slash,
         color: CupertinoColors.secondaryLabel.resolveFrom(context),
       ),
-      title: _wrappableText(const Text('通知が許可されていません')),
+      title: _wrappableText('通知が許可されていません'),
       subtitle: _wrappableText(
-        Text(
-          'iOS の設定アプリで CurtainCall の通知を許可してください',
-          style: TextStyle(
-            color: CupertinoColors.secondaryLabel.resolveFrom(context),
-          ),
+        'iOS の設定アプリで CurtainCall の通知を許可してください',
+        style: TextStyle(
+          color: CupertinoColors.secondaryLabel.resolveFrom(context),
         ),
       ),
       trailing: const CupertinoListTileChevron(),
@@ -315,7 +333,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     required bool enabled,
   }) {
     return CupertinoListTile(
-      title: _wrappableText(Text(label)),
+      title: _wrappableText(label),
       trailing: CupertinoSwitch(
         value: enabled,
         onChanged: (value) => _onToggleNotification(companyId, value),
@@ -337,16 +355,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     final isSelected = choice == selected;
     return CupertinoListTile(
       title: _wrappableText(
-        Text(
-          label,
-          style: disabled
-              ? TextStyle(
-                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
-                )
-              : null,
-        ),
+        label,
+        style: disabled
+            ? TextStyle(
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              )
+            : null,
       ),
-      subtitle: disabled ? _wrappableText(const Text('インストールされていません')) : null,
+      subtitle: disabled ? _wrappableText('インストールされていません') : null,
       trailing: isSelected
           ? Icon(
               CupertinoIcons.check_mark,
@@ -361,52 +377,186 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   Widget _buildClearReadStatesRow(BuildContext context) {
     return CupertinoListTile(
       title: _wrappableText(
-        Text(
-          '既読をすべてクリア',
-          style: TextStyle(
-            color:
-                (_clearing
-                        ? CupertinoColors.secondaryLabel
-                        : CupertinoColors.activeBlue)
-                    .resolveFrom(context),
-          ),
+        '既読をすべてクリア',
+        style: TextStyle(
+          color:
+              (_clearing
+                      ? CupertinoColors.secondaryLabel
+                      : CupertinoColors.activeBlue)
+                  .resolveFrom(context),
         ),
       ),
       onTap: _clearing ? null : () => unawaited(_onTapClearReadStates()),
     );
   }
 
-  // S-03/E-18。バージョン行。未着・読み出せない間は値を出さずラベルのみ
-  // （D-05 §5.9）。
+  // S-03/E-18。バージョン行。値は S-03 §7.5 の書式で、未着・読み出せない
+  // 間（AsyncLoading / AsyncError）と、version / buildNumber のいずれかが
+  // 空文字のときは null（ラベルのみ）にする。空文字は未取得として扱う
+  // （`$(FLUTTER_BUILD_NAME)` が解決されなかったビルドで " (1)"・"1.0.0 ()"
+  // のような括弧だけの値を出さない。D-05 §4.1・§5.9・§6）。タップしても何も
+  // 起きない（onTap を渡さない。S-03 §4 E-18）。
   //
-  // additionalInfo（値）は _CupertinoListTileState.build で title の
-  // Expanded の外側・Row の非 flex 子として DefaultTextStyle(maxLines: 1) に
-  // 包まれる（overflow は渡されず既定の TextOverflow.clip）。非 flex の Row
-  // 子は maxWidth: double.infinity で採寸されるため、_wrappableText を当てて
-  // も省略にはならず、Dynamic Type 拡大時は title が 0 幅まで潰れた後に
-  // RenderFlex のオーバーフローになる（省略ではない）。緩和するなら
-  // additionalInfo を Flexible(child: Text(..., overflow:
-  // TextOverflow.ellipsis)) のように Text 側で overflow を明示する必要が
-  // ある（SDK 側のラッパーは maxLines: 1 のみで overflow は既定 clip の
-  // ため、Flexible で幅を有界にするだけでは ellipsis にならない）。
+  // additionalInfo / trailing は渡さない：どちらも CupertinoListTile の Row で
+  // title の Expanded の横に非 flex 子として並ぶため、title の幅が削られ、
+  // _versionTitle の 1 行判定の前提（行の残り幅をすべて使える）が変わる。
+  // additionalInfo は加えて DefaultTextStyle(maxLines: 1) に包まれ折り返せない。
+  // title の maxWidth は有界のまま（0 まで縮むことはあっても infinity には
+  // ならない。Flutter 3.47.4 stable の `_CupertinoListTileState.build` の
+  // `Row` 組み立てで確認）。D-05 §5.9・§8 #53。
   Widget _buildVersionRow(
     BuildContext context, {
     required AppVersion? version,
   }) {
+    final value =
+        version == null ||
+            version.version.isEmpty ||
+            version.buildNumber.isEmpty
+        ? null
+        : '${version.version} (${version.buildNumber})';
     return CupertinoListTile(
-      title: _wrappableText(const Text('バージョン')),
-      // D-05 追随（TODO(D-05 reopen)）: E-18 の左右分離レイアウトを保つため
-      // additionalInfo のまま残す（§7.6 と両立しない申し送り。詳細は本
-      // メソッドの doc。FOLLOWUPS 3-23。緩和方針を §5.9 に追記後、本コメント
-      // を削除する）。
-      additionalInfo: version == null
-          ? null
-          : Text(
-              '${version.version} (${version.buildNumber})',
-              style: TextStyle(
-                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+      title: _versionTitle(context, label: 'バージョン', value: value),
+    );
+  }
+
+  // 1 行に収まるときのラベルと値の最小の間隔（pt）。
+  static const double _versionRowGap = 8;
+
+  // 値を次の行に送ったときの行間（pt）。
+  static const double _versionValueGap = 2;
+
+  // S-03 §4 E-18・§7.5。ラベルと値が 1 行に収まるかを実測し、収まるなら
+  // 1 行（ラベル左・値右）、収まらないなら 2 行（ラベル左寄せ・値右寄せ）に
+  // する。値が null（未着・失敗・空文字）ならラベルだけを返す（D-05 §5.9・
+  // §8 #53）。
+  Widget _versionTitle(
+    BuildContext context, {
+    required String label,
+    required String? value,
+  }) {
+    final labelStyle = CupertinoTheme.of(context).textTheme.textStyle;
+    final valueStyle = labelStyle.copyWith(
+      // S-03 §4 E-18「セカンダリ色」。
+      color: CupertinoColors.secondaryLabel.resolveFrom(context),
+    );
+    // S-03 §7.5「値が未着・読み出せないとき」。
+    if (value == null) return _wrappableText(label, style: labelStyle);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 2 行の経路（ラベル左寄せ・値右寄せ）。幅が無制約のときもこちらへ
+        // 倒す。stretch: false を使うのは無制約幅のときだけ：
+        // CrossAxisAlignment.stretch は子に BoxConstraints.tightFor(width:
+        // infinity) を渡すため、RenderParagraph が「object was given an
+        // infinite size during layout」で落ちる（release では無限幅の
+        // レイアウトになって行が壊れる）。CrossAxisAlignment.end なら子は
+        // loose な無制約幅を受け取ってテキスト幅に縮むので落ちない（右寄せの
+        // 見た目も保てる）。D-05 §8 #53。
+        Widget twoLines({required bool stretch}) => Column(
+          crossAxisAlignment: stretch
+              ? CrossAxisAlignment.stretch
+              : CrossAxisAlignment.end,
+          children: [
+            _wrappableText(label, style: labelStyle, textAlign: TextAlign.left),
+            const SizedBox(height: _versionValueGap),
+            _wrappableText(
+              value,
+              style: valueStyle,
+              textAlign: TextAlign.right,
+            ),
+          ],
+        );
+        // 1 行の経路は Expanded を使うため、幅が有界であること（= title が
+        // CupertinoListTile の Row の Expanded の中にあること）に依存する。
+        // その前提をコード上に残す：CupertinoListTile.title の中では
+        // additionalInfo / trailing の有無にかかわらず幅は有界だが、
+        // _versionTitle を title の外（横スクロール・非 flex の Row の子など）へ
+        // 流用する・SDK 側で title の置き場が変わると maxWidth が infinity に
+        // なり、fitsOneLine が必ず true（x <= infinity）になって「RenderFlex
+        // children have non-zero flex but incoming width constraints are
+        // unbounded」で落ちる。
+        if (!constraints.hasBoundedWidth) return twoLines(stretch: false);
+        final fitsOneLine =
+            _singleLineWidth(context, label, labelStyle) +
+                _versionRowGap +
+                _singleLineWidth(context, value, valueStyle) <=
+            constraints.maxWidth;
+        if (!fitsOneLine) return twoLines(stretch: true);
+        // ラベルは非 flex（実測で収まることを確かめた幅）、値は残り幅いっぱい
+        // の右寄せ。実測と実レイアウトがわずかにずれても Expanded の中で
+        // 折り返るだけで、あふれも省略もしない。
+        return Row(
+          children: [
+            _wrappableText(label, style: labelStyle),
+            const SizedBox(width: _versionRowGap),
+            Expanded(
+              child: _wrappableText(
+                value,
+                style: valueStyle,
+                textAlign: TextAlign.right,
               ),
             ),
+          ],
+        );
+      },
+    );
+  }
+
+  // `_wrappableText(text, style: style)` を、この [context] の条件で制約なしに
+  // 1 行で並べたときの幅（pt）。
+  //
+  // **不変条件：実測は実描画とまったく同じ条件で行う。** `Text` が描画時に
+  // 適用する上書きの集合（`DefaultTextStyle` の親スタイルとの合成・
+  // `MediaQuery.boldTextOf` が true のときの `FontWeight.bold` の merge・
+  // `maybeLineHeightScaleFactorOverrideOf` / `maybeLetterSpacingOverrideOf` /
+  // `maybeWordSpacingOverrideOf` の merge）と、`Text` が `RichText` に渡す
+  // `locale`・`textDirection`・`textScaler` を、ここでも同じ値でそろえる
+  // （Flutter 3.47.4 stable の `Text.build` が `RichText` に渡す引数で
+  // 確認）。片方だけに足すと実測が実描画より狭くなり、1 行の経路を選んだのに
+  // 収まらない（D-05 §6 の「E-18 の実測と実描画がずれた」）。
+  //
+  // `locale` は `TextSpan` ではなく `computeWidth` の `locale:` に渡す：
+  // `TextSpan.locale` は読み上げ（VoiceOver / TalkBack）の発音にしか効かず
+  // レイアウトに影響しない（`TextSpan.locale` の doc）。
+  // 段落スタイルに入って CJK のフォールバック字形を選ぶのは
+  // `TextPainter.computeWidth` の `locale:` 引数の方で、実描画では
+  // `RichText` の `locale ?? Localizations.maybeLocaleOf(context)` がそこに
+  // 入る。Flutter 側で上書きの集合が増えたときは必ずここも同時に直す。
+  //
+  // `strutStyle`・`textWidthBasis`・`textHeightBehavior` は渡さない：
+  // `strutStyle` は `Text` 側が null（`effectiveStrutStyle` も null）、
+  // `textWidthBasis` は双方 `TextWidthBasis.parent`（`_wrappableText` の
+  // `DefaultTextStyle` の既定値と `computeWidth` の既定値）で一致し、
+  // `textHeightBehavior` は縦方向にしか効かず幅に影響しない（同じく
+  // `Text.build` が `RichText` に渡す引数で確認）。
+  //
+  // [context] には実描画と同じ subtree のもの（`_versionTitle` の
+  // `LayoutBuilder` の builder）を渡す。
+  double _singleLineWidth(BuildContext context, String text, TextStyle style) {
+    final overrides = TextStyle(
+      // iOS「文字を太くする」。
+      fontWeight: MediaQuery.boldTextOf(context) ? FontWeight.bold : null,
+      height: MediaQuery.maybeLineHeightScaleFactorOverrideOf(context),
+      letterSpacing: MediaQuery.maybeLetterSpacingOverrideOf(context),
+      wordSpacing: MediaQuery.maybeWordSpacingOverrideOf(context),
+    );
+    // TextPainter.computeWidth は width の取得を try / finally で囲って
+    // dispose する（Flutter 3.47.4 stable の `TextPainter.computeWidth` の
+    // try / finally。..layout() は try の外にあるので、layout 自体が投げた
+    // 場合は dispose されない）。自前の TextPainter は持たない：この builder は
+    // 文字サイズの変更・回転・appVersionProvider の AsyncLoading →
+    // AsyncData のたびに再実行されるため、dispose を忘れるとそのたびに
+    // ui.Paragraph（ネイティブ資源）が漏れる。
+    return TextPainter.computeWidth(
+      text: TextSpan(
+        text: text,
+        // _wrappableText と同じ合成にすること（変えるときは両方）。
+        style: DefaultTextStyle.of(context).style.merge(style).merge(overrides),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      // TextSpan.locale では効かない（上の doc）。
+      locale: Localizations.maybeLocaleOf(context),
+      maxLines: 1,
     );
   }
 

@@ -1,29 +1,50 @@
-# 使い捨て：D-02 reopen の U-11（steps[*].timeout-minutes 超過時の step・job・実行全体の結論と失敗通知メール）を
-# main で 1 回だけ実測する（§8 #70 の代替 (d)。T-52 と同じ方式）。
-# PR で main にマージ → gh workflow run で 1 回実行 → 別 PR で削除する。恒久的な成果物にしない。
+# 使い捨て：D-02 §7 冒頭 (f)（U-11）の ⑥〜⑨ を main で実測する（§8 #81。§10 Task L。T-52 と同じ方式）。
+# PR で main にマージ → gh workflow run -f mode=… で 2 回（mode ごとに 1 回）実行 → 別 PR で削除する。恒久的な成果物にしない。
+# 1 回の実行に 2 つの形を混ぜない（片方の cancelled が実行全体の結論を cancelled にして他方の測定を壊すため）。
 # 外部 action は使わない（§8 #52）。$GITHUB_OUTPUT へは書かない。
 name: probe-step-timeout
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "測る形（step-timeout-minutes = (d-1) / timeout-command = (d-2)）"
+        type: choice
+        options:
+          - step-timeout-minutes
+          - timeout-command
 permissions: {} # 何も読み書きしない（§8 #52 と同じ既定）
 concurrency:
   group: probe-step-timeout # 本番の collect（group: collect）の待機列に入らない
   cancel-in-progress: false
 jobs:
-  collect:
+  step-timeout-minutes: # ⑥⑨：ステップの timeout-minutes 超過時の結論とメール
+    if: ${{ inputs.mode == 'step-timeout-minutes' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5 # ジョブ単位の timeout は発火させない（step 単位の timeout だけを測る）
+    timeout-minutes: 10 # ジョブの上限には掛けない
     permissions: {}
     steps:
-      - name: sleep 120（step の timeout-minutes 1 で止まる）
+      - name: sleep 120（ステップの timeout-minutes 1 で止まる）
         timeout-minutes: 1
         run: sleep 120
-      - name: "!cancelled() のステップ（step timeout がキャンセル扱いならスキップ、失敗扱いなら実行）"
+      - name: "!cancelled() のステップ（打ち切りがキャンセル扱いならスキップ）"
         if: ${{ !cancelled() }}
-        run: echo "U-11：step timeout の後も cancelled() は偽だった"
-      - name: failure() のステップ（step timeout が失敗扱いなら実行）
-        if: ${{ failure() }}
-        run: echo "U-11：step timeout の後に failure() が真だった"
+        run: echo "U-11：ステップの打ち切りの後も cancelled() は偽だった"
+      - name: always() のステップ（対照）
+        if: ${{ always() }}
+        run: echo "対照：always() のステップは実行された"
+  timeout-command: # ⑦⑧：coreutils timeout の終了コード 124 と結論・メール
+    if: ${{ inputs.mode == 'timeout-command' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10 # ジョブの上限には掛けない
+    permissions: {}
+    steps:
+      - name: timeout -k 5s 30s sleep 120（終了コード 124 のはず）
+        run: |
+          set +e
+          timeout -k 5s 30s sleep 120
+          code=$?
+          echo "U-11：timeout の終了コード=$code"
+          exit "$code"
       - name: always() のステップ（対照）
         if: ${{ always() }}
         run: echo "対照：always() のステップは実行された"

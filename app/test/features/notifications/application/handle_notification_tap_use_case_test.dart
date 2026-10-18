@@ -1,5 +1,5 @@
 /// `HandleNotificationTapUseCase` のテスト。D-05 §7 group('タブの解決') の
-/// 4 ケースと 1 対 1（4 ケースとも `closeInAppBrowser()` 1 回を併せて検証）。
+/// ケース一覧と 1 対 1（全ケースで `closeInAppBrowser()` 1 回を併せて検証）。
 /// ケースを増やすときは §7 の group('タブの解決') のケース一覧にも行を足す。
 library;
 

@@ -1,3 +1,10 @@
+/// `RequestNotificationPermissionUseCase` のテスト。D-04 §7 の UseCase テストの
+/// 表の `RequestNotificationPermissionUseCase` の行と、group('許可の要求') の
+/// ケース一覧に対応する（§5.7。§7 の `notDetermined` の 1 行は戻り値
+/// `authorized` / `denied` の 2 ケースに分けている）。ケースを増やすときは
+/// §7 の group('許可の要求') のケース一覧にも行を足す。
+library;
+
 import 'package:curtaincall/features/notifications/application/request_notification_permission_use_case.dart';
 import 'package:curtaincall/features/notifications/domain/push_gateway.dart';
 import 'package:flutter_test/flutter_test.dart';

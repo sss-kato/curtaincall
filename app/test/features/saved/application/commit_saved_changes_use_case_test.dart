@@ -1,3 +1,10 @@
+/// `CommitSavedChangesUseCase` のテスト。D-05 §7 の UseCase テストの表の
+/// `CommitSavedChangesUseCase` の行と、group('確定')・group('削除の述語') の
+/// ケース一覧に対応する（S-02/ST-04・§7.1・§7.3）。ケースを増やすときは §7 の
+/// 該当 group のケース一覧にも行を足す。
+library;
+
+import 'package:curtaincall/core/database/app_database.dart';
 import 'package:curtaincall/features/articles/domain/article_sync_repository.dart';
 import 'package:curtaincall/features/articles/infrastructure/drift_article_repository.dart';
 import 'package:curtaincall/features/saved/application/commit_saved_changes_use_case.dart';
@@ -25,9 +32,7 @@ void main() {
         readIds: [a.id],
         savedAtByIds: {a.id: DateTime.utc(2026)},
       );
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
 
       final committed = await useCase.execute(
         unsave: {a.id},
@@ -51,9 +56,7 @@ void main() {
         savedAtByIds: {b.id: DateTime.utc(2026)},
       );
       final repository = DriftArticleRepository(db);
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
       final results = collectStream(repository.watchInFeed());
       await pumpEventQueue();
 
@@ -108,9 +111,7 @@ void main() {
       final x = testArticle(id: testArticleId(1));
       final t2 = DateTime.utc(2026, 1, 5);
       await seedArticles(db, inserts: [x]);
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
       expect(await savedArticleRow(db, x.id), isNull);
 
       final committed = await useCase.execute(
@@ -134,9 +135,7 @@ void main() {
         inserts: [c],
         savedAtByIds: {a.id: DateTime.utc(2026), c.id: DateTime.utc(2026)},
       );
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
 
       final committed = await useCase.execute(
         unsave: {a.id},
@@ -161,9 +160,7 @@ void main() {
         readIds: [a.id],
         savedAtByIds: {a.id: savedAt},
       );
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
 
       final committed = await useCase.execute(
         unsave: const {},
@@ -182,9 +179,7 @@ void main() {
       final db = openInMemoryDatabase();
       final unsavedArticle = testArticle(id: testArticleId(1));
       await seedArticles(db, inserts: [unsavedArticle]);
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
 
       final committed = await useCase.execute(
         unsave: {unsavedArticle.id},
@@ -232,9 +227,7 @@ void main() {
         savedAtByIds: {a.id: DateTime.utc(2026)},
       );
       final articleRepository = DriftArticleRepository(db);
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
       final results = collectStream(articleRepository.watchInFeed());
       await pumpEventQueue();
       final firstEmissionCount = results.length;
@@ -259,9 +252,7 @@ void main() {
         savedAtByIds: {a.id: DateTime.utc(2026)},
       );
       final articleRepository = DriftArticleRepository(db);
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
 
       await articleRepository.applyFeed(
         const FeedApplyPlan(
@@ -468,9 +459,7 @@ void main() {
         savedAtByIds: {a.id: t},
       );
       await DriftSavedArticleRepository(db).remove(a.id);
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
 
       final committed = await useCase.execute(
         unsave: const {},
@@ -490,9 +479,7 @@ void main() {
         outOfFeed: [a],
         savedAtByIds: {a.id: DateTime.utc(2026)},
       );
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
 
       await useCase.execute(unsave: const {}, resaveAt: const {});
 
@@ -503,9 +490,7 @@ void main() {
       final db = openInMemoryDatabase();
       final a = testArticle(id: testArticleId(1));
       await seedArticles(db, inserts: [a]);
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
 
       await useCase.execute(unsave: const {}, resaveAt: const {});
 
@@ -516,9 +501,7 @@ void main() {
       final db = openInMemoryDatabase();
       final a = testArticle(id: testArticleId(1));
       await seedArticles(db, inserts: [a]);
-      final useCase = CommitSavedChangesUseCase(
-        DriftSavedArticleRepository(db),
-      );
+      final useCase = _useCase(db);
       final beforeCount = (await db.select(db.articles).get()).length;
 
       await expectLater(
@@ -608,3 +591,9 @@ class _FailingSavedArticleRepository implements SavedArticleRepository {
 
 /// `Error` ではない失敗注入用の例外（drift 以外の要因を想定）。
 class _InjectedDbException implements Exception {}
+
+/// 実物の [DriftSavedArticleRepository] を渡した UseCase を作る。Repository を
+/// 失敗注入ラッパで包むケースと、Repository を直接購読するケースだけは
+/// テスト内で明示構築する。
+CommitSavedChangesUseCase _useCase(AppDatabase db) =>
+    CommitSavedChangesUseCase(DriftSavedArticleRepository(db));

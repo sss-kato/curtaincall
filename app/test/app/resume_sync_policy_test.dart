@@ -1,3 +1,9 @@
+/// `resolveResumeSync` の遷移列テスト。D-04 §7「純粋関数の直接テスト（例外）」
+/// の表の `resolveResumeSync` の行に対応する（§5.3・§8 #18・#28）。遷移列を
+/// 畳み込んで検証するのも同じ行の指定による。ケースを増やすときは §7 の表の
+/// 同じ行にも足す。
+library;
+
 import 'package:curtaincall/app/resume_sync_policy.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';

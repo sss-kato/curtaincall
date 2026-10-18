@@ -1,3 +1,8 @@
+/// `compareArticles` のテスト。D-04 §7「純粋関数の直接テスト（例外）」の表の
+/// `compareArticles` の行に対応する（D-01 §4.5・§8 #3）。ケースを増やすときは
+/// §7 の表の同じ行にも足す。
+library;
+
 import 'package:curtaincall/features/articles/domain/article.dart';
 import 'package:curtaincall/features/articles/domain/article_order.dart';
 import 'package:flutter_test/flutter_test.dart';

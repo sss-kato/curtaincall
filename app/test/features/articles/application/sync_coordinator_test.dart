@@ -1,3 +1,12 @@
+/// `SyncCoordinator` のテスト。D-04 §7 の UseCase テストの表の
+/// `SyncCoordinator` の行と、group('同時実行の抑止')・group('対応外スキーマの抑止')・
+/// group('全体タイムアウト')・group('通知タップの後追い')・group('完了通知')・
+/// group('dispose') の各ケース一覧に対応する（§5.3・§8 #39・#64）。ケースを
+/// 増やすときは §7 の該当 group のケース一覧にも行を足す。
+///
+/// §7 との差分（§7 に無いケース等）は docs/tasks/FOLLOWUPS.md 2-20 を参照。
+library;
+
 import 'dart:async';
 
 import 'package:curtaincall/features/articles/application/sync_articles_use_case.dart';

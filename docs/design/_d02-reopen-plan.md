@@ -240,6 +240,23 @@ reopen の本文に書く前に一次資料（該当 SHA の `action.yml`・READ
 | U-9 | 付録 A-3 の jq（`def safe` / `def num` を含む `jq -s -r` のプログラム）が jq 1.7.1 で期待どおり動く：`def` を先頭に置いた形で構文エラーにならない／`safe` が C0・C1・`U+2028`・`U+2029`・バックティックを潰す／数値以外の `collected` が `?` になる／`fullCrawlCompanyIds` が文字列のとき `map` が失敗して `\|\| echo "サマリ本文の整形に失敗した"` に落ちる | 手元の jq 1.7.1 で `printf` した JSON を流す（#61 と同じ方法）。YAML に `U+2028` を直書きしない | P-18〜P-21・P-30 |
 | U-10 | 解放済みの `App` に 2 回目の `deleteApp` を呼ぶと失敗する（P-14 の理由。T-48 の実装コメント「deleteApp の再実行で偽の warn を出さない」に依拠し、firebase-admin のソースでは確かめていない） | `firebase-admin` の `deleteApp`（`app/lifecycle`）のソース | P-14（理由の文。メモ化の結論は変わらない） |
 
+### 検証結果（2026-10-18。一次資料は各 SHA の GitHub 上のファイル、実測は手元）
+
+| # | 結果 | 根拠（一次資料・実測） | 計画への影響 |
+|---|---|---|---|
+| U-1 | **成立** | checkout `CHANGELOG.md` v6.0.0「Persist creds to a separate file」（#2286）、v6.0.1「Add worktree support for persist-credentials includeIf」（#2327）。`src/git-auth-helper.ts`（`3d3c42e5`）の `configureToken()`：資格情報を `$RUNNER_TEMP/git-credentials-<uuid>.config` に書き、`.git/config` には `includeIf.gitdir:<repo>/.git.path` と `includeIf.gitdir:<repo>/.git/worktrees/*.path` だけを書く | X 表の「`.git/config` の extraheader」を「`$RUNNER_TEMP` の資格情報ファイル（`.git/config` から `includeIf` で読み込む）」へ直す前提が確定 |
+| U-2 | **成立** | 同ファイル：`tokenConfigKey = http.${serverUrl.origin}/.extraheader`、値 `AUTHORIZATION: basic ${base64("x-access-token:<token>")}`。キー名・値の形は v4 と同じ | §4.10 のマスク規則（`EXTRAHEADER_AUTH_PATTERN`）は変更不要 |
+| U-3 | **成立（但し書きあり）** | `includeIf` のキーと値はいずれも**書き込み時点の絶対パス**（`path.join(runnerTemp, …)`・`path.join(workingDirectory, ".git")`）で、git 実行時に環境変数を展開しない → `cwd: repoRoot` の git 子プロセスは `HOME`・`RUNNER_TEMP`・`GIT_CONFIG_*` に依存せず読める。**但し** `persist-credentials: false` でも fetch の間はファイルを作り、`git-source-provider.ts` の終盤で `removeAuth()` → `removeToken()` が extraheader・`includeIf`・`$RUNNER_TEMP` 配下のファイルを消す（「作らない」ではなく「終了時に消す」） | J-6 の許可リストに足す変数は無い（推奨は不変）。P-23 等の「`persist-credentials: false` ではファイルを作らない」の文言を「checkout の終了時に `includeIf` とファイルを消す」に直す |
+| U-4 | **影響なし** | upload-pages-artifact v4.0.0 リリースノート「hidden files (specifically dotfiles) will not be included」（#102）、v5.0.0「Update upload-artifact action to version 7」（#139）・「add `include-hidden-files` input」（#137）。`action.yml`（`fc324d35`）：入力 `path`（必須）・`name`（既定 `github-pages`）・`retention-days`・`include-hidden-files`（既定 `false`）、composite で `.git`/`.github`/ドットファイルを除外して tar 化 | `data/` は `articles.json`・`companies.json` のみ（実測。ドットファイル無し）。`path: data` のまま変更不要 |
+| U-5 | **成立** | checkout `action.yml`：`using: node24`。deploy-pages `action.yml`（`368f8252`）：`using: 'node24'`。upload-pages-artifact は composite で内部の upload-artifact（`bbbca2dd` v7.0.0）が `using: 'node24'`。deploy-pages README の例は `runs-on: ubuntu-latest` | ホスト型 `ubuntu-latest` で動く前提は成立。runner の最小版の固定は不要 |
+| U-6 | **影響なし** | deploy-pages v5.0.0 リリースノート：Node.js 24 化のみ（#404）、v5.0.1：ポーリングの backoff（#444）。`action.yml`：入力 `token`（既定 `github.token`）・`artifact_name`（既定 `github-pages`）、出力 `page_url` は v4 と同名。README：`pages: write`・`id-token: write` が必要（現行と同じ） | §5.6 の `permissions`・`environment.url: ${{ steps.deploy.outputs.page_url }}` は変更不要 |
+| U-7 | **成立** | checkout `action.yml`：`fetch-depth` の `default: 1` | P-27 の前提どおり |
+| U-8 | **一致** | `gh api repos/actions/<name>/git/ref/tags/<tag>`（いずれも軽量タグ＝`object.type: commit`）：checkout `v7.0.1` → `3d3c42e5aac5ba805825da76410c181273ba90b1`、deploy-pages `v5.0.1` → `368f82528645a54fb793d4d04e342629a3f51346`、upload-pages-artifact `v5.0.0` → `fc324d3547104276b827a68afc52ff2a11cc49c9`、setup-node `v7.1.0` → `949feb2413d6458794dcd2491c4babbbce0c15c1` | 本ファイルの SHA は正しい |
+| U-9 | **期待どおり** | jq 1.7.1 で付録 A-3 の 3 本を実行。① 正常な JSON → 3 本とも 1 行ずつ出力、② `\n`・ESC（U+001B）・U+2028・U+2029・U+0085・NUL・バックティックを含む値 → すべて空白に潰れ、各出力は 1 行（U+2028/2029 の残存 0）、③ 300 文字の値 → 200 文字で切り詰め、④ `collected` が文字列 → `?`、⑤ `fullCrawlCompanyIds` が文字列 → jq が終了コード 5（`Cannot iterate over string`）で失敗し `\|\| echo "サマリ本文の整形に失敗した"` に落ちる、⑥ 0 バイト・複数文書 → 1 本目は「サマリの形が想定外」、2・3 本目は何も出さない。`def` を先頭に置いた形で構文エラーなし | J-12 推奨案 A のとおり採用できる。なお ESC を潰した後の `[31m` のような文字列は残る（無害） |
+| U-10 | **成立** | firebase-admin 13.10.0 `lib/app/lifecycle.js` の `deleteApp(app)` は `getApp(app.name)` を呼び、`lib/app/firebase-app.js` の `name` getter は `checkDestroyed_()` を通るため、解放済みの App では**同期で** `FirebaseAppError` を投げる | P-14 の理由の文は正しい（メモ化の結論も不変） |
+
+**J の推奨への影響**：変更なし。U-3 の但し書きにより P-23 系の文言だけ直す（推奨の結論は不変）。
+
 ## FOLLOWUPS §1 の未完了項目（参考）
 
 `docs/tasks/FOLLOWUPS.md` §1 のうち ✅ の付いていない項目は **1-13 と 1-18 の 2 件だけ**（1-1〜1-12・1-14〜1-17・1-19〜1-22 はすべて ✅）。いずれも本表で扱った。

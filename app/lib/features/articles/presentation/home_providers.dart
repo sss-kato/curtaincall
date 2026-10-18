@@ -7,6 +7,7 @@ library;
 import 'dart:async';
 
 import 'package:curtaincall/core/di/articles_providers.dart';
+import 'package:curtaincall/core/di/no_retry.dart';
 import 'package:curtaincall/core/di/providers.dart';
 import 'package:curtaincall/core/di/settings_providers.dart';
 import 'package:curtaincall/features/articles/application/watch_home_articles_use_case.dart';
@@ -148,7 +149,13 @@ class HomeScrollToTop extends _$HomeScrollToTop {
 /// の値が変わると Stream は作り直されるが、Riverpod の `AsyncLoading` は前の
 /// 値を保持する（`isLoading && hasValue`）ので、`HomePage` は `hasValue` の
 /// ときは前の値で描き、全面ローディングにしない（D-05 §5.1.4。S-01/A-03）。
-@Riverpod(keepAlive: true)
+///
+/// **自動リトライを切る**（`noRetry`。D-04 §8 #61・#67 と同じ理由）。切らない
+/// と Riverpod 3 の既定が Exception を最大 10 回（合計約 38 秒）再試行し、
+/// その間 `AsyncLoading(hasError: true)` が続いて E-24 が出ず、`HomeScreen`
+/// の張り直し（`isLoading` の間は張り直さない）も遅れる。張り直しは
+/// `HomeScreen` が契機ごとに 1 回だけ行う（D-05 §5.1.5・§8 #40）。
+@Riverpod(keepAlive: true, retry: noRetry)
 Stream<HomeArticles> homeArticles(Ref ref, {required String? companyId}) {
   final filter = ref.watch(unreadFilterProvider);
   // 値があればそれを使う。値が無くエラーなら既定 OFF（false）で一覧を張る

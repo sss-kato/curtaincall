@@ -50,7 +50,7 @@ final class HomeTabControllerProvider
   }
 }
 
-String _$homeTabControllerHash() => r'bad784fee8c9026db3614fbae41a1b58aad49d5d';
+String _$homeTabControllerHash() => r'94a63f07277f1375a188f468bcf3283c040ec5e4';
 
 /// 選択中の団体タブ（S-01/ST-10）。起動時 `(index: 0, source: user)`
 /// （S-01 §8 #3）。永続化しない。**配線だけを持つ Notifier なのでテスト
@@ -145,6 +145,12 @@ abstract class _$HomeScrollToTop extends $Notifier<ScrollToTopRequest> {
 /// の値が変わると Stream は作り直されるが、Riverpod の `AsyncLoading` は前の
 /// 値を保持する（`isLoading && hasValue`）ので、`HomePage` は `hasValue` の
 /// ときは前の値で描き、全面ローディングにしない（D-05 §5.1.4。S-01/A-03）。
+///
+/// **自動リトライを切る**（`noRetry`。D-04 §8 #61・#67 と同じ理由）。切らない
+/// と Riverpod 3 の既定が Exception を最大 10 回（合計約 38 秒）再試行し、
+/// その間 `AsyncLoading(hasError: true)` が続いて E-24 が出ず、`HomeScreen`
+/// の張り直し（`isLoading` の間は張り直さない）も遅れる。張り直しは
+/// `HomeScreen` が契機ごとに 1 回だけ行う（D-05 §5.1.5・§8 #40）。
 
 @ProviderFor(homeArticles)
 const homeArticlesProvider = HomeArticlesFamily._();
@@ -156,6 +162,12 @@ const homeArticlesProvider = HomeArticlesFamily._();
 /// の値が変わると Stream は作り直されるが、Riverpod の `AsyncLoading` は前の
 /// 値を保持する（`isLoading && hasValue`）ので、`HomePage` は `hasValue` の
 /// ときは前の値で描き、全面ローディングにしない（D-05 §5.1.4。S-01/A-03）。
+///
+/// **自動リトライを切る**（`noRetry`。D-04 §8 #61・#67 と同じ理由）。切らない
+/// と Riverpod 3 の既定が Exception を最大 10 回（合計約 38 秒）再試行し、
+/// その間 `AsyncLoading(hasError: true)` が続いて E-24 が出ず、`HomeScreen`
+/// の張り直し（`isLoading` の間は張り直さない）も遅れる。張り直しは
+/// `HomeScreen` が契機ごとに 1 回だけ行う（D-05 §5.1.5・§8 #40）。
 
 final class HomeArticlesProvider
     extends
@@ -172,11 +184,17 @@ final class HomeArticlesProvider
   /// の値が変わると Stream は作り直されるが、Riverpod の `AsyncLoading` は前の
   /// 値を保持する（`isLoading && hasValue`）ので、`HomePage` は `hasValue` の
   /// ときは前の値で描き、全面ローディングにしない（D-05 §5.1.4。S-01/A-03）。
+  ///
+  /// **自動リトライを切る**（`noRetry`。D-04 §8 #61・#67 と同じ理由）。切らない
+  /// と Riverpod 3 の既定が Exception を最大 10 回（合計約 38 秒）再試行し、
+  /// その間 `AsyncLoading(hasError: true)` が続いて E-24 が出ず、`HomeScreen`
+  /// の張り直し（`isLoading` の間は張り直さない）も遅れる。張り直しは
+  /// `HomeScreen` が契機ごとに 1 回だけ行う（D-05 §5.1.5・§8 #40）。
   const HomeArticlesProvider._({
     required HomeArticlesFamily super.from,
     required String? super.argument,
   }) : super(
-         retry: null,
+         retry: noRetry,
          name: r'homeArticlesProvider',
          isAutoDispose: false,
          dependencies: null,
@@ -216,7 +234,7 @@ final class HomeArticlesProvider
   }
 }
 
-String _$homeArticlesHash() => r'2f0251f27ecaad615d0d088dd6b815cf35df8757';
+String _$homeArticlesHash() => r'eb24b5aa25d0c16617d1200923d9b6105e969533';
 
 /// タブ 1 ページ分の表示対象（D-05 §4.6）。
 ///
@@ -225,12 +243,18 @@ String _$homeArticlesHash() => r'2f0251f27ecaad615d0d088dd6b815cf35df8757';
 /// の値が変わると Stream は作り直されるが、Riverpod の `AsyncLoading` は前の
 /// 値を保持する（`isLoading && hasValue`）ので、`HomePage` は `hasValue` の
 /// ときは前の値で描き、全面ローディングにしない（D-05 §5.1.4。S-01/A-03）。
+///
+/// **自動リトライを切る**（`noRetry`。D-04 §8 #61・#67 と同じ理由）。切らない
+/// と Riverpod 3 の既定が Exception を最大 10 回（合計約 38 秒）再試行し、
+/// その間 `AsyncLoading(hasError: true)` が続いて E-24 が出ず、`HomeScreen`
+/// の張り直し（`isLoading` の間は張り直さない）も遅れる。張り直しは
+/// `HomeScreen` が契機ごとに 1 回だけ行う（D-05 §5.1.5・§8 #40）。
 
 final class HomeArticlesFamily extends $Family
     with $FunctionalFamilyOverride<Stream<HomeArticles>, String?> {
   const HomeArticlesFamily._()
     : super(
-        retry: null,
+        retry: noRetry,
         name: r'homeArticlesProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
@@ -244,6 +268,12 @@ final class HomeArticlesFamily extends $Family
   /// の値が変わると Stream は作り直されるが、Riverpod の `AsyncLoading` は前の
   /// 値を保持する（`isLoading && hasValue`）ので、`HomePage` は `hasValue` の
   /// ときは前の値で描き、全面ローディングにしない（D-05 §5.1.4。S-01/A-03）。
+  ///
+  /// **自動リトライを切る**（`noRetry`。D-04 §8 #61・#67 と同じ理由）。切らない
+  /// と Riverpod 3 の既定が Exception を最大 10 回（合計約 38 秒）再試行し、
+  /// その間 `AsyncLoading(hasError: true)` が続いて E-24 が出ず、`HomeScreen`
+  /// の張り直し（`isLoading` の間は張り直さない）も遅れる。張り直しは
+  /// `HomeScreen` が契機ごとに 1 回だけ行う（D-05 §5.1.5・§8 #40）。
 
   HomeArticlesProvider call({required String? companyId}) =>
       HomeArticlesProvider._(argument: companyId, from: this);

@@ -59,7 +59,7 @@
 | T-49 | D-02 | E | http ラッパーのタイムアウトの例外名を TimeoutError に直す | collector | — | done |
 | T-50 | D-02 | F | collect-articles の invalid raw article の警告に companyId を足す | collector | — | done |
 | T-51 | D-02 | G | git 出力のマスク対象を AUTH_SCHEMES として定数化し §7.3 のケースを足す | collector | — | done |
-| T-52 | D-02 | J | 収集ワークフローを main で実測確認する | collector | T-48 | todo |
+| T-52 | D-02 | J | 収集ワークフローを main で実測確認する | collector | T-48 | in_progress |
 | T-53 | D-04 | T-F5a | ログの例外整形（releaseSafeError の追加と lib/ への一括適用） | app | — | done |
 | T-54 | D-04 | T-F5b | 通知タップの等価性・抑止判定の依存と診断を反映する | app | T-53 | done |
 | T-55 | D-05 | T-S | URL 検証に userInfo の条件を追加する | app | — | in_progress |

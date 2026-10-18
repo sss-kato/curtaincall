@@ -32,10 +32,13 @@ SyncArticlesUseCase syncArticlesUseCase(Ref ref) => SyncArticlesUseCase(
 );
 
 /// 対応外スキーマの抑止判定（D-04 §5.2.1。§8 #64）。`SyncCoordinator` に
-/// 関数型で渡す。
+/// 関数型で渡す。引数の型は `UnsupportedSchemaReader`（D-04 §4.4。§8 #71）
+/// で、`articleSyncRepositoryProvider` の値はその部分型なのでそのまま渡せる
+/// （Provider を新しく足さない）。
 @Riverpod(keepAlive: true)
-SyncSuppressionPolicy syncSuppressionPolicy(Ref ref) =>
-    SyncSuppressionPolicy(articles: ref.watch(articleSyncRepositoryProvider));
+SyncSuppressionPolicy syncSuppressionPolicy(Ref ref) => SyncSuppressionPolicy(
+  schemaReader: ref.watch(articleSyncRepositoryProvider),
+);
 
 /// Coordinator は具象 UseCase ではなく関数型を受け取る（テストでは
 /// スタブ関数を渡す。D-04 §5.3・§8 #33）。

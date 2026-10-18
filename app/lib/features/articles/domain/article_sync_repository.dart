@@ -1,4 +1,5 @@
 import 'package:curtaincall/features/articles/domain/article.dart';
+import 'package:curtaincall/features/articles/domain/unsupported_schema_reader.dart';
 import 'package:meta/meta.dart';
 
 /// `SyncArticlesUseCase` が組み立てる反映計画（D-04 §5.2）。
@@ -65,7 +66,11 @@ final class FeedApplyResult {
 }
 
 /// 同期用（`SyncArticlesUseCase` だけが使う。D-04 §8 #42）。
-abstract interface class ArticleSyncRepository {
+///
+/// `unsupportedSchemaVersion()` は [UnsupportedSchemaReader] から継承する
+/// （再宣言しない。D-04 §8 #71）。
+abstract interface class ArticleSyncRepository
+    implements UnsupportedSchemaReader {
   /// 端末にある全記事（`in_feed` の真偽を問わない）。
   Future<List<Article>> findAll();
 
@@ -77,12 +82,6 @@ abstract interface class ArticleSyncRepository {
   /// `generatedAt`）。行が無い、または `articles` が 0 件なら null
   /// （`feedEtag` と同じ保険。D-04 §8 #38）。
   Future<DateTime?> feedGeneratedAt();
-
-  /// `settings.feed_unsupported_schema`。行が無ければ null
-  /// （D-04 §5.2.1、D-04 §8 #64）。`SyncSuppressionPolicy` が抑止判定に
-  /// 使う（記録は `SyncArticlesUseCase` の手順 2、解除は手順 3・8-6 が
-  /// `setUnsupportedSchemaVersion` で行う）。
-  Future<int?> unsupportedSchemaVersion();
 
   /// `settings.feed_unsupported_schema` を upsert（null なら行を削除）。
   Future<void> setUnsupportedSchemaVersion(int? version);

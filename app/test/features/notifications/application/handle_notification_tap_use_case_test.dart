@@ -16,7 +16,7 @@ void main() {
       final useCase = HandleNotificationTapUseCase(opener);
 
       final result = await useCase.execute(
-        const NotificationTap(companyId: 'toho'),
+        parseNotificationTap(const {'companyId': 'toho'}),
         companyIds: const ['toho', 'shiki'],
       );
 
@@ -29,7 +29,7 @@ void main() {
       final useCase = HandleNotificationTapUseCase(opener);
 
       final result = await useCase.execute(
-        const NotificationTap(companyId: null),
+        parseNotificationTap(const {'companyId': null}),
         companyIds: const ['toho', 'shiki'],
       );
 
@@ -42,7 +42,7 @@ void main() {
       final useCase = HandleNotificationTapUseCase(opener);
 
       final result = await useCase.execute(
-        const NotificationTap(companyId: 'zzz'),
+        parseNotificationTap(const {'companyId': 'zzz'}),
         companyIds: const ['toho', 'shiki'],
       );
 
@@ -55,7 +55,7 @@ void main() {
       final useCase = HandleNotificationTapUseCase(opener);
 
       final result = await useCase.execute(
-        const NotificationTap(companyId: ''),
+        parseNotificationTap(const {'companyId': ''}),
         companyIds: const ['toho', 'shiki'],
       );
 

@@ -84,7 +84,7 @@ final class InitialNotificationTapProvider
 }
 
 String _$initialNotificationTapHash() =>
-    r'91f87fd50827cee30be330caff2448649abbaf78';
+    r'4f4bc16bc8bb78c1f9023a86ced715cf6dfd22b2';
 
 /// 起動中（バックグラウンド・フォアグラウンド）に通知をタップしたときに
 /// 流れる Stream。

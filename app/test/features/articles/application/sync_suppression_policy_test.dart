@@ -1,34 +1,38 @@
 import 'package:curtaincall/features/articles/application/sync_result.dart';
 import 'package:curtaincall/features/articles/application/sync_suppression_policy.dart';
+import 'package:curtaincall/features/articles/domain/unsupported_schema_reader.dart';
 import 'package:curtaincall/features/articles/infrastructure/drift_article_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../../helpers/delegating_article_sync_repository.dart';
 import '../../../helpers/in_memory_database.dart';
 
 /// `unsupportedSchemaVersion()` の呼び出し回数を記録する薄いラッパ
-/// （D-04 §7「呼び出し回数を記録するフェイクで確認」）。
-final class _CountingArticleSyncRepository
-    extends DelegatingArticleSyncRepository {
-  _CountingArticleSyncRepository(super.inner);
+/// （D-04 §7「呼び出し回数を記録するフェイクで確認」）。抑止判定の依存は
+/// [UnsupportedSchemaReader] の 1 メソッドだけなので、それだけを実装する
+/// （`DelegatingArticleSyncRepository` を使わない。D-04 §8 #71）。
+final class _CountingSchemaReader implements UnsupportedSchemaReader {
+  _CountingSchemaReader(this._inner);
+
+  final UnsupportedSchemaReader _inner;
 
   int unsupportedSchemaVersionCallCount = 0;
 
   @override
   Future<int?> unsupportedSchemaVersion() {
     unsupportedSchemaVersionCallCount++;
-    return super.unsupportedSchemaVersion();
+    return _inner.unsupportedSchemaVersion();
   }
 }
 
-/// `unsupportedSchemaVersion()` が常に例外を投げるフェイク（D-04 §7）。
-/// 抑止判定は他のメソッドを呼ばないため、それ以外は未 override のまま
-/// （呼ばれると `UnimplementedError`）でよい。
-final class _ThrowingArticleSyncRepository
-    extends DelegatingArticleSyncRepository {
+/// `unsupportedSchemaVersion()` が常に [_error] を投げるフェイク
+/// （D-04 §7。[UnsupportedSchemaReader] の 1 メソッドだけを実装する）。
+final class _ThrowingSchemaReader implements UnsupportedSchemaReader {
+  _ThrowingSchemaReader(this._error);
+
+  final Object _error;
+
   @override
-  Future<int?> unsupportedSchemaVersion() =>
-      Future<int?>.error(Exception('database is locked'));
+  Future<int?> unsupportedSchemaVersion() => Future<int?>.error(_error);
 }
 
 void main() {
@@ -36,7 +40,7 @@ void main() {
     test('記録が無い × launch → false', () async {
       final db = openInMemoryDatabase();
       final policy = SyncSuppressionPolicy(
-        articles: DriftArticleRepository(db),
+        schemaReader: DriftArticleRepository(db),
       );
 
       expect(await policy.shouldSuppress(SyncTrigger.launch), isFalse);
@@ -46,7 +50,7 @@ void main() {
       final db = openInMemoryDatabase();
       final repository = DriftArticleRepository(db);
       await repository.setUnsupportedSchemaVersion(2);
-      final policy = SyncSuppressionPolicy(articles: repository);
+      final policy = SyncSuppressionPolicy(schemaReader: repository);
 
       for (final trigger in [SyncTrigger.launch, SyncTrigger.foreground]) {
         expect(
@@ -62,7 +66,7 @@ void main() {
       final db = openInMemoryDatabase();
       final repository = DriftArticleRepository(db);
       await repository.setUnsupportedSchemaVersion(2);
-      final policy = SyncSuppressionPolicy(articles: repository);
+      final policy = SyncSuppressionPolicy(schemaReader: repository);
 
       for (final trigger in [
         SyncTrigger.pullToRefresh,
@@ -83,7 +87,7 @@ void main() {
       final repository = DriftArticleRepository(db);
       await repository.setUnsupportedSchemaVersion(2);
       final policy = SyncSuppressionPolicy(
-        articles: repository,
+        schemaReader: repository,
         supportedSchemaVersions: {1, 2},
       );
 
@@ -93,10 +97,8 @@ void main() {
     test('launch / foreground 以外では unsupportedSchemaVersion() を呼ばない '
         '（DB を読まない。呼び出し回数を記録するフェイクで確認）', () async {
       final db = openInMemoryDatabase();
-      final counting = _CountingArticleSyncRepository(
-        DriftArticleRepository(db),
-      );
-      final policy = SyncSuppressionPolicy(articles: counting);
+      final counting = _CountingSchemaReader(DriftArticleRepository(db));
+      final policy = SyncSuppressionPolicy(schemaReader: counting);
 
       for (final trigger in [
         SyncTrigger.pullToRefresh,
@@ -111,13 +113,28 @@ void main() {
 
     test('unsupportedSchemaVersion() が例外を投げる → 同じ例外がそのまま伝播する '
         '（握るのは SyncCoordinator）', () async {
+      final error = Exception('database is locked');
       final policy = SyncSuppressionPolicy(
-        articles: _ThrowingArticleSyncRepository(),
+        schemaReader: _ThrowingSchemaReader(error),
       );
 
       await expectLater(
         policy.shouldSuppress(SyncTrigger.launch),
-        throwsA(isA<Exception>()),
+        throwsA(same(error)),
+      );
+    });
+
+    test('unsupportedSchemaVersion() が Error（StateError。close 済み DB に '
+        '相当）を投げる → 同じ Error がそのまま伝播する（包み直さない。受け手が '
+        'on Object である根拠。D-04 §5.2.1「失敗時」）', () async {
+      final error = StateError('closed');
+      final policy = SyncSuppressionPolicy(
+        schemaReader: _ThrowingSchemaReader(error),
+      );
+
+      await expectLater(
+        policy.shouldSuppress(SyncTrigger.launch),
+        throwsA(same(error)),
       );
     });
   });

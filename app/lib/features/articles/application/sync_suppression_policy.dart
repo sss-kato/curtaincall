@@ -1,10 +1,6 @@
 import 'package:curtaincall/features/articles/application/sync_result.dart';
-import 'package:curtaincall/features/articles/domain/article_sync_repository.dart';
 import 'package:curtaincall/features/articles/domain/articles_file.dart';
-
-/// `SyncCoordinator` に渡す関数型（Coordinator は具象クラスに依存しない。
-/// D-04 §8 #33 と同じ形）。
-typedef SyncSuppressionCheck = Future<bool> Function(SyncTrigger trigger);
+import 'package:curtaincall/features/articles/domain/unsupported_schema_reader.dart';
 
 /// 対応外 schemaVersion を記録している間、`launch` / `foreground` の取得を
 /// 抑止するか（D-04 §5.2.1・§8 #32・#64）。
@@ -15,16 +11,18 @@ typedef SyncSuppressionCheck = Future<bool> Function(SyncTrigger trigger);
 /// `inProgress == true` になり、通信していないのに E-21（ST-11）が出て
 /// しまう（S-00 §8 #31・S-01 §8 #23 の但し書きに反する）。
 final class SyncSuppressionPolicy {
-  /// [_articles] から記録を読んで判定する [SyncSuppressionPolicy] を作る。
+  /// [_schemaReader] から記録を読んで判定する [SyncSuppressionPolicy] を
+  /// 作る。引数の型は 1 メソッドのポート [UnsupportedSchemaReader] で、
+  /// `findAll`・`applyFeed` には触れない（D-04 §4.4・§8 #71）。
   ///
   /// [_supportedSchemaVersions] はテスト専用の差し替え口（「app 更新後」を
   /// 再現するためだけに使う。DI では既定のまま使う）。
   SyncSuppressionPolicy({
-    required this._articles,
+    required this._schemaReader,
     this._supportedSchemaVersions = supportedArticlesSchemaVersions,
   });
 
-  final ArticleSyncRepository _articles;
+  final UnsupportedSchemaReader _schemaReader;
   final Set<int> _supportedSchemaVersions;
 
   /// [trigger] の取得を抑止するか判定する。
@@ -32,18 +30,23 @@ final class SyncSuppressionPolicy {
   /// 1. [trigger] が `launch` / `foreground` 以外（`pullToRefresh`・
   ///    `retry`・`notificationTap`）なら false（ユーザーの明示操作は常に
   ///    試す。DB を読まない）
-  /// 2. `articles.unsupportedSchemaVersion()` が null なら false
+  /// 2. `schemaReader.unsupportedSchemaVersion()` が null なら false
   /// 3. [_supportedSchemaVersions] が記録値を含むなら false（記録があっても
   ///    現在の app が対応する版 = app 更新後）
   /// 4. それ以外は true（毎回配信を取り直さない）
   ///
-  /// DB 例外はそのまま投げる（呼び出し側の `SyncCoordinator` が捕捉して
-  /// **抑止しない**扱いにする。§5.2.1「失敗時」）。
+  /// 失敗時は例外（`Error` を含む）をそのまま投げる（捕まえない・包み直さ
+  /// ない。呼び出し側の `SyncCoordinator` が `on Object` で捕捉して
+  /// **抑止しない**扱いにする。D-04 §5.2.1「失敗時」）。
+  ///
+  /// 抑止理由を 2 つ目にするときは `Future<SyncSuppressionReason?>` へ
+  /// 広げる（null = 抑止しない。D-04 §8 #74）。`SyncResult` の組み立ては
+  /// 広げた後も `SyncCoordinator` に残す（#64 の契約の所有者を移さない）。
   Future<bool> shouldSuppress(SyncTrigger trigger) async {
     if (trigger != SyncTrigger.launch && trigger != SyncTrigger.foreground) {
       return false;
     }
-    final recorded = await _articles.unsupportedSchemaVersion();
+    final recorded = await _schemaReader.unsupportedSchemaVersion();
     if (recorded == null) {
       return false;
     }

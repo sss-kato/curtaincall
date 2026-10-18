@@ -108,13 +108,17 @@ String _$syncArticlesUseCaseHash() =>
     r'dbc91f034560d62697c2ae1655e7a924a59de45e';
 
 /// 対応外スキーマの抑止判定（D-04 §5.2.1。§8 #64）。`SyncCoordinator` に
-/// 関数型で渡す。
+/// 関数型で渡す。引数の型は `UnsupportedSchemaReader`（D-04 §4.4。§8 #71）
+/// で、`articleSyncRepositoryProvider` の値はその部分型なのでそのまま渡せる
+/// （Provider を新しく足さない）。
 
 @ProviderFor(syncSuppressionPolicy)
 const syncSuppressionPolicyProvider = SyncSuppressionPolicyProvider._();
 
 /// 対応外スキーマの抑止判定（D-04 §5.2.1。§8 #64）。`SyncCoordinator` に
-/// 関数型で渡す。
+/// 関数型で渡す。引数の型は `UnsupportedSchemaReader`（D-04 §4.4。§8 #71）
+/// で、`articleSyncRepositoryProvider` の値はその部分型なのでそのまま渡せる
+/// （Provider を新しく足さない）。
 
 final class SyncSuppressionPolicyProvider
     extends
@@ -125,7 +129,9 @@ final class SyncSuppressionPolicyProvider
         >
     with $Provider<SyncSuppressionPolicy> {
   /// 対応外スキーマの抑止判定（D-04 §5.2.1。§8 #64）。`SyncCoordinator` に
-  /// 関数型で渡す。
+  /// 関数型で渡す。引数の型は `UnsupportedSchemaReader`（D-04 §4.4。§8 #71）
+  /// で、`articleSyncRepositoryProvider` の値はその部分型なのでそのまま渡せる
+  /// （Provider を新しく足さない）。
   const SyncSuppressionPolicyProvider._()
     : super(
         from: null,
@@ -161,7 +167,7 @@ final class SyncSuppressionPolicyProvider
 }
 
 String _$syncSuppressionPolicyHash() =>
-    r'c93309db72d748c5b0b330d45c70603a5c346621';
+    r'c7fbbe85b3be8d740bec4543608a68db1118ab7c';
 
 /// Coordinator は具象 UseCase ではなく関数型を受け取る（テストでは
 /// スタブ関数を渡す。D-04 §5.3・§8 #33）。

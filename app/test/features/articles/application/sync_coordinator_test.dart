@@ -29,6 +29,29 @@ const _succeeded = SyncSucceeded(
 /// よい（タイムアウト自体を検証するテストは `fakeAsync` で 5 秒を明示する）。
 const _defaultTimeout = Duration(seconds: 30);
 
+/// [SyncSuppressionCheckFailed] を [trigger]・[error]・[stackTrace]（いずれも
+/// 同一インスタンス）で確かめる Matcher（`==` を定義しない事象なので型と
+/// フィールドで見る。D-04 §5.3・§7）。[stackTrace] は `shouldSuppress` の
+/// 失敗に添えたものをそのまま渡す。catch で受けたスタックトレースを捨てて
+/// `StackTrace.current`・`StackTrace.empty` 等に差し替える実装を赤にするため、
+/// 型ではなく同一性で見る。
+Matcher _isCheckFailed(
+  SyncTrigger trigger,
+  Object error,
+  StackTrace stackTrace,
+) => isA<SyncSuppressionCheckFailed>()
+    .having((e) => e.trigger, 'trigger', trigger)
+    .having((e) => e.error, 'error', same(error))
+    .having((e) => e.stackTrace, 'stackTrace', same(stackTrace));
+
+/// 抑止判定（`shouldSuppress`）の失敗のパターン（テスト名に埋める見出しと
+/// 投げる値）。`on Exception` では取りこぼす `Error` も必ず含める（D-04
+/// §5.2.1「失敗時」）。
+final _checkFailures = <(String, Object)>[
+  ('Exception', Exception('db locked')),
+  ('Error（StateError）', StateError('closed')),
+];
+
 /// 抑止しない既定のスタブ（対応外スキーマの抑止を検証しないケース用）。
 Future<bool> _neverSuppress(SyncTrigger _) async => false;
 
@@ -61,7 +84,7 @@ _realStack({List<MockFeedResponse> responses = const []}) {
     logger: Logger(level: Level.off),
   );
   final useCase = SyncArticlesUseCase(feed: feed, articles: repository);
-  final policy = SyncSuppressionPolicy(articles: repository);
+  final policy = SyncSuppressionPolicy(schemaReader: repository);
   final coordinator = _coordinator(
     execute: useCase.execute,
     shouldSuppress: policy.shouldSuppress,
@@ -197,7 +220,12 @@ void main() {
       await settle();
 
       expect(stub.callCount, 1);
-      expect(events, [const SyncStarted(SyncTrigger.launch)]);
+      // フィールド（trigger・error・stackTrace）の検証は下の
+      // _checkFailures の for で行う。ここでは順序だけを見る。
+      expect(events, [
+        isA<SyncSuppressionCheckFailed>(),
+        const SyncStarted(SyncTrigger.launch),
+      ]);
 
       stub.completerAt(0).complete(_succeeded);
       expect(await future, _succeeded);
@@ -229,7 +257,12 @@ void main() {
       await settle();
 
       expect(stub.callCount, 1);
-      expect(events, [const SyncStarted(SyncTrigger.launch)]);
+      // フィールド（trigger・error・stackTrace）の検証は下の
+      // _checkFailures の for で行う。ここでは順序だけを見る。
+      expect(events, [
+        isA<SyncSuppressionCheckFailed>(),
+        const SyncStarted(SyncTrigger.launch),
+      ]);
 
       stub.completerAt(0).complete(_succeeded);
       expect(await future, _succeeded);
@@ -250,11 +283,68 @@ void main() {
       await settle();
 
       expect(stub.callCount, 1);
-      expect(events, [const SyncStarted(SyncTrigger.launch)]);
+      // フィールド（trigger・error・stackTrace）の検証は下の
+      // _checkFailures の for で行う。ここでは順序だけを見る。
+      expect(events, [
+        isA<SyncSuppressionCheckFailed>(),
+        const SyncStarted(SyncTrigger.launch),
+      ]);
 
       stub.completerAt(0).complete(_succeeded);
       expect(await future, _succeeded);
     });
+
+    for (final (label, error) in _checkFailures) {
+      final stackTrace = StackTrace.current;
+      test('shouldSuppress が $label を投げる → events に '
+          'SyncSuppressionCheckFailed(trigger, error, stackTrace) が 1 回流れ、 '
+          'その後に SyncStarted → SyncCompleted が続く（順序も確かめる。 '
+          'D-04 §8 #73）', () async {
+        final stub = SyncExecutorStub();
+        final coordinator = _coordinator(
+          execute: stub.call,
+          shouldSuppress: (trigger) => Future.error(error, stackTrace),
+        );
+        final events = <SyncEvent>[];
+        coordinator.events.listen(events.add);
+
+        final future = coordinator.run(SyncTrigger.launch);
+        await settle();
+        stub.completerAt(0).complete(_succeeded);
+        expect(await future, _succeeded);
+        await settle();
+
+        expect(events, [
+          _isCheckFailed(SyncTrigger.launch, error, stackTrace),
+          const SyncStarted(SyncTrigger.launch),
+          const SyncCompleted(SyncTrigger.launch, _succeeded),
+        ]);
+      });
+    }
+
+    for (final suppress in [true, false]) {
+      test('shouldSuppress が $suppress を返した（例外なし）→ '
+          'SyncSuppressionCheckFailed は流れない（D-04 §8 #73）', () async {
+        final stub = SyncExecutorStub();
+        final coordinator = _coordinator(
+          execute: stub.call,
+          shouldSuppress: (trigger) async => suppress,
+        );
+        final events = <SyncEvent>[];
+        coordinator.events.listen(events.add);
+
+        final future = coordinator.run(SyncTrigger.launch);
+        await settle();
+        if (!suppress) {
+          stub.completerAt(0).complete(_succeeded);
+        }
+        await future;
+        await settle();
+
+        expect(events, isNotEmpty);
+        expect(events.whereType<SyncSuppressionCheckFailed>(), isEmpty);
+      });
+    }
 
     test('shouldSuppress の完了前に run() をもう 1 回呼ぶ '
         '（Completer で判定を止める）→ shouldSuppress は 1 回しか呼ばれず、'
@@ -543,6 +633,94 @@ void main() {
         expect(stub.callCount, 0);
       });
     });
+
+    for (final (label, error) in _checkFailures) {
+      test('shouldSuppress を Completer で止めたまま overallTimeout を経過させ、'
+          ' その後 $label で解決させる → events は '
+          'SyncCompleted(launch, SyncFailed(timeout)) → '
+          'SyncSuppressionCheckFailed の 2 件（完了済みの実行について診断だけが '
+          '後から流れる）で、SyncStarted は流れず execute の呼び出し回数は 0 '
+          '（D-04 §5.3 の events の契約・§6・§8 #73）', () {
+        fakeAsync((async) {
+          final stub = SyncExecutorStub();
+          final suppressCompleter = Completer<bool>();
+          final coordinator = _coordinator(
+            execute: stub.call,
+            shouldSuppress: (trigger) => suppressCompleter.future,
+            overallTimeout: const Duration(seconds: 5),
+          );
+          final events = <SyncEvent>[];
+          coordinator.events.listen(events.add);
+
+          coordinator.run(SyncTrigger.launch);
+          async.elapse(const Duration(seconds: 5));
+
+          expect(events, [const SyncCompleted(SyncTrigger.launch, _timeout)]);
+
+          final stackTrace = StackTrace.current;
+          suppressCompleter.completeError(error, stackTrace);
+          async.flushMicrotasks();
+
+          expect(events, [
+            const SyncCompleted(SyncTrigger.launch, _timeout),
+            _isCheckFailed(SyncTrigger.launch, error, stackTrace),
+          ]);
+          expect(stub.callCount, 0);
+        });
+      });
+    }
+
+    test('shouldSuppress を Completer で止めたまま overallTimeout を経過させ、'
+        ' 新しい run(pullToRefresh) を実行中のまま止めてから古い判定を '
+        'Exception で解決させる → 古い実行の SyncSuppressionCheckFailed(launch) '
+        'が新しい実行の SyncStarted と SyncCompleted の間に届くが、新しい実行の '
+        '対（SyncStarted(pullToRefresh) → SyncCompleted(pullToRefresh)）は崩れず、 '
+        '新しい実行の結果も変わらない（D-04 §5.3 の events の契約・§6）', () {
+      fakeAsync((async) {
+        final stub = SyncExecutorStub();
+        final suppressCompleters = <Completer<bool>>[];
+        final coordinator = _coordinator(
+          execute: stub.call,
+          shouldSuppress: (trigger) {
+            if (suppressCompleters.isEmpty) {
+              final completer = Completer<bool>();
+              suppressCompleters.add(completer);
+              return completer.future;
+            }
+            return Future.value(false);
+          },
+          overallTimeout: const Duration(seconds: 5),
+        );
+        final events = <SyncEvent>[];
+        coordinator.events.listen(events.add);
+
+        coordinator.run(SyncTrigger.launch);
+        async.elapse(const Duration(seconds: 5));
+
+        SyncResult? result;
+        coordinator.run(SyncTrigger.pullToRefresh).then((r) => result = r);
+        async.flushMicrotasks();
+        expect(stub.callCount, 1);
+
+        final error = Exception('db locked');
+        final stackTrace = StackTrace.current;
+        suppressCompleters[0].completeError(error, stackTrace);
+        async.flushMicrotasks();
+
+        stub.completerAt(0).complete(_succeeded);
+        async.flushMicrotasks();
+
+        expect(events, [
+          const SyncCompleted(SyncTrigger.launch, _timeout),
+          const SyncStarted(SyncTrigger.pullToRefresh),
+          _isCheckFailed(SyncTrigger.launch, error, stackTrace),
+          const SyncCompleted(SyncTrigger.pullToRefresh, _succeeded),
+        ]);
+        expect(stub.callCount, 1);
+        expect(stub.calls[0], SyncTrigger.pullToRefresh);
+        expect(result, _succeeded);
+      });
+    });
   });
 
   group('通知タップの後追い', () {
@@ -819,5 +997,31 @@ void main() {
       );
       expect(stub.callCount, 0);
     });
+
+    for (final (label, error) in _checkFailures) {
+      test('抑止判定の完了前に dispose()、その後 shouldSuppress が $label で '
+          '解決 → execute は呼ばれず（呼び出し回数 0）、run() の Future は '
+          'SyncFailed(timeout) で完了し、events には '
+          'SyncSuppressionCheckFailed も流れない（_disposed が true のため '
+          '0 件。閉じたコントローラに add しない。D-04 §6・§5.3）', () async {
+        final stub = SyncExecutorStub();
+        final suppressCompleter = Completer<bool>();
+        final coordinator = _coordinator(
+          execute: stub.call,
+          shouldSuppress: (trigger) => suppressCompleter.future,
+        );
+        final events = <SyncEvent>[];
+        coordinator.events.listen(events.add);
+
+        final future = coordinator.run(SyncTrigger.launch);
+        coordinator.dispose();
+        suppressCompleter.completeError(error);
+
+        expect(await future, _timeout);
+        expect(stub.callCount, 0);
+        await settle();
+        expect(events, isEmpty);
+      });
+    }
   });
 }

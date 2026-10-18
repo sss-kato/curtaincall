@@ -3,6 +3,7 @@ library;
 
 import 'package:curtaincall/core/di/articles_providers.dart';
 import 'package:curtaincall/core/di/providers.dart';
+import 'package:curtaincall/core/logging/app_logger.dart';
 import 'package:curtaincall/features/articles/application/sync_coordinator.dart';
 import 'package:curtaincall/features/articles/application/sync_result.dart';
 import 'package:logger/logger.dart';
@@ -81,14 +82,33 @@ class SyncController extends _$SyncController {
       ref.read(syncCoordinatorProvider).run(trigger);
 
   void _onEvent(SyncEvent event) {
-    state = switch (event) {
-      SyncStarted() => state.copyWith(inProgress: true),
-      SyncCompleted(:final result) => SyncStatus(
-        inProgress: false,
-        lastResult: result,
-        sequence: state.sequence + 1,
-      ),
-    };
+    // SyncEvent は sealed なので、事象が増えたときはここが網羅性検査で
+    // 落ちる（取りこぼしを防ぐ。D-04 §8 #73）。
+    switch (event) {
+      case SyncStarted():
+        state = state.copyWith(inProgress: true);
+      case SyncCompleted(:final result):
+        state = SyncStatus(
+          inProgress: false,
+          lastResult: result,
+          sequence: state.sequence + 1,
+        );
+      case SyncSuppressionCheckFailed(
+        :final trigger,
+        :final error,
+        :final stackTrace,
+      ):
+        // 状態は変えない（通常はこの後 SyncStarted / SyncCompleted が続く。
+        // 全体タイムアウト後に解決した場合は SyncCompleted(timeout) の後に
+        // 本イベントだけが届く。D-04 §5.3 の events の契約・§6）。抑止が
+        // 効かないまま毎回取得している状態を残す唯一の手掛かり（D-04
+        // §5.2.1「失敗時」・§8 #73）。
+        _logger.w(
+          '対応外スキーマの抑止判定に失敗（抑止せず取得する）: $trigger',
+          error: releaseSafeError(error),
+          stackTrace: releaseSafeStackTrace(stackTrace),
+        );
+    }
     _log(event);
   }
 

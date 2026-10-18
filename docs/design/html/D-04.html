@@ -514,7 +514,7 @@ a{color:var(--accent)}
   IMPL --&gt; IF
   IMPL --&gt; ENT</pre>
 <p><strong><code>core/logging/app_logger.dart</code> の整形関数（<code>releaseSafeError</code>・<code>releaseSafeStackTrace</code>）は層に属さない例外</strong>で、presentation / app / infrastructure から直接 import してよい（<code>Logger</code> 本体は <code>loggerProvider</code> 経由で受け取る。§4.9・§8 #75）。理由：I/O も状態も持たない純粋関数（引数 → 戻り値）で、差し替えの対象にならないため依存の逆転を必要としない。図では <code>core/logging</code> を INFRA の subgraph に置いたまま、この 2 関数を <strong>層に属さないノード <code>LOGFMT</code></strong> として別に描き、presentation / app / infrastructure からの破線で例外を明示する。<strong>この 2 関数への import は CLAUDE.md「presentation から infrastructure の直接 import 禁止」の対象外</strong>として扱う（禁止の目的は具象の Repository・DB・HTTP に画面が結びつくのを防ぐことで、整形関数はそれに当たらない。CLAUDE.md への申し送りは §8.1）。</p>
-<p><code>core/logging</code> のうち DB 技術（<code>package:drift/remote.dart</code>・<code>package:sqlite3/common.dart</code>）を import するのは <code>app_logger.dart</code> の release 分岐だけである。この import について**「推移しない」の意味を 2 つに書き分ける**（下の依存表の <code>lib/app/</code> の行が「推移的に取り込み」を CLAUDE.md 違反の根拠にしているため、同じ語を別の意味で使わない）：</p>
+<p><code>core/logging</code> のうち DB 技術（<code>package:drift/isolate.dart&#39; show DriftRemoteException</code>・<code>package:sqlite3/common.dart&#39; show SqliteException</code>。§4.9）を import するのは <code>app_logger.dart</code> の release 分岐だけである。この import について**「推移しない」の意味を 2 つに書き分ける**（下の依存表の <code>lib/app/</code> の行が「推移的に取り込み」を CLAUDE.md 違反の根拠にしているため、同じ語を別の意味で使わない）：</p>
 <ul>
 <li><strong>型としては推移しない</strong>：<code>releaseSafeError</code> は <code>Object?</code> を受けて <code>Object?</code> を返し、drift / sqlite3 の型を 1 つも公開しない。呼び出し側が触る API は <code>Object?</code> だけなので、呼び出し側のコードに DB 技術のシンボルは現れない（<code>lib/app/</code> の行が問題にしているのは、<strong>呼び出し側から参照できるシンボル</strong>が他 feature の presentation に及ぶことである）</li>
 <li><strong>依存グラフ上の辺は残る</strong>：<code>app_logger.dart</code> をビルドに含めれば drift / sqlite3 もビルドに含まれる。したがって DB 技術の import は <strong><code>app_logger.dart</code> の 1 ファイルに限る</strong>（<code>core/logging</code> の他のファイル・他の層に広げない）。<strong>SQLite 以外の例外型を要約する必要が出て import が増える時点で §8 #75 (C)（依存の逆転。<code>SafeLoggable</code> と注入型 <code>ErrorSummarizer</code> の 2 形態）を見直す</strong></li>
@@ -565,7 +565,8 @@ a{color:var(--accent)}
   lib/
     main.dart                   bootstrap() を await して runApp
     app/
-      bootstrap.dart            core/di/bootstrap_overrides.dart の buildOverrides() を await して runApp（具象を import しない。§5.1）
+      bootstrap.dart            core/di/bootstrap_overrides.dart の buildOverrides() を await して
+                                ProviderScope(retry: noRetry, …) で runApp（具象を import しない。§5.1・§8 #78）
       app.dart                  CupertinoApp（ST-30。§5.9）
       root_tabs.dart            S-00/E-01〜E-04。A-01・A-02・ST-20（Widget のみ。Provider を置かない。§5.8）
       root_tab.dart             RootTab（タブの列挙）・shouldNotifyReselect（再タップ判定の純粋関数）。**import ゼロ**（§5.8）
@@ -576,7 +577,8 @@ a{color:var(--accent)}
     core/
       di/
         no_retry.dart           noRetry（Riverpod の自動リトライを切る定数関数。**import ゼロ**。
-                                articleCountProvider（§5.4）と initialNotificationTapProvider（§5.7）が共有する。
+                                articleCountProvider（§5.4）・initialNotificationTapProvider（§5.7）・D-05 の個別指定と、
+                                app 全体の既定にする lib/app/bootstrap.dart の ProviderScope(retry:) が共有する（§8 #78）。
                                 具象を持たないため「core/di は具象 import を許す唯一の場所」（§8 #43・#45）の対象外。§8 #67）
         providers.dart          基盤（DB・logger・http・companies）と Repository・PushGateway の Provider（§4.7。T-C）
         articles_providers.dart articles feature の Provider（ArticlesFeed・SyncArticlesUseCase・SyncCoordinator。§4.7。T-D。§8 #45）
@@ -1438,9 +1440,50 @@ abstract interface class PushGateway {
 </tr>
 <tr>
 <td><code>FcmPushGateway</code>（フェーズ 5。§10 T-G）</td>
-<td><code>firebase_messaging</code>：<code>getNotificationSettings().authorizationStatus</code>（<code>provisional</code> は <code>authorized</code> 扱い）／<code>requestPermission(alert: true, badge: false, sound: true)</code>／<code>subscribeToTopic</code> / <code>unsubscribeFromTopic</code>／<code>getInitialMessage()</code>／<code>onMessageOpenedApp</code>。どちらも <code>parseNotificationTap(Map&lt;String, Object?&gt;.from(message.data))</code> で <code>NotificationTap</code> に写す（<code>RemoteMessage.data</code> は <code>Map&lt;String, dynamic&gt;</code> なので、<code>Object?</code> に写してから渡す。<code>dynamic</code> を infrastructure の外へ出さない。写像の規則は domain の純粋関数に閉じ、<code>FcmPushGateway</code> は呼ぶだけ。§7）。フォアグラウンド受信時も通知を表示する（<code>setForegroundNotificationPresentationOptions(alert: true, badge: false, sound: true)</code>。S-01/ST-15 はフォアグラウンドでも同じ動作）</td>
+<td><code>firebase_messaging</code>：<code>getNotificationSettings().authorizationStatus</code>（<code>provisional</code> は <code>authorized</code> 扱い）／<code>requestPermission(alert: true, badge: false, sound: true)</code>／<code>subscribeToTopic</code> / <code>unsubscribeFromTopic</code>／<code>getInitialMessage()</code>／<code>onMessageOpenedApp</code>。どちらも <code>parseNotificationTap(Map&lt;String, Object?&gt;.from(message.data))</code> で <code>NotificationTap</code> に写す（<code>RemoteMessage.data</code> は <code>Map&lt;String, dynamic&gt;</code> なので、<code>Object?</code> に写してから渡す。<code>dynamic</code> を infrastructure の外へ出さない。写像の規則は domain の純粋関数に閉じ、<code>FcmPushGateway</code> は呼ぶだけ。§7）。フォアグラウンド受信時も通知を表示する（<code>setForegroundNotificationPresentationOptions(alert: true, badge: false, sound: true)</code>。S-01/ST-15 はフォアグラウンドでも同じ動作）。<strong><code>subscribe</code> / <code>unsubscribe</code> は <code>getAPNSToken()</code> が非 null を返すまで 500 ms 間隔で問い合わせてから <code>subscribeToTopic</code> / <code>unsubscribeFromTopic</code> を呼ぶ</strong>（待ちは既存の 15 秒のタイムアウトの内側。下のコード片。§6・§8 #79）</td>
 </tr>
 </tbody></table>
+<pre><code class="language-dart">// lib/features/notifications/infrastructure/fcm_push_gateway.dart（抜粋。§10 T-G = 実タスク T-36。§8 #79）
+/// APNs トークンの問い合わせ間隔
+const Duration apnsTokenPollInterval = Duration(milliseconds: 500);
+
+@override
+Future&lt;void&gt; subscribe(String topic) =&gt;
+    _afterApnsToken('subscribe', topic, () =&gt; _messaging.subscribeToTopic(topic));
+
+@override
+Future&lt;void&gt; unsubscribe(String topic) =&gt;
+    _afterApnsToken('unsubscribe', topic, () =&gt; _messaging.unsubscribeFromTopic(topic));
+
+/// APNs トークンを得てから [call] を呼ぶ。待ちと [call] の合計を feedTimeout（15 秒。§6）で打ち切る。
+/// .timeout() は内側の Future を止めないため、時間切れの後に待ちの loop が抜けて [call] を遅れて呼ばない
+/// よう timedOut を見る（遅れた subscribeToTopic が、利用者がその後に切った団体を購読し直すのを防ぐ）
+Future&lt;void&gt; _afterApnsToken(String operation, String topic, Future&lt;void&gt; Function() call) async {
+  var timedOut = false;
+  var waiting = true;
+  var polls = 0;
+  Future&lt;void&gt; body() async {
+    while (await _messaging.getAPNSToken() == null) {
+      if (timedOut) return;
+      polls++;
+      await Future&lt;void&gt;.delayed(apnsTokenPollInterval);
+    }
+    waiting = false;
+    if (timedOut) return;
+    if (polls &gt; 0) _logger.d('APNs トークン待ち $polls 回の後に $operation（$topic）');   // T-G の実機確認で見る
+    await call();
+  }
+
+  try {
+    await body().timeout(feedTimeout);
+  } on TimeoutException {
+    timedOut = true;
+    // 失敗の原因が TimeoutException だけでは apns-token-not-set 相当か FCM の応答待ちかを切り分けられないため 1 行残す
+    if (waiting) _logger.d('APNs トークンを得られないまま時間切れ: $operation（$topic）');
+    rethrow;   // SyncPushSubscriptionsUseCase の手順 4 が failed に積む（§5.6・§6）
+  }
+}</code></pre>
+<p><code>getAPNSToken()</code> 自身の例外（<code>PlatformException</code>）は捕捉せずにそのまま伝わり、手順 4 の <code>failed</code> に積まれる（<code>subscribeToTopic</code> の例外と同じ扱い）。ログに載せるのは操作名・<code>topic</code>（団体 id）・回数だけで、例外は載せない（§4.9）。<strong>テストは無い</strong>（<code>FcmPushGateway</code> はテストしない方針。§7）。</p>
 <p>切り替えは <code>const String pushBackend = String.fromEnvironment(&#39;CURTAINCALL_PUSH&#39;, defaultValue: &#39;none&#39;)</code>。<code>&#39;fcm&#39;</code> のときだけ <code>buildOverrides()</code>（<code>core/di/bootstrap_overrides.dart</code>。§5.1・§8 #43）が <code>Firebase.initializeApp()</code> を呼び、DI が <code>FcmPushGateway</code> を注入する（§8 #12）。</p>
 <h3 id="sec-4-7">4.7 Riverpod / DI（<code>lib/core/di/</code>）<a class="anchor" href="#sec-4-7">#</a></h3>
 <p><code>riverpod_annotation</code> + <code>riverpod_generator</code>（Riverpod 3.x。<code>Ref</code> 型）。基盤の Provider はすべて <code>keepAlive: true</code>。<code>appDatabaseProvider</code>・<code>companiesProvider</code>・<code>loggerProvider</code> は <code>core/di/bootstrap_overrides.dart</code> の <code>buildOverrides()</code> が実体を与え（<code>bootstrap</code> はその戻り値を <code>ProviderScope(overrides: ...)</code> に渡すだけ。§5.1。§8 #43）、override 無しで読むと <code>UnimplementedError</code> を投げる（テストでも必ず override する）。</p>
@@ -1586,8 +1629,12 @@ RequestNotificationPermissionUseCase requestNotificationPermissionUseCase(Ref re
 <td>UseCase はコンストラクタ注入なので Provider を介さず直接生成する。Provider の配線自体はテストしない</td>
 </tr>
 <tr>
+<td>自動リトライ</td>
+<td><strong>app 全体の既定で切る</strong>：<code>lib/app/bootstrap.dart</code> の <code>ProviderScope(retry: noRetry, overrides: …)</code>（§5.1 手順 3。<code>noRetry</code> は <code>lib/core/di/no_retry.dart</code>）。Riverpod 3 の既定（<code>ProviderContainer.defaultRetry</code>）は <code>Error</code>・<code>ProviderException</code> 以外の失敗を最大 10 回・約 38 秒再実行し、その間 <code>isLoading &amp;&amp; hasError</code> が続く（§5.4.2）。<strong>設計上の理由を持つ Provider の個別指定 <code>retry: noRetry</code> は残す</strong>：本書の <code>articleCountProvider</code>（#61）・<code>initialNotificationTapProvider</code>（#67）と D-05 の <code>homeArticlesProvider</code>・<code>savedArticlesProvider</code> / <code>SavedListController</code>・<code>unreadFilterProvider</code>。<strong>新設の Provider には付けなくてよい</strong>（既定が切れている）。ただし Provider 経由で「<code>Exception</code> で即 <code>AsyncError</code> になる」ことをテストするなら、その Provider には個別指定を付ける（テストの <code>ProviderContainer</code> は既定を通らない）。<code>bootstrap.dart</code> の 1 引数はテストで覆えないため、§4.8 の 4 つ目の step（<code>grep</code>）で書き戻しを止める（§8 #78）</td>
+</tr>
+<tr>
 <td>生成物</td>
-<td><code>*.g.dart</code> はコミットする（<code>build_runner</code> を CI で走らせない。§4.8）</td>
+<td><code>*.g.dart</code> はコミットする（<code>build_runner</code> を CI で走らせない。§4.8）。生成物の鮮度検査（再生成して差分を見る CI step）は今は置かない（§8 #76）</td>
 </tr>
 </tbody></table>
 <h3 id="sec-4-8">4.8 プロジェクト設定と CI<a class="anchor" href="#sec-4-8">#</a></h3>
@@ -1607,8 +1654,9 @@ dependencies:
   logger: ^2.4.0
   collection: ^1.18.0            # ListEquality / MapEquality（§4.2・§4.4・§8 #24）
   meta: ^1.18.0                  # @immutable（domain の値オブジェクト。§4.1）
-  sqlite3: ^2.4.0                # SqliteException の結果コードだけを release のログに載せる（§4.9・§8 #75）。
-                                 # drift の推移的依存だが import するため明示する（depend_on_referenced_packages）
+  sqlite3: ^2.6.0                # SqliteException の結果コードだけを release のログに載せる（§4.9・§8 #75）。
+                                 # drift の推移的依存だが import するため明示する（depend_on_referenced_packages）。
+                                 # 下限は drift 2.31.0 の要求（sqlite3: ^2.6.0）に合わせる（解決は 2.9.4）
 dev_dependencies:
   flutter_test: { sdk: flutter }
   very_good_analysis: ^6.0.0
@@ -1638,6 +1686,9 @@ targets:
 <pre><code class="language-yaml"># .github/workflows/app-ci.yml（本書が定める test job の step。実ファイルはこれに加えて
 # D-05 §4.7 の Info.plist 検査 step と、main への push でだけ走る ios-build job を持つ。
 # 本書はそれらを再定義しない＝下の抜粋で上書きしない）
+# 末尾の 4 つの検査 step（「ログの整形漏れの検査」の説明コメントから ProviderScope の step まで）は
+# 実ファイルと 1 文字ずつ一致させる（抜粋の直後の段落）。それより前の step は内容だけを定め、
+# 書式（with: の書き方・step 名・説明コメント）は実ファイルに委ねる
 name: app-ci
 on:
   pull_request:
@@ -1669,139 +1720,419 @@ jobs:
         run: dart format --output=none --set-exit-if-changed lib test
       # 夏時間のある TZ で日時書式の暦日差を実検証する（§5.9・§7・§8 #56）。対象を 1 ディレクトリに絞る
       - run: TZ=America/New_York flutter test test/core/ui/article/
-      # ログの整形漏れの検査（§4.9・§8 #75）。release のログに DB ファイルの絶対パスが載る退行を止める。
-      # error: / stackTrace: の名前付き引数は logger の呼び出しだけに現れる（§4.9）ので 1 行で判定できる。
+      # ログの整形漏れの検査（D-04 §4.9・D-04 §8 #75）。release のログに DB ファイルの絶対パスが
+      # 載る退行を止める。error: / stackTrace: の名前付き引数は logger の呼び出しだけに現れる
+      # （D-04 §4.9）。1 行で判定できる形は下の (2) が強制し、(4)(5) が 1 行の中の出現数を突き合わせる。
       # 行頭が // の行（説明コメント）は除外する。コード行の末尾コメントに書かないこと。
       # 除外の正規表現は「grep -rn の出力の &lt;ファイル&gt;:&lt;行番号&gt;: に続くコード先頭」を見ている
       # （':[[:space:]]*//' だけだと https:// の &quot;s:&quot; + &quot;//&quot; に一致して URL を含むログ行が除外され、
       #  未整形の例外を渡していても検査をすり抜ける。実測済み）
-      - name: logger の error: / stackTrace: が整形関数を通っているか
+      # name に &quot;: &quot; が入るため YAML のマッピングと解釈されない形で引用する
+      - name: &quot;logger の error: / stackTrace: が整形関数を通っているか&quot;
         run: |
-          if grep -rn --include='*.dart' -e 'error: ' lib | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | grep -v 'error: releaseSafeError('; then
+          # この step の検査の一覧（目次）。各判定の直上コメントは対応するラベルで始まる。
+          # 検査を増減したらこの一覧も同じ変更で直す（個数は書かない）。
+          # ラベルは追番で、既存の番号は振り直さない（番号の集合を参照するコメントが
+          # 目次と各判定の直上に散っており、振り直しに漏れたコメントは静かに嘘になる
+          # ＝ CI は赤くならない）。検査を足すときは途中に挿入せず末尾に足す
+          #   (0) strip_strings / occurrences 自身が機能しているかの自己検査
+          #   (1) lib に合格形が最低 1 件あるかの番兵（走査対象が消えたときの失効防止）
+          #   (2) error: / stackTrace: の実引数の折り返しの禁止
+          #   (3) 文字列リテラルの除去が破綻した行の検出（出現数を信用できない行を落とす）
+          #   (4) error: の実引数が releaseSafeError( を通っているか（1 行内の出現数の突合）
+          #   (5) stackTrace: の実引数が releaseSafeStackTrace( を通っているか（同）
+          #   (6) ログ定型ヘルパが error: / stackTrace: を名前付きで受けていないか
+          # 本 step は (0)〜(6) とヘルパ 4 つを含めて D-04 §4.8 の抜粋に収載済み
+          # （抜粋と 1 文字ずつ一致させる。変えるときは設計書と同じ変更で直す）
+          # 共用ヘルパ 3 つ（lib_code_lines / strip_strings / occurrences）を (0)(1)(3)(4)(5) で
+          # 使う。(4)(5) 専用の unwrapped は (3) の直後に定義する（検査本体ではない）。
+          # lib_code_lines: （引数必須）lib 全体のうち、字面 $1 を含むコード行（行頭が // の説明コメント行は除外）
+          #   -a（--binary-files=text）: NUL バイトを含む .dart が 1 つでもあると grep が
+          #   そのファイルをバイナリ扱いして行を出力せず、そのファイルの違反が丸ごと
+          #   0 件に見えて緑になる（実測済み）
+          lib_code_lines() { grep -arn --include='*.dart' -e &quot;$1&quot; lib | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//'; }
+          # strip_strings: 文字列リテラル（'...' / &quot;...&quot;）を落とす。message の字面に 'error: ' を
+          #   含む正当なログ行を赤にしないため、数える前に必ず通す（実測済み）
+          strip_strings() { sed -E &quot;s/'([^'\\\\]|\\\\.)*'//g; s/\&quot;([^\&quot;\\\\]|\\\\.)*\&quot;//g&quot;; }
+          # occurrences: strip_strings で文字列リテラルを落としたうえでの、字面 $1 の出現数
+          occurrences() { strip_strings | grep -oF &quot;$1&quot; | wc -l | tr -d '[:space:]'; }
+          # (0) strip_strings / occurrences が機能していることの自己検査（positive control）。
+          #     strip_strings の sed の編集ミス 1 か所で (3)(4)(5) は同時に失効しうる
+          #     （sed が空出力になる故障では、(3) は引用符が残らないので grep が 1 を返して
+          #      通過し、(4)(5) は両辺 0 で一致する＝未整形の error: e があっても
+          #      この 3 つは緑。実測済み）。その故障は (1) が 0 件で赤にし、置換が no-op に
+          #      なる故障は (3) が赤にする（どちらも (0) を外して実測済み）が、出る診断は
+          #      「lib に合格形が無い」「文字列リテラルの除去が破綻」で、真の原因
+          #      （strip_strings 自体の故障）を指さない。(0) を先頭に置くのは、
+          #      ヘルパの故障をその場で 1 行で示して (1)(3) の誤った診断を追わせないため。
+          #     既定シェルは bash -e で pipefail が無いためパイプ中段の失敗は終了コードに出ないが、
+          #     set -o pipefail では代替しないこと。入れると (3) の
+          #     { lib_code_lines ...; lib_code_lines ...; } | strip_strings | grep が、
+          #     どちらかの lib_code_lines が 0 件（終了コード 1）のとき grep が一致しても
+          #     pipeline 全体が 1 を返し、(3) が fail-open に反転する（実測済み）
+          [ &quot;$(printf '%s\n' &quot;w('error: x', error: e);&quot; | occurrences 'error: ')&quot; = 1 ] \
+            || { echo 'strip_strings / occurrences の自己検査に失敗（検査が失効している。D-04 §4.8）'; exit 1; }
+          # (1) 走査対象が消えたときに「0 件＝緑」で検査が黙って失効するのを防ぐ番兵
+          #     （working-directory の変更・lib/ の配置変更・app_logger.dart の移動）。
+          #     上の一覧の (3)(4)(5)(6) はいずれも「違反が 0 件」で合格を判定するため、
+          #     合格形が最低 1 件あることを先に確かめる（実測済み。D-04 §4.8）。
+          #     ここで照合する字面 'error: releaseSafeError(' は、下の step「release のログに
+          #     例外の自由文を出していないか」冒頭の期待値の一覧と対になる（step が別なので
+          #     変数は共有できない）。整形関数を改名するときは両方を同じ変更で直す。
+          #     lib_code_lines で数える＝説明コメント 1 行だけの lib では緑にしない（実測済み）。
+          #     strip_strings も通す＝文字列リテラルの中の合格形
+          #     （const sample = 'error: releaseSafeError(';）1 行では満足しない（実測済み。
+          #      行末コメント中の合格形は strip_strings では落ちないので、上に書いたとおり
+          #      説明コメントをコード行の末尾に書かないという規約で担保する）
+          [ &quot;$(lib_code_lines 'error: releaseSafeError(' | strip_strings | grep -cF 'error: releaseSafeError(')&quot; -ge 1 ] \
+            || { echo 'lib を走査できていない、または lib に合格形（error: releaseSafeError(）が 1 件も無い。後者ならこの番兵の字面を現在のログ経路に合わせて見直す（D-04 §4.8）'; exit 1; }
+          # (2) 実引数の折り返しを禁じる。下の (4)(5) は「error: と整形関数の呼び出しが同じ行に
+          #     並ぶ」ことを前提にするが、dart format は 80 桁を超える単一式を 'error:' だけの行に
+          #     折り返すため、その形では前提が崩れて 1 件も検出できない（実測済み）。
+          #     1 行に収まらない場合は releaseSafeError(...) の内側の式をローカル変数に出す
+          #     （error: の実引数は releaseSafeError( のままにする。D-04 §4.9）。実引数そのものを
+          #     ローカル変数に出す形（final safe = releaseSafeError(e); ... error: safe,）は
+          #     (4) が赤にするので回避策にならない（実測済み）。それでも収まらない場合は
+          #     位置引数のログ定型ヘルパ（AppLifecycleSync._warn・SettingsScreen._logWarn）に寄せる
+          if grep -rnE --include='*.dart' '(error|stackTrace):[[:space:]]*$' lib | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//'; then
+            echo 'error: / stackTrace: の実引数が折り返されており検査できない（1 行に収めること。D-04 §4.9）'; exit 1
+          fi
+          # (3) 文字列リテラルの除去が破綻した行を、数える前に落とす。strip_strings は行内の
+          #     引用符を左から素朴に対にするため、コード部に対にならない引用符が 1 個あると
+          #     error: を含む区間ごと食われ、(4)(5) の両辺の出現数が 0 で揃って違反が緑になる
+          #     （偽陰性。prefer_single_quotes はアポストロフィを含む文字列に二重引用符を許すので
+          #      &quot;it's …&quot; と行内のもう 1 個の ' が揃うだけで成立する。実測済み）。
+          #     除去が破綻した行＝除去後に引用符が残る行は、出現数を信用できない。
+          #     逆に、引用符が偶数個で残骸が再び対になる形（error: をまたぐ区間が食われるのに
+          #     strip_strings 後の引用符は 0 個で揃う。実測：
+          #      _logger.w(&quot;a's&quot;, error: e, stackTrace: traces[&quot;x's&quot;]);）はこの (3) では見えない
+          #     ＝ error: の前後にアポストロフィを含む文字列を置く形は検出外
+          #     （D-04 §4.8 (A)-10）。
+          #     赤になったら、二重引用符の文字列からアポストロフィを外す（&quot;can't&quot; → 'できない'）・
+          #     行末コメントの引用符を外す・raw string の末尾の \ を避ける、のいずれかで直す。
+          #     いずれも取れない場合はログ呼び出しを位置引数ヘルパ（AppLifecycleSync._warn・
+          #     SettingsScreen._logWarn）に寄せる。
+          #     違反行は CI ログに出す（他の判定と同じく file:line を残す）。grep が 1 を返すのは
+          #     「残留なし」＝合格なので、|| true で受けて $broken_lines が空のときは通過させる
+          broken_lines=$({ lib_code_lines 'error: '; lib_code_lines 'stackTrace: '; } | strip_strings | grep &quot;['\&quot;]&quot; || true)
+          if [ -n &quot;$broken_lines&quot; ]; then
+            printf '%s\n' &quot;$broken_lines&quot;
+            echo '文字列リテラルの除去が破綻している行がある（出現数を信用できないので赤にする。D-04 §4.9）'; exit 1
+          fi
+          # unwrapped: (4)(5) が共用するヘルパ（検査本体ではない）。$1 の出現数と
+          #   $2（整形関数つき）の出現数が一致しない行だけを返す
+          unwrapped() {
+            lib_code_lines &quot;$1&quot; | while IFS= read -r line; do
+              [ &quot;$(printf '%s\n' &quot;$line&quot; | occurrences &quot;$1&quot;)&quot; = &quot;$(printf '%s\n' &quot;$line&quot; | occurrences &quot;$2&quot;)&quot; ] \
+                || printf '%s\n' &quot;$line&quot;
+            done
+          }
+          # (4) 判定は行単位ではなく出現単位で行う。「合格形を含む行」を grep -v で落とす形は、
+          #     1 行に合格形と違反形が混在すると緑になる（実測済み。例：
+          #     _logger.w('a', error: releaseSafeError(e)); _logger.w('b', error: e);）。
+          #     出現数が一致しなければ、整形関数を通していない実引数がその行にある。
+          #     逆は成り立たない（error: の直後が整形関数でさえあれば、三項・??・キャストで
+          #     同じ式に生の例外を混ぜた形は緑になる。D-04 §4.8 (A)-7。実測済み）
+          hits=$(unwrapped 'error: ' 'error: releaseSafeError(')
+          if [ -n &quot;$hits&quot; ]; then
+            printf '%s\n' &quot;$hits&quot;
             echo '例外を releaseSafeError() を通さずに logger へ渡している（D-04 §4.9）'; exit 1
           fi
-          if grep -rn --include='*.dart' -e 'stackTrace: ' lib | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' | grep -v 'stackTrace: releaseSafeStackTrace('; then
+          # (5) stackTrace: 側。考え方と限界は (4) と同じ
+          hits=$(unwrapped 'stackTrace: ' 'stackTrace: releaseSafeStackTrace(')
+          if [ -n &quot;$hits&quot; ]; then
+            printf '%s\n' &quot;$hits&quot;
             echo 'スタックトレースを releaseSafeStackTrace() を通さずに logger へ渡している（D-04 §4.9）'; exit 1
           fi
-          # ログ定型ヘルパが error: / stackTrace: を名前付きで受けると、上の検査を満たすために
-          # 呼び出し側と本体の両方が包んで releaseSafeError(releaseSafeError(e)) になり、
-          # release では内側の戻り値（String）だけがログに残る（§4.9 の「必ず位置引数で受ける」）。
-          # 名前付き引数の宣言（) より手前に { があり、その後に Object? error / StackTrace? stackTrace）を禁じる。
-          # 位置引数（'(String m, Object error, StackTrace s) {'）は ) の手前に { が無いので当たらない
+          # (6) ログ定型ヘルパが error: / stackTrace: を名前付きで受けると、(4)(5) を満たすために
+          #     呼び出し側と本体の両方が包んで releaseSafeError(releaseSafeError(e)) になり、
+          #     release では内側の戻り値（String）だけがログに残る
+          #     （D-04 §4.9 の「必ず位置引数で受ける」）。名前付き引数の宣言
+          #     （) より手前に { があり、その後に Object? error / StackTrace? stackTrace）を禁じる。
+          #     位置引数（'(String m, Object error, StackTrace s) {'）は ) の手前に { が無いので当たらない
           if grep -rnE --include='*.dart' '\{[^)]*(Object|Exception|Error|StackTrace)\??[[:space:]]+(error|stackTrace)\b' lib | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//'; then
-            echo 'ログ定型ヘルパが error: / stackTrace: を名前付きで受けている（D-04 §4.9・§8 #75）'; exit 1
+            echo 'ログ定型ヘルパが error: / stackTrace: を名前付きで受けている（D-04 §4.9・D-04 §8 #75）'; exit 1
           fi
       # 上の検査は error: / stackTrace: の実引数しか見ないため、message 文字列に例外を埋め込む形
       # （_logger.w('DB 失敗: $e')）と、releaseSafeError の release 分岐そのものの書き換え
-      # （return cause.toString() 等）はすり抜ける。この 2 つを塞ぐ（§4.9・§8 #75）。
-      # (a) app_logger.dart は 4 つを固定する：「文字列補間」「cause のメンバ参照」「自由文を読む語」の
-      #     3 つの許可リスト（字面）と、「kDebugMode の分岐と return の位置」（制御フロー）。
-      #     字面の 3 つだけでは if (!kDebugMode) return error; の 1 文字の反転を 1 件も検出できない
-      #     （補間もメンバ参照も変わらないため 3 検査すべて緑。実測済み）ので 4 つ目を置く。
+      # （return cause.toString() 等）はすり抜ける。この 2 つを塞ぐ（D-04 §4.9・D-04 §8 #75）。
+      # (a) app_logger.dart は「字面の許可リスト」と「制御フロー」を固定する（判定の一覧は
+      #     下の run: 冒頭の目次。D-04 §10 T-F5a の (a-1)〜(a-4) との対応もそこに書く）。
+      #     字面だけでは if (!kDebugMode) return error; の 1 文字の反転を 1 件も検出できない
+      #     （補間もメンバ参照も変わらないため字面の判定はすべて緑。実測済み）ので
+      #     制御フローも固定する。
       #     -o は行頭情報を落とすため、コメント行の除外を先に行う
       # (b) lib/ 全体は '$e' だけを見る形より広い名前集合（e と、error / exception / cause / stackTrace を
       #     含む識別子）の補間を禁じる。'$e' だけを見る形では $error・${next.error}・${error.remoteCause}
       #     が素通りする（\b が e の直後の r で成立しないため。実測済み）＝「書き換え」だけでなく
-      #     「別経路の 1 行の追加」も捕まえる。名前集合と「補間という形」には依存する（限界は本節末尾の一覧）
-      # この 2 つの step の期待値を緩める変更は §8 #75 の決定の変更にあたる。期待値だけを緩めて通す形を
-      # レビューで止めるため、緩めるときは本書を draft に戻して /design-review をやり直す
+      #     「別経路の 1 行の追加」も捕まえる。名前集合と「補間という形」には依存する
+      #     （限界は D-04 §4.8 末尾の一覧）。
+      #     生成物（*.g.dart）も走査対象に含める（コミットされ CI で再生成も照合もされない＝
+      #     そのまま release ビルドに載る。D-04 §8 #20）。生成物が hit した場合（drift の生成
+      #     toString() は全列を ..write('id: $id, ') の形で補間するため、lastError のような列名を
+      #     足すと確実に hit する）は、列名・テーブル名・Provider 名を error / exception / cause /
+      #     stackTrace を含まない名前に変える（命名で避けるのが既定。D-04 §4.8 (B)-5）。
+      #     それが取れない場合に限り --exclude='*.g.dart' の再付与を D-04 §8 #75 の再レビューで判断する
+      # この 2 つの step の期待値を緩める変更は D-04 §8 #75 の決定の変更にあたる。期待値だけを緩めて
+      # 通す形をレビューで止めるため、緩めるときは設計書を draft に戻して /design-review をやり直す
       - name: release のログに例外の自由文を出していないか
         run: |
-          # --- (a) lib/core/logging/app_logger.dart（§4.9 のコード片どおりに書く） ---
-          code() { grep -vE '^[[:space:]]*//' lib/core/logging/app_logger.dart; }
-          interps=$(code | grep -oE '\$\{[A-Za-z_][A-Za-z0-9_.?]*\}|\$[A-Za-z_][A-Za-z0-9_]*' | LC_ALL=C sort -u | tr '\n' ' ')
-          if [ &quot;$interps&quot; != '${cause.extendedResultCode} ${cause.resultCode} ' ]; then
-            echo &quot;app_logger.dart の文字列補間が許可リストと異なる: $interps（D-04 §4.9・§8 #75）&quot;; exit 1
+          # この step の検査の一覧（目次）。各判定の直上コメントは対応するラベルで始まる。
+          # 検査を増減したらこの一覧も同じ変更で直す（個数は書かない）。
+          # 既存の記号は振り直さない（群内では追番、群は固定）。(a-*) を足すときは (a-vi) の
+          # 直後に、(b) 系を足すときは (b) の後ろに置く（記号は 2 群あり、末尾に足すと
+          # 群の区切りと目次の並びが崩れる）。
+          # 記号は (a-i)… とする：D-04 §10 T-F5a の (a-1)〜(a-4)（= §4.8 の (a) の 4 検査）は
+          # 切り方が違う（設計書側に (a-iii)(a-iv) が無い）ため、番号が衝突しない別記号にして
+          # 対応をこの目次に書く
+          #   (a-i)   すべての文字列補間が許可リストと一致（D-04 §10 T-F5a (a-1)）
+          #   (a-ii)  cause のメンバ参照が許可リストと一致（同 (a-2)）
+          #   (a-iii) error 側のメンバ参照が error.remoteCause だけ（T-F5a に対応なし。キャスト経由対策）
+          #   (a-iv)  .remoteCause の出現数が 1（同上）
+          #   (a-v)   自由文を読む語が無い（同 (a-3)）
+          #   (a-vi)  制御フローと出現数の固定（同 (a-4)）。(a-i)〜(a-v) は字面しか見ないため必要
+          #   (b)     lib/ 全体（app_logger.dart を除く）の例外の補間の禁止（同 (b)）
+          # ヘルパ名（本 step の app_logger_code_lines / forbidden_interp、上の step の
+          # lib_code_lines / strip_strings / occurrences / unwrapped）は D-04 §4.8 の抜粋と
+          # 限界一覧が同じ名前で参照する（改名するときは設計書と同じ変更で直す）。
+          # 2 step のスクリプト切り出しは FOLLOWUPS 4-22
+          # app_logger.dart を変えるときに同じ変更で直す期待値（許可リスト）は、この一覧だけ
+          # （下の判定と診断メッセージはすべてこの変数を参照する）。これ以外に
+          # app_logger.dart へ結びつく字面は (a-v) の自由文の語の禁止リスト 1 か所と
+          # ファイルパス 3 か所（app_logger_code_lines の定義・(a-v) の grep・(b) の除外）
+          # だけで、ファイル移動・型の追加のときはそちらも見る。D-04 §4.9 のコード片・D-04 §4.8 の
+          # 期待値と三重管理になるので、実装・設計書・この一覧を同じ変更で直す。
+          # 整形関数を改名するときは、上の step「logger の error: / stackTrace: が整形関数を
+          # 通っているか」の (1) 番兵が持つ合格形の字面 'error: releaseSafeError(' も同じ
+          # 変更で直す（step が別なので変数としては共有できない）
+          expected_interps='${cause.extendedResultCode} ${cause.resultCode} '
+          expected_members='cause.extendedResultCode cause.resultCode cause?.runtimeType '
+          expected_errmembers='error.remoteCause '
+          expected_remote_cause_count=1
+          expected_return_error_count=1
+          expected_kdebugmode_lines=3
+          expected_debug_branch='if (kDebugMode) return error;'
+          expected_stacktrace_body='releaseSafeStackTrace(StackTrace? stackTrace) =&gt; kDebugMode ? stackTrace : null;'
+          # --- (a) lib/core/logging/app_logger.dart（D-04 §4.9 のコード片どおりに書く） ---
+          # app_logger_code_lines: app_logger.dart のコード行（説明コメント行は除外）
+          app_logger_code_lines() { grep -vE '^[[:space:]]*//' lib/core/logging/app_logger.dart; }
+          # (a-i) すべての文字列補間が許可リストと一致すること
+          interps=$(app_logger_code_lines | grep -oE '\$\{[A-Za-z_][A-Za-z0-9_.?]*\}|\$[A-Za-z_][A-Za-z0-9_]*' | LC_ALL=C sort -u | tr '\n' ' ')
+          if [ &quot;$interps&quot; != &quot;$expected_interps&quot; ]; then
+            echo &quot;app_logger.dart の文字列補間が許可リストと異なる: ${interps}（D-04 §4.9・D-04 §8 #75）&quot;; exit 1
           fi
-          # 補間を伴わないメンバ参照（return cause.message; 等）も塞ぐ。LC_ALL=C で並び順を固定する
-          members=$(code | grep -oE 'cause\??\.[A-Za-z]+' | LC_ALL=C sort -u | tr '\n' ' ')
-          if [ &quot;$members&quot; != 'cause.extendedResultCode cause.resultCode cause?.runtimeType ' ]; then
-            echo &quot;releaseSafeError が許可リスト外のメンバを参照している: $members（D-04 §4.9・§8 #75）&quot;; exit 1
+          # (a-ii) 補間を伴わないメンバ参照（return cause.message; 等）も塞ぐ。
+          #     LC_ALL=C で並び順を固定する
+          members=$(app_logger_code_lines | grep -oE 'cause\??\.[A-Za-z]+' | LC_ALL=C sort -u | tr '\n' ' ')
+          if [ &quot;$members&quot; != &quot;$expected_members&quot; ]; then
+            echo &quot;releaseSafeError が許可リスト外のメンバを参照している: ${members}（D-04 §4.9・D-04 §8 #75）&quot;; exit 1
           fi
-          # 中間変数・キャスト経由（final m = (cause as SqliteException).message;）も塞ぐ。
-          # 5 語は SqliteException の自由文フィールド（§8 #75）。safeToString は Error.safeToString(cause)
-          # （toString() という字面にも cause のメンバ参照にも当たらないのに自由文を返す）を塞ぐため。
-          # コメント行の除外は行番号の後ろに固定する
+          # (a-iii) cause ではなく error 側のメンバ参照からも自由文に到達できるため、
+          #     同じ方式で error 側も固定する。許可は DriftRemoteException を 1 段開く error.remoteCause の 1 つだけ
+          errmembers=$(app_logger_code_lines | grep -oE 'error\??\.[A-Za-z]+' | LC_ALL=C sort -u | tr '\n' ' ')
+          if [ &quot;$errmembers&quot; != &quot;$expected_errmembers&quot; ]; then
+            echo &quot;releaseSafeError が許可リスト外の error メンバを参照している: ${errmembers}（D-04 §4.9・D-04 §8 #75）&quot;; exit 1
+          fi
+          # (a-iv) 上の字面はキャスト経由（return ... (error as DriftRemoteException).remoteCause;）に当たらず、
+          # cause 側の許可リストも補間も変わらないため、それだけでは remoteCause を生のまま返す 1 行の
+          # 追加を検出できない（実測済み）。remoteCause を開くのは cause への代入 1 か所だけなので
+          # 出現数を expected_remote_cause_count に固定する。ただし塞げるのはキャスト経由
+          # （(error as DriftRemoteException).remoteCause）だけで、パターン分解
+          # （DriftRemoteException(remoteCause: final x)）は .remoteCause の字面が増えないため
+          # 見えない（D-04 §4.8 (A)-8。実測済み）。本体に return cause; を足す形も
+          # 同じ理由で見えない（D-04 §4.8 (A)-9）。
+          # この出現数の固定はキャスト経由を塞ぐ唯一の検査なので外さない（上記の限界は別の検査で補う。
+          # 緩めるときはこの 2 つの step の冒頭に書いたとおり設計書を draft に戻す）
+          if [ &quot;$(app_logger_code_lines | grep -oF '.remoteCause' | wc -l | tr -d '[:space:]')&quot; != &quot;$expected_remote_cause_count&quot; ]; then
+            echo &quot;releaseSafeError が remoteCause を ${expected_remote_cause_count} か所（cause への代入）以外で参照している（D-04 §4.9・D-04 §8 #75）&quot;; exit 1
+          fi
+          # (a-v) 中間変数・キャスト経由（final m = (cause as SqliteException).message;）も塞ぐ。
+          # 5 語は SqliteException の自由文フィールド（D-04 §8 #75）。safeToString は
+          # Error.safeToString(cause)（toString() という字面にも cause のメンバ参照にも
+          # 当たらないのに自由文を返す）を塞ぐため。コメント行の除外は行番号の後ろに固定する
           if grep -nE 'toString\(\)|safeToString|\b(message|explanation|causingStatement|parametersToStatement|operation)\b' lib/core/logging/app_logger.dart | grep -vE '^[0-9]+:[[:space:]]*//'; then
-            echo 'releaseSafeError が例外の自由文を読んでいる（D-04 §4.9・§8 #75）'; exit 1
+            echo 'releaseSafeError が例外の自由文を読んでいる（D-04 §4.9・D-04 §8 #75）'; exit 1
           fi
-          # 4 つ目：制御フロー（debug / release の分岐と return の位置）を固定する。上の 3 つは字面だけを
-          # 見るため、if (kDebugMode) を if (!kDebugMode) に 1 文字だけ反転させても補間・メンバ参照の集合が
-          # 変わらず 3 検査すべて緑になる（= #75 の効果そのものを無効化できる。実測済み）。
+          # (a-vi) 制御フロー（debug / release の分岐と return の位置）を固定する。(a-i)〜(a-v) は
+          # 字面だけを見るため、if (kDebugMode) を if (!kDebugMode) に 1 文字だけ反転させても補間・
+          # メンバ参照の集合が変わらず字面の判定はすべて緑になる
+          # （= D-04 §8 #75 の効果そのものを無効化できる。実測済み）。
           # 改行と連続空白を 1 個の空白に潰してから照合するので、dart format の折り返しと
-          # インデントに依存しない（§4.9 のコード片の 2 行をそのまま照合する）
-          flow=$(code | tr -s ' \t\n' ' ')
+          # インデントに依存しない（D-04 §4.9 のコード片の 2 行をそのまま照合する）。
+          # case のパターンは期待値を &quot;...&quot; で囲む＝ StackTrace? の ? をグロブではなく字面として扱う
+          flow=$(app_logger_code_lines | tr -s ' \t\n' ' ')
           case &quot;$flow&quot; in
-            *'if (kDebugMode) return error;'*) ;;
-            *) echo 'releaseSafeError の debug 分岐が「if (kDebugMode) return error;」でない（D-04 §4.9・§8 #75）'; exit 1;;
+            *&quot;$expected_debug_branch&quot;*) ;;
+            *) echo &quot;releaseSafeError の debug 分岐が「${expected_debug_branch}」でない（D-04 §4.9・D-04 §8 #75）&quot;; exit 1;;
           esac
           case &quot;$flow&quot; in
-            *'releaseSafeStackTrace(StackTrace? stackTrace) =&gt; kDebugMode ? stackTrace : null;'*) ;;
-            *) echo 'releaseSafeStackTrace が「=&gt; kDebugMode ? stackTrace : null;」でない（D-04 §4.9・§8 #75）'; exit 1;;
+            *&quot;$expected_stacktrace_body&quot;*) ;;
+            *) echo &quot;releaseSafeStackTrace が「${expected_stacktrace_body}」の形でない（D-04 §4.9・D-04 §8 #75）&quot;; exit 1;;
           esac
           # 分岐を 1 つ足す・return を増やす形（final x = error; return x; 等）も塞ぐ。
-          # コード行での出現数は return error; が 1 回、kDebugMode を含む行が 3 行で固定。
-          # 3 行の内訳：createAppLogger の level: の行・releaseSafeStackTrace の 1 行式・
-          # releaseSafeError の if（この 3 つは §4.9 のコード片にすべて載せてある。
-          # createAppLogger の return Logger( は 'return error;' に当たらないので 1 回は変わらない）
-          if [ &quot;$(code | grep -cE 'return error;')&quot; != 1 ] || [ &quot;$(code | grep -cF 'kDebugMode')&quot; != 3 ]; then
-            echo 'app_logger.dart の return error; / kDebugMode の出現数が想定（1 回 / 3 行）と異なる（D-04 §4.9・§8 #75）'; exit 1
+          # コード行での出現数は expected_return_error_count（return error;）と
+          # expected_kdebugmode_lines（kDebugMode を含む行）で固定する。
+          # expected_kdebugmode_lines の内訳は createAppLogger の level: の行・
+          # releaseSafeStackTrace の 1 行式・releaseSafeError の if
+          # （いずれも D-04 §4.9 のコード片に載せてある。createAppLogger の return Logger( は
+          # 'return error;' に当たらないので expected_return_error_count は変わらない）
+          if [ &quot;$(app_logger_code_lines | grep -cE 'return error;')&quot; != &quot;$expected_return_error_count&quot; ] \
+            || [ &quot;$(app_logger_code_lines | grep -cF 'kDebugMode')&quot; != &quot;$expected_kdebugmode_lines&quot; ]; then
+            echo &quot;app_logger.dart の return error; / kDebugMode の出現数が想定（${expected_return_error_count} 回 / ${expected_kdebugmode_lines} 行）と異なる（D-04 §4.9・D-04 §8 #75）&quot;; exit 1
           fi
-          # --- (b) lib/ 全体（'$e' だけを見る形より広い名前集合。限界は本節末尾の一覧） ---
-          # 許すのは 2 つだけ：(1) 自前の例外・結果型が toString() で自分の cause フィールドを出す形
-          # （$cause・${cause}。§4.3 の FeedOfflineException・FeedErrorException 等。原因フィールドの名前は
-          # public の cause に固定する＝ $_cause 等にすると下の sed が名前に一致せず CI が赤になる。§4.9）、
-          # (2) 自前例外型の enum / 数値フィールドの 3 語（${e.reason}・${e.schemaVersion}・${e.offset}）。
-          # 許可形は「変数名が e で、かつ自前例外型のフィールド」に限る（型は検査できないので規約に委ねる。
-          # §4.9 の表）。新しい enum / 数値フィールドを補間するときは下の sed に同じ機会で 1 語足す。
+          # --- (b) lib/ 全体（'$e' だけを見る形より広い名前集合。限界は D-04 §4.8 末尾の一覧） ---
+          # 許すのは 2 つだけ。
+          # ・自前の例外・結果型が toString() で自分の cause フィールドを出す形
+          #   （$cause・${cause}。D-04 §4.3 の FeedOfflineException・FeedErrorException 等。原因フィールドの
+          #   名前は public の cause に固定する＝ $_cause 等にすると下の sed が名前に一致せず CI が
+          #   赤になる。D-04 §4.9）
+          # ・自前例外型の enum / 数値フィールドの 3 語（${e.reason}・${e.schemaVersion}・${e.offset}）。
+          # 許可形は「変数名が e で、かつ自前例外型のフィールド」に限る（型は検査できないので規約に
+          # 委ねる。D-04 §4.9 の表）。新しい enum / 数値フィールドを補間するときは下の sed に
+          # 同じ機会で 1 語足す。
           # sed で許可形を消してから同じ式を当てるので、1 行に許可形と違反が混在しても検出できる。
           # app_logger.dart は (a) で完全固定しているため二重に見ない（${cause.resultCode} を持つ）
           # 下の sed の置換に \b（単語境界）を使わない。BSD sed（macOS）は \b を解釈せず置換が無効になり、
           # toString() の正当な $cause が誤検出される（GNU sed では動くため CI と手元で挙動が変わる。実測）。
           # 代わりに ([^A-Za-z0-9_]|$) を先読みの代用として置き、\1 で元の 1 文字を書き戻す。
           # ${e.reason} 等と ${cause} は } で終わるため単語境界を必要としない（そのまま）
-          danger='\$e\b|\$\{e\b|\$\{?[A-Za-z0-9_.]*([eE]rror|[eE]xception|[cC]ause|[sS]tackTrace)'
-          hits=$(grep -rnE --include='*.dart' &quot;$danger&quot; lib \
+          forbidden_interp='\$e\b|\$\{e\b|\$\{?[A-Za-z0-9_.]*([eE]rror|[eE]xception|[cC]ause|[sS]tackTrace)'
+          hits=$(grep -rnE --include='*.dart' &quot;$forbidden_interp&quot; lib \
             | grep -vE '^lib/core/logging/app_logger\.dart:' \
             | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' \
             | sed -E 's/\$\{e\.(reason|schemaVersion|offset)\}//g; s/\$cause([^A-Za-z0-9_]|$)/\1/g; s/\$\{cause\}//g' \
-            | grep -E &quot;$danger&quot; || true)
+            | grep -E &quot;$forbidden_interp&quot; || true)
           if [ -n &quot;$hits&quot; ]; then
             echo &quot;$hits&quot;
-            echo '例外オブジェクト・その自由文を message 文字列に埋め込んでいる（D-04 §4.9・§8 #75）'; exit 1
+            echo '例外オブジェクト・その自由文を message 文字列に埋め込んでいる（D-04 §4.9・D-04 §8 #75）'; exit 1
           fi
-      # NotificationTap の const 禁止（§4.6・§8 #70）。対象を宣言ファイル 1 つに限るため
+      # NotificationTap の const 禁止（D-04 §4.6・§8 #70）。対象を宣言ファイル 1 つに限るため
       # 宣言自身との衝突が無く、違反が無ければ 0 行で通る（lib・test 全体を見る広い grep は置かない）。
       # 「再追加」は品質ゲートでは検出できない（const コンストラクタの追加はコンパイルエラーでも lint でもなく、
-      # @immutable を書き戻すと prefer_const_constructors_in_immutables が const を要求して穴が再び開く）ため常設する
+      # @immutable を書き戻すと prefer_const_constructors_in_immutables が const を要求して穴が再び開く）ため常設する。
+      # 行頭が // の行（dartdoc・説明コメント）は除外する（grep -n の 1 ファイル出力は &lt;行番号&gt;: で始まる）。
+      # @Immutable()・接頭辞つき import の @meta.immutable も同じ注釈なので拾う。
+      # 照合の前に 1 行内のブロックコメント（/* … */・/** … */）を空白 1 つに置き換える。置き換えないと
+      # const /* x */ NotificationTap( が素通りする（実測）。空でなく空白にするのは
+      # const/* x */NotificationTap( を const NotificationTap( として拾うため。
+      # sed は行単位なので grep -n の行番号は元ファイルのまま。sed は前段なので終了コードは
+      # 最後の grep -v のもの（1 行でも残れば 0 ＝ 赤）で、パイプで判定が消えない。
+      # 対象ファイルの移動・改名やクラス名の変更で grep が 0 行になり黙って緑になる（vacuous pass）のを防ぐため、
+      # 先にファイルとクラス宣言があることを確かめる（既定シェルに pipefail が無く、パイプ前段の
+      # 「ファイルが無い」は終了コードに出ない）
       - name: NotificationTap に @immutable と const コンストラクタが無いか
         run: |
-          if grep -nE '@immutable|const[[:space:]]+(factory[[:space:]]+)?NotificationTap' lib/features/notifications/domain/notification_tap.dart | grep -vE '^[0-9]+:[[:space:]]*//'; then
+          f=lib/features/notifications/domain/notification_tap.dart
+          if ! grep -qE '^final class NotificationTap([^A-Za-z0-9_]|$)' &quot;$f&quot;; then
+            echo &quot;::error file=app/$f::final class NotificationTap の宣言が見つからない。移動・改名したらこの step の対象も同じ変更で直す（D-04 §4.8）&quot; &gt;&amp;2; exit 1
+          fi
+          if sed -E 's#/\*([^*]|\*+[^*/])*\*+/# #g' &quot;$f&quot; \
+            | grep -nE '@([A-Za-z0-9_]+\.)?[Ii]mmutable|const[[:space:]]+(factory[[:space:]]+)?NotificationTap' \
+            | grep -vE '^[0-9]+:[[:space:]]*//'; then
             echo 'NotificationTap に @immutable / const コンストラクタが復活している（D-04 §4.6・§8 #70）'; exit 1
+          fi
+      # Riverpod 3 の自動リトライを app 全体の既定で切る 1 引数（D-04 §5.1 手順 3・§8 #78）の書き戻しを止める。
+      # この 1 引数は本番の ProviderScope にしか効かず、テストは自前の ProviderContainer を作るため
+      # 消しても flutter test は緑のまま（D-04 §8 #78）。dart format が引数を複数行に割るので 1 行の照合にせず、
+      # コード行（行頭が // の行を除く）の中の ProviderScope( と retry: noRetry をそれぞれ数える。
+      # ファイルの移動・改名で 0 件になり黙って緑になる（vacuous pass）のを防ぐため、件数は「ちょうど 1」で判定する
+      - name: ProviderScope が自動リトライを既定で切っているか
+        run: |
+          f=lib/app/bootstrap.dart
+          code=$(grep -vE '^[[:space:]]*//' &quot;$f&quot;) || {
+            echo &quot;::error file=app/$f::$f が無いかコード行が無い。移動・改名したらこの step の対象も同じ変更で直す（D-04 §4.8）&quot; &gt;&amp;2; exit 1
+          }
+          scopes=$(printf '%s\n' &quot;$code&quot; | grep -c 'ProviderScope(' || true)
+          retries=$(printf '%s\n' &quot;$code&quot; | grep -cE '(^|[^A-Za-z0-9_])retry:[[:space:]]*noRetry([^A-Za-z0-9_]|$)' || true)
+          if [ &quot;$scopes&quot; -ne 1 ] || [ &quot;$retries&quot; -ne 1 ]; then
+            echo &quot;::error file=app/$f::ProviderScope( が ${scopes} 件・retry: noRetry が ${retries} 件（どちらも 1 件であること。D-04 §4.7・§8 #78）&quot; &gt;&amp;2; exit 1
           fi</code></pre>
+<p><strong>抜粋と実ファイルの一致</strong>：上の末尾 3 step（「ログの整形漏れの検査」の説明コメントから NotificationTap の step の終わりまで）は、<code>.github/workflows/app-ci.yml</code>（main 時点の 31〜344 行）を写したもので、<strong>次の 6 か所のコメントだけを本書の改訂に合わせて書き換えてある</strong>（実ファイルは §10 T-F6 でこの抜粋に合わせる）：(1) 1 つ目の step の目次の直後（実ファイル 53〜55 行「抜粋にある本 step は…旧版で…設計書に無い」→「収載済み」）、(2) (3) の限界の参照（同 119 行「(A) に未収載の限界」→「(A)-10」）、(3) (4) の限界の参照（同 144 行「(A) の限界」→「(A)-7」）、(4) (b) の生成物の対処（同 183 行「(B) の偽陽性の対処と同じ」→「(B)-5」）、(5) 2 つ目の step の目次（同 199〜200 行「D-04 に未収載」→「T-F5a に対応なし」、同 204〜209 行のヘルパ名の対応と FOLLOWUPS 2-12〜2-17 への言及→「同じ名前で参照する」）、(6) (a-iv) の限界の参照（同 253〜254 行「(A) に未収載の限界」「(A)-5」→「(A)-8」「(A)-9」）。コード行（コメント以外）は 1 文字も変えていない。<strong>4 つ目の step（<code>ProviderScope が自動リトライを既定で切っているか</code>。説明コメント 5 行を含む）は 2026-10-19 の §8 #78 で新設したもので、実ファイルにはまだ無い</strong>（§10 T-F6 が NotificationTap の step の直後に、この抜粋のとおり足す）。<strong>以後、4 step を変えるときは実ファイルと本抜粋を同じ変更で直す</strong>（§4.9 末尾の「同じ変更で直す」手順と同じ扱い）。YAML の引用は 1 つ目の step 名だけに要る（<code>: </code> を含むため。引用しないと <code>mapping values are not allowed here</code> でワークフロー全体が読めなくなる。FOLLOWUPS 2-12）。2 つ目・3 つ目・4 つ目の step 名は <code>: </code> も行頭の予約文字も含まないので引用しない。<code>run: |</code> の中はブロックスカラーなので、<code>&#39;</code>・<code>&quot;</code>・<code>#</code>・<code>:</code> を含む行も引用を要しない。</p>
+<p><strong>§10 T-F5a の (a-1)〜(a-4) と 2 つ目の step の (a-i)〜(a-vi) の対応</strong>（記号の系統が違うのは、2 つ目の step が T-53 で (a-iii)(a-iv) を足して 6 つに割ったため。T-F5a の (iv)(v) は完了済みタスクの完了条件として番号を変えない）：</p>
+<table>
+<thead>
+<tr>
+<th>§10 T-F5a</th>
+<th>2 つ目の step</th>
+<th>内容</th>
+<th>期待値の変数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>(a-1)</td>
+<td>(a-i)</td>
+<td><code>app_logger.dart</code> のすべての文字列補間が許可リストと一致</td>
+<td><code>expected_interps</code></td>
+</tr>
+<tr>
+<td>(a-2)</td>
+<td>(a-ii)</td>
+<td><code>cause</code> のメンバ参照が許可リストと一致</td>
+<td><code>expected_members</code></td>
+</tr>
+<tr>
+<td>（対応なし）</td>
+<td>(a-iii)</td>
+<td><code>error</code> 側のメンバ参照が <code>error.remoteCause</code> だけ（キャスト・中間変数経由で <code>error</code> の自由文に届く形を塞ぐ）</td>
+<td><code>expected_errmembers</code></td>
+</tr>
+<tr>
+<td>（対応なし）</td>
+<td>(a-iv)</td>
+<td><code>.remoteCause</code> の出現数が 1（<code>(error as DriftRemoteException).remoteCause</code> を返す 1 行の追加を塞ぐ）</td>
+<td><code>expected_remote_cause_count</code></td>
+</tr>
+<tr>
+<td>(a-3)</td>
+<td>(a-v)</td>
+<td>自由文を読む語（<code>toString()</code>・<code>safeToString</code>・自由文フィールド 5 語）が無い</td>
+<td>（禁止リストは grep の正規表現に直書き）</td>
+</tr>
+<tr>
+<td>(a-4)</td>
+<td>(a-vi)</td>
+<td>制御フローの照合 2 つと出現数の固定 2 つ</td>
+<td><code>expected_debug_branch</code>・<code>expected_stacktrace_body</code>・<code>expected_return_error_count</code>・<code>expected_kdebugmode_lines</code></td>
+</tr>
+<tr>
+<td>(b)</td>
+<td>(b)</td>
+<td><code>lib/</code>（<code>app_logger.dart</code> を除く）の例外の補間の禁止</td>
+<td>（許可形は <code>sed</code> に直書き）</td>
+</tr>
+</tbody></table>
+<p>1 つ目の step の (0)〜(6) は T-F5a の (iv) にまとめて対応する（(4)(5) が実引数、(6) が宣言の検査で、(0)〜(3) は (4)(5) が失効しないための前提の検査）。ヘルパは 4 つ：<code>lib_code_lines</code>（<code>lib</code> 全体のコード行。<code>grep -a</code> で NUL バイトを含むファイルもテキストとして読む）・<code>strip_strings</code>（文字列リテラルを落とす）・<code>occurrences</code>（落とした後の出現数）・<code>unwrapped</code>（(4)(5) の出現数の突合）。2 つ目の step のヘルパは <code>app_logger_code_lines</code>（<code>app_logger.dart</code> のコード行）と、禁止形の正規表現を持つ変数 <code>forbidden_interp</code>。</p>
 <p><code>const NotificationTap(...)</code>・<code>const</code> 変数の初期化子・<code>const</code> コレクションの要素がいずれも<strong>コンパイルエラー</strong>になることは型が保証する（<code>const</code> コンストラクタを持たない。§4.6・§8 #70）ため、<strong><code>lib</code> と <code>test</code> の全体に <code>const NotificationTap(</code> を探す広い step は置かない</strong>（置くと <code>notification_tap.dart</code> のコンストラクタ宣言自身に当たって違反 0 件でも赤になり、かつ <code>const</code> 変数の初期化子・<code>const</code> コレクションの要素という抜け道が残る）。置くのは上記のとおり<strong>宣言ファイル 1 つに限った 1 行</strong>で、目的は違反の検出ではなく <strong><code>@immutable</code> と <code>const</code> コンストラクタの書き戻しの防止</strong>である（§10 T-F5b 完了条件 (ii) はこの step への置き換え）。</p>
 <p><strong>§4.8 の検査の限界（本書で唯一の一覧。§4.9 と §8 #75 は本節を参照するだけで、限界を各所に書かない）</strong></p>
 <p><strong>(A) 規則違反だが検査は緑になるもの</strong>（検出できない）：</p>
 <ol>
 <li><code>cause</code> という名前の変数・フィールドを <code>$cause</code> / <code>${cause}</code> で補間する形は<strong>許可形</strong>として素通りする（許してよいのは自前例外・結果型の <code>toString()</code> の中だけ、という規約側の取り決めに委ねる。§4.9 の表の 2 行目）。外部由来の例外型が <code>reason</code> という名前のフィールドを持ち <code>catch (e)</code> で <code>${e.reason}</code> と書いた場合も同じで、<code>sed</code> は<strong>型を判定できない</strong>ため許可形として消える</li>
 <li>引数リストが<strong>複数行に分かれた</strong>名前付き引数の宣言（1 つ目の step は 1 行の中だけを見る）</li>
-<li><strong>補間という形を取らないもの</strong>は 1 行に収まっていても検出できない：<code>_logger.w(&#39;DB 失敗: &#39; + e.toString())</code>（<code>+</code> 連結）・<code>_logger.w(e.toString())</code>（引数に直接渡す）。<code>danger</code> の正規表現は <code>$…</code> で始まる補間だけを見ているため、これらは 1 件もヒットしない（実測済み）</li>
+<li><strong>補間という形を取らないもの</strong>は 1 行に収まっていても検出できない：<code>_logger.w(&#39;DB 失敗: &#39; + e.toString())</code>（<code>+</code> 連結）・<code>_logger.w(e.toString())</code>（引数に直接渡す）。<code>forbidden_interp</code> の正規表現は <code>$…</code> で始まる補間だけを見ているため、これらは 1 件もヒットしない（実測済み）</li>
 <li>名前集合の<strong>外</strong>の識別子：<code>$err</code>・<code>${ex}</code>・<code>$e2</code>・<code>${failure}</code>・<code>${summarize(e)}</code>（ヘルパ名に <code>error</code> を含まない）はいずれもヒットしない。(b) は「識別子名に依存しない」検査ではなく、<strong><code>e</code> と、<code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む識別子</strong>という名前集合に依存する</li>
 <li>(a) の 4 つ目（制御フロー）が固定するのは <code>if (kDebugMode) return error;</code> の 1 行・<code>releaseSafeStackTrace</code> の 1 行式・<code>return error;</code> が 1 回・<code>kDebugMode</code> を含むコード行が <strong>3 行</strong>（<code>createAppLogger</code> の <code>level:</code>・<code>releaseSafeStackTrace</code>・<code>releaseSafeError</code> の <code>if</code>）の 4 点だけで、それ以外の構造変更（<code>releaseSafeError</code> を別ファイルへ移す・整形関数を経由しない新しいログ API を足す）は見ない</li>
-<li>(a) はコード行だけを見る（<code>code()</code> が <code>//</code> で始まる行を除く）ため、<strong>コメントの内容と実装の矛盾は永久に検出されない</strong>（§4.9 の <code>malformed</code> のログ行の直上コメントを実装と同時に直す必要があるのはこのため。§10 T-F5a）</li>
+<li>(a) はコード行だけを見る（<code>app_logger_code_lines()</code> が <code>//</code> で始まる行を除く）ため、<strong>コメントの内容と実装の矛盾は永久に検出されない</strong>（§4.9 の <code>malformed</code> のログ行の直上コメントを実装と同時に直す必要があるのはこのため。§10 T-F5a）</li>
+<li><strong><code>error:</code> の直後が整形関数でさえあれば、三項・<code>??</code>・キャストで同じ式に生の例外を混ぜた形は緑</strong>になる（例：<code>error: releaseSafeError(e) == null ? null : e</code>）。1 つ目の step の (4)(5) は 1 行の中の「<code>error: </code> の出現数」と「<code>error: releaseSafeError(</code> の出現数」を突き合わせるだけで、実引数の式の残りの部分を見ない（実測済み）。§4.9 の「<code>error:</code> の実引数は必ず <code>releaseSafeError(...)</code> だけ」という規約に委ねる</li>
+<li><strong><code>remoteCause</code> のパターン分解</strong>（<code>if (error case DriftRemoteException(remoteCause: final x)) return x;</code>）は (a-iii)（<code>error.</code> のメンバ参照）にも (a-iv)（<code>.remoteCause</code> の出現数）にも見えない。<code>.remoteCause</code> の字面も <code>error.</code> の字面も増えないため（実測済み）。(a-iv) が塞げるのはキャスト経由（<code>(error as DriftRemoteException).remoteCause</code>）だけである</li>
+<li><strong><code>releaseSafeError</code> の本体への <code>return cause;</code> の追加</strong>（<code>if (cause is SqliteException)</code> より前に置くと <code>remoteCause</code> を生のまま返す）も同じ理由で見えない。(a-vi) が数えるのは <code>return error;</code> の出現数だけで、<code>return cause;</code> は数えない。(A)-5 の「それ以外の構造変更」の具体例で、§4.9 のコード片を正とするレビューに委ねる</li>
+<li><strong>引用符が偶数個のまま <code>strip_strings</code> の残骸が再び対になる形</strong>は 1 つ目の step の (3) を通過する：<code>_logger.w(&quot;a&#39;s&quot;, error: e, stackTrace: traces[&quot;x&#39;s&quot;]);</code> は、<code>strip_strings</code> が <code>&#39;s&quot;, error: e, stackTrace: traces[&quot;x&#39;</code> を 1 つの文字列リテラルとして食うため、除去後の行に引用符が 0 個で揃い（(3) が破綻を検知しない）、(4)(5) の両辺も 0 で揃って緑になる（実測済み）。<code>error:</code> の前後にアポストロフィを含む二重引用符の文字列を 2 つ置く形はすべてこれに当たる。対処は規約側（二重引用符の文字列にアポストロフィを書かない。1 つ目の step の (3) の直上コメント）</li>
+<li><strong>走査対象の消失</strong>（<code>working-directory</code> の変更・<code>lib/</code> の配置変更・<code>app_logger.dart</code> や <code>notification_tap.dart</code> の移動・<code>strip_strings</code> 自身の故障）で判定が 0 件になり緑になる形。<strong>現行は塞いである</strong>：1 つ目の step の (0)（<code>strip_strings</code> / <code>occurrences</code> の自己検査）と (1)（合格形が最低 1 件ある番兵）、2 つ目の step は <code>app_logger.dart</code> が無ければ <code>interps</code> が空になって (a-i) が赤、3 つ目の step はファイルとクラス宣言の存在確認、4 つ目の step はコード行の存在確認と「ちょうど 1 件」の判定。<strong>これらの番兵を外すと再び開く</strong>ため、検査を整理するときも外さない</li>
+<li><strong>4 つ目の step は <code>retry: noRetry</code> が <code>ProviderScope(</code> の引数であることまでは見ない</strong>（<code>bootstrap.dart</code> のコード行に両方が 1 件ずつあることだけを見る）。<code>ProviderScope</code> から 1 引数を外して同じファイルの別の呼び出しに <code>retry: noRetry</code> を書く形は緑になる。<code>bootstrap.dart</code> は <code>bootstrap()</code> 1 関数だけのファイル（§5.1）で <code>retry:</code> を持つ呼び出しが他に無いため、行の照合より壊れにくい件数の判定を採った。<code>noRetry</code> 以外の関数（<code>retry: (_, _) =&gt; null</code> 等）に書き換えると赤になる（同じ振る舞いでも §4.7 の規則どおり <code>noRetry</code> を使う）</li>
 </ol>
 <p><strong>(B) 規則は許すが検査が落とすもの</strong>（偽陽性。実装者が「規約に従ったのに赤になった」ときの判断材料）：</p>
 <ol>
 <li>自前例外型の enum / 数値フィールドのうち、<code>sed</code> の許可リストの 3 語（<code>reason</code>・<code>schemaVersion</code>・<code>offset</code>）<strong>以外</strong>を補間した形（<code>${e.committed.length}</code> 等）。規則（§4.9 の表の 1 行目は型による一般規則）は許すが赤になる。対処は <code>app-ci.yml</code> の <code>sed</code> に同じ機会で 1 語足すこと（<code>app-ci.yml</code> は本節の所管）</li>
 <li>捕捉変数を <code>e</code> 以外に命名した場合（<code>catch (error)</code> の <code>${error.reason}</code>）。対処は捕捉変数を <code>e</code> と命名すること（§4.9 の表の 1 行目）</li>
-<li>自前例外型が原因を private フィールドで持つ場合（<code>final Object? _cause;</code> と <code>&#39;…(cause: $_cause)&#39;</code>）。<code>$_cause</code> は <code>danger</code> にヒットする一方 <code>sed</code> の許可形は名前に完全一致するため消えない。対処は原因フィールドを public の <code>cause</code> に固定すること（§4.9 の表の 2 行目）</li>
-<li><strong>例外ではない値の識別子名に <code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> が含まれる場合</strong>（<code>&#39;失敗数: $errorCount&#39;</code>・<code>&#39;${state.errors.length}&#39;</code> など）。規則（§4.9 は例外とその自由文だけを禁じる）は許すが赤になる（<code>danger</code> は識別子の一部一致で当たり、<code>sed</code> の許可形 3 語・<code>$cause</code>・<code>${cause}</code> のいずれとも一致しないので消えない。実測済み）。対処は変数名を変える（<code>failureCount</code> 等）か、ログに出す値を件数の別名に移すこと</li>
+<li>自前例外型が原因を private フィールドで持つ場合（<code>final Object? _cause;</code> と <code>&#39;…(cause: $_cause)&#39;</code>）。<code>$_cause</code> は <code>forbidden_interp</code> にヒットする一方 <code>sed</code> の許可形は名前に完全一致するため消えない。対処は原因フィールドを public の <code>cause</code> に固定すること（§4.9 の表の 2 行目）</li>
+<li><strong>例外ではない値の識別子名に <code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> が含まれる場合</strong>（<code>&#39;失敗数: $errorCount&#39;</code>・<code>&#39;${state.errors.length}&#39;</code> など）。規則（§4.9 は例外とその自由文だけを禁じる）は許すが赤になる（<code>forbidden_interp</code> は識別子の一部一致で当たり、<code>sed</code> の許可形 3 語・<code>$cause</code>・<code>${cause}</code> のいずれとも一致しないので消えない。実測済み）。対処は変数名を変える（<code>failureCount</code> 等）か、ログに出す値を件数の別名に移すこと</li>
+<li><strong>生成物（<code>*.g.dart</code>）が <code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む識別子を補間する場合</strong>。(b) は生成物も走査する（コミットされ CI で再生成も照合もされず、そのまま release ビルドに載るため。§8 #20）。drift の生成する <code>toString()</code> は全列を <code>..write(&#39;lastError: $lastError, &#39;)</code> の形で補間するので、列名に <code>lastError</code> のような名前を付けると確実に赤になる。riverpod_generator の生成物も Provider 名を補間する。<strong>対処は列名・テーブル名・Provider 名を 4 語を含まない名前に変えること</strong>で、<strong>生成物を検査の対象から外さない</strong>（<code>--exclude=&#39;*.g.dart&#39;</code> の再付与は命名で避けられない場合に限り、§8 #75 の再レビューで判断する。2 つ目の step の説明コメント）</li>
+<li><strong>複数行にまたがるブロックコメント（<code>/* … */</code>）の 2 行目以降に <code>@immutable</code> / <code>@Immutable</code> / <code>const NotificationTap</code> の字面がある場合</strong>（3 つ目の step）。3 つ目の step のブロックコメントの除去は <code>sed</code> の 1 行単位なので、同じ行で閉じるコメントしか消せず、2 行目以降の字面がコード行として赤になる（誤検出側。説明コメントを <code>//</code> か <code>///</code> で書けば起きない）。行頭が <code>//</code> の行は除外しているので、dartdoc（<code>///</code>）の中の <code>@immutable</code> は赤にならない</li>
 </ol>
 <p>(A) の 1〜4 については、<code>error:</code> / <code>stackTrace:</code> の実引数と宣言の検査（1 つ目の step）と <code>app_logger.dart</code> の 4 つの固定（(a)）が二重の網になっており、release の出力に載る値は <code>releaseSafeError</code> が返すものに限られる。</p>
 <p><code>app/assets/companies.json</code> の同梱コピーの同期検証は collector 側の契約テスト（D-01 §7.1）が担い、<code>collector-ci.yml</code> のパスフィルタに含まれる（D-02 §5.6）。本ワークフローは重ねて検証しない。</p>
 <h3 id="sec-4-9">4.9 ログ<a class="anchor" href="#sec-4-9">#</a></h3>
-<p><code>logger</code> パッケージ（CLAUDE.md。<code>print</code> 禁止）。<code>buildOverrides()</code>（<code>core/di/bootstrap_overrides.dart</code>。§5.1）が 1 つ生成して <code>loggerProvider</code> に override する。レベルは debug ビルドで <code>Level.debug</code>、release で <code>Level.warning</code>。domain・application は <code>Logger</code> を import しない（UseCase は結果型で失敗を返す）。<strong>本節は app 全体の規約</strong>で、下の列挙は本書が持つ出力箇所に限る：infrastructure（<code>HttpArticlesFeed</code>・<code>DriftArticleRepository</code>・<code>NoopPushGateway</code>・<code>FcmPushGateway</code>）と presentation / app（<code>SyncController</code>・<code>AppLifecycleSync</code>（ライフサイクル起点の失敗に加え、記事件数 Stream のエラーを 1 障害につき 1 回記録する。§5.4））。<strong>D-05 が持つ出力箇所（<code>LoggingOpenArticleAction</code>・<code>UrlLauncherArticleOpener</code>・<code>UrlLauncherNotificationSettingsOpener</code>・<code>SettingsScreen</code>。一覧は D-05 §3.2）も本節に従う</strong>（列挙を出力箇所のチェックリストとして使うと D-05 側が漏れる。§10 T-F5a の範囲はその 4 か所を含む）。<strong>値を使わない「副作用専用の Provider」は置かない</strong>（依存が暗黙になり、読む側から副作用の存在が見えないため。副作用と順序は <code>AppLifecycleSync</code> に集約する。§8 #49）。記事本文・通知本文・サムネイルの内容はログに出さない（出してよいのは URL・id・件数と、例外については <strong>debug ビルドは型とメッセージ、release / profile ビルドは下の <code>releaseSafeError</code> が返す値だけ</strong>）。</p>
-<p><strong>message 文字列に例外を埋め込まない規約</strong>（§4.8 の検査 (b) が機械的に固定する。§8 #75）。message は release でも <code>Level.warning</code> としてそのまま出力される（os_log ＝ Console.app / sysdiagnose から読める）ため、<code>error:</code> を整形しても message 経由で同じ内容が載る。<strong>補間してよいのは次の 2 つだけ</strong>で、それ以外の「例外らしい値」（<code>$e</code>・<code>${e}</code>・<code>$error</code>・<code>${next.error}</code>・<code>${error.remoteCause}</code>・<code>${e.toString()}</code>・<code>$stackTrace</code> など）は<strong>変数名にかかわらず禁止</strong>する（<code>$err</code>・<code>${ex}</code>・<code>${failure}</code> のように名前に <code>error</code> を含まない形も、<code>&#39;…&#39; + e.toString()</code> のように補間でない形も規約では禁止。ただし <strong>§4.8 の検査が機械的に固定できるのは <code>e</code> と、<code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む識別子の補間だけ</strong>で、それ以外は規約に委ねる。§4.8 末尾の限界一覧 (A)-3・(A)-4）：</p>
+<p><code>logger</code> パッケージ（CLAUDE.md。<code>print</code> 禁止）。<code>buildOverrides()</code>（<code>core/di/bootstrap_overrides.dart</code>。§5.1）が 1 つ生成して <code>loggerProvider</code> に override する。レベルは debug ビルドで <code>Level.debug</code>、release で <code>Level.warning</code>。<strong>ただし現行の <code>createAppLogger</code> は <code>filter:</code> を渡さず、既定の <code>DevelopmentFilter</code> が効くため、release / profile ではレベルにかかわらず全ログが出力されない</strong>（<code>DevelopmentFilter.shouldLog</code> は <code>assert</code> の中でだけ真になる。クラス doc も &quot;In release mode ALL logs are omitted&quot;。logger 2.8.0 で確認。<code>app_logger.dart</code> 冒頭の実測 2）。<strong>本節の release 向けの規約（message に例外を埋め込まない・<code>releaseSafeError</code> / <code>releaseSafeStackTrace</code> を通す）と §4.8 の検査は、filter を <code>ProductionFilter</code> 等に替えたときの備え</strong>である（替えた時点で release の <code>Level.warning</code> 以上が os_log ＝ Console.app / sysdiagnose から読める形で出る。替えるかどうかはフェーズ 6 の TestFlight 配布の前に判断する。§8 #75・§8.2.4）。<strong>logger を通らない release の出力経路は §5.1 の <code>buildOverrides</code> 手順 1a で閉じる</strong>（未捕捉例外の既定の出力。§8 #77）。drift の <code>logStatements</code>（SQL 文・バインド値を <code>driftRuntimeOptions.debugPrint</code> に出す）と isolate の <code>debugLog</code> は使わない。domain・application は <code>Logger</code> を import しない（UseCase は結果型で失敗を返す）。<strong>本節は app 全体の規約</strong>で、下の列挙は本書が持つ出力箇所に限る：infrastructure（<code>HttpArticlesFeed</code>・<code>DriftArticleRepository</code>・<code>NoopPushGateway</code>・<code>FcmPushGateway</code>）と presentation / app（<code>SyncController</code>・<code>AppLifecycleSync</code>（ライフサイクル起点の失敗に加え、記事件数 Stream のエラーを 1 障害につき 1 回記録する。§5.4））。<strong>D-05 が持つ出力箇所（<code>LoggingOpenArticleAction</code>・<code>UrlLauncherArticleOpener</code>・<code>UrlLauncherNotificationSettingsOpener</code>・<code>SettingsScreen</code>。一覧は D-05 §3.2）も本節に従う</strong>（列挙を出力箇所のチェックリストとして使うと D-05 側が漏れる。§10 T-F5a の範囲はその 4 か所を含む）。<strong>値を使わない「副作用専用の Provider」は置かない</strong>（依存が暗黙になり、読む側から副作用の存在が見えないため。副作用と順序は <code>AppLifecycleSync</code> に集約する。§8 #49）。記事本文・通知本文・サムネイルの内容はログに出さない（出してよいのは URL・id・件数と、例外については <strong>debug ビルドは型とメッセージ、release / profile ビルドは下の <code>releaseSafeError</code> が返す値だけ</strong>）。</p>
+<p><strong>message 文字列に例外を埋め込まない規約</strong>（§4.8 の検査 (b) が機械的に固定する。§8 #75）。filter を替えると message は release でも <code>Level.warning</code> としてそのまま出力される（os_log ＝ Console.app / sysdiagnose から読める。既定の <code>DevelopmentFilter</code> のままでは出ない＝本節冒頭）ため、<code>error:</code> を整形しても message 経由で同じ内容が載る。<strong>補間してよいのは次の 2 つだけ</strong>で、それ以外の「例外らしい値」（<code>$e</code>・<code>${e}</code>・<code>$error</code>・<code>${next.error}</code>・<code>${error.remoteCause}</code>・<code>${e.toString()}</code>・<code>$stackTrace</code> など）は<strong>変数名にかかわらず禁止</strong>する（<code>$err</code>・<code>${ex}</code>・<code>${failure}</code> のように名前に <code>error</code> を含まない形も、<code>&#39;…&#39; + e.toString()</code> のように補間でない形も規約では禁止。ただし <strong>§4.8 の検査が機械的に固定できるのは <code>e</code> と、<code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む識別子の補間だけ</strong>で、それ以外は規約に委ねる。§4.8 末尾の限界一覧 (A)-3・(A)-4）：</p>
 <table>
 <thead>
 <tr>
@@ -1826,8 +2157,12 @@ _logger.w('articles.json の解析に失敗（malformed: JSON として解析で
 <p>同じ理由で <code>ArticlesFileCodec.decode</code> の失敗のログ行（<code>${e.reason}</code> = <code>FeedFailureReason</code>）は<strong>現状のまま変えない</strong>（enum なので上の表の 1 行目に当たる）。</p>
 <p><strong><code>error:</code> と <code>stackTrace:</code> に渡す前に 2 つの整形関数を必ず通す</strong>（<code>core/logging/app_logger.dart</code>。§8 #75）：</p>
 <pre><code class="language-dart">// import は package:flutter/foundation.dart（kDebugMode）・package:logger/logger.dart（Logger）・
-// package:drift/remote.dart（DriftRemoteException）・package:sqlite3/common.dart（SqliteException）。
-// DB 技術の知識はこの 1 ファイルに閉じる（§8 #75）
+// package:drift/isolate.dart' show DriftRemoteException・package:sqlite3/common.dart' show SqliteException。
+// DB 技術の知識はこの 1 ファイルに閉じる（§8 #75）。
+// DriftRemoteException の定義元 package:drift/remote.dart は library 宣言に @experimental が付く（型そのものには
+// 付かない）。注釈の無い isolate.dart の再 export（drift 2.31.0 lib/isolate.dart:17）から取れば
+// `// ignore: experimental_member_use` は要らない。isolate.dart は dart:isolate を引き込み web 非対応だが、
+// 本アプリは iOS 専用なので影響は無い（web を対象に加えるときは remote.dart + ignore に戻すか #75 (C) へ寄せる）
 
 /// Logger の生成（既存）。このファイルには createAppLogger もあり、level: の 1 行で kDebugMode を使う
 /// ＝ §4.8 (a) の 4 つ目が数える「kDebugMode を含むコード行」は下の 2 関数と合わせて 3 行になる。
@@ -1839,12 +2174,15 @@ Logger createAppLogger() {
   );
 }
 
-/// debug 以外（release / profile）ではスタックトレースを出さない（既存）
+/// debug 以外（release / profile）ではスタックトレースを出さない（既存）。
+/// なお SimplePrinter は LogEvent.stackTrace を印字しない（logger 2.8.0 で確認）ため、現状この戻り値は
+/// debug でもログに現れない。printer を替えたときの備えである
 StackTrace? releaseSafeStackTrace(StackTrace? stackTrace) =&gt; kDebugMode ? stackTrace : null;
 
 /// debug 以外では、外部由来の自由文（失敗した DB ファイルの絶対パス・SQL 文）を落として要約だけにする。
 /// drift の SqliteException.toString() は失敗した DB ファイルの絶対パス（iOS サンドボックスの UUID を含む）を
-/// 持つことがあり、release でも Level.warning は出力される（os_log ＝ Console.app / sysdiagnose から読める）。
+/// 持つことがある。既定の DevelopmentFilter では release / profile のログは出ないが、filter を ProductionFilter 等に
+/// 替えると release でも Level.warning が出力される（os_log ＝ Console.app / sysdiagnose から読める）。その備え。
 /// ただし型名だけに潰すと、要件 §10 フェーズ 6 の TestFlight 配布（= release ビルド）で
 /// 「待てば直るロック」と「恒久破損（§8 #68 の削除・再インストール）」を切り分けられなくなるため、
 /// **パスを含まない結果コードだけは残す**（許可リスト方式。§8 #75）。
@@ -1866,11 +2204,61 @@ Object? releaseSafeError(Object? error) {
   }
   return cause?.runtimeType;
 }</code></pre>
-<p><strong>この 2 関数（<code>releaseSafeError</code>・<code>releaseSafeStackTrace</code>）を変更するとき、および同じファイルの <code>createAppLogger</code> の <code>kDebugMode</code> の行数を変えるときは、§4.8 (a) の期待値文字列と <code>kDebugMode</code> の期待行数（3 行）も同じ変更で直し、本書を <code>draft</code> に戻して <code>/design-review</code> をやり直す</strong>（上のコード片と <code>app-ci.yml</code> の期待値は二重管理になる。<code>interps</code> は <code>LC_ALL=C sort -u</code> の順・末尾の空白 1 個まで一致する必要があり、<code>members</code> と制御フローの照合文字列も同様。例：<code>extendedResultCode</code> を出すのをやめる正当な変更でも、実装・上のコード片・§4.8 の期待値の 3 か所を同時に直さないと CI が赤になる）。<strong><code>releaseSafeStackTrace</code> の 1 行式は 92 桁で <code>dart format</code> が <code>=&gt;</code> の後ろで折り返す</strong>ため、§4.8 の制御フローの照合は改行と連続空白を 1 個に潰してから行う（折り返した実装でも緑になり、インデントにも依存しない）。逆に<strong>期待値だけを緩めて通すのは §8 #75 の決定の変更にあたる</strong>（§4.8 の同趣旨の 1 文）。</p>
+<p><strong>この 2 関数（<code>releaseSafeError</code>・<code>releaseSafeStackTrace</code>）を変更するとき、および同じファイルの <code>createAppLogger</code> の <code>kDebugMode</code> の行数を変えるときは、<code>app-ci.yml</code> の 2 つ目の step（§4.8）冒頭の期待値 8 変数も同じ変更で直し、本書を <code>draft</code> に戻して <code>/design-review</code> をやり直す</strong>。8 変数は次のとおり（実装から辿る先はこの一覧で、§4.8 の抜粋にも同じものがある）：</p>
+<table>
+<thead>
+<tr>
+<th>変数</th>
+<th>現在の値</th>
+<th>固定するもの（§4.8 の記号）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>expected_interps</code></td>
+<td><code>&#39;${cause.extendedResultCode} ${cause.resultCode} &#39;</code></td>
+<td>すべての文字列補間（(a-i)）</td>
+</tr>
+<tr>
+<td><code>expected_members</code></td>
+<td><code>&#39;cause.extendedResultCode cause.resultCode cause?.runtimeType &#39;</code></td>
+<td><code>cause</code> のメンバ参照（(a-ii)）</td>
+</tr>
+<tr>
+<td><code>expected_errmembers</code></td>
+<td><code>&#39;error.remoteCause &#39;</code></td>
+<td><code>error</code> 側のメンバ参照。許可は <code>error.remoteCause</code> だけ（(a-iii)）</td>
+</tr>
+<tr>
+<td><code>expected_remote_cause_count</code></td>
+<td><code>1</code></td>
+<td><code>.remoteCause</code> の出現数（(a-iv)）</td>
+</tr>
+<tr>
+<td><code>expected_return_error_count</code></td>
+<td><code>1</code></td>
+<td><code>return error;</code> の出現数（(a-vi)）</td>
+</tr>
+<tr>
+<td><code>expected_kdebugmode_lines</code></td>
+<td><code>3</code></td>
+<td><code>kDebugMode</code> を含むコード行の数（(a-vi)）</td>
+</tr>
+<tr>
+<td><code>expected_debug_branch</code></td>
+<td><code>&#39;if (kDebugMode) return error;&#39;</code></td>
+<td>debug 分岐の制御フロー（(a-vi)）</td>
+</tr>
+<tr>
+<td><code>expected_stacktrace_body</code></td>
+<td><code>&#39;releaseSafeStackTrace(StackTrace? stackTrace) =&gt; kDebugMode ? stackTrace : null;&#39;</code></td>
+<td><code>releaseSafeStackTrace</code> の本体（(a-vi)）</td>
+</tr>
+</tbody></table>
+<p>（上のコード片・<code>app-ci.yml</code> の期待値・§4.8 の抜粋は三重管理になる。<code>interps</code>（<code>expected_interps</code> との照合）は <code>LC_ALL=C sort -u</code> の順・末尾の空白 1 個まで一致する必要があり、<code>members</code>・<code>errmembers</code> と制御フローの照合文字列も同様。例：<code>extendedResultCode</code> を出すのをやめる正当な変更でも、実装・上のコード片・§4.8 の期待値の 3 か所を同時に直さないと CI が赤になる）。<strong><code>releaseSafeStackTrace</code> の 1 行式は 92 桁で <code>dart format</code> が <code>=&gt;</code> の後ろで折り返す</strong>ため、§4.8 の制御フローの照合は改行と連続空白を 1 個に潰してから行う（折り返した実装でも緑になり、インデントにも依存しない）。逆に<strong>期待値だけを緩めて通すのは §8 #75 の決定の変更にあたる</strong>（§4.8 の同趣旨の 1 文）。</p>
 <p>自前の例外型（<code>FeedOfflineException</code>・<code>FeedErrorException</code>。§4.3）を許可リストに入れないのは、その <code>reason</code>・<code>schemaVersion</code> が <code>SyncResult</code> に写って別のログ行と状態に現れるため、型名だけで足りるからである（§8 #75）。<strong>その「別のログ行」が上の許可形の 1 行目</strong>（<code>HttpArticlesFeed</code> の <code>${e.reason}</code>）で、<code>releaseSafeError</code> 側は型名だけを返す形と矛盾しない。</p>
-<p>以後、本書・D-05 のコード例はすべて <code>logger.w(&#39;…&#39;, error: releaseSafeError(e), stackTrace: releaseSafeStackTrace(s))</code> の形で書く（<code>error:</code> に素の例外を渡す形は書かない。§8.1 の D-05 宛）。<strong><code>error:</code> / <code>stackTrace:</code> という名前付き引数を書いてよいのは <code>logger</code> / <code>_logger</code> の呼び出しだけ</strong>とし、ログ定型の private ヘルパ（<code>AppLifecycleSync._warn</code>・<code>SettingsScreen._logWarn</code>）は例外とスタックトレースを<strong>位置引数</strong>で受けて<strong>本体で 1 度だけ</strong>整形関数を通す（呼び出し側は生の <code>e</code>・<code>s</code> を渡す）。<code>SettingsScreen._logWarn</code> の署名は <strong><code>void _logWarn(String message, Object? error, StackTrace? stackTrace)</code></strong> とする（<code>_logIfNewlyErrored</code> が <code>next.error</code> / <code>next.stackTrace</code> を渡すため 2 つは nullable。呼び出し 5 箇所は名前付きから位置引数に置き換えるだけ）。<strong><code>AppLifecycleSync._warn</code> の署名は <code>void _warn(String message, [Object? error, StackTrace? stackTrace])</code></strong> とする（例外を伴わない 1 行（件数の滞留ログ）も同じヘルパで出せるよう省略可能にする。§5.3 の擬似コード末尾。<strong>整形はこの本体 1 か所だけで行い、呼び出しは生の <code>e</code>・<code>s</code> を渡す</strong>＝二重包みを構造的に防ぐ。<strong>呼び出しは計 10 か所にする</strong>：現状の <code>_warn</code> 呼び出し 8 か所に加え、<strong>直接 <code>_logger.w</code> を呼んでいる 2 か所（記事件数の購読の失敗＝ <code>error: next.error</code> の行・件数の初回読み出しの滞留ログ）も <code>_warn</code> に寄せる</strong>。§5.3 の擬似コード（<code>_warn(&#39;記事件数の購読に失敗&#39;, next.error, next.stackTrace)</code> と <code>_warn(&#39;記事件数の初回読み出しが … 以内に返らない&#39;)</code>）が到達状態で、<strong><code>error: next.error</code> を残すと §4.8 の 1 つ目の step が赤になる</strong>）。<strong><code>error:</code> の実引数に null ガード（<code>error == null ? null : releaseSafeError(error)</code> のような三項）を書かない</strong>：<code>releaseSafeError</code> は <code>null</code> をそのまま返すので不要であり、書くと <code>error: </code> の直後が <code>releaseSafeError(</code> でなくなって §4.8 の検査に落ちる。こうすると「<code>error:</code> の実引数は必ず <code>releaseSafeError(...)</code>」が例外なく成り立ち、§4.8 の CI の 1 行検査が成立する。</p>
+<p>以後、本書・D-05 のコード例はすべて <code>logger.w(&#39;…&#39;, error: releaseSafeError(e), stackTrace: releaseSafeStackTrace(s))</code> の形で書く（<code>error:</code> に素の例外を渡す形は書かない。§8.1 の D-05 宛）。<strong><code>error:</code> / <code>stackTrace:</code> という名前付き引数を書いてよいのは <code>logger</code> / <code>_logger</code> の呼び出しだけ</strong>とし、ログ定型の private ヘルパ（<code>AppLifecycleSync._warn</code>・<code>SettingsScreen._logWarn</code>）は例外とスタックトレースを<strong>位置引数</strong>で受けて<strong>本体で 1 度だけ</strong>整形関数を通す（呼び出し側は生の <code>e</code>・<code>s</code> を渡す）。<code>SettingsScreen._logWarn</code> の署名は <strong><code>void _logWarn(String message, Object? error, StackTrace? stackTrace)</code></strong> とする（<code>_logIfNewlyErrored</code> が <code>next.error</code> / <code>next.stackTrace</code> を渡すため 2 つは nullable。呼び出し 5 箇所は名前付きから位置引数に置き換えるだけ）。<strong><code>AppLifecycleSync</code> のログ定型ヘルパは 2 つに分ける</strong>：例外を伴う行は <strong><code>void _warn(String message, Object? error, StackTrace? stackTrace)</code></strong>（<strong>位置引数 3 つ・すべて必須</strong>。<code>error</code> / <code>stackTrace</code> が nullable なのは <code>next.error</code> / <code>next.stackTrace</code> を渡すため）、例外を伴わない 1 行（件数の滞留ログ）は <strong><code>void _warnMessage(String message)</code></strong>（<code>_logger.w(message)</code> を呼ぶだけで <code>error:</code> / <code>stackTrace:</code> を渡さない）とする（§5.3 の擬似コード末尾）。<strong>省略可能な位置引数（<code>[Object? error, StackTrace? stackTrace]</code>）にしない理由</strong>：<code>StackTrace</code> は <code>Object</code> の部分型なので、省略可能にすると <code>_warn(&#39;…&#39;, s)</code>（スタックトレースだけを第 2 引数に渡す誤記）がコンパイルも lint も通り（<code>very_good_analysis</code> 6.0.0 に検出ルールは無い）、release では <code>releaseSafeError(s)</code> が型名 <code>_StackTrace</code> だけを返して原因が追えなくなる。必須 3 引数なら引数の個数の不一致でコンパイルエラーになる（<code>SettingsScreen._logWarn</code> と同じ形。FOLLOWUPS 4-25）。<strong>整形は <code>_warn</code> の本体 1 か所だけで行い、呼び出しは生の <code>e</code>・<code>s</code> を渡す</strong>＝二重包みを構造的に防ぐ。<strong>呼び出しは計 10 か所</strong>（<code>_warn</code> 9 か所 + <code>_warnMessage</code> 1 か所＝件数の初回読み出しの滞留ログ）。記事件数の購読の失敗は <code>_warn(&#39;記事件数の購読に失敗&#39;, next.error, next.stackTrace)</code>（§5.3 の擬似コード）で、<strong><code>error: next.error</code> を <code>_logger.w</code> に直接書くと §4.8 の 1 つ目の step が赤になる</strong>。<code>_warnMessage</code> は <code>error:</code> / <code>stackTrace:</code> を書かないので §4.8 の検査の対象外で、release の出力に載るのは固定文の message だけである（message に例外を補間しない規約は <code>_warnMessage</code> にも及ぶ）。<strong><code>error:</code> の実引数に null ガード（<code>error == null ? null : releaseSafeError(error)</code> のような三項）を書かない</strong>：<code>releaseSafeError</code> は <code>null</code> をそのまま返すので不要であり、書くと <code>error: </code> の直後が <code>releaseSafeError(</code> でなくなって §4.8 の検査に落ちる。こうすると「<code>error:</code> の実引数は必ず <code>releaseSafeError(...)</code>」が例外なく成り立ち、§4.8 の CI の 1 行検査が成立する。</p>
 <p><strong>ログ定型ヘルパは必ず位置引数で受ける（<code>error:</code> / <code>stackTrace:</code> という名前付き引数をヘルパの宣言に書かない）。</strong> これは現行 2 ヘルパの都合ではなく<strong>規約</strong>で、§4.8 の 1 つ目の step が宣言を検査する。理由：ヘルパが名前付きで受けると、呼び出し側は §4.8 の検査（「<code>error: </code> の実引数は必ず <code>releaseSafeError(</code>」）を通すために <code>error: releaseSafeError(e)</code> と書き、ヘルパ本体も同じ検査のために <code>error: releaseSafeError(error)</code> と書くことになり、release では <code>releaseSafeError(releaseSafeError(e))</code> になって<strong>内側が返した文字列を外側が <code>cause?.runtimeType</code> に潰し、ログに <code>String</code> だけが残る</strong>（結果コードも型名も失われる）。§4.8 のどの検査も緑のままで（4 つ目の制御フローの照合も <code>app_logger.dart</code> しか見ないため通る）、<code>releaseSafeError</code> に直接テストを置かない（§8 #75 (A)）ため自動では気づけない。採らなかった案：<code>releaseSafeError</code> を冪等にする（先頭で <code>if (error is String || error is Type) return error;</code>）——<code>String</code> を素通しにすると「許可リスト方式」（§8 #75）が崩れ、外部由来の <code>String</code> を <code>error:</code> に渡す経路が新たに開く。位置引数の規約なら関数の意味を変えずに済み、検査も宣言 1 行を見るだけで足りる。</p>
-<p><strong><code>app_logger.dart</code> は上のコード片どおりに書く</strong>（文字列補間は <code>${cause.resultCode}</code> と <code>${cause.extendedResultCode}</code> の 2 つだけ）。§4.8 の検査 (a) が<strong>4 つ</strong>を固定する：(1) このファイルのすべての文字列補間、(2) すべての <code>cause</code> メンバ参照、(3) 自由文を読む語（<code>toString()</code>・<code>safeToString</code>・<code>SqliteException</code> の自由文フィールド 5 語）がコード行に無いこと、(4) <strong>制御フロー</strong>（<code>if (kDebugMode) return error;</code> の 1 行・<code>releaseSafeStackTrace</code> の 1 行式・<code>return error;</code> が 1 回・<code>kDebugMode</code> を含むコード行が <strong>3 行</strong>＝ <code>createAppLogger</code> の <code>level:</code>・<code>releaseSafeStackTrace</code>・<code>releaseSafeError</code> の <code>if</code>）。(1)〜(3) は<strong>字面</strong>だけを固定するので、補間もメンバ参照も自由文の語も含まない行の追加・書き換え（<code>if (!kDebugMode) return error;</code> への 1 文字の反転、<code>final x = error; return x;</code>）は (4) が捕まえる。<strong>2 つの検査の役割</strong>：(a) は <code>app_logger.dart</code> を上の 4 点で固定し、(b) は <code>lib/</code> 全体を「<code>$e</code> だけを見る形より広い名前集合」（<code>e</code> と、<code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む識別子）で見る。どちらも「既存の行の書き換え」と「別経路の 1 行の追加」の<strong>両方</strong>を捕まえる（第 2 周の <code>$e</code> だけを見る形は前者しか捕まえられなかった）。<strong>検査が捕まえられないもの・規則は許すが検査が落とすものの一覧は §4.8 末尾に 1 か所だけ置く</strong>（本節では繰り返さない）。<code>presentation</code> は <code>Logger</code> を生成時（<code>ConsumerState</code> は <code>initState</code>、Notifier は <code>build()</code>）に 1 度だけ <code>ref.read(loggerProvider)</code> して保持する（<code>Logger</code> は keepAlive の基盤オブジェクトなので、保持した参照を <code>await</code> 後に使ってよい。§5.3）。</p>
+<p><strong><code>app_logger.dart</code> は上のコード片どおりに書く</strong>（文字列補間は <code>${cause.resultCode}</code> と <code>${cause.extendedResultCode}</code> の 2 つだけ）。§4.8 の検査 (a) が<strong>4 つ</strong>を固定する：(1) このファイルのすべての文字列補間、(2) すべての <code>cause</code> メンバ参照、(3) 自由文を読む語（<code>toString()</code>・<code>safeToString</code>・<code>SqliteException</code> の自由文フィールド 5 語）がコード行に無いこと、(4) <strong>制御フロー</strong>（<code>if (kDebugMode) return error;</code> の 1 行・<code>releaseSafeStackTrace</code> の 1 行式・<code>return error;</code> が 1 回・<code>kDebugMode</code> を含むコード行が <strong>3 行</strong>＝ <code>createAppLogger</code> の <code>level:</code>・<code>releaseSafeStackTrace</code>・<code>releaseSafeError</code> の <code>if</code>）。実ファイルはこの 4 つを (a-i)(a-ii)(a-v)(a-vi) とし、加えて (a-iii)（<code>error</code> 側のメンバ参照は <code>error.remoteCause</code> だけ）と (a-iv)（<code>.remoteCause</code> の出現数 1）を固定する（記号の対応は §4.8 の抜粋の直後の表）。(1)〜(3) は<strong>字面</strong>だけを固定するので、補間もメンバ参照も自由文の語も含まない行の追加・書き換え（<code>if (!kDebugMode) return error;</code> への 1 文字の反転、<code>final x = error; return x;</code>）は (4) が捕まえる。<strong>2 つの検査の役割</strong>：(a) は <code>app_logger.dart</code> を上の 4 点で固定し、(b) は <code>lib/</code> 全体を「<code>$e</code> だけを見る形より広い名前集合」（<code>e</code> と、<code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む識別子）で見る。どちらも「既存の行の書き換え」と「別経路の 1 行の追加」の<strong>両方</strong>を捕まえる（第 2 周の <code>$e</code> だけを見る形は前者しか捕まえられなかった）。<strong>検査が捕まえられないもの・規則は許すが検査が落とすものの一覧は §4.8 末尾に 1 か所だけ置く</strong>（本節では繰り返さない）。<code>presentation</code> は <code>Logger</code> を生成時（<code>ConsumerState</code> は <code>initState</code>、Notifier は <code>build()</code>）に 1 度だけ <code>ref.read(loggerProvider)</code> して保持する（<code>Logger</code> は keepAlive の基盤オブジェクトなので、保持した参照を <code>await</code> 後に使ってよい。§5.3）。</p>
 <h2 id="sec-5">5. 処理フロー（正常系）<a class="anchor" href="#sec-5">#</a></h2>
 <h3 id="sec-5-1">5.1 起動（<code>bootstrap</code> → <code>runApp</code>）<a class="anchor" href="#sec-5-1">#</a></h3>
 <ul>
@@ -1878,11 +2266,37 @@ Object? releaseSafeError(Object? error) {
 <li><strong>手順</strong>（<code>lib/app/bootstrap.dart</code> の <code>bootstrap()</code>）：<ol>
 <li><code>WidgetsFlutterBinding.ensureInitialized()</code></li>
 <li><code>final overrides = await buildOverrides()</code>（<code>lib/core/di/bootstrap_overrides.dart</code>。具象を生成する唯一の起動処理。§8 #43）</li>
-<li><code>runApp(ProviderScope(overrides: overrides, child: const CurtainCallApp()))</code></li>
+<li><code>runApp(ProviderScope(retry: noRetry, overrides: overrides, child: const CurtainCallApp()))</code>（<code>retry: noRetry</code> は Riverpod 3 の自動リトライを app 全体の既定で切る 1 引数。<code>noRetry</code> は <code>package:curtaincall/core/di/no_retry.dart</code> から import する。import ゼロの定数関数なので #43 の「<code>lib/app/</code> は具象を import しない」に触れない。§4.7「自動リトライ」・§8 #67・#78。書き戻しは §4.8 の 4 つ目の step が止める）</li>
 </ol>
 </li>
 <li><strong><code>buildOverrides()</code></strong>（<code>Future&lt;List&lt;Override&gt;&gt;</code>）の<strong>手順</strong>：<ol>
-<li><code>Logger</code> を生成（§4.9）</li>
+<li><code>Logger</code> を生成（§4.9）<ul>
+<li><p>1a. <strong><code>kDebugMode</code> が偽（release / profile）のときだけ</strong>、未捕捉例外の既定の出力経路 2 つを、手順 1 の <code>Logger</code> への 1 行に差し替える（§4.9・§8 #77）。debug では差し替えない（Flutter 既定の赤画面・コンソールの詳細表示を残す）：</p>
+<pre><code class="language-dart">// lib/core/di/bootstrap_overrides.dart（buildOverrides の手順 1a。§8 #77）
+// 追加の import：dart:ui（PlatformDispatcher）・package:flutter/foundation.dart（kDebugMode・FlutterError）。
+// releaseSafeError / releaseSafeStackTrace は既存の import（core/logging/app_logger.dart）から
+if (!kDebugMode) {
+  // Flutter のフレームワーク内の例外（build・layout・ProviderScope の onError が FlutterError.reportError で送るもの）。
+  // 既定の FlutterError.presentError は release でも例外の文字列表現を出力するため差し替える
+  FlutterError.onError = (details) =&gt; logger.e(
+        'FlutterError（未捕捉）',
+        error: releaseSafeError(details.exception),
+        stackTrace: releaseSafeStackTrace(details.stack),
+      );
+  // Zone に捕捉されない非同期の例外。true を返して処理済みにする（false だとエンジンの既定の出力に落ちる）
+  PlatformDispatcher.instance.onError = (error, stack) {
+    logger.e(
+      '未捕捉の非同期例外',
+      error: releaseSafeError(error),
+      stackTrace: releaseSafeStackTrace(stack),
+    );
+    return true;
+  };
+}</code></pre>
+<p>置き場を <code>bootstrap()</code> ではなく <code>buildOverrides()</code> にするのは、差し替え先の <code>Logger</code> を生成するのが手順 1 で、<code>bootstrap()</code> は具象（<code>createAppLogger</code>）を持たないため（§8 #43）。<code>kDebugMode</code> の分岐を <code>app_logger.dart</code> に置かないのは、§4.8 (a-vi) が同ファイルの <code>kDebugMode</code> の行数を 3 に固定しているため。<code>error:</code> / <code>stackTrace:</code> の 2 行は §4.8 の 1 つ目の step の (4)(5) を満たす形（1 行に収め、整形関数を通す）で書く。手順 1a より前（<code>WidgetsFlutterBinding.ensureInitialized()</code> と手順 1）の例外は既定の経路のままだが、どちらも外部由来の文字列を持たない</p>
+</li>
+</ul>
+</li>
 <li><code>pushBackend == &#39;fcm&#39;</code> のときだけ <code>Firebase.initializeApp()</code>（T-G 以降。それ以外は呼ばない）</li>
 <li><code>AppDatabase(driftDatabase(name: &#39;curtaincall&#39;))</code> を生成する（実際の open は最初のクエリで行われる。<code>schemaVersion</code> の migration もそのとき）</li>
 <li><code>AssetCompanyRepository().loadAll()</code> を await して <code>List&lt;Company&gt;</code> を得る（§4.5）</li>
@@ -2307,7 +2721,7 @@ void initState() {
   _countStallTimer = Timer(articleCountStallLogDelay, () {
     final count = ref.read(articleCountProvider);
     if (count.hasValue || count.hasError) return;
-    _warn('記事件数の初回読み出しが $articleCountStallLogDelay 以内に返らない');
+    _warnMessage('記事件数の初回読み出しが $articleCountStallLogDelay 以内に返らない');   // 例外を伴わない 1 行（§4.9）
   });
   WidgetsBinding.instance.addPostFrameCallback((_) =&gt; _onLaunch());   // 最初のフレーム後
 }
@@ -2324,10 +2738,12 @@ Future&lt;void&gt; _onLaunch() async {
   unawaited(ref.read(syncControllerProvider.notifier).sync(SyncTrigger.launch));  // 1. await しない。取得は裏で続く（S-01/ST-18）
   try {
     await ref.read(requestNotificationPermissionUseCaseProvider).execute();       // 2. ダイアログが閉じるまで待つ
-  } on Exception catch (e) {
-    // RequestNotificationPermissionUseCase が投げるのはプラグインの PlatformException 系（Exception）だけなので、
-    // ここは on Exception で足りる（§5.7）。下の _syncSubscriptions とは捕捉する型が異なる
-    _warn('通知許可の要求に失敗', e);                                            //    失敗しても 3 に進む（§4.9・§5.7）
+  } on Object catch (e, s) {
+    // RequestNotificationPermissionUseCase が投げるのは通常プラグインの PlatformException 系（Exception）だが、
+    // 依存先（Provider の build() や PushGateway の実装）が Error（StateError 等）を投げても手順 3 が
+    // スキップされないよう、他の手順と同じく Object で受ける（§5.7「失敗しても 3 に進む」。§8 #80）。
+    // _warn は位置引数 3 つが必須なので s も渡す（_warn('…', e) はコンパイルエラー。§4.9）
+    _warn('通知許可の要求に失敗', e, s);                                         //    失敗しても 3 に進む（§4.9・§5.7）
   }
   await _syncSubscriptions();                                                     // 3. 許可の結果に関わらず購読同期
 }
@@ -2365,18 +2781,22 @@ Future&lt;void&gt; _resyncSubscriptions() async {
   }
 }
 
-// ログ定型ヘルパ。整形関数を通すのはこの本体 1 か所だけで、呼び出し側は生の e・s を渡す
-// （改修後の呼び出しは 10 か所＝実装済みの _warn 呼び出し 8 か所 + 直接 _logger.w を呼んでいた 2 か所
-//   （記事件数の購読の失敗・件数の初回読み出しの滞留。上の initState のとおり _warn に寄せる）。
-//   上の擬似コードには代表の 5 か所だけを載せている）。
+// ログ定型ヘルパ 2 つ（§4.9）。呼び出しは計 10 か所＝ _warn 9 か所 + _warnMessage 1 か所
+// （件数の初回読み出しの滞留。上の擬似コードには代表の 5 か所だけを載せている）。
+// _warn：整形関数を通すのはこの本体 1 か所だけで、呼び出し側は生の e・s を渡す。
 // 例外とスタックトレースは位置引数で受ける（名前付きで受けると呼び出し側と本体が二重に包み、
 // release では内側が返した String だけが残る。§4.9・§4.8 の 1 つ目の step が宣言を検査する）。
+// 3 引数とも必須にする（省略可能にすると StackTrace が Object の部分型であるため _warn('…', s) が
+// 型を通り、release では型名だけが残る。§4.9）。
 // releaseSafeError / releaseSafeStackTrace は null をそのまま返すので null ガードを書かない（§4.9）
-void _warn(String message, [Object? error, StackTrace? stackTrace]) =&gt; _logger.w(
+void _warn(String message, Object? error, StackTrace? stackTrace) =&gt; _logger.w(
       message,
       error: releaseSafeError(error),
       stackTrace: releaseSafeStackTrace(stackTrace),
-    );</code></pre>
+    );
+
+// _warnMessage：例外を伴わない 1 行だけに使う（error: / stackTrace: を渡さない）
+void _warnMessage(String message) =&gt; _logger.w(message);</code></pre>
 <p><code>_onLaunch</code> の 3 手順は逐次（2 を await してから 3）で、1 だけを await しない。復帰時の 3 手順はすべて await せず独立に始める（互いに依存しない）。<strong>復帰時の手順 3</strong> は飛行中の実行を待つ間に次の復帰が来ても、<code>resyncIfNeeded()</code> が「待っている間に新しい実行が始まっていたら重ねない」規則を持ち（§5.6.3 手順 2）、<code>run()</code> 自体も <code>PushSubscriptionCoordinator</code> が直列化するため <code>execute</code> が並走しない。D-05 の通知トグル（S-03/A-01）による購読同期も同じ <code>PushSubscriptionCoordinator.run()</code> を通るため、復帰時の再同期の実行中にトグルを操作しても直列化され、Coordinator が持つ直近の結果はトグル経路の失敗も含む（トグル操作で失敗した団体も次の復帰で再実行される。§8 #37・#41・#52）。</p>
 <h3 id="sec-5-4">5.4 共通状態表示の判定（<code>core/ui/status/list_status.dart</code>・<code>features/articles/presentation/list_status.dart</code>）<a class="anchor" href="#sec-5-4">#</a></h3>
 <p>本節は 4 小節に分ける：<strong>型と置き場</strong>（§5.4.1）→ <strong>件数の写像と再試行</strong>（§5.4.2。判定表が前提にする「自動リトライを切る」「<code>ref.invalidate</code> は直前値を捨てない」はここ）→ <strong>判定表</strong>（§5.4.3）→ <strong>全面表示からの復帰</strong>（§5.4.4）。</p>
@@ -2420,7 +2840,7 @@ final class FeedStatus {
 /// 判定表は §5.4.3
 ListStatus resolveListStatus(FeedStatus feed, {required bool hasVisible});</code></pre>
 <h4 id="sec-5-4-2">5.4.2 件数の写像と再試行<a class="anchor" href="#sec-5-4-2">#</a></h4>
-<p><strong>Riverpod 3 の自動リトライは切る</strong>（T-23 の実測）：<code>ProviderContainer</code> の既定 <code>retry</code>（<code>maxRetries = 10</code>、指数バックオフ上限 6.4 秒）のままだと、<code>Stream</code> がエラーを出しても状態は直ちに <code>AsyncError</code> にならず、リトライが尽きるまでの約 50 秒は <code>AsyncLoading(hasError: true, ...)</code> として現れる。これは <strong>A-12 の再購読中とまったく同じ形</strong>なので、両者を <code>AsyncValue</code> から区別できない。<code>articleCountProvider</code> は自動リトライを切る（下のコード片の <code>noRetry</code>。<code>lib/core/di/no_retry.dart</code>。§8 #61・#67）ことでこの重なりを無くし、「値なし × <code>isLoading</code>」を<strong>利用者が再試行を押した結果の再購読</strong>に限定する。<code>AsyncData</code> / <code>AsyncError</code> の状態クラスだけを見る <code>switch</code> は記事があるのに全面ローディングになるため、写像は引き続き <code>hasValue</code> / <code>isLoading</code> / <code>hasError</code> で行う。<strong>§5.4.3 の判定表の <code>pending</code> の行はこの前提の上に成り立つ。</strong></p>
+<p><strong>Riverpod 3 の自動リトライは切る</strong>（T-23 の実測）：<code>ProviderContainer</code> の既定 <code>retry</code>（<code>maxRetries = 10</code>、指数バックオフ上限 6.4 秒）のままだと、<code>Stream</code> がエラーを出しても状態は直ちに <code>AsyncError</code> にならず、リトライが尽きるまでの約 38 秒（<code>ProviderContainer.defaultRetry</code>、riverpod 3.0.3：200 ms から倍々で上限 6.4 秒の待ちを 10 回＝ 0.2 + 0.4 + 0.8 + 1.6 + 3.2 + 6.4 × 5 = 38.2 秒）は <code>AsyncLoading(hasError: true, ...)</code> として現れる。これは <strong>A-12 の再購読中とまったく同じ形</strong>なので、両者を <code>AsyncValue</code> から区別できない。<code>articleCountProvider</code> は自動リトライを切る（下のコード片の <code>noRetry</code>。<code>lib/core/di/no_retry.dart</code>。§8 #61・#67）ことでこの重なりを無くし、「値なし × <code>isLoading</code>」を<strong>利用者が再試行を押した結果の再購読</strong>に限定する。<code>AsyncData</code> / <code>AsyncError</code> の状態クラスだけを見る <code>switch</code> は記事があるのに全面ローディングになるため、写像は引き続き <code>hasValue</code> / <code>isLoading</code> / <code>hasError</code> で行う。<strong>§5.4.3 の判定表の <code>pending</code> の行はこの前提の上に成り立つ。</strong> <strong>app 全体の既定との関係</strong>（§8 #78）：<code>bootstrap.dart</code> の <code>ProviderScope(retry: noRetry, …)</code> が全 Provider の既定を「再実行しない」にしているため、本番では個別指定を書き落としても再実行は起きない。それでも <code>articleCountProvider</code> の <code>retry: noRetry</code> は消さない：テストは本番の <code>ProviderScope</code> を通らず自前の <code>ProviderContainer</code> を作るので、個別指定があって初めて「<code>Exception</code> で即 <code>AsyncError</code> になる」ことが Provider 経由のテストで検証でき、指定が既定に戻されたときにテストが赤になる。</p>
 <p><strong><code>unavailable</code> になるのは「アプリを起動してから一度も件数が分からない」ときに限る</strong>（S-00 §5.2 ST-17・S-01 §5.1 ST-19・S-02 §5 ST-06）。ここで言う「一度も」は<strong>受動的な失敗</strong>（＝ <code>retryRequested == false</code> の間に観測した失敗。利用者の操作を伴わずに Stream がエラー終了した場合がこれにあたる）についての限定で、一度でも件数を得た後に読み出せなくなったときは ST-17 にせず、直前に表示していた内容（一覧または ST-12 の空表示）をそのまま保ち、利用者への知らせも出さない（一度見えていた一覧を全面のエラー表示に置き換えないため）。本書はこれを次の 2 つで満たす（§8 #63）：(1) <code>resolveArticleCount</code> の分岐 1 が <code>hasValue: true</code>（<code>AsyncError</code> / <code>AsyncLoading</code> が直前値を保持している場合を含む）を<strong>最優先</strong>で拾い、件数の値がある限り <code>unavailable</code> を返さない（<code>retryRequested == false</code> のとき。下記の例外を参照）。(2) <code>articleCountProvider</code> が <code>keepAlive: true</code> で、アプリの生存中は状態（＝一度得た件数）を捨てない。下部タブでホームを離れて戻っても再購読は起きず、「起動してから一度も」の単位と一致する。</p>
 <p><strong>例外は「利用者が明示的に押した再試行」（S-00/A-12・S-01/A-08・S-02/A-05）だけ</strong>：この 3 つでは <code>ref.invalidate</code> で購読を張り直す（新しい件数を得る唯一の手段）。<strong>このうちホームの 2 つ（A-12・A-08）だけが、あわせて写像の入力 <code>retryRequested</code> を true にする</strong>（S-02/A-05 が立てない理由は下記。移り先は §5.4.4）。押した時点の画面はいずれも全面表示（ST-14・ST-16・ST-17）で<strong>一覧は出ていない</strong>ため、上の限定が守ろうとしている「見えていた一覧を消さない」とは衝突しない。</p>
 <p><strong>ただし <code>countRetryRequestedProvider</code> はホーム（<code>articleCountProvider</code>）専用で、S-02/A-05 からは呼ばない。</strong> 理由は 2 つ：(1) <strong>ホームの件数購読を無関係に張り直す</strong>。<code>retry()</code> は立てることと <code>ref.invalidate(articleCountProvider)</code> を 1 メソッドにまとめてあるため（下記）、S-02 から呼ぶと保存一覧とは無関係にホームの件数購読が張り直され、ホームが <code>pending</code>（→ ST-10）を経由する。(2) <strong>写し方が逆</strong>：S-02 はやり直し中も <code>unavailable</code> のまま（E-24 を出したままにし E-20 を出さない。S-02 §5 ST-06・§6 A-05）だが、ホームは再購読中を <code>pending</code>（→ ST-10）に写す。加えて <code>countRetryRequestedProvider</code> は <code>articles/presentation</code> にあり、<code>saved/presentation</code> からの import は CLAUDE.md の禁止事項にあたる。</p>
@@ -2524,15 +2944,17 @@ class CountRetryRequested extends _$CountRetryRequested {
 }
 
 /// **自動リトライを切る**（`noRetry`。§8 #61）。切らないと「値なし × isLoading × hasError」が
-/// 自動リトライ中（約 50 秒）と A-12 の再購読中の両方で成立し、区別できない。
-/// noRetry は lib/core/di/no_retry.dart の共有定数関数（initialNotificationTapProvider（§5.7）と共有。§8 #67）
+/// 自動リトライ中（約 38 秒）と A-12 の再購読中の両方で成立し、区別できない。
+/// app 全体の既定（bootstrap.dart の ProviderScope(retry: noRetry)。§8 #78）でも切れているが、
+/// テストは自前の ProviderContainer を作り既定を通らないため、個別指定も残す（§8 #78）。
+/// noRetry は lib/core/di/no_retry.dart の共有定数関数（initialNotificationTapProvider（§5.7）・bootstrap.dart と共有。§8 #67）
 @Riverpod(keepAlive: true, retry: noRetry)
 Stream&lt;int&gt; articleCount(Ref ref) =&gt; ref.watch(articleQueryRepositoryProvider).watchCount();
 
 /// 件数の初回読み出しが値もエラーも返さないまま滞留していることを 1 度だけ記録するまでの待ち時間。
 /// 表示は E-20（ST-10）のまま変えない。記録するのは AppLifecycleSync（§5.3・§8 #66）
 const Duration articleCountStallLogDelay = Duration(seconds: 10);</code></pre>
-<pre><code class="language-dart">// lib/core/di/no_retry.dart（import ゼロ。2 つの Provider が共有する。§3.2・§8 #67）
+<pre><code class="language-dart">// lib/core/di/no_retry.dart（import ゼロ。個別指定の Provider と bootstrap.dart の ProviderScope が共有する。§3.2・§8 #67・#78）
 /// Riverpod 3 の自動リトライを切る（次の再試行までの間隔を返さない）
 Duration? noRetry(int retryCount, Object error) =&gt; null;</code></pre>
 <p>購読失敗のログは Provider ではなく <code>AppLifecycleSync.initState</code> の <code>ref.listenManual(articleCountProvider, ...)</code> が <code>shouldLogCountError</code> を使って行う（§5.3 の擬似コード・§4.9）。Provider の <code>build</code> 内で <code>ref.listen</code> を張ると rebuild のたびに張り直され、<code>fireImmediately</code> が毎回 <code>previous == null</code> で発火して同じ障害が何度も記録される（T-23 の実測で 1 障害あたり 31 行）。<code>listenManual</code> は <code>initState</code> の 1 回きりなのでこれが起きない（§8 #49）。</p>
@@ -2860,7 +3282,7 @@ ReadDisplayState resolveReadDisplayState({required bool isRead, required bool ha
 </ol>
 </li>
 <li><strong>出力</strong>：<code>PushPermissionStatus</code></li>
-<li><strong>失敗時</strong>：<code>PushGateway</code> の例外はそのまま投げる。<code>AppLifecycleSync</code> は捕捉して <code>logger.w</code> に残し、購読同期（§5.6）には進む（未許可でもトピック購読はできる。S-03 §8 #6）</li>
+<li><strong>失敗時</strong>：<code>PushGateway</code> の例外はそのまま投げる。<code>AppLifecycleSync</code> は <code>on Object catch</code> で捕捉して（<code>Error</code> を含む。§8 #80）<code>logger.w</code> に残し、購読同期（§5.6）には進む（未許可でもトピック購読はできる。S-03 §8 #6）</li>
 </ul>
 <p>通知タップは <code>PushGateway.takeInitialTap()</code>（アプリ未起動からの起動）と <code>PushGateway.taps</code>（起動中）を、<code>features/notifications/presentation/notification_tap_providers.dart</code> の 2 つの Provider で公開する。D-05 のホームがこれを <code>ref.listen</code> し、S-01/ST-15（タブ選択・先頭スクロール・<code>sync(notificationTap)</code>）を行う。<code>companyId</code> が団体定義に無い・null のときの扱い（「すべて」）も D-05（S-01 §8 #15）。</p>
 <p><strong>同じ団体の通知を続けてタップしても、<code>notificationTapStreamProvider</code> の発火が 1 回ずつ D-05 に届く</strong>（根拠は <a href="../screens/S-01.md">S-01</a> §6 A-07 と §5.3 ST-15：通知のタップは<strong>そのつど</strong>本画面を ST-15 の状態で開く操作として定義されており、2 回目を無視する規定は無い。同格の下流設計書 D-05 §6「通知が連続して届き連打された → 各回タブ選択・先頭スクロール」もこれに従う）。これは <code>NotificationTap</code> の <code>==</code> が identity であること（§4.6・§8 #70）に依存する：Riverpod の <code>updateShouldNotify</code> は <code>previous != next</code> で判定し、<code>AsyncData&lt;NotificationTap&gt;</code> の <code>==</code> は中身の <code>NotificationTap</code> の <code>==</code> を使うため、値としての等価性を持たせると 2 回目以降の <code>AsyncData(同じ団体)</code> が前回値と等しくなって<strong>通知そのものが届かない</strong>（3 Provider の置き場は現状維持（§8 #58）で、ここも変えない）。</p>
@@ -3358,7 +3780,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td><code>subscribe</code> / <code>unsubscribe</code> が応答を返さない（FCM の内部リトライで待ち続ける）</td>
-<td><code>FcmPushGateway</code>（T-G）の <code>subscribe</code> / <code>unsubscribe</code> に <code>.timeout()</code> を掛け、<code>TimeoutException</code> を投げる。<code>SyncPushSubscriptionsUseCase</code> の手順 4 はこれを捕捉して <code>failed</code> に積むため、1 団体の停止が残りの団体の同期を止めない（次の復帰で再実行。§8 #37）。上限は <code>feedTimeout</code> と同じ 15 秒</td>
+<td><code>FcmPushGateway</code>（T-G）の <code>subscribe</code> / <code>unsubscribe</code> に <code>.timeout()</code> を掛け、<code>TimeoutException</code> を投げる。<code>SyncPushSubscriptionsUseCase</code> の手順 4 はこれを捕捉して <code>failed</code> に積むため、1 団体の停止が残りの団体の同期を止めない（次の復帰で再実行。§8 #37）。上限は <code>feedTimeout</code> と同じ 15 秒で、<strong>APNs トークンの待ち（<code>getAPNSToken()</code> を 500 ms 間隔で問い合わせる。§4.6・§8 #79）もこの 15 秒の内側に入る</strong>（トークンが得られないまま時間切れになったときは <code>debug</code> ログに 1 行残し、<code>TimeoutException</code> を投げる。時間切れの後に遅れて <code>subscribeToTopic</code> / <code>unsubscribeFromTopic</code> を呼ばない）</td>
 <td>infrastructure（T-G）/ application</td>
 </tr>
 <tr>
@@ -4191,7 +4613,7 @@ class TabReselect extends _$TabReselect {
 <td>61</td>
 <td>記事件数の写像を 4 値の <code>ArticleCountState</code>（<code>pending</code> / <code>unavailable</code> / <code>empty</code> / <code>present</code>）に広げ、判定表の先頭行で <code>unavailable</code> を ST-17（<code>FullView.unavailable</code>）に落とす。あわせて <strong><code>articleCountProvider</code> の自動リトライを切り</strong>（<code>retry: noRetry</code>。共有の置き場は #67）、「値なし × <code>isLoading</code>」を A-12 による再購読中の合図として使う。関数名は <code>resolveHasArticles</code> → <strong><code>resolveArticleCount</code></strong>（§5.4・§7）</td>
 <td>真偽値のまま <code>hasError → false</code> に写し、<code>lastResult</code> で ST-14 / ST-12 に分ける（従来）／<code>unavailable</code> は足すが自動リトライは既定のまま残す</td>
-<td>S-00 §8 #36 が「読み出せず件数が分からないときは ST-17 で、ST-12 にしてはならない」と確定したため、真偽値では表せない（従来は <code>lastResult</code> が <code>SyncSucceeded</code> のとき ST-12 に落ちる既知の限界があり、再試行の動線が無かった）。自動リトライを残すと「値なし × <code>isLoading</code> × <code>hasError</code>」が<strong>自動リトライ中（約 50 秒）と A-12 の再購読中の両方</strong>で成立し、S-01 §5.1 ST-02（再試行の実行中は全面ローディング）と ST-19（読み出せない間は E-24 のまま）を区別できない。切れば「値なし × <code>isLoading</code>」＝利用者が押した再購読に限定でき、障害の発覚も 50 秒早まる。自動回復の喪失は ST-17 の再試行ボタン（S-00/A-12）が代替する。改名は <code>bool?</code> を返さなくなったためで、CLAUDE.md の純粋関数の列挙も 1 語を差し替える（§8.1。<code>shouldSyncOnResume</code> → <code>resolveResumeSync</code> と同じ扱い）（画面定義書 S-00 §8 #36・S-01 §8 #31 への追随、2026-09-24）</td>
+<td>S-00 §8 #36 が「読み出せず件数が分からないときは ST-17 で、ST-12 にしてはならない」と確定したため、真偽値では表せない（従来は <code>lastResult</code> が <code>SyncSucceeded</code> のとき ST-12 に落ちる既知の限界があり、再試行の動線が無かった）。自動リトライを残すと「値なし × <code>isLoading</code> × <code>hasError</code>」が<strong>自動リトライ中（約 38 秒。riverpod 3.0.3 の <code>ProviderContainer.defaultRetry</code>。§5.4.2）と A-12 の再購読中の両方</strong>で成立し、S-01 §5.1 ST-02（再試行の実行中は全面ローディング）と ST-19（読み出せない間は E-24 のまま）を区別できない。切れば「値なし × <code>isLoading</code>」＝利用者が押した再購読に限定でき、障害の発覚も約 38 秒早まる。自動回復の喪失は ST-17 の再試行ボタン（S-00/A-12）が代替する。改名は <code>bool?</code> を返さなくなったためで、CLAUDE.md の純粋関数の列挙も 1 語を差し替える（§8.1。<code>shouldSyncOnResume</code> → <code>resolveResumeSync</code> と同じ扱い）（画面定義書 S-00 §8 #36・S-01 §8 #31 への追随、2026-09-24）</td>
 </tr>
 <tr>
 <td>62</td>
@@ -4225,7 +4647,7 @@ class TabReselect extends _$TabReselect {
 </tr>
 <tr>
 <td>67</td>
-<td>自動リトライを切る関数 <code>noRetry</code> を <code>lib/core/di/no_retry.dart</code> に 1 つ置き、<code>articleCountProvider</code>（§5.4）と <code>initialNotificationTapProvider</code>（§5.7）が共有する</td>
+<td>自動リトライを切る関数 <code>noRetry</code> を <code>lib/core/di/no_retry.dart</code> に 1 つ置き、<code>articleCountProvider</code>（§5.4）と <code>initialNotificationTapProvider</code>（§5.7）が共有する（<strong>2026-10-19 以降は D-05 の個別指定の Provider と <code>lib/app/bootstrap.dart</code> の <code>ProviderScope(retry: noRetry)</code> も共有する</strong>。<code>no_retry.dart</code> は import を持たないので、<code>bootstrap.dart</code> が import しても #43 の「<code>lib/app/</code> は具象を import しない」に触れない。#78）</td>
 <td>各ファイルに <code>_noRetry</code> を private で複製する（従来）</td>
 <td>CLAUDE.md「共通処理は…コピーしない」。同じ 1 行を 2 か所に持つと、片方だけ既定に戻されても analyzer では気づけない（自動リトライの有無は #61 の判定の前提で、戻ると「値なし × <code>isLoading</code>」が再購読中と自動リトライ中で重なる）。置き場を <code>core/di/</code> にするのは<strong>新しいディレクトリを作らない</strong>ため（CLAUDE.md のディレクトリ規約に手を入れない）で、このファイルは import を 1 つも持たない定数関数なので「<code>core/di</code> は具象 import を許す唯一の場所」（#43・#45）の趣旨とは独立に扱える（§3.2・§4.7）（reopen 後・第 1 周 [M-13]）</td>
 </tr>
@@ -4247,7 +4669,12 @@ class TabReselect extends _$TabReselect {
 | 72 | <strong>注入口の関数型 <code>SyncSuppressionCheck</code> を <code>sync_coordinator.dart</code> に置く</strong>（<code>SyncExecutor</code> と同じファイル。<code>sync_suppression_policy.dart</code> からは削除する。§3.2・§5.2.1・§5.3） | 具象と同じ <code>sync_suppression_policy.dart</code> に置いたままにする（従来） | 抽象を必要としているのは利用側（<code>SyncCoordinator</code>）で、CLAUDE.md D（依存性逆転）の「利用側が必要とする形を宣言する」に従えば注入口は利用側に属する。具象のファイルに置くと <code>sync_coordinator.dart</code> が <code>sync_suppression_policy.dart</code>（具象クラスのファイル）を import することになり、「Coordinator は具象クラスに依存しない」（#33・#64）という設計意図が import からは読めない。同じ役割の <code>SyncExecutor</code> が Coordinator 側にあるのに <code>SyncSuppressionCheck</code> だけ具象側にあるのは非対称で、次に Coordinator へ注入口を足す人がどちらに倣うか決められない。移動だけで振る舞いは変わらない（§10 T-F5b） |
 | 73 | <strong>抑止判定（<code>shouldSuppress</code>）が例外・<code>Error</code> で失敗したことを <code>events</code> の <code>SyncSuppressionCheckFailed(trigger, error, stackTrace)</code> として流し、<code>SyncController</code> が <code>logger.w</code> に残す</strong>（状態 <code>SyncStatus</code> は変えない。§5.2.1・§5.3・§6・§7） | <code>SyncCoordinator</code> に <code>Logger</code> を注入して直接記録する／何も記録しない（従来） | 従来は判定の失敗を「抑止しない」に丸めるだけだったため、<strong>判定ロジック自身の欠陥（<code>TypeError</code> 等）では <code>execute</code> が正常に成功し、抑止が恒久的に効かず起動・復帰のたびに 200 KB を取り直している状態が結果にもログにも現れなかった</strong>（無症状。#32 が防ごうとした負荷がそのまま復活する）。<strong>この無症状だった状態は、本決定によってログ 1 行として現れるほか、配信が対応外のままであれば毎回の E-21・E-25 としても現れる</strong>（抑止が成立しないため <code>SyncFailed(unsupportedSchema, suppressed: false)</code> が返る。<strong>S-00 §8 #31 は「取得そのものを行わなかったとき」の規定なので対象外</strong>で整合し、<strong>S-01 §8 #23 の但し書きの末尾（「アプリがこの例外に当たるかを判断できないときは…従来どおり起動時・復帰時の取得を行う。ST-03・ST-02 になり、取得結果に応じて S-00/E-21・E-23・E-25 が出る」）と一致する</strong>（2026-10-04 反映。§8.1 の S-01 宛）。本書の振る舞いは変えない。§6 の該当行）。<code>Logger</code> を注入する案は §4.9「domain・application は <code>Logger</code> を import しない」に反する。<strong>#38 (b) が同型の先例</strong>：後退防止で 200 を破棄した事実を <code>SyncSucceeded.staleDiscarded</code> で返し <code>SyncController</code> が記録する形にしてある。<code>events</code> は既に <code>SyncController</code> がログを出す唯一の入口（成功・失敗・破棄）なので、診断の事象を 1 つ足すのが最も素直で、<code>SyncEvent</code> が <code>sealed</code> なため <code>_onEvent</code> の網羅性検査が取りこぼしを防ぐ。<code>SyncStatus</code> を変えないので画面の分岐は増えない（§10 T-F5b） |
 | 74 | <strong><code>SyncSuppressionCheck</code> / <code>shouldSuppress</code> の戻り値は <code>Future&lt;bool&gt;</code> のまま維持し、抑止時に返す <code>SyncFailed(unsupportedSchema, suppressed: true)</code> は <code>SyncCoordinator</code> が組み立てる。抑止理由が 2 つ目になった時点で <code>Future&lt;SyncSuppressionReason?&gt;</code>（<code>enum</code> または <code>sealed class</code>。null = 抑止しない）に広げる</strong>（<code>SyncResult</code> の組み立ては広げた後も <code>SyncCoordinator</code> に残す。§5.2.1） | いま広げる（理由が増えたときの波及を先に断つ）／広げる先を <code>Future&lt;SyncResult?&gt;</code> にする | 広げる先を <code>SyncResult?</code> にすると、<code>SyncCoordinator</code> が流す完了結果を<strong>判定側が任意に決められる</strong>（<code>SyncSucceeded</code> を返すことも型の上では可能になる）ため、「抑止された実行は <code>SyncStarted</code> を流さず <code>SyncCompleted(SyncFailed(unsupportedSchema, suppressed: true))</code> を 1 回流す」という #64 で固めた（そして §7 で固定した）契約の所有者が Coordinator から判定側へ移り、型から読めなくなる。<strong><code>SyncSuppressionReason?</code> なら理由をいくつ増やしても契約の所有者は Coordinator に残り、型のまま保たれる</strong>（判定側は「なぜ抑止するか」だけを返し、<code>SyncResult</code> への写像は Coordinator の 1 か所）。いま広げないのは次の理由による：抑止理由は現在 1 つだけで、増やす予定も要件に無い。一方で変更の波及は typedef・Policy・Coordinator の分岐・DI・§7 の 12 ケースに及び、<strong>振る舞いを変えないまま <code>done</code> のタスク（T-21・T-40）の実装とテストを広く書き換える</strong>ことになる。2 つ目の理由を足す作業は必ず <code>SyncSuppressionPolicy</code> を触るので、その時点で本行が目に入る（#33「3 つ目の Coordinator が必要になった時点で <code>SerialRunner</code> に切り出す」・#54「Stream・Timer を持つようになったら見直す」と同じ、条件付きの先送りとして記録する）。<strong>設計書を読まない実装者にも届くよう、<code>shouldSuppress</code> の宣言に dartdoc を 1 行置く</strong>（§5.2.1 のコード片。広げる先の型を実装ファイルに書いておく） |
-| 75 | <strong>ログに渡す例外は <code>releaseSafeError(e)</code> を通す</strong>。release / profile では<strong>許可リスト方式</strong>で要約する：(a) <code>DriftRemoteException</code> は <code>remoteCause</code> を 1 段開く、(b) <code>SqliteException</code> は型名 + <code>resultCode</code> / <code>extendedResultCode</code>（パスを含まない数値）、(c) それ以外は <code>runtimeType</code> だけ。<code>core/logging/app_logger.dart</code> に <code>releaseSafeStackTrace</code> と対で置き、本書・D-05 のコード例はすべてこの形で書く（§4.9・§5.3・§5.7・§8.1） | 何もしない（従来。<code>error: e</code> をそのまま渡す）／<code>createAppLogger()</code> の printer で出力文字列をサニタイズする／<strong>release では型名だけに潰す</strong>（許可リストを持たない案）／自前の例外型（<code>FeedErrorException</code>・<code>FeedOfflineException</code>）も許可リストに入れて <code>toString()</code> を通す／要約を <code>core/database/</code> に置き <code>core/logging</code> から呼ぶ／<strong>(A) <code>Object? releaseSafeError(Object? error, {bool isDebug = kDebugMode})</code> にして純粋関数の直接テストを置く</strong>（§7 の列挙と CLAUDE.md のテスト方針を 1 行広げる）／<strong>(C) 依存を逆転させる</strong>（<code>core/logging</code> に <code>abstract interface class SafeLoggable { String get safeSummary; }</code> を置き、DB 例外の要約は <code>core/database</code>（drift / sqlite3 を既に知る層）が <code>SafeLoggable</code> を実装した薄いラッパに包んで返す。<code>releaseSafeError</code> は <code>error is SafeLoggable ? error.safeSummary : error.runtimeType</code> の 2 分岐になり <code>core/logging</code> は DB 技術を知らなくなる） | drift の <code>SqliteException.toString()</code> は<strong>失敗した DB ファイルの絶対パス（iOS サンドボックスの UUID を含む）<strong>を持つことがあり、release でもレベルは <code>Level.warning</code>（§4.9）なので <code>os_log</code> に残って Console.app / sysdiagnose から読める。<code>releaseSafeStackTrace()</code> はスタックトレース側しか止めないため、<code>error:</code> 経由の流出は消えない。<strong>外部送信は無く端末ローカルに閉じるため優先度は低い</strong>が、対処は 1 関数（10 行弱）で済む。printer でサニタイズする案は、自由文の中から「パスらしきもの」を正規表現で当てる形になり、区切りの食い潰し・前置文字での回避といった取りこぼしが起きやすい（D-02 §4.10 の <code>maskCredentials</code> が実測で何度も破れた類のもの）うえ、呼び出し側から</strong>サニタイズされていることが見えない</strong>。呼び出し側で明示的に包めば、どの値が出力されるかがその行で読め、<code>grep</code>（<code>error: </code> の実引数が <code>releaseSafeError(</code> でない行が残らないこと）で機械的に検査できる（検査は §4.8 の CI step にも置く）。<strong>長い根拠は <a href="#sec-8-2">§8.2</a></strong>：型名だけに潰さない理由（TestFlight = release ビルドで #68 の判断ができなくなる）・自前例外型を許可リストに入れない理由・要約の置き場（(C) の依存逆転と <code>core/database/</code> を今回採らない理由と見直しの条件）・(A)（<code>isDebug</code> 引数 + 直接テスト）を採らない理由・検査を 3 段（(a) <code>app_logger.dart</code> の完全固定、(b) <code>lib/</code> 全体の名前集合、(c) ログ定型ヘルパの宣言）にして CI に常設する理由。<strong><code>SqliteException</code> の自由文フィールドは <code>message</code>・<code>explanation</code>・<code>causingStatement</code>・<code>parametersToStatement</code>・<code>operation</code> の 5 つ</strong>（<code>sqlite3</code> 2.9.4 で確認。<code>toString()</code> にも <code>while $operation, </code> として出る）で、<code>offset</code> は <code>int?</code> なので対象外（§4.9・§10 T-F5a） |</p>
+| 75 | <strong>ログに渡す例外は <code>releaseSafeError(e)</code> を通す</strong>。release / profile では<strong>許可リスト方式</strong>で要約する：(a) <code>DriftRemoteException</code> は <code>remoteCause</code> を 1 段開く、(b) <code>SqliteException</code> は型名 + <code>resultCode</code> / <code>extendedResultCode</code>（パスを含まない数値）、(c) それ以外は <code>runtimeType</code> だけ。<code>core/logging/app_logger.dart</code> に <code>releaseSafeStackTrace</code> と対で置き、本書・D-05 のコード例はすべてこの形で書く（§4.9・§5.3・§5.7・§8.1） | 何もしない（従来。<code>error: e</code> をそのまま渡す）／<code>createAppLogger()</code> の printer で出力文字列をサニタイズする／<strong>release では型名だけに潰す</strong>（許可リストを持たない案）／自前の例外型（<code>FeedErrorException</code>・<code>FeedOfflineException</code>）も許可リストに入れて <code>toString()</code> を通す／要約を <code>core/database/</code> に置き <code>core/logging</code> から呼ぶ／<strong>(A) <code>Object? releaseSafeError(Object? error, {bool isDebug = kDebugMode})</code> にして純粋関数の直接テストを置く</strong>（§7 の列挙と CLAUDE.md のテスト方針を 1 行広げる）／<strong>(C) 依存を逆転させる</strong>（<code>core/logging</code> に <code>abstract interface class SafeLoggable { String get safeSummary; }</code> を置き、DB 例外の要約は <code>core/database</code>（drift / sqlite3 を既に知る層）が <code>SafeLoggable</code> を実装した薄いラッパに包んで返す。<code>releaseSafeError</code> は <code>error is SafeLoggable ? error.safeSummary : error.runtimeType</code> の 2 分岐になり <code>core/logging</code> は DB 技術を知らなくなる） | drift の <code>SqliteException.toString()</code> は<strong>失敗した DB ファイルの絶対パス（iOS サンドボックスの UUID を含む）<strong>を持つことがある。<strong>現行の <code>createAppLogger</code> は <code>filter:</code> を渡さず既定の <code>DevelopmentFilter</code> が効くため、release / profile ではログ自体が出力されない</strong>（logger 2.8.0 で確認。§4.9 冒頭）。<strong>本決定はその filter を <code>ProductionFilter</code> 等に替えたときの備え</strong>で、替えた時点で release の <code>Level.warning</code>（§4.9）が <code>os_log</code> に残り Console.app / sysdiagnose から読めるようになる（filter を替えるかどうかはフェーズ 6 の TestFlight 配布の前に判断する。§8.2.4）。備えを今置くのは、filter の変更が 1 行で済む一方、そのとき全呼び出し箇所を後から整形し直すのは改修が広い（§10 T-F5a で 7 ファイル・18 箇所）ためである。<code>releaseSafeStackTrace()</code> はスタックトレース側しか止めないため、<code>error:</code> 経由の流出は消えない（なお <code>SimplePrinter</code> は <code>LogEvent.stackTrace</code> を印字しないので、スタックトレース側は printer を替えたときの備え。§4.9）。<strong>外部送信は無く端末ローカルに閉じるため優先度は低い</strong>が、対処は 1 関数（10 行弱）で済む。printer でサニタイズする案は、自由文の中から「パスらしきもの」を正規表現で当てる形になり、区切りの食い潰し・前置文字での回避といった取りこぼしが起きやすい（D-02 §4.10 の <code>maskCredentials</code> が実測で何度も破れた類のもの）うえ、呼び出し側から</strong>サニタイズされていることが見えない</strong>。呼び出し側で明示的に包めば、どの値が出力されるかがその行で読め、<code>grep</code>（<code>error: </code> の実引数が <code>releaseSafeError(</code> でない行が残らないこと）で機械的に検査できる（検査は §4.8 の CI step にも置く）。<strong>長い根拠は <a href="#sec-8-2">§8.2</a></strong>：型名だけに潰さない理由（TestFlight = release ビルドで #68 の判断ができなくなる）・自前例外型を許可リストに入れない理由・要約の置き場（(C) の依存逆転と <code>core/database/</code> を今回採らない理由と見直しの条件）・(A)（<code>isDebug</code> 引数 + 直接テスト）を採らない理由・検査を 3 段（(a) <code>app_logger.dart</code> の完全固定、(b) <code>lib/</code> 全体の名前集合、(c) ログ定型ヘルパの宣言）にして CI に常設する理由。<strong><code>SqliteException</code> の自由文フィールドは <code>message</code>・<code>explanation</code>・<code>causingStatement</code>・<code>parametersToStatement</code>・<code>operation</code> の 5 つ</strong>（<code>sqlite3</code> 2.9.4 で確認。<code>toString()</code> にも <code>while $operation, </code> として出る）で、<code>offset</code> は <code>int?</code> なので対象外（§4.9・§10 T-F5a）。<strong>見直しの条件（追加）</strong>：配布ビルドに <code>--obfuscate</code>（<code>flutter build ipa --obfuscate</code>）を付けると <code>Type.toString()</code> が難読化後の短縮名に置き換わるため、既定の分岐（(c) <code>cause?.runtimeType</code>）が返す型名が意味を失う（<code>SqliteException</code> の分岐は結果コードの数値なので影響しない）。<code>--obfuscate</code> を採る時点で、(c) の戻り値を型名以外（例：既知の型を列挙した固定文）にするか、<code>--split-debug-info</code> の記号表で読み戻す運用にするかを決め直す |
+| 76 | <strong>CI に生成物の鮮度検査（<code>dart run build_runner build --delete-conflicting-outputs</code> の後に <code>git diff --exit-code app/lib</code>）を今は置かない</strong>。<code>*.g.dart</code> はコミットし CI で再生成しない（§3.2・§4.7・§4.8）方針を変えない（<strong>条件付きの先送り</strong>） | 鮮度検査を <code>app-ci.yml</code> に足す（FOLLOWUPS 4-2）／<code>app_database.g.dart</code> だけを検査対象から外して足す／再生成の後に <code>dart format</code> を掛けてから比べる | <code>build_runner</code> の実行漏れは <code>flutter analyze</code> も <code>dart format</code> も通るため人の再生成でしか見つからず（T-39 で 1 回すり抜けた。FOLLOWUPS 4-1・4-28）、検査自体の価値はある。しかし <strong>drift_dev 2.31.0 が内蔵する <code>dart_style</code> が古く、再生成した <code>app_database.g.dart</code> が 172 行の整形差で <code>dart format</code> の結果と一致しない</strong>（FOLLOWUPS §6）ため、素直な <code>git diff --exit-code app/lib</code> は変更が無くても常に赤になり、品質ゲートとして使えない。特定ファイルを外す案は、外したファイルの実行漏れ（drift のスキーマ変更＝最も影響が大きい生成物）を見逃す。<code>dart format</code> を掛けてから比べる案は、コミットする生成物の形（<code>dart format</code> 済み）を CI と手元で揃える手順を新たに要し、§4.8 の品質ゲート 4 コマンドに 1 つ足す変更（CLAUDE.md の品質ゲート行の変更＝開発者承認事項）と同じ重さになる。<strong>見直しの条件</strong>：drift_dev の更新で <code>app_database.g.dart</code> の整形差が消えた時点で、§3.2・§4.7・§4.8 を改訂して鮮度検査の step を置く（本書を <code>draft</code> に戻して <code>/design-review</code>）。それまでは生成物を変えるタスクの完了条件で <code>build_runner</code> の再実行を確認する |
+| 77 | <strong>release / profile では、未捕捉例外の既定の出力経路 2 つ（<code>FlutterError.onError</code>・<code>PlatformDispatcher.instance.onError</code>）を <code>buildOverrides</code> の手順 1a で差し替え、<code>releaseSafeError</code> / <code>releaseSafeStackTrace</code> を通した <code>logger.e</code> の 1 行にする</strong>（§5.1）。<code>driftRuntimeOptions.debugPrint</code> は差し替えない | 何もしない（従来）／差し替えを <code>bootstrap()</code> に置く／debug でも差し替える／<code>driftRuntimeOptions.debugPrint = (_) {}</code> も release で置く（FOLLOWUPS 4-23 の (2)）／<code>driftRuntimeOptions.dontWarnAboutMultipleDatabases = true</code> | <code>bootstrap.dart</code> が <code>FlutterError.onError</code> / <code>PlatformDispatcher.instance.onError</code> を上書きしておらず、Flutter 既定の <code>presentError</code> と、エンジンの未処理例外の出力が、<code>releaseSafeError</code> を経ずに例外の文字列表現（drift の例外では DB ファイルの絶対パス）を release でも出力する（FOLLOWUPS 4-23 の (1)）。#75 の「<code>error:</code> に渡す例外は必ず整形する」を logger の外の経路にも及ぼす。<code>ProviderScope</code> の <code>onError</code> も <code>FlutterError.reportError</code> に送る（flutter_riverpod 3.0.3 <code>provider_scope.dart</code> 166〜173 行）ので、Provider 内の未捕捉例外も同じ差し替えで閉じる。置き場は <code>Logger</code> を生成する <code>buildOverrides()</code>（<code>bootstrap()</code> は具象を持たない。#43）。debug では Flutter 既定の表示（赤画面・詳細なコンソール出力）が開発に要るので差し替えない。<code>PlatformDispatcher.instance.onError</code> は <code>true</code> を返す（<code>false</code> だとエンジンの既定の出力に落ちて差し替えの意味が無い）。<code>buildOverrides</code> 手順 4 の失敗（§5.1「失敗時」）は <code>runApp</code> に到達しないことで起動しないのは従来どおりで、出力が logger の 1 行に変わるだけである。<strong><code>driftRuntimeOptions.debugPrint</code> を差し替えないのは、drift 2.31.0 で release に到達する呼び出しが無いため</strong>（pub cache で確認）：呼び出しは 4 か所で、複数生成の警告（<code>db_base.dart</code> 87 行）は <code>assert(_handleInstantiated())</code> の中＝ debug だけ（文言も &quot;This warning will only appear on debug builds.&quot;）、<code>logStatements</code>（<code>engines.dart</code> 68 行）と isolate の <code>debugLog</code>（<code>communication.dart</code> 83・133 行）は本アプリが使わない（§4.9）。FOLLOWUPS 4-23 の (2)「release でも出る」はこの事実と合わないので、使わない設定のための差し替えは置かない（<code>logStatements</code> / <code>debugLog</code> を使う変更が出た時点で、その出力を logger に寄せるかを決める）。<code>dontWarnAboutMultipleDatabases</code> も同じ理由で要らない |
+| 78 | <strong>Riverpod 3 の自動リトライを app 全体の既定で切り、既存の個別指定も残す</strong>：<code>lib/app/bootstrap.dart</code> を <code>ProviderScope(retry: noRetry, overrides: …)</code> にし（§5.1 手順 3）、設計上の理由を持つ Provider の <code>retry: noRetry</code>（本書の <code>articleCountProvider</code>（#61）・<code>initialNotificationTapProvider</code>（#67）、D-05 の <code>homeArticlesProvider</code>・<code>savedArticlesProvider</code> / <code>SavedListController</code>・<code>unreadFilterProvider</code>）は消さない。新設の Provider には付けなくてよい。<code>bootstrap.dart</code> の 1 引数の書き戻しは <code>app-ci.yml</code> の 4 つ目の検査 step（<code>grep</code>。§4.8）で止める（§4.7「自動リトライ」） | (A) 個別指定だけを続ける（従来）／(B) app 全体の既定にし、個別指定を削る／(C) の中で <code>grep</code> を置かず §4.7 の規則表とコードコメントでレビューに委ねる | <strong>事実</strong>（riverpod 3.0.3 / flutter_riverpod 3.0.3 の pub cache で確認）：既定の <code>ProviderContainer.defaultRetry</code>（<code>provider_container.dart</code> 825〜839 行）は <code>Error</code> と <code>ProviderException</code> を除く失敗を最大 10 回・200 ms から倍々・上限 6.4 秒で再実行し（合計 約 38 秒）、drift の <code>SqliteException</code>・<code>DriftRemoteException</code>、プラグインの <code>PlatformException</code> は <code>Exception</code> なので再実行される。その間の状態は <code>isLoading &amp;&amp; hasError</code> で、§5.4.2 の「A-12 の再購読中」と同じ形になる。適用は <code>origin.retry ?? container.retry ?? ProviderContainer.defaultRetry</code>（<code>element.dart</code> 685 行）で、<code>ProviderScope</code> は <code>retry:</code> を受け取って生成する <code>ProviderContainer</code> に渡し（<code>provider_scope.dart</code> 79・115・165 行）、子のコンテナにも引き継がれる（<code>provider_container.dart</code> 743・748 行）。テストが自前で作る <code>ProviderContainer</code> / <code>ProviderContainer.test</code> は <code>retry:</code> を渡さない限り既定の再実行になる。2026-10-19 時点で個別指定の無い Stream / Future の Provider は <code>browserChoice</code>・<code>notificationSettings</code>・<code>chromeAvailable</code>・<code>appVersion</code>・<code>pushPermissionStatus</code> とその委譲 2 つ・<code>notificationTapStream</code>・<code>minuteClock</code>（棚卸しは <code>pm-handoff/t61-retry-audit.md</code>）。<strong>(A) を採らない理由</strong>：個別指定の漏れは既に 2 回起きた（FOLLOWUPS 3-32・4-27。D-05 §4.6 のコード片に指定が無かった）。漏れの検出は注釈と戻り値の型が別行になるため 1 行の <code>grep</code> にならず、レビュー頼みが続く。既定を切れば書き落としても本番では再実行が起きず、漏れが構造的に消える。<strong>(B) を採らない理由</strong>：テストは本番の <code>ProviderScope</code> を通らず自前の <code>ProviderContainer</code> を作るため、個別指定を削ると既存のテスト（T-61 の <code>group(&#39;自動リトライ&#39;)</code> など、<code>Exception</code> で即 <code>AsyncError</code> になることを Provider 経由で見るもの）は <code>ProviderContainer(retry: noRetry)</code> を渡さないと赤になり、渡すと<strong>テスト自身の設定を検証するだけ</strong>になって <code>bootstrap.dart</code> の 1 引数を消しても全テストが緑のままになる。(C) なら既存の個別指定とそのテストが検出力を保ち、既定は「指定し忘れた Provider」の安全網として働く。<strong><code>grep</code> を常設する理由</strong>：<code>bootstrap.dart</code> の 1 引数はどのテストでも覆えず、消しても品質ゲート 4 コマンドがすべて緑のまま通る（#70 の <code>@immutable</code> の書き戻しと同じ型）ので、レビューだけでは恒久的な担保にならない。<strong>振る舞いへの影響</strong>：指定の無い Provider（<code>appVersion</code>・<code>pushPermissionStatus</code> 等）の一時的な失敗は自動では回復しなくなるが、いずれも値が無い間は既定の表示で崩れず（S-03 §7.5・§8 #19）、<code>pushPermissionStatus</code> は復帰時の <code>ref.invalidate</code>（§5.3 の復帰時の手順 2）で読み直されるので、要件・画面定義書の振る舞いは変わらない。D-05 §4.6 のコード片は追随不要（既に個別指定がある Provider は D-05 側の決定として残る）。開発者の委任により推奨案 (C) を採用（2026-10-19、旧 §9 Q-1）。実装は §10 T-F6 |
+| 79 | <strong><code>FcmPushGateway</code> の <code>subscribe</code> / <code>unsubscribe</code> は、<code>getAPNSToken()</code> が非 null を返すまで 500 ms 間隔で問い合わせてから <code>subscribeToTopic</code> / <code>unsubscribeFromTopic</code> を呼ぶ</strong>。待ちは既存の 15 秒のタイムアウト（<code>feedTimeout</code>。§6）の内側に入れ、タイムアウトの値と <code>failed</code> への写し方は変えない。トークン待ちのまま時間切れになったら <code>debug</code> ログに 1 行残し、時間切れの後に遅れて購読操作を呼ばない（§4.6 のコード片・§6） | (B) 待たない（従来の設計。初回の失敗は #37 の復帰時の再実行で回復させる）／(C) §10 T-G の実機確認で失敗が出たら本書を <code>draft</code> に戻して (A) を入れる／待ちで時間切れになったことをログに残さない | <strong>事実</strong>：iOS で APNs トークンを得る前に <code>subscribeToTopic</code> を呼ぶと <code>[firebase_messaging/apns-token-not-set]</code> で失敗する、という報告がある（firebase_messaging 16.5.0）。<strong>出典は非公式のブログ 1 件</strong>（<code>https://startdebugging.net/2026/08/fix-firebase-messaging-apns-token-not-set-on-flutter-ios/</code>）で、<strong>公式ドキュメントでの裏づけは未確認</strong>。反対に Apple Developer Forums には設定不備で <code>getAPNSToken()</code> が nil のまま返らない報告もある（<code>pm-handoff/t36-fcm-prep.md</code>）。本書は起動直後に 5 団体を購読する（§5.3 <code>_onLaunch</code> 手順 3）ので、報告どおりなら初回は 5 件とも <code>failed</code> になり、#37 の復帰時の再実行まで通知が届かない期間ができる。<strong>(A) を採る理由</strong>：トークンが既にあれば 1 回目の問い合わせで抜けるため、報告が誤りでも振る舞いは変わらず、報告が正しければ初回の 5 件の <code>failed</code> を防げる。(C) は現象が出たときに reopen の 1 周が要り、フェーズ 5 の実機確認を 2 度行うことになる。<strong>ログを残す理由</strong>：トークンが設定不備で永久に得られない端末では失敗の原因が <code>apns-token-not-set</code> ではなく <code>TimeoutException</code> として残り、切り分けの手がかりが 1 つ減る。待ちのまま時間切れになったことを 1 行残せば区別できる。<strong>遅れた呼び出しを止める理由</strong>：<code>.timeout()</code> は内側の Future を止めないため、時間切れの後にトークンが届くと <code>subscribeToTopic</code> が遅れて走り、利用者がその間に通知を切った団体を購読し直しうる。<strong>見直しの条件</strong>：出典が非公式 1 件なので、§10 T-G（= 実タスク T-36）の実機確認で「待ちが発生したか」（<code>APNs トークン待ち n 回</code> の <code>debug</code> ログの有無）を見る。待ちが一度も発生せず、かつ初回起動直後の購読に <code>failed</code> が無ければ、報告は本アプリの構成には当たらなかったと記録する（待ちは残してよい。トークンがあれば 1 回で抜けるため害が無い）。待ちのまま時間切れが出たら、設定不備（Push Notifications capability・APNs 鍵の登録）を先に疑い、それでも解消しなければ本書を <code>draft</code> に戻して待ち方を見直す。<strong>実装範囲は T-36</strong>（費用＝ Apple Developer Program の加入のため止めているタスク。§10 T-G）で、本決定で新しい実装タスクは増えない。テストは無い（<code>FcmPushGateway</code> はテストしない方針。§7）。開発者の委任により推奨案 (A) を採用（2026-10-19、旧 §9 Q-2） |
+| 80 | <strong><code>AppLifecycleSync</code> の通知許可の要求（§5.3 <code>_onLaunch</code> 手順 2）は <code>on Object catch</code> で受ける</strong>（<code>on Exception</code> にしない。§5.3・§5.7） | <code>on Exception catch</code>（2026-10-19 の再開前の擬似コード。「<code>RequestNotificationPermissionUseCase</code> が投げるのはプラグインの <code>PlatformException</code> 系だけ」を理由にしていた） | §5.7「失敗しても 3 に進む」は失敗の種類を限らない。<code>ref.read(requestNotificationPermissionUseCaseProvider)</code> は Provider の <code>build()</code> の失敗で同期的に投げうり、<code>PushGateway</code> の実装や依存先が <code>Error</code>（<code>StateError</code> 等）を投げると、<code>on Exception</code> では捕捉されずに手順 3（購読同期）がスキップされ、未捕捉の非同期エラーになる。実装（<code>lib/app/app_lifecycle_sync.dart</code> の <code>_onLaunch</code>）は既に手順ごとに <code>on Object</code> で受けており、その理由（「依存先が <code>Error</code> を投げても手順 3 がスキップされないよう、他の手順と同じく <code>Object</code> で受ける」）は本書の規約（#41 の「呼び出し側は <code>on Object catch</code>」・<code>_syncSubscriptions</code> と同じ形）と整合するので、設計書を実装に揃える。振る舞いの変更は無い（擬似コードの訂正） |</p>
 <h3 id="sec-8-1">8.1 他設計書への申し送り<a class="anchor" href="#sec-8-1">#</a></h3>
 <table>
 <thead>
@@ -4448,14 +4875,19 @@ class TabReselect extends _$TabReselect {
 <td>§5.2、§5.2.1、§5.3、§7、§8 #64</td>
 </tr>
 <tr>
-<td>実装（<strong>§10 T-F5a</strong>。<strong>未起票</strong>。<strong>ログの例外整形（#75）の追随</strong>。所有タスク（T-B2 = 実タスク T-19、T-31・T-35 等）はいずれも <code>done</code> で再実行できないため、差分を引き取る新しいタスクを立てる。<strong>T-F5b の前に実行する</strong>）</td>
-<td><strong>新規なし</strong>。<strong>改修</strong>：<code>core/logging/app_logger.dart</code>（<code>releaseSafeError</code> の追加。既存の <code>createAppLogger</code>・<code>releaseSafeStackTrace</code> は §4.9 のコード片どおりに残す。#75）、<code>pubspec.yaml</code>（<code>sqlite3</code> を dependencies に追加。§4.8・#75）、<code>.github/workflows/app-ci.yml</code>（<strong>§4.8 の 2 step</strong>：(1) <code>error:</code> / <code>stackTrace:</code> の実引数が整形関数を通っているか＋<strong>ログ定型ヘルパが名前付きで受けていないか</strong>、(2) 例外の自由文の検査 2 段（(a) <code>app_logger.dart</code> の補間・メンバ参照・制御フローの完全固定、(b) <code>lib/</code> 全体を <strong><code>e</code> と、<code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む識別子という名前集合</strong>で見る検査（限界は §4.8 末尾））。(3) の <code>notification_tap.dart</code> の step は T-F5b が足す）、<code>features/articles/infrastructure/http_articles_feed.dart</code> の <code>malformed</code> のログ行の文言（<code>${e.message}</code> を落とし <code>${e.offset}</code> を残す）<strong>と、その直上コメントの追随</strong>（§4.9・#75）、<code>error:</code> / <code>stackTrace:</code> に素の例外を渡している既存の呼び出し箇所 <strong>7 ファイル（18 箇所。数え方は 1 つ上の行）</strong>（<code>lib/app/app_lifecycle_sync.dart</code>・<code>features/notifications/presentation/notification_tap_providers.dart</code>・<code>features/articles/infrastructure/http_articles_feed.dart</code>・<code>features/settings/presentation/settings_screen.dart</code>・<code>features/browser/presentation/open_article_action.dart</code>・<code>features/browser/infrastructure/url_launcher_article_opener.dart</code>・<code>features/notifications/infrastructure/url_launcher_notification_settings_opener.dart</code>。#75）。<strong><code>app_lifecycle_sync.dart</code> の整形は <code>_warn</code> の本体 1 か所で行う</strong>（<code>_warn</code> の署名を <code>[Object? error, StackTrace? stackTrace]</code> にし、呼び出しは生の <code>e</code>・<code>s</code> のまま渡す。<strong>呼び出しは計 10 か所</strong>＝既存 8 ＋ 直接 <code>_logger.w</code> を呼んでいる 2 か所（記事件数の購読の失敗＝ <code>error: next.error</code> の行・件数の初回読み出しの滞留）を <code>_warn</code> に寄せる。<strong><code>error: next.error</code> を残すと §4.8 の 1 つ目の step（＝下の検査 (iv)）が赤になる</strong>。§4.9・§5.3 の擬似コード）。<strong>テストの追加・変更は無い</strong></td>
+<td>実装（<strong>§10 T-F5a</strong>。<strong>実タスク T-53 / done</strong>（FOLLOWUPS 4-15 で起票）。<strong>ログの例外整形（#75）の追随</strong>。所有タスク（T-B2 = 実タスク T-19、T-31・T-35 等）はいずれも <code>done</code> で再実行できないため、差分を引き取る新しいタスクを立てる。<strong>T-F5b の前に実行する</strong>）</td>
+<td><strong>新規なし</strong>。<strong>改修</strong>：<code>core/logging/app_logger.dart</code>（<code>releaseSafeError</code> の追加。既存の <code>createAppLogger</code>・<code>releaseSafeStackTrace</code> は §4.9 のコード片どおりに残す。#75）、<code>pubspec.yaml</code>（<code>sqlite3</code> を dependencies に追加。§4.8・#75）、<code>.github/workflows/app-ci.yml</code>（<strong>§4.8 の 2 step</strong>：(1) <code>error:</code> / <code>stackTrace:</code> の実引数が整形関数を通っているか＋<strong>ログ定型ヘルパが名前付きで受けていないか</strong>、(2) 例外の自由文の検査 2 段（(a) <code>app_logger.dart</code> の補間・メンバ参照・制御フローの完全固定、(b) <code>lib/</code> 全体を <strong><code>e</code> と、<code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む識別子という名前集合</strong>で見る検査（限界は §4.8 末尾））。(3) の <code>notification_tap.dart</code> の step は T-F5b が足す）、<code>features/articles/infrastructure/http_articles_feed.dart</code> の <code>malformed</code> のログ行の文言（<code>${e.message}</code> を落とし <code>${e.offset}</code> を残す）<strong>と、その直上コメントの追随</strong>（§4.9・#75）、<code>error:</code> / <code>stackTrace:</code> に素の例外を渡している既存の呼び出し箇所 <strong>7 ファイル（18 箇所。数え方は 1 つ上の行）</strong>（<code>lib/app/app_lifecycle_sync.dart</code>・<code>features/notifications/presentation/notification_tap_providers.dart</code>・<code>features/articles/infrastructure/http_articles_feed.dart</code>・<code>features/settings/presentation/settings_screen.dart</code>・<code>features/browser/presentation/open_article_action.dart</code>・<code>features/browser/infrastructure/url_launcher_article_opener.dart</code>・<code>features/notifications/infrastructure/url_launcher_notification_settings_opener.dart</code>。#75）。<strong><code>app_lifecycle_sync.dart</code> の整形は <code>_warn</code> の本体 1 か所で行う</strong>（<code>_warn</code> の署名を <code>[Object? error, StackTrace? stackTrace]</code> にし（<strong>この署名は 2026-10-19 の改訂で必須 3 引数 + <code>_warnMessage</code> に改めた。追随は §10 T-F6。§4.9</strong>）、呼び出しは生の <code>e</code>・<code>s</code> のまま渡す。<strong>呼び出しは計 10 か所</strong>＝既存 8 ＋ 直接 <code>_logger.w</code> を呼んでいる 2 か所（記事件数の購読の失敗＝ <code>error: next.error</code> の行・件数の初回読み出しの滞留）を <code>_warn</code> に寄せる。<strong><code>error: next.error</code> を残すと §4.8 の 1 つ目の step（＝下の検査 (iv)）が赤になる</strong>。§4.9・§5.3 の擬似コード）。<strong>テストの追加・変更は無い</strong></td>
 <td>§4.8、§4.9、§5.3、§8 #75</td>
 </tr>
 <tr>
-<td>実装（<strong>§10 T-F5b</strong>。<strong>未起票</strong>。<strong>通知タップの等価性・抑止判定の依存と診断（#70〜#74）の追随</strong>。T-D = 実タスク T-21・T-F4 相当の T-40・T-B2 = T-19 等はいずれも <code>done</code> で再実行できないため、差分を引き取る新しいタスクを立てる。<strong>T-F5a の後・T-33（= D-05 §10 T-M）の着手前提</strong>）</td>
+<td>実装（<strong>§10 T-F5b</strong>。<strong>実タスク T-54 / done</strong>（FOLLOWUPS 4-15 で起票）。<strong>通知タップの等価性・抑止判定の依存と診断（#70〜#74）の追随</strong>。T-D = 実タスク T-21・T-F4 相当の T-40・T-B2 = T-19 等はいずれも <code>done</code> で再実行できないため、差分を引き取る新しいタスクを立てる。<strong>T-F5a の後・T-33（= D-05 §10 T-M）の着手前提</strong>）</td>
 <td><strong>新規</strong>：<code>features/articles/domain/unsupported_schema_reader.dart</code>（#71）。<strong>改修</strong>：<code>features/notifications/domain/notification_tap.dart</code>（<code>==</code> / <code>hashCode</code> の削除、<strong><code>@immutable</code> と <code>const</code> コンストラクタの削除、未使用になる <code>import &#39;package:meta/meta.dart&#39;;</code> の削除</strong>。#70）、<code>test/features/notifications/domain/notification_tap_test.dart</code>（比較を <code>companyId</code> に変え、「同じ <code>data</code> から 2 回作ると <code>==</code> が false」を 1 ケース追加。#70）、<code>features/articles/domain/article_sync_repository.dart</code>（<code>implements UnsupportedSchemaReader</code>・再宣言の削除。#71）、<code>features/articles/application/sync_suppression_policy.dart</code>（依存の型を <code>UnsupportedSchemaReader</code> に絞り、引数名を <code>articles</code> から <code>schemaReader</code> に改め、<code>SyncSuppressionCheck</code> の宣言を削除。#71・#72）、<strong><code>core/di/articles_providers.dart</code></strong>（<code>syncSuppressionPolicyProvider</code> の引数名を <code>schemaReader:</code> に変更。現在の実装は <code>SyncSuppressionPolicy(articles: ref.watch(articleSyncRepositoryProvider));</code> なので、これを直さないとコンパイルが通らない。§4.7 のコード片・#71）、<code>features/articles/application/sync_coordinator.dart</code>（<code>SyncSuppressionCheck</code> の宣言を受け取り、<code>SyncEvent</code> に <code>SyncSuppressionCheckFailed</code> を追加、<code>_start</code> 手順 3 (a) の catch を <code>on Object</code> にして事象を流す。#72・#73）、<code>features/articles/presentation/sync_controller.dart</code>（<code>_onEvent</code> の switch に分岐を足してログ。<code>releaseSafeError</code> は T-F5a が用意済み。#73・#75）、<code>.github/workflows/app-ci.yml</code>（<strong>§4.8 の 3 つ目の step</strong>＝ <strong><code>notification_tap.dart</code> 1 ファイルに限った <code>@immutable</code> / <code>const</code> コンストラクタの検査</strong>（書き戻しの防止。<code>lib</code>・<code>test</code> 全体を見る広い step は置かない）。§4.8・#70）、<code>test/features/articles/application/sync_suppression_policy_test.dart</code>（ダブルを 1 メソッドに簡約し <code>Error</code> のケースを追加。#71・§7）、<code>test/features/articles/application/sync_coordinator_test.dart</code>（<code>group(&#39;対応外スキーマの抑止&#39;)</code> に 3 ケース・<code>group(&#39;dispose&#39;)</code> に 2 ケース・<code>group(&#39;全体タイムアウト&#39;)</code> に 1 ケース。§7）、<code>test/features/notifications/application/handle_notification_tap_use_case_test.dart</code>（<code>const NotificationTap(...)</code> 4 箇所を <code>parseNotificationTap</code> に置き換える。#70）</td>
 <td>§4.4、§4.6、§4.8、§5.2.1、§5.3、§5.7、§6、§7、§8 #70〜#74</td>
+</tr>
+<tr>
+<td>実装（<strong>§10 T-F6</strong>。<strong>未起票</strong>。<strong>2026-10-19 の再開で変わった分の追随</strong>。T-F5a = 実タスク T-53、T-F5b = T-54 はいずれも <code>done</code> で再実行できないため、差分を引き取る新しいタスクとして立てる）</td>
+<td><strong>新規なし</strong>。<strong>改修 5</strong>：(1) <code>app/pubspec.yaml</code>（<code>sqlite3: ^2.4.0</code> → <code>^2.6.0</code>。drift 2.31.0 の要求に下限を合わせる。§4.8・FOLLOWUPS 2-18）、(2) <code>lib/app/app_lifecycle_sync.dart</code>（<code>_warn</code> を必須位置引数 3 つの <code>void _warn(String message, Object? error, StackTrace? stackTrace)</code> に改め、例外を伴わない件数の滞留ログ 1 か所を新設の <code>void _warnMessage(String message)</code> に移す。呼び出しは <code>_warn</code> 9 か所 + <code>_warnMessage</code> 1 か所。クラス doc の「呼び出し側が間違えうる 1 点」の注記は型で防げるようになるので削る。§4.9・§5.3・FOLLOWUPS 4-25）、(3) <code>lib/core/di/bootstrap_overrides.dart</code>（<code>buildOverrides</code> 手順 1a：release / profile で <code>FlutterError.onError</code>・<code>PlatformDispatcher.instance.onError</code> を差し替える。§5.1・§8 #77・FOLLOWUPS 4-23）、(4) <code>.github/workflows/app-ci.yml</code>（§4.8 の抜粋の直後の段落が挙げる<strong>コメント 6 か所</strong>を抜粋に合わせる（既存の 3 step のコード行は変えない。FOLLOWUPS 2-13）。<strong>あわせて 4 つ目の検査 step <code>ProviderScope が自動リトライを既定で切っているか</code> を NotificationTap の step の直後に抜粋どおり足す</strong>。§8 #78）、<strong>(5) <code>lib/app/bootstrap.dart</code>（<code>ProviderScope(retry: noRetry, overrides: …)</code> の 1 引数と <code>package:curtaincall/core/di/no_retry.dart</code> の import。§5.1 手順 3・§4.7「自動リトライ」・§8 #78）</strong>。<strong>テストの追加・変更は無い</strong>（<code>bootstrap</code> と <code>AppLifecycleSync</code> は §7 のテスト対象外。既存の個別指定 <code>retry: noRetry</code> とそのテストは残す。§8 #78）</td>
+<td>§4.7、§4.8、§4.9、§5.1、§5.3、§8 #77・#78</td>
 </tr>
 <tr>
 <td>CLAUDE.md（司令塔。<strong>反映済み</strong>。§3.1・§8 #75）</td>
@@ -4512,9 +4944,9 @@ class TabReselect extends _$TabReselect {
 <p><strong><code>grep</code> をやめた理由（(c&#39;) を採らない理由）</strong>：<code>grep -rn -e &#39;const NotificationTap(&#39; lib test</code> は <code>notification_tap.dart</code> の<strong>コンストラクタ宣言自身</strong>（<code>const NotificationTap({required this.companyId});</code>）に当たるため、違反が 1 件も無い状態でも必ずヒットして <code>exit 1</code> になり、<strong>CI と §10 T-F5b の完了条件が達成不能</strong>だった。さらに <code>const tap = NotificationTap(companyId: &#39;toho&#39;);</code>（<code>const</code> 変数の初期化子）と <code>const [NotificationTap(companyId: &#39;toho&#39;)]</code>（<code>const</code> コレクションの要素）は <code>const NotificationTap(</code> という文字列を含まないのに <code>const</code> 正規化され、<code>dart analyze</code> でも 1 件も鳴らない（実測）＝ <strong>文字列検査では塞げない抜け道が 2 つ残る</strong>。型で禁じれば宣言との衝突も抜け道も同時に消える。したがって <strong><code>lib</code> と <code>test</code> の全体に <code>const NotificationTap(</code> を探す広い CI step は置かない</strong>（違反 0 件でも宣言自身に当たって赤になる）が、<strong>削除ではなく置き換えである</strong>：<code>const</code> コンストラクタと <code>@immutable</code> の<strong>再追加</strong>は品質ゲートでは 1 つも検出できない（<code>const</code> コンストラクタを足すことはコンパイルエラーでも lint でもなく、<code>@immutable</code> が無ければ <code>prefer_const_constructors_in_immutables</code> も鳴らず、<code>parseNotificationTap</code> の引数は定数式でないため <code>prefer_const_constructors</code> も鳴らない。§7 の識別性テストも <code>parseNotificationTap</code> で比べるので緑のまま）。そこで <strong>§4.8 には <code>notification_tap.dart</code> 1 ファイルに限った 1 行の step を常設</strong>し（対象を宣言ファイルに絞れば宣言との衝突が無く、<code>@immutable</code> と <code>const</code> コンストラクタが消えている状態では 0 行で通る）、<strong>§10 T-F5b 完了条件 (ii) は「<code>const NotificationTap(</code> が <code>lib</code>・<code>test</code> に 0 件」から「<code>notification_tap.dart</code> に <code>@immutable</code> と <code>const</code> コンストラクタが残っていないこと」への置き換え</strong>とする（1 度きりの確認ではなく、同じ検査を CI にも置く。#75 で検査を CI に常設したのと同じ理由＝後続タスクの書き戻しをその時点で赤にする）。</p>
 <p><strong><code>prefer_const_constructors</code> との関係</strong>：<code>const</code> コンストラクタが無いので、テストが引数にリテラルを渡しても <code>const</code> を要求されない（§4.6 の表が 2 行で済む）。<strong>波及</strong>：<code>notification_tap.dart</code> の <code>import &#39;package:meta/meta.dart&#39;;</code> は未使用になるので削除する（§10 T-F5b）。<code>meta</code> の依存自体は他の値クラス（§4.1）が使うので残る。</p>
 <h4 id="sec-8-2-4">8.2.4 #75 の根拠（<code>releaseSafeError</code> の許可リストと検査の 3 段）<a class="anchor" href="#sec-8-2-4">#</a></h4>
-<p><strong>型名だけに潰す案を採らなかった理由</strong>：要件 §10 フェーズ 6 の TestFlight 配布は <strong>release ビルド</strong>であり、身内配布で ST-17（E-24）から抜けられない端末が出たときに得られるログが <code>SqliteException</code> の 1 行だけになると、<code>database is locked</code>（待てば直る）・<code>file is not a database</code>（<strong>恒久破損。#68 は「削除・再インストールしか無い＝既読・保存を捨てる」と決めている</strong>）・migration 失敗の区別がつかず、#68 の判断が行えない。SQLite の結果コード（<code>sqlite.org/rescode.html</code> の数値）は<strong>パスも SQL も含まない</strong>ため、流出の懸念なくこの区別を残せる。</p>
+<p><strong>型名だけに潰す案を採らなかった理由</strong>：要件 §10 フェーズ 6 の TestFlight 配布は <strong>release ビルド</strong>であり、身内配布で ST-17（E-24）から抜けられない端末が出たときに得られるログが <code>SqliteException</code> の 1 行だけになると、<code>database is locked</code>（待てば直る）・<code>file is not a database</code>（<strong>恒久破損。#68 は「削除・再インストールしか無い＝既読・保存を捨てる」と決めている</strong>）・migration 失敗の区別がつかず、#68 の判断が行えない。SQLite の結果コード（<code>sqlite.org/rescode.html</code> の数値）は<strong>パスも SQL も含まない</strong>ため、流出の懸念なくこの区別を残せる。<strong>ただし現行の構成（<code>createAppLogger</code> が <code>filter:</code> を渡さず既定の <code>DevelopmentFilter</code>）では release のログは 1 行も出ない</strong>（§4.9 冒頭）ため、この区別は filter を <code>ProductionFilter</code> 等に替えたときに初めて得られる（開発者判断 2026-10-19：#75 の根拠は「filter を替えたときの備え」とする）。<strong>TestFlight で切り分けに使うには、配布の前に filter を替える</strong>（替えるか・どの filter にするかは<strong>フェーズ 6 の前に判断する</strong>。替えるまでは、ST-17 から抜けない端末の切り分けは debug ビルドでの再現に委ねる）。</p>
 <p><strong>自前の例外型を許可リストに入れなかった理由</strong>：<code>FeedErrorException</code>・<code>FeedOfflineException</code> の情報（<code>reason</code>・<code>schemaVersion</code>）は <code>SyncResult</code> に写って別のログ行と状態に現れるため型名で足り、<code>core/logging</code> が feature の domain を import する辺を作らずに済む。</p>
-<p><strong>要約を <code>core/database/</code> に置かなかった理由</strong>：<code>core/logging</code> → <code>core/database</code> の依存が生まれ、「ログ出力用の要約」という責務が DB 層に紛れる。DB 技術の import（<code>drift/remote.dart</code>・<code>sqlite3/common.dart</code>）は <code>app_logger.dart</code> の 1 ファイルに閉じ（この import が presentation へ推移しないことは §3.1 に明記した）、<strong>SQLite 以外の例外型を足したくなった時点で置き場を見直す</strong>（#33・#54 と同じ条件付きの先送り）。</p>
+<p><strong>要約を <code>core/database/</code> に置かなかった理由</strong>：<code>core/logging</code> → <code>core/database</code> の依存が生まれ、「ログ出力用の要約」という責務が DB 層に紛れる。DB 技術の import（<code>package:drift/isolate.dart&#39; show DriftRemoteException</code>・<code>package:sqlite3/common.dart&#39; show SqliteException</code>。<code>isolate.dart</code> 経由にする理由は §4.9 のコード片の冒頭コメント）は <code>app_logger.dart</code> の 1 ファイルに閉じ（この import が presentation へ推移しないことは §3.1 に明記した）、<strong>SQLite 以外の例外型を足したくなった時点で置き場を見直す</strong>（#33・#54 と同じ条件付きの先送り）。</p>
 <p><strong>(C)（依存の逆転）を今回採らない理由</strong>：要約を返せるのは例外を<strong>作る側</strong>だが、DB 例外を作るのは drift / sqlite3 であって <code>core/database</code> ではなく、<code>core/database</code> が包み直すには <code>DriftArticleRepository</code> の全メソッドで <code>try</code>/<code>catch</code> してラッパに詰め替える必要がある。<strong>なお (C) には包み直しを要らなくする変形（注入型の逆転）がある</strong>：<code>core/logging</code> に <code>abstract interface class ErrorSummarizer { String? summarize(Object? error); }</code> を置き、DB 技術を知る実装を <code>core/database</code> に、束ねを <code>core/di/</code> に置けば <code>try</code>/<code>catch</code> は不要になる。ただし整形関数が Provider 経由になるため、<strong>§3.1 の例外の前提（presentation から直接呼べる引数 → 戻り値の純粋関数）が崩れ</strong>、<code>error: releaseSafeError(e)</code> の 1 行検査（§4.8）も注入された値を経由する形に書き換えが要る。SQLite 以外の例外型を足す時点では<strong>この 2 形態（例外側に <code>SafeLoggable</code> を実装させる形と、注入型 <code>ErrorSummarizer</code> の形）を比較して選ぶ</strong>。§5.2.1 は <code>unsupportedSchemaVersion()</code> の例外を<strong>包み直さない</strong>（そのまま <code>SyncCoordinator</code> に捕まえさせる）と決めており、包むと <code>SyncFailed(storage)</code> への写像と二重になる。1 関数 10 行の許可リストに対して割に合わないため先送りし、<strong>SQLite 以外の例外型を足す必要が出た時点で (C) を第 1 候補として見直す</strong>（そのときは <code>core/logging</code> の import が 2 つ以上の技術に広がり、逆転の利得が費用を上回る）。</p>
 <p><strong>(A)（<code>isDebug</code> 引数 + 直接テスト）を採らない理由</strong>：(1) <strong><code>DriftRemoteException</code> はコンストラクタが private（<code>DriftRemoteException._</code>。drift 2.31.0 <code>lib/src/remote/communication.dart:222</code> で確認）なのでテストから作れず</strong>、<code>drift_flutter</code> の既定（background isolate）＝<strong>本番の経路である 1 段開く分岐をテストで覆えない</strong>（覆えるのは <code>SqliteException</code> 直渡し・その他の型・<code>null</code>・<code>isDebug: true</code> の 4 ケースだけ）。(2) それでも CLAUDE.md のテスト方針（純粋関数の列挙と、<code>test/core/logging/</code> という新しい置き場）を広げる必要があり、開発者の判断（§9）を 1 件増やす。(3) <code>isDebug</code> は本番の呼び出し側が使わない引数で、#69 (B) でフォールト注入の口を却下したのと同じ「テストのためだけに本番の分岐口を増やす」形になる。<strong>代わりに検査を否定形から肯定形に変え、「書き換え」と「別経路の追加」の両方を捕まえる 2 段にする</strong>（§4.8。1 タスクの完了条件ではなく <strong>CI に常設</strong>されるため、後続タスクが「もう少し情報を出そう」と書き換えた時点で赤になる）。</p>
 <p><strong>(a) <code>app_logger.dart</code> を許可リストで完全固定する</strong>：「<code>message</code> 等を参照しない」という否定形だけでは <code>return cause.toString();</code>・<code>return &#39;$cause&#39;;</code>・<code>&#39;SqliteException(${cause.resultCode}) ${cause.operation}&#39;</code> のような書き換えを 1 つも検出できないため、<strong>このファイルのすべての文字列補間</strong>（<code>${cause.resultCode}</code>・<code>${cause.extendedResultCode}</code> の 2 つと完全一致）と<strong>すべての <code>cause</code> メンバ参照</strong>（<code>cause.resultCode</code>・<code>cause.extendedResultCode</code>・<code>cause?.runtimeType</code> の 3 つと完全一致）を固定し、さらに <code>toString()</code>・<strong><code>safeToString</code></strong>（<code>return Error.safeToString(cause);</code> は <code>toString()</code> という字面にも <code>cause</code> のメンバ参照にも当たらないのに自由文を返す）と 5 つの自由文フィールド名がコード行に現れないこと（キャスト・中間変数経由を塞ぐ）を検査する。</p>
@@ -4522,17 +4954,20 @@ class TabReselect extends _$TabReselect {
 <p><strong>(b) <code>lib/</code> 全体を「<code>$e</code> だけを見る形より広い名前集合」で検査する</strong>：<code>$e</code> だけを見る形（第 2 周の案）では <strong><code>$error</code>・<code>${next.error}</code>・<code>${error.remoteCause}</code> が素通りする</strong>（<code>\b</code> が <code>e</code> の直後の <code>r</code> で成立しない。実測済み）。<code>SettingsScreen._logWarn</code> は引数名が <code>error</code>、<code>_logIfNewlyErrored</code> は <code>next.error</code> を扱うため、<strong>最も書かれやすい形が抜けていた</strong>。識別子名に <code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む補間を一律に禁じ、許可形（自前例外型の enum / 数値フィールドと、自前例外・結果型の <code>toString()</code> の <code>$cause</code>）だけを <code>sed</code> で除いてから同じ式を当てる（<strong>許す形を明示的に定義してあるので、実装者が回避策を発明する必要が無い</strong>。§4.9 の表）。<strong>ただし (b) は「識別子名に依存しない」検査ではない</strong>：<code>e</code> と、<code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む識別子という<strong>名前集合</strong>と、「補間という形」に依存する（<code>$err</code>・<code>${ex}</code>・<code>${failure}</code>・<code>&#39;…&#39; + e.toString()</code> はいずれもヒットしない）。<strong>検査が捕まえられないものと、規則は許すが検査が落とすもの（偽陽性）の一覧は §4.8 末尾に 1 か所だけ置く</strong>（本節と §4.9 では繰り返さない）。</p>
 <p><strong>(c) ログ定型ヘルパの名前付き <code>error:</code> / <code>stackTrace:</code> 宣言を禁じる</strong>：(a)(b) を通しても、ヘルパが名前付きで受けると呼び出し側と本体が二重に包み、release で <code>String</code> だけが残る（理由と採らなかった案（冪等化）は §4.9）。この 2 段 + (c) の帰結として、<strong><code>http_articles_feed.dart</code> の <code>malformed</code> のログ行（<code>${e.message}</code>）は文言を変え、その直上コメント（現在は「ログには message・offset だけを載せる」）も同じ変更で追随させる</strong>（確定した文言・コメントの案と「<code>String</code> は固定文でも補間しない」理由は §4.9。コメントの取り残しは検査がコード行だけを見るため CI では検出されない。§4.8 末尾 (A)-6。同じ行の <code>${e.offset}</code> と <code>${e.reason}</code> の行は許可形なので残す）。この 1 ファイルは §10 T-F5a の「判断を要する」側に数える。</p>
 <h2 id="sec-9">9. 未決定事項<a class="anchor" href="#sec-9">#</a></h2>
-<p>該当なし。開発者の判断を要する事項は残っていない。</p>
+<p>該当なし（2026-10-19 の再開で挙げた Q-1・Q-2 は同日に解決し、§8 #78・#79 に移した。下の「解決済みの経緯」）。</p>
+<p><strong>解決済みの経緯</strong>：</p>
 <p>2026-09-24 の回答で解決した分はすべて §8 に移してある（対応：Q-1 → #55、Q-2 → #56、Q-3 → #57、Q-4 → #58、Q-5 → #59、Q-6 → #60。reopen 後・第 1 周で挙げた Q-1（恒久的な DB 障害からの逃げ道）は <strong>#68</strong>。初稿の Q-1〜Q-6 は 2026-09-19 の回答で §8 #24〜#29 へ）。そのほかの決定（§8 #61〜#67・#69。#69 は再現手段の有無という事実にもとづく完了条件の整理）は画面定義書 S-00 §8 #31・#36・#38・§5.2 ST-17、S-01 §5.1 ST-02・ST-04・ST-19・§8 #23・#30・#31、S-02 §5 ST-06 の決定と CLAUDE.md の規約から導けるもので、判断の余地が無い。</p>
 <p>2026-09-27 の追随（§8 #70〜#75。実装で判明した事項の反映）も開発者の判断を要しない：#70 は<strong>承認済みの画面定義書と D-05 §6 が定めた振る舞い（連続タップは各回反応する）に設計を合わせる</strong>修正（画面仕様は変えない）、#71・#72 は CLAUDE.md I・D から、#73 は §4.9（application は Logger を持たない）と既存の #38 (b) の形から、#74 は #33・#54 と同じ「条件付きの先送り」から、#75 は既存の <code>releaseSafeStackTrace</code> の方針から導ける。費用・要件書・画面定義書・CLAUDE.md の変更を伴うものは 1 件も無い。</p>
 <p>2026-09-28 の指摘修正（第 1 段階・第 1 周）も同様で、開発者の判断を要しない：#75 を許可リスト方式に広げたのは要件 §10 フェーズ 6（TestFlight = release ビルド）と §8 #68（恒久破損時は削除・再インストールしか無い）から導ける判断で、追加の依存（<code>sqlite3</code>）は drift の推移的依存を明示するだけ・CI の step は本書が定める <code>app-ci.yml</code> の範囲内（§4.8）。<strong>CLAUDE.md の変更は不要</strong>（テスト方針の純粋関数の列挙を広げないため。§8 #75「直接テストは置かない」）。画面定義書の補正（S-01 の連続タップの明文化と §8 #30 の枝番）はこの周では §8.1 の申し送り（次回 reopen 時）にとどめ、S-01 を直さなかった（<strong>その後 2026-10-04 の S-01 の改訂（approved）で両方とも反映済み</strong>。§8.1 の S-01 宛）。</p>
 <p>2026-09-28 の指摘修正（第 1 段階・第 2 周）も開発者の判断を要しない。第 1 周で置いた 2 つの歯止め自身の欠陥を、いずれも<strong>実測した事実</strong>にもとづいて直したものである：(1) #70 の <code>const</code> 禁止を <code>grep</code> から<strong>型</strong>（<code>@immutable</code> と <code>const</code> コンストラクタを外す）に変えたのは、<code>grep</code> がコンストラクタ宣言自身に当たって CI が永久に赤になること・<code>const</code> 変数の初期化子と <code>const</code> コレクションの要素という抜け道が <code>dart analyze</code> で 1 件も鳴らないこと・<code>@immutable</code> を残すと <code>prefer_const_constructors_in_immutables</code> でゲートが赤になることの 3 つの実測結果に従った帰結で、選択の余地が無い。(2) #75 の検査を否定形から肯定形（許可リスト）に変え CI に常設したのは、否定形では <code>return cause.toString();</code> のような書き換えを 1 つも検出できないという事実への対処であり、<strong><code>releaseSafeError</code> に <code>isDebug</code> 引数を足して直接テストを置く案（CLAUDE.md のテスト方針の列挙と置き場を広げる＝開発者の判断が必要）は採らなかった</strong>ため、本節は 0 件のまま（理由は #75。<code>DriftRemoteException</code> のコンストラクタが private でテストから作れず、本番の経路である 1 段開く分岐を覆えないことを pub cache の実物で確認した）。S-01 §8 #23 の書き落ち（抑止判定を読み出せないときの扱い）もこの周では §8.1 の申し送り（次回 reopen 時）にとどめ、画面定義書を直さなかった（<strong>その後 2026-10-04 の S-01 の改訂（approved）で §8 #23 の但し書きの末尾として反映済み</strong>。§8.1 の S-01 宛）。</p>
 <p>2026-09-28 の指摘修正（第 1 段階・第 3 周）も開発者の判断を要しない。第 2 周で新設した §4.8 の検査自身が<strong>過剰な側と不足な側の両方</strong>を持っていたことを、いずれも<strong>実測した事実</strong>にもとづいて直したものである：(1) 過剰（<code>${e.message}</code>・<code>${e.reason}</code> を落とす）は、許してよい形を「自前例外型の enum フィールドと数値フィールド」「自前例外・結果型の <code>toString()</code> の <code>$cause</code>」に限って<strong>明示的に定義</strong>することで解消し、<code>String</code> 型は固定文でも補間しないという線（<code>DateTime.parse</code> の <code>FormatException.message</code> が入力そのものになるという事実）を §4.9 に書いた。(2) 不足（<code>$error</code>・<code>${next.error}</code>・<code>${error.remoteCause}</code> が素通りする）は、検査を <code>$e</code> だけを見る形より広い名前集合（<code>e</code> と、<code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む識別子）へ広げ、<code>app_logger.dart</code> については<strong>すべての補間</strong>を許可リストで固定した。どちらも CI の <code>grep</code> の書き方と、実装済みコード 1 行の文言の変更に収まり、<strong>要件書・画面定義書・CLAUDE.md の本体・費用には影響しない</strong>（CLAUDE.md への 1 行の申し送り（§3.1 の例外）はこの周では §8.1 に挙げて本体の変更を開発者の承認に委ねた。<strong>その後 CLAUDE.md 123 行に反映済み</strong>＝コミット <code>3733c5e</code>。§8.1 の CLAUDE.md 宛）。<code>releaseSafeError</code> を冪等にする案（[M-5] (a)）を採らず位置引数の規約 + 宣言の検査（(b)）にしたのも、冪等化が「許可リスト方式」（#75）に <code>String</code> の素通しという穴を開けるという設計上の理由から導ける。</p>
 <p>2026-09-28 の指摘修正（第 2 段階・第 1 周）も開発者の判断を要しない。<strong>§8 の決定（#1〜#75）の内容は 1 つも変えていない</strong>：(1) §4.8 (a-4) の <code>kDebugMode</code> の期待値を 2 → <strong>3</strong> に直したのは、<code>app_logger.dart</code> に <code>createAppLogger</code>（<code>level: kDebugMode ? …</code>）があるという<strong>実測した事実</strong>への訂正で、期待値を緩める変更ではない（緩める変更なら §4.9 のとおり <code>draft</code> に戻して再レビューが要る）。(2) 品質ゲートを 3 → <strong>4 コマンド</strong>に直したのは、現行の CLAUDE.md と <code>.github/workflows/app-ci.yml</code> が <code>dart format</code> を含んでいるという事実への追随。(3) T-F5 を T-F5a / T-F5b に割ったのは配分だけの変更で、改修の総数・検査の内容・振る舞いの変更点は同じ。(4) §8.2 の新設と §10 の「実タスク / 状態」列は体裁と事実の明示。要件書・画面定義書・CLAUDE.md・費用への影響は無い。</p>
+<p>2026-10-19 の再開で反映した FOLLOWUPS 2-12〜2-19・4-2・4-23・4-25 のうち、開発者の判断を要したのは 2-17 の波及だけで、<strong>開発者判断 2026-10-19 #1</strong> により (a)「#75 の根拠を『filter を替えたときの備え』に弱め、TestFlight で切り分けに使うには事前に filter を替える（フェーズ 6 前に判断）」を採った（§4.9 冒頭・§8 #75・§8.2.4）。(b)「フェーズ 6 で <code>ProductionFilter</code> に替えると今決める」は採らなかった（filter の選択はフェーズ 6 の前の判断として残す）。<strong>開発者判断 #2</strong> により FOLLOWUPS 4-22（ログ検査 2 step のスクリプト切り出し。CLAUDE.md の品質ゲート行の変更を伴う）と 4-24（<code>occurrences</code> の再設計）はこの再開に含めず別バッチとした。ほかは事実の訂正（2-12・2-13・2-15・2-16・2-18・2-19）、限界一覧の追記（2-14）、既存の規約から導ける決定（4-25 は #75 の「位置引数で受ける」の延長、4-23 は #75 の適用範囲の延長＝ #77、4-2 は #33・#54 と同じ条件付きの先送り＝ #76）である。</p>
+<p>同じ再開で §9 に挙げた 2 件は、開発者の委任（D-02〜D-05 の未決定事項は推奨案で進める運用）により 2026-10-19 に推奨案で解決した：<strong>Q-1（Riverpod 3 の既定リトライ）→ #78</strong>（(C) app 全体の既定で切り、既存の個別指定も残す。<code>bootstrap.dart</code> の 1 引数は <code>grep</code> の常設で守る）、<strong>Q-2（APNs トークンの待ち）→ #79</strong>（(A) 15 秒のタイムアウトの内側で 500 ms 間隔で待つ。時間切れは <code>debug</code> ログに 1 行残す）。あわせて #80（通知許可の catch を実装の <code>on Object</code> に揃える）は §5.7「失敗しても 3 に進む」と #41 から導ける擬似コードの訂正で、判断の余地が無い。いずれも要件書・画面定義書・CLAUDE.md・費用への影響は無い（#79 の実装は費用のため止めている T-36 の範囲に入るだけで、新しい費用は生じない）。</p>
 <h2 id="sec-10">10. タスク分割の目安<a class="anchor" href="#sec-10">#</a></h2>
-<p><strong>本節での「品質ゲート」は <code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test &amp;&amp; dart format --output=none --set-exit-if-changed lib test</code> の 4 コマンドを指す</strong>（CLAUDE.md「品質ゲート」の app 行と同じ。<code>riverpod_lint</code> は analyzer プラグインなので <code>flutter analyze</code> だけでは実行されない。<code>dart format</code> は未フォーマットのまま analyze / test を通過してレビューまで届いた実例があるため入っている（開発者確認 2026-09-24）。§4.8・§8 #60）。<strong>本節のタスク候補 ID（T-A〜T-G・T-F3・T-F4・T-F5a・T-F5b・T-P）は <code>/pm plan</code> 用の ID で、実タスク（<code>docs/tasks/T-nn.md</code>）とは別系統</strong>（本文中の <code>T-17</code>・<code>T-23</code> のような <code>T-nn</code> は実タスクを指す。<strong>対応と状態は下の表の「実タスク / 状態」列が正</strong>で、<code>docs/tasks/README.md</code> にも対応表がある）。<strong>本書の他の節が <code>§10 T-F5</code> と参照している箇所は T-F5a と T-F5b の総称</strong>とし、どちらに属するかは下の表の 2 行を見る（分割の理由は下の「T-F5 を 2 つに割った理由」）。<strong><code>T-H</code>〜<code>T-O</code> は D-05 §10 が使う</strong>ため本書では欠番にし、本書の片付けタスクは D-05 の全タスク完了後に行うので末尾の <strong><code>T-P</code></strong> とする（D-05 §10 前文・§1「決めること」9 が「D-04 の T-F1・T-F2a・T-F2b の後に続く T-H〜T-O」と定めており、<strong>D-05 §10 の表が実際に T-H1〜T-O を使っているので本書が譲る</strong>。両書とも review 中だが、ID の割り当ては先に確定した D-05 側に合わせる）。</p>
+<p><strong>本節での「品質ゲート」は <code>flutter analyze &amp;&amp; dart analyze --fatal-infos &amp;&amp; flutter test &amp;&amp; dart format --output=none --set-exit-if-changed lib test</code> の 4 コマンドを指す</strong>（CLAUDE.md「品質ゲート」の app 行と同じ。<code>riverpod_lint</code> は analyzer プラグインなので <code>flutter analyze</code> だけでは実行されない。<code>dart format</code> は未フォーマットのまま analyze / test を通過してレビューまで届いた実例があるため入っている（開発者確認 2026-09-24）。§4.8・§8 #60）。<strong>本節のタスク候補 ID（T-A〜T-G・T-F3・T-F4・T-F5a・T-F5b・T-F6・T-P）は <code>/pm plan</code> 用の ID で、実タスク（<code>docs/tasks/T-nn.md</code>）とは別系統</strong>（本文中の <code>T-17</code>・<code>T-23</code> のような <code>T-nn</code> は実タスクを指す。<strong>対応と状態は下の表の「実タスク / 状態」列が正</strong>で、<code>docs/tasks/README.md</code> にも対応表がある）。<strong>本書の他の節が <code>§10 T-F5</code> と参照している箇所は T-F5a と T-F5b の総称</strong>とし、どちらに属するかは下の表の 2 行を見る（分割の理由は下の「T-F5 を 2 つに割った理由」）。<strong><code>T-H</code>〜<code>T-O</code> は D-05 §10 が使う</strong>ため本書では欠番にし、本書の片付けタスクは D-05 の全タスク完了後に行うので末尾の <strong><code>T-P</code></strong> とする（D-05 §10 前文・§1「決めること」9 が「D-04 の T-F1・T-F2a・T-F2b の後に続く T-H〜T-O」と定めており、<strong>D-05 §10 の表が実際に T-H1〜T-O を使っているので本書が譲る</strong>。両書とも review 中だが、ID の割り当ては先に確定した D-05 側に合わせる）。</p>
 <p>D-01 §10 Task C（app 契約実装）は本書の T-B1・T-D に吸収する。各タスクは pm の目安どおり新規ファイルは 5〜10 を目安（テストを含む。<code>build_runner</code> の生成物と <code>articles.sample.json</code> のコピーは数えない）・UseCase 3 以内で、単独で品質ゲートを通す（T-A は <code>flutter test</code> の対象が無いため analyze の 2 コマンドと <code>dart format</code> のみ。<code>test/</code> がまだ無いので <code>dart format</code> の対象は <code>lib</code> だけ）。目安の<strong>例外は 4 つ</strong>：T-A（<code>flutter create</code> の生成物の整理が主）、T-G（既存ファイルの改修が主）、<strong>T-D（11。うち 3 つはテストヘルパで、UseCase は <code>SyncArticlesUseCase</code> の 1 つだけ）</strong>、<strong>T-F1（14 + 改修 1。純粋関数・Provider・状態表示の型を別ファイルに切り出したためファイル数が増えたが、UseCase は 0）</strong>。T-P は新規ファイルが 0（既存ファイルの改修のみ）なので目安の対象外。<strong>T-F3（新規 3 + 改修 7）・T-F4（新規 4 + 改修 5）・T-F5a（改修 10）・T-F5b（新規 1 + 改修 6 + テスト 4）は本書の改訂で振る舞いが変わった分を実装済みコードに反映する追随タスク</strong>で、いずれも新規ファイルは目安内（<strong>T-F5a / T-F5b は改修中心で新規 0 / 1・UseCase 0</strong> のため、触るファイル数は目安の対象外とする。改修の総数 16 の内訳は <strong><code>error:</code> / <code>stackTrace:</code> の整形だけを行う機械的な置換 6 件</strong>（対象は <code>lib/</code> の 18 箇所。§8.1）・<strong>設定への追加 2 件</strong>（<code>pubspec.yaml</code>・<code>.github/workflows/app-ci.yml</code>）・<strong>判断を要する 8 件</strong>で 6 + 2 + 8 = 16。<code>http_articles_feed.dart</code> は <code>error:</code> の整形に加えて <code>malformed</code> の message 文字列の文言変更を含むため<strong>判断を要する側</strong>に数える（§4.9・§8 #75）。この 16 を T-F5a に 10（判断 2 + 設定 2 + 整形 6）、T-F5b に 6（判断 6）へ割る）。</p>
-<p><strong>T-F5 を 2 つに割った理由</strong>（第 2 段階・第 1 周 [M-6]）：1 タスクにすると改修 16 + テスト 4 = 21 ファイル・<code>grep</code> 検査 7 つ・振る舞いの変更 3 点になり、CI が 1 度赤になったときに原因が #70 系（通知タップの等価性）か #75 系（ログの整形）かを切り分ける材料が混ざる。<strong>振る舞いの変更を 1 点（T-F5a）と 2 点（T-F5b）に分ければ、検査 7 つも (iv)(v)(vi) と (i)(ii)(iii)(iii&#39;) に分かれて 1 ループで切り分けられる。</strong> 第 1 段階で決めた #70〜#75 の内容は変えていない（配分だけを決めた）。<strong>順序は T-F5a → T-F5b</strong>（#73 で <code>sync_controller.dart</code> に足すログ行が T-F5a の <code>releaseSafeError</code> を要し、<code>.github/workflows/app-ci.yml</code> も両方が触る）。どちらも T-33（= D-05 §10 T-M）の前。<strong>各候補に対応する実タスクとその状態は表の「実タスク / 状態」列が正</strong>：T-A〜T-F4 はすべて <code>done</code> で再実行できず、<strong>残る作業は T-F5a・T-F5b（いずれも未起票）・T-P（= T-43, <code>todo</code>）・T-G（= T-36, <code>todo</code>）の 4 つだけ</strong>である（<code>/pm plan</code> は <code>done</code> の行を再度切り出さない）。<code>done</code> の候補で生じた差分を新しい ID が引き取る対応は、§8.1 の「実装（§10 T-F3）」「実装（§10 T-F4）」「実装（§10 T-F5a）」「実装（§10 T-F5b）」「実装（§10 T-P）」の各行が持つ。T-B1 は <code>feed_state_keys.dart</code> が infrastructure（T-C）へ移ったため 10 で目安内（§8 #47）。将来さらに分けるなら T-F1 を「<code>lib/app/</code> の骨格（起動・下部タブ・ライフサイクル。<code>root_tab.dart</code>・<code>tab_controller.dart</code>・<code>tab_reselect.dart</code> はこちら）」と「状態の型と判定（<code>core/ui/status/list_status.dart</code>・<code>articles/presentation</code> の <code>sync_controller.dart</code>・<code>list_status.dart</code>）」の 2 つに割る（前者の完了条件はシミュレータでの目視、後者はテーブル駆動テストで、検証手段も分かれる）。生成物（<code>*.g.dart</code>・<code>*.drift.dart</code>）は各タスクでコミットする。並行タスクが同じファイル（生成物を含む）を編集しないよう、Provider の定義は feature ごとのファイルに分ける（§4.7。§8 #45）。</p>
+<p><strong>T-F5 を 2 つに割った理由</strong>（第 2 段階・第 1 周 [M-6]）：1 タスクにすると改修 16 + テスト 4 = 21 ファイル・<code>grep</code> 検査 7 つ・振る舞いの変更 3 点になり、CI が 1 度赤になったときに原因が #70 系（通知タップの等価性）か #75 系（ログの整形）かを切り分ける材料が混ざる。<strong>振る舞いの変更を 1 点（T-F5a）と 2 点（T-F5b）に分ければ、検査 7 つも (iv)(v)(vi) と (i)(ii)(iii)(iii&#39;) に分かれて 1 ループで切り分けられる。</strong> 第 1 段階で決めた #70〜#75 の内容は変えていない（配分だけを決めた）。<strong>順序は T-F5a → T-F5b</strong>（#73 で <code>sync_controller.dart</code> に足すログ行が T-F5a の <code>releaseSafeError</code> を要し、<code>.github/workflows/app-ci.yml</code> も両方が触る）。どちらも T-33（= D-05 §10 T-M）の前。<strong>各候補に対応する実タスクとその状態は表の「実タスク / 状態」列が正</strong>：T-A〜T-F5b はすべて <code>done</code> で再実行できず（T-F5a = T-53、T-F5b = T-54。FOLLOWUPS 4-15 で起票）、<strong>残る作業は T-F6（2026-10-19 の再開で追加。未起票）・T-P（= T-43, <code>todo</code>）・T-G（= T-36, <code>todo</code>）の 3 つだけ</strong>である（<code>/pm plan</code> は <code>done</code> の行を再度切り出さない）。<code>done</code> の候補で生じた差分を新しい ID が引き取る対応は、§8.1 の「実装（§10 T-F3）」「実装（§10 T-F4）」「実装（§10 T-F5a）」「実装（§10 T-F5b）」「実装（§10 T-P）」の各行が持つ。T-B1 は <code>feed_state_keys.dart</code> が infrastructure（T-C）へ移ったため 10 で目安内（§8 #47）。将来さらに分けるなら T-F1 を「<code>lib/app/</code> の骨格（起動・下部タブ・ライフサイクル。<code>root_tab.dart</code>・<code>tab_controller.dart</code>・<code>tab_reselect.dart</code> はこちら）」と「状態の型と判定（<code>core/ui/status/list_status.dart</code>・<code>articles/presentation</code> の <code>sync_controller.dart</code>・<code>list_status.dart</code>）」の 2 つに割る（前者の完了条件はシミュレータでの目視、後者はテーブル駆動テストで、検証手段も分かれる）。生成物（<code>*.g.dart</code>・<code>*.drift.dart</code>）は各タスクでコミットする。並行タスクが同じファイル（生成物を含む）を編集しないよう、Provider の定義は feature ごとのファイルに分ける（§4.7。§8 #45）。</p>
 <table>
 <thead>
 <tr>
@@ -4647,8 +5082,8 @@ class TabReselect extends _$TabReselect {
 <tr>
 <td>T-F5a</td>
 <td>本改訂の追随・その 1（<strong>ログの例外整形</strong>。§8 #75。§8.1「実装（§10 T-F5a）」）。<strong>T-F5b より先に実行する</strong>（#73 で <code>sync_controller.dart</code> に足すログ行が <code>releaseSafeError</code> を要するため）</td>
-<td>未起票（<code>/pm plan</code> で起票する）</td>
-<td>新規なし。改修 10 ＝ <strong>判断を要する 2 件</strong>＋<strong>設定への追加 2 件</strong>＋<strong>整形だけを行う 6 件</strong>（§10 前文の「改修 16」の分類のうち、判断を要する 8 件の内 2 件と設定 2 件・整形 6 件。残り 6 件は T-F5b）。<strong>判断を要する 2 件</strong>：<code>core/logging/app_logger.dart</code>（<code>releaseSafeError</code> の追加。既存の <code>createAppLogger</code>・<code>releaseSafeStackTrace</code> は §4.9 のコード片どおりに残す。#75）・<strong><code>features/articles/infrastructure/http_articles_feed.dart</code></strong>（<code>error:</code> 4 箇所の整形に加えて <code>malformed</code> の message 文字列の文言変更<strong>と、その直上コメントの追随</strong>。現在の直上コメント（77-80 行目「ログには message・offset だけを載せる」）は §4.3・§4.9 の新しい規約と矛盾するため、コード片と同じ文言に直す。§4.9 のコード片にコメントの案がある）。<strong>設定への追加 2 件</strong>：<code>pubspec.yaml</code>（<code>sqlite3</code> の追加）・<code>.github/workflows/app-ci.yml</code>（<strong>§4.8 のログに関する 2 step = (1)(2) だけ</strong>。(3) の <code>notification_tap.dart</code> 1 ファイルの step は T-F5b が足す）。<strong>整形だけを行う 6 件</strong>：<code>lib/app/app_lifecycle_sync.dart</code>（<strong><code>_warn</code> の署名を <code>void _warn(String message, [Object? error, StackTrace? stackTrace])</code> に変え、整形は本体 1 か所で行う。呼び出しは 10 か所</strong>＝既存 8 ＋ <strong>直接 <code>_logger.w</code> を呼んでいる 2 か所（記事件数の購読の失敗・件数の初回読み出しの滞留）を <code>_warn</code> に寄せる</strong>。<strong><code>error: next.error</code> の行を残すと検査 (iv) が赤になる</strong>。§4.9・§5.3 の擬似コード）・<code>features/notifications/presentation/notification_tap_providers.dart</code>・<code>features/settings/presentation/settings_screen.dart</code>（<code>_logWarn</code> を位置引数に直す）・<code>features/browser/presentation/open_article_action.dart</code>・<code>features/browser/infrastructure/url_launcher_article_opener.dart</code>・<code>features/notifications/infrastructure/url_launcher_notification_settings_opener.dart</code>。<strong>テストの追加・変更は無い</strong>（#75 は直接テストを置かない。§8.2）</td>
+<td>T-53 / <strong>done</strong>（FOLLOWUPS 4-15）</td>
+<td>新規なし。改修 10 ＝ <strong>判断を要する 2 件</strong>＋<strong>設定への追加 2 件</strong>＋<strong>整形だけを行う 6 件</strong>（§10 前文の「改修 16」の分類のうち、判断を要する 8 件の内 2 件と設定 2 件・整形 6 件。残り 6 件は T-F5b）。<strong>判断を要する 2 件</strong>：<code>core/logging/app_logger.dart</code>（<code>releaseSafeError</code> の追加。既存の <code>createAppLogger</code>・<code>releaseSafeStackTrace</code> は §4.9 のコード片どおりに残す。#75）・<strong><code>features/articles/infrastructure/http_articles_feed.dart</code></strong>（<code>error:</code> 4 箇所の整形に加えて <code>malformed</code> の message 文字列の文言変更<strong>と、その直上コメントの追随</strong>。現在の直上コメント（77-80 行目「ログには message・offset だけを載せる」）は §4.3・§4.9 の新しい規約と矛盾するため、コード片と同じ文言に直す。§4.9 のコード片にコメントの案がある）。<strong>設定への追加 2 件</strong>：<code>pubspec.yaml</code>（<code>sqlite3</code> の追加）・<code>.github/workflows/app-ci.yml</code>（<strong>§4.8 のログに関する 2 step = (1)(2) だけ</strong>。(3) の <code>notification_tap.dart</code> 1 ファイルの step は T-F5b が足す）。<strong>整形だけを行う 6 件</strong>：<code>lib/app/app_lifecycle_sync.dart</code>（<strong><code>_warn</code> の署名を <code>void _warn(String message, [Object? error, StackTrace? stackTrace])</code> に変え（2026-10-19 の改訂で必須 3 引数 + <code>_warnMessage</code> に改めた。追随は T-F6。§4.9）、整形は本体 1 か所で行う。呼び出しは 10 か所</strong>＝既存 8 ＋ <strong>直接 <code>_logger.w</code> を呼んでいる 2 か所（記事件数の購読の失敗・件数の初回読み出しの滞留）を <code>_warn</code> に寄せる</strong>。<strong><code>error: next.error</code> の行を残すと検査 (iv) が赤になる</strong>。§4.9・§5.3 の擬似コード）・<code>features/notifications/presentation/notification_tap_providers.dart</code>・<code>features/settings/presentation/settings_screen.dart</code>（<code>_logWarn</code> を位置引数に直す）・<code>features/browser/presentation/open_article_action.dart</code>・<code>features/browser/infrastructure/url_launcher_article_opener.dart</code>・<code>features/notifications/infrastructure/url_launcher_notification_settings_opener.dart</code>。<strong>テストの追加・変更は無い</strong>（#75 は直接テストを置かない。§8.2）</td>
 <td><code>lib/core/logging/</code>、<code>lib/app/app_lifecycle_sync.dart</code>、<code>lib/features/articles/infrastructure/</code>、<code>lib/features/notifications/{presentation,infrastructure}/</code>、<code>lib/features/settings/presentation/</code>、<code>lib/features/browser/{presentation,infrastructure}/</code>（<code>browser/</code> と <code>notifications/infrastructure/</code> は <code>error:</code> / <code>stackTrace:</code> の整形のみ）、<code>app/pubspec.yaml</code>、<code>.github/workflows/app-ci.yml</code></td>
 <td>なし（T-F4 の成果物に触れない）</td>
 <td>品質ゲート通過（§10 前文の 4 コマンド）。<strong>振る舞いが変わるのは 1 点だけ</strong>：release のログに例外オブジェクトが出ず SQLite の結果コードだけが残る（#75）。<strong><code>grep</code> による検査は (iv)(v)(vi) の 3 つ</strong>（番号は 7 つの通し番号のままで、(i)(ii)(iii)(iii&#39;) は T-F5b）：(iv) <strong><code>error:</code> / <code>stackTrace:</code> の実引数が整形関数でない行が <code>lib/</code> に残らない</strong>こと、および<strong>名前付き <code>error:</code> / <code>stackTrace:</code> 引数の宣言が <code>lib/</code> に残らない</strong>こと（§4.8 の 1 つ目の step と同じコマンドで 0 件。対象は整形 6 件と <code>http_articles_feed.dart</code>。ログ定型の private ヘルパ（<code>AppLifecycleSync._warn</code>・<code>SettingsScreen._logWarn</code>）は位置引数に直す＝二重に包む形を構造的に無くす。null ガードの三項を書かない。§4.9）、(v) <strong>例外の自由文の検査 2 段が緑になる</strong>（§4.8 の 2 つ目の step と同じコマンド）：(a) <code>app_logger.dart</code> について<strong>4 つ</strong>が成り立つこと ——（a-1）<strong>すべての文字列補間</strong>が <code>${cause.resultCode}</code>・<code>${cause.extendedResultCode}</code> の 2 つと完全一致、（a-2）<strong>すべての <code>cause</code> メンバ参照</strong>が <code>cause.resultCode</code>・<code>cause.extendedResultCode</code>・<code>cause?.runtimeType</code> の 3 つと完全一致、（a-3）<code>toString()</code>・<code>safeToString</code> と自由文フィールド名（<code>message</code>・<code>explanation</code>・<code>causingStatement</code>・<code>parametersToStatement</code>・<code>operation</code>）がコード行に無いこと、（a-4）<strong>制御フローが固定どおり</strong>＝コード行に <code>if (kDebugMode) return error;</code> と <code>releaseSafeStackTrace(StackTrace? stackTrace) =&gt; kDebugMode ? stackTrace : null;</code> が（空白を潰した形で）現れ、<code>return error;</code> が 1 回・<code>kDebugMode</code> を含むコード行が <strong>3 行</strong>（<code>createAppLogger</code> の <code>level:</code>・<code>releaseSafeStackTrace</code>・<code>releaseSafeError</code> の <code>if</code>。§4.9 のコード片に 3 つとも載っている）であること（字面の (a-1)〜(a-3) だけでは <code>if (!kDebugMode)</code> への反転を検出できない。§4.8・§8 #75）、(b) <code>lib/</code>（<code>app_logger.dart</code> を除く）のコード行に <code>$e</code>・<code>${e…}</code>・および識別子名が <code>error</code> / <code>exception</code> / <code>cause</code> / <code>stackTrace</code> を含む補間が残らないこと（許すのは <code>${e.reason}</code>・<code>${e.schemaVersion}</code>・<code>${e.offset}</code> と、自前例外・結果型の <code>toString()</code> の <code>$cause</code>・<code>${cause}</code> だけ。<code>http_articles_feed.dart</code> の <code>${e.message}</code> はこの検査に落ちるので文言を変える。§4.9・#75）、<strong>(vi) <code>grep -c &#39;message・offset&#39; lib/features/articles/infrastructure/http_articles_feed.dart</code> が 0</strong>（<code>malformed</code> のログ行の<strong>直上コメントの取り残し</strong>の検出。コメント行は §4.8 の検査から除外されるため CI では 1 度も検出されない＝本タスクで 1 度だけ確認する。CI には常設しない。§4.8 末尾 (A)-6・§4.9）。<strong>目視は無い。</strong> <strong>T-F3 とは並行しない</strong>（<code>lib/app/app_lifecycle_sync.dart</code> と <code>features/notifications/presentation/notification_tap_providers.dart</code> を両方が改修する）。<code>settings_screen.dart</code>・<code>browser/</code>・<code>notifications/infrastructure/</code> を触るが、所有タスク（T-O = 実タスク T-35、T-31 等）はいずれも <code>done</code> なので衝突しない。<strong>D-05 §10 の T-S（<code>browser/application/</code> のみ）とは触るファイルが重ならないため並行してよい</strong></td>
@@ -4656,11 +5091,20 @@ class TabReselect extends _$TabReselect {
 <tr>
 <td>T-F5b</td>
 <td>本改訂の追随・その 2（<strong>通知タップの等価性・抑止判定の依存と診断</strong>。§8 #70〜#74。§8.1「実装（§10 T-F5b）」）。<strong>T-F5a の後・T-33（= D-05 §10 T-M）の着手前に完了させる</strong>（<code>NotificationTap</code> の <code>==</code> が identity であることを前提に <code>NotificationTapHandler</code> を実装するため）</td>
-<td>未起票（<code>/pm plan</code> で起票する）</td>
+<td>T-54 / <strong>done</strong>（FOLLOWUPS 4-15）</td>
 <td>新規 1：<code>features/articles/domain/unsupported_schema_reader.dart</code>（#71）。<strong>改修 6（すべて判断を要する）</strong>：<code>features/notifications/domain/notification_tap.dart</code>（<code>==</code> / <code>hashCode</code> の削除、<strong><code>@immutable</code> と <code>const</code> コンストラクタの削除、未使用になる <code>import &#39;package:meta/meta.dart&#39;;</code> の削除</strong>。#70）・<code>features/articles/domain/article_sync_repository.dart</code>（<code>implements UnsupportedSchemaReader</code>・再宣言の削除。#71）・<code>features/articles/application/sync_suppression_policy.dart</code>（依存の型を <code>UnsupportedSchemaReader</code> に絞り、引数名を <code>articles</code> から <code>schemaReader</code> に改め、<code>SyncSuppressionCheck</code> の宣言を削除。#71・#72）・<code>features/articles/application/sync_coordinator.dart</code>（<code>SyncSuppressionCheck</code> の宣言を受け取り、<code>SyncEvent</code> に <code>SyncSuppressionCheckFailed</code> を追加、<code>_start</code> 手順 3 (a) の catch を <code>on Object</code> にして事象を流す。#72・#73）・<code>features/articles/presentation/sync_controller.dart</code>（<code>_onEvent</code> の switch に分岐を足してログ。<strong><code>releaseSafeError</code> は T-F5a が用意済み</strong>。#73・#75）・<strong><code>core/di/articles_providers.dart</code></strong>（<code>syncSuppressionPolicyProvider</code> の引数名を <code>schemaReader:</code> に変更。現在の実装は <code>SyncSuppressionPolicy(articles: ref.watch(articleSyncRepositoryProvider));</code> なので、これを直さないとコンパイルが通らない。§4.7 のコード片・#71）。あわせて <code>.github/workflows/app-ci.yml</code> に <strong>§4.8 の 3 つ目の step</strong>（<code>notification_tap.dart</code> 1 ファイルに限った <code>@immutable</code> / <code>const</code> コンストラクタの検査。<code>lib</code>・<code>test</code> 全体を見る広い <code>const NotificationTap(</code> の step は置かない）を足す（同ファイルを T-F5a も触るため順序は T-F5a → T-F5b）。<strong>テスト 4</strong>：<code>notification_tap_test.dart</code>（比較を <code>companyId</code> に変える。<code>==</code> が identity になるため従来のアサーションは失敗する。「同じ <code>data</code> から 2 回作ると <code>==</code> が false」を 1 ケース追加）・<code>sync_suppression_policy_test.dart</code>（ダブルを 1 メソッドに簡約し <code>Error</code> のケースを追加）・<code>sync_coordinator_test.dart</code>（<code>group(&#39;対応外スキーマの抑止&#39;)</code> に 3 ケース・<code>group(&#39;dispose&#39;)</code> に 2 ケース・<code>group(&#39;全体タイムアウト&#39;)</code> に 1 ケース）・<code>handle_notification_tap_use_case_test.dart</code>（<code>const NotificationTap(...)</code> 4 箇所を <code>parseNotificationTap</code> に置き換える）</td>
 <td><code>lib/features/articles/{domain,application,presentation}/</code>、<code>lib/features/notifications/domain/</code>、<strong><code>lib/core/di/articles_providers.dart</code></strong>、<code>.github/workflows/app-ci.yml</code>、<code>test/features/{articles,notifications}/</code></td>
 <td><strong>T-F5a</strong>（<code>sync_controller.dart</code> のログ行が <code>releaseSafeError</code> を要する。<code>app-ci.yml</code> も両方が触る）、T-F4（= 実タスク T-40、<code>done</code>。<code>SyncSuppressionPolicy</code>・<code>SyncCoordinator</code> の抑止経路を前提にする）</td>
 <td>品質ゲート通過（§10 前文の 4 コマンド）。<strong>振る舞いが変わるのは 2 点だけ</strong>：(1) 同じ団体の通知タップが各回 D-05 に届く（#70）、(2) 抑止判定の失敗が <code>logger.w</code> に 1 行残る（#73）。<strong><code>grep</code> による検査は (i)(ii)(iii)(iii&#39;) の 4 つ</strong>（番号は 7 つの通し番号のままで、(iv)(v)(vi) は T-F5a）：(i) <code>NotificationTap</code> の <code>operator ==</code> / <code>hashCode</code> が残らない、(ii) <strong><code>notification_tap.dart</code> に <code>@immutable</code> と <code>const</code> コンストラクタが残らない</strong>（<code>const</code> コンストラクタを外すこと。以後 <code>const NotificationTap(...)</code>・<code>const</code> 変数の初期化子・<code>const</code> コレクションの要素はいずれも<strong>コンパイルエラー</strong>になる）。<strong>この検査は 1 度きりにせず、対象ファイルに限って §4.8 の 3 つ目の step として常設する</strong>：<code>const</code> コンストラクタと <code>@immutable</code> の<strong>再追加</strong>は 4 つの品質ゲートすべてが緑のまま通る（追加はコンパイルエラーでも lint でもなく、<code>@immutable</code> が無ければ <code>prefer_const_constructors_in_immutables</code> も鳴らない）ため、品質ゲートは恒久的な担保にならない（§4.6・§4.8・#70。旧 (ii)「<code>const NotificationTap(</code> が <code>lib</code>・<code>test</code> に 0 件」からの<strong>置き換え</strong>で、削除ではない）、(iii) <code>SyncSuppressionCheck</code> の宣言が <code>sync_coordinator.dart</code> にだけある、<strong>(iii&#39;) <code>SyncSuppressionPolicy(articles:</code> が <code>lib/</code> と <code>test/</code> に 0 件</strong>（<code>schemaReader:</code> への改名漏れの検出。#71）。§7 の追加ケース（<code>parseNotificationTap</code> の 2 件、<code>SyncSuppressionPolicy</code> の <code>Error</code>、<code>SyncCoordinator</code> の <code>group(&#39;対応外スキーマの抑止&#39;)</code> 3 件・<code>group(&#39;dispose&#39;)</code> 2 件・<code>group(&#39;全体タイムアウト&#39;)</code> 1 件）が通ること。<code>notification_tap_test.dart</code> の比較が <code>expect(tap.companyId, expected)</code> の形になっていること（<code>==</code> が identity になるため従来のアサーションは必ず失敗する。§7）。<code>SyncSuppressionPolicy</code> のテストのダブルが <code>DelegatingArticleSyncRepository</code> を使わず 1 メソッドだけを実装していること（#71）。<strong>目視は無い</strong>（通知の実機確認はフェーズ 5 の T-G。#70 の経路は §7 の自動テストでは「<code>NotificationTap</code> の <code>==</code> が identity であること」までしか固定できないため、T-G の実機確認に 1 項目を足す。§10 T-G）。<strong>T-F3 とは並行しない</strong>（<code>notification_tap_providers.dart</code> は T-F5a が触るが、T-F5a → T-F5b の順序と合わせて T-F3 と重ねない）。<strong>T-F4 の後・T-33（D-05 T-M）と T-34（T-N）の前</strong>に実行する。<strong><code>core/di/articles_providers.dart</code> は衝突しない</strong>：所有タスク（T-D = 実タスク T-21、D-05 §10 T-I = 実タスク T-29）はいずれも <code>done</code>（<code>docs/tasks/T-29.md</code> の frontmatter で確認）で、本タスクは T-33（= D-05 §10 T-M）より前に実行するため D-05 側の同ファイルへの追記とも重ならない</td>
+</tr>
+<tr>
+<td>T-F6</td>
+<td>2026-10-19 の再開の追随（§8.1「実装（§10 T-F6）」。FOLLOWUPS 2-13・2-18・4-23・4-25、§8 #78）</td>
+<td>未起票（<code>/pm plan</code> で起票する）</td>
+<td>新規なし。<strong>改修 5</strong>：<code>app/pubspec.yaml</code>（<code>sqlite3: ^2.6.0</code> と注記。§4.8）・<code>lib/app/app_lifecycle_sync.dart</code>（<code>_warn</code> の必須 3 引数化と <code>_warnMessage</code> の新設。§4.9・§5.3）・<code>lib/core/di/bootstrap_overrides.dart</code>（<code>buildOverrides</code> 手順 1a。§5.1・§8 #77）・<code>.github/workflows/app-ci.yml</code>（コメント 6 か所を §4.8 の抜粋に合わせる。既存 3 step のコード行は変えない。<strong>4 つ目の検査 step（<code>ProviderScope が自動リトライを既定で切っているか</code>）を抜粋どおり足す</strong>。§8 #78）・<strong><code>lib/app/bootstrap.dart</code>（<code>ProviderScope(retry: noRetry, overrides: …)</code> の 1 引数と <code>no_retry.dart</code> の import。§5.1 手順 3・§8 #78）</strong>。既存の個別指定 <code>retry: noRetry</code>（<code>articleCountProvider</code>・<code>initialNotificationTapProvider</code>・D-05 の 3 Provider）とそのテストは<strong>残す</strong>（§8 #78）</td>
+<td><code>app/pubspec.yaml</code>、<code>lib/app/app_lifecycle_sync.dart</code>、<code>lib/app/bootstrap.dart</code>、<code>lib/core/di/bootstrap_overrides.dart</code>、<code>.github/workflows/app-ci.yml</code></td>
+<td>T-F5a・T-F5b（= 実タスク T-53・T-54。ともに <code>done</code>）</td>
+<td>品質ゲート通過（§10 前文の 4 コマンド）。<code>app-ci.yml</code> の 4 つの検査 step が緑（<code>bootstrap_overrides.dart</code> に足す <code>error:</code> / <code>stackTrace:</code> の 2 行も 1 つ目の step の (4)(5) を満たす）。<strong><code>app-ci.yml</code> の「ログの整形漏れの検査」の説明コメントから 4 つ目の step の終わりまでと §4.8 の抜粋の該当範囲が 1 文字ずつ一致する</strong>こと（差分ツールで 0 行。足す前は 31〜344 行）。<strong>4 つ目の step が赤になることを 1 度だけ手元で確かめる</strong>：<code>bootstrap.dart</code> から <code>retry: noRetry,</code> を消して step の <code>run:</code> を実行し、終了コードが 1 になること（確かめた後は戻す。CI には常設しない）。<code>grep -c &#39;retry: noRetry&#39; lib/features/articles/presentation/list_status.dart lib/features/notifications/presentation/notification_tap_providers.dart</code> がともに 1 以上（個別指定を消していない。§8 #78）。<code>grep -c &#39;_warnMessage(&#39; lib/app/app_lifecycle_sync.dart</code> が 2（宣言 1 + 呼び出し 1）で、<code>_warn(</code> の呼び出しがすべて 3 引数であること（1 か所でも 2 引数ならコンパイルエラーになる＝品質ゲートで担保）。<code>grep -n &#39;sqlite3: ^2.6.0&#39; pubspec.yaml</code> が 1 行。<code>bootstrap_overrides.dart</code> の差し替えが <code>if (!kDebugMode)</code> の内側にあり、<code>PlatformDispatcher.instance.onError</code> が <code>true</code> を返すこと（§5.1 手順 1a のコード片どおり）。<strong>目視は無い</strong>（既定の <code>DevelopmentFilter</code> では release / profile のログが出ないため、差し替えの効果は出力で観測できない。§4.9）。<strong>T-P（= T-43）とは並行しない</strong>（<code>app_lifecycle_sync.dart</code> を T-P の (8) も触る）。<strong>T-G（= T-36）とは並行しない</strong>（<code>bootstrap_overrides.dart</code>・<code>pubspec.yaml</code> を T-G も触る）</td>
 </tr>
 <tr>
 <td>T-P</td>
@@ -4675,10 +5119,10 @@ class TabReselect extends _$TabReselect {
 <td>T-G</td>
 <td>FCM 実装（フェーズ 5。<strong>Apple Developer Program 加入後</strong>）</td>
 <td>T-36 / todo</td>
-<td><code>features/notifications/infrastructure/fcm_push_gateway.dart</code>、<code>pubspec.yaml</code> に <code>firebase_core</code>・<code>firebase_messaging</code>、<code>core/di/bootstrap_overrides.dart</code> の <code>fcm</code> 分岐（<code>Firebase.initializeApp()</code>）、<code>core/di/providers.dart</code> の <code>pushGateway</code> の <code>fcm</code> 分岐、<code>ios/Runner</code> の Push Notifications / Background Modes（remote-notification）の capability、<code>.gitignore</code> に <code>GoogleService-Info.plist</code>（§8 #27。開発者が手元の <code>app/ios/Runner/</code> に置く）。計 1 + 改修 5</td>
+<td><code>features/notifications/infrastructure/fcm_push_gateway.dart</code>、<code>pubspec.yaml</code> に <code>firebase_core</code>・<code>firebase_messaging</code>、<code>core/di/bootstrap_overrides.dart</code> の <code>fcm</code> 分岐（<code>Firebase.initializeApp()</code>）、<code>core/di/providers.dart</code> の <code>pushGateway</code> の <code>fcm</code> 分岐、<code>ios/Runner</code> の Push Notifications / Background Modes（remote-notification）の capability、<code>.gitignore</code> に <code>GoogleService-Info.plist</code>（§8 #27。開発者が手元の <code>app/ios/Runner/</code> に置く）。計 1 + 改修 5。<strong><code>fcm_push_gateway.dart</code> は APNs トークンの待ち（§4.6 のコード片・§8 #79）を含む</strong></td>
 <td><code>lib/features/notifications/infrastructure/</code>、<code>lib/core/di/</code>、<code>app/ios/</code></td>
 <td>T-F1、要件 §10 フェーズ 5</td>
-<td>品質ゲート通過（§10 前文の 4 コマンド。<code>none</code> ビルド）。<code>--dart-define=CURTAINCALL_PUSH=fcm</code> の実機ビルドで、collector（D-02）からの通知が届き、タップで <code>companyId</code> が <code>notificationTapStreamProvider</code> に流れる。同じ実機ビルドで S-01/ST-18（初回起動の許可ダイアログ）と S-03/ST-03（許可を拒否したときの案内行）を目視で確認する（§8 #29）。<strong>S-01/ST-15（A-07。同じ団体の通知を 2 回続けてタップした場合）を実機で目視</strong>する（<code>NotificationTap</code> の <code>==</code> が identity であることの裏づけ。§8 #70・§10 T-F5b）。<strong>あわせて §6 の 2 行を実機で確認する</strong>：(a) 機内モードで購読同期を走らせ、<code>subscribe</code> / <code>unsubscribe</code> が 15 秒で <code>TimeoutException</code> になり 1 団体の停止が他団体の同期を止めないこと（ログの <code>failed</code>）、(b) 通知タップで起動した後にホット再起動して <code>takeInitialTap()</code> が 2 回目に null を返し、同じタップを 2 度処理しないこと。新規テストは無し（<code>FcmPushGateway</code> はテストしない方針。<code>FakePushGateway</code> で UseCase を、<code>parseNotificationTap</code> を純粋関数テストで検証済み。§7）</td>
+<td>品質ゲート通過（§10 前文の 4 コマンド。<code>none</code> ビルド）。<code>--dart-define=CURTAINCALL_PUSH=fcm</code> の実機ビルドで、collector（D-02）からの通知が届き、タップで <code>companyId</code> が <code>notificationTapStreamProvider</code> に流れる。同じ実機ビルドで S-01/ST-18（初回起動の許可ダイアログ）と S-03/ST-03（許可を拒否したときの案内行）を目視で確認する（§8 #29）。<strong>S-01/ST-15（A-07。同じ団体の通知を 2 回続けてタップした場合）を実機で目視</strong>する（<code>NotificationTap</code> の <code>==</code> が identity であることの裏づけ。§8 #70・§10 T-F5b）。<strong>あわせて §6 の 2 行を実機で確認する</strong>：(a) 機内モードで購読同期を走らせ、<code>subscribe</code> / <code>unsubscribe</code> が 15 秒で <code>TimeoutException</code> になり 1 団体の停止が他団体の同期を止めないこと（ログの <code>failed</code>）、(b) 通知タップで起動した後にホット再起動して <code>takeInitialTap()</code> が 2 回目に null を返し、同じタップを 2 度処理しないこと。<strong>(c) APNs トークンの待ち（§4.6・§8 #79）</strong>：<code>subscribe</code> / <code>unsubscribe</code> が <code>getAPNSToken()</code> を 500 ms 間隔で待ってから購読操作を呼ぶ実装になっていること（§4.6 のコード片どおり。時間切れの後に購読操作を呼ばない <code>timedOut</code> の判定を含む）を確認したうえで、アプリを削除して入れ直した初回起動の debug ビルドで、(c-1) 「APNs トークン待ち n 回」の <code>debug</code> ログが出たか（待ちが発生したか）と、(c-2) 起動直後の購読同期に <code>failed</code> が無いことをログで見て、結果を <code>docs/tasks/T-36.md</code> に記録する。待ちのまま時間切れ（「APNs トークンを得られないまま時間切れ」のログ）が出たら、Push Notifications capability と APNs 鍵の登録を先に確かめ、それでも解消しなければ本書を <code>draft</code> に戻す（§8 #79 の見直しの条件）。新規テストは無し（<code>FcmPushGateway</code> はテストしない方針。<code>FakePushGateway</code> で UseCase を、<code>parseNotificationTap</code> を純粋関数テストで検証済み。§7）</td>
 </tr>
 </tbody></table>
 <p>D-05 のタスクは T-F1・T-F2a・T-F2b の後に画面ごと（ホーム／保存／設定）に分ける。並行できる組：T-B1 と T-B2（domain の feature が別）、T-F1 と T-F2a と T-F2b（<code>lib/app/</code> + <code>articles/presentation</code> + <code>core/ui/status/list_status.dart</code>、<code>core/ui/status/</code> の Widget 7 ファイル、<code>core/ui/article/</code> で互いに素。同名ファイルを 2 つのタスクが作らない）。T-F2a は T-A の直後から着手できる。<strong>T-D と T-E は並行しない</strong>（T-E のテストが T-D の <code>test/helpers/completer_stub.dart</code> を使うため。§7・§10 T-E）。T-P は T-F1・T-E・T-F3 の完了後に 1 タスクで行う（複数タスクに分けると (4)〜(6)・(8) の import 追随が中途半端な状態でコンパイルできなくなる）。<strong>T-F3（= 実タスク T-39）は完了済み。以下は当時の順序の記録</strong>：T-F3 の実行時期は D-05 §10 の T-H3 の後・T-M の前だった（T-H3 より前だと <code>core/ui/</code> の切り出しと衝突し、T-M・T-N より後だと画面タスクが古い型（<code>FullView</code> 5 値・<code>FullErrorKind</code> 2 値・<code>resolveHasArticles</code>・引数つき <code>feedStatusProvider</code>）を前提に書かれてしまう。D-05 §10 の T-M・T-N は新しい型を前提にしている）。<strong>この制約は D-05 §10 の T-M・T-N の依存欄にも要るもので、起票済みの <code>docs/tasks/T-33.md</code>・<code>T-34.md</code> の <code>depends_on</code> に <code>T-39</code> を足す形で反映済み</strong>（§8.1 の D-05 宛）。**T-F3 と T-M・T-N は <code>lib/app/app_lifecycle_sync.dart</code> を両方が改修するため並行させなかった。**<strong>T-F4（= 実タスク T-40）も完了済み</strong>で、どのタスクとも触るファイルが重ならないため単独で実行できた（<code>articles/application</code> と <code>core/di/articles_providers.dart</code> のみ。T-F3 とも並行可だった）。<strong>T-F5a → T-F5b の順に実行し、どちらも T-F4 の後・T-33（D-05 T-M）と T-34（T-N）の前に置く。T-F5a は T-F3 とは並行しない</strong>（<code>lib/app/app_lifecycle_sync.dart</code> と <code>features/notifications/presentation/notification_tap_providers.dart</code> を T-F3・T-F5a の両方が改修する。T-F3 は完了済みなので実務上は制約にならないが、順序の根拠として残す）。<strong>T-F5b は <code>sync_coordinator.dart</code>・<code>sync_suppression_policy.dart</code> を改修するため T-F4 とも並行しない</strong>（T-F4 も完了済み）。<strong>T-F5a と D-05 §10 の <code>T-S</code>（<code>lib/features/browser/application/</code> と <code>test/features/browser/application/</code> のみ）は並行してよい</strong>：T-F5a が <code>browser/</code> で触るのは <code>presentation/open_article_action.dart</code> と <code>infrastructure/url_launcher_article_opener.dart</code> の 2 ファイル（<code>error:</code> / <code>stackTrace:</code> の整形のみ）で、T-S の <code>application/open_article_use_case.dart</code> とは重ならない。T-F5a が触る <code>browser/</code>・<code>notifications/infrastructure/</code>・<code>settings/presentation/</code> のファイルの所有タスク（実タスク T-31・T-35 等）はいずれも <code>done</code> なので衝突しない。<strong>T-F5b は <code>browser/</code>・<code>settings/presentation/</code> を触らない</strong>ので T-S とも無関係に並行してよい。<strong>本節の「並行してよい」はすべてファイル単位の判断</strong>で、<code>pm dispatch</code> の衝突チェックはディレクトリ単位（<code>.claude/skills/pm/SKILL.md</code>）のため警告が出る組がある（T-F4 と T-P、T-F1 と T-F2a など）。警告が出たら各タスクの成果物・改修ファイルの一覧を突き合わせ、重なりが無ければ並行してよい。<strong>T-P は D-05 の画面タスク（T-M・T-N・T-O）と並行しない</strong>（T-M・T-N とは同じ <code>lib/app/</code> / <code>saved/presentation</code> を触るため。T-O とはファイルが重ならないが、T-P を T-H1〜T-O の完了後に走らせるため）。<strong>実行時期は D-05 §10 の T-H1〜T-O がすべて完了した後</strong>（D-05 §10 末尾と同じ）。<strong>D-05 §10 の片付けタスク <code>T-Q</code>（<code>lib/core/ui/list/</code>・<code>test/core/ui/list/</code> のみ）・<code>T-R</code>（<code>test/helpers/</code> のみ）とは触るファイルが重ならないため、T-P と並行してよい</strong>（D-05 §8.1 の D-04 宛。T-Q・T-R の完了を T-P の前提にしない）。</p>
@@ -4889,6 +5333,14 @@ class TabReselect extends _$TabReselect {
 <tr>
 <td>2026-10-19</td>
 <td><strong>再開（draft）</strong>：FOLLOWUPS 2-12〜2-19・4-2・4-23・4-25 の反映（pm-handoff/d04-reopen-plan.md）。開発者判断 2026-10-19 #1（2-17 は (a) 根拠を「filter を替えたときの備え」に弱める）・#2（4-22・4-24 は別バッチ）に従う。あわせて riverpod 3 の既定リトライ（FOLLOWUPS 3-32・4-27、T-61）の扱いを決める</td>
+</tr>
+<tr>
+<td>2026-10-19</td>
+<td><strong>FOLLOWUPS 2-12〜2-19・4-2・4-23・4-25 の反映</strong>。開発者判断 2026-10-19 <strong>#1</strong>：2-17 は (a)（#75 の根拠を「filter を替えたときの備え」に弱め、§8.2.4 に「TestFlight で切り分けに使うには事前に filter を替える（フェーズ 6 前に判断）」）。<strong>#2</strong>：4-22・4-24 は入れない（別バッチ）。内容：§4.8 の CI 抜粋の末尾 3 step を <code>app-ci.yml</code>（main）に同期し（2-12 の step 名の引用・2-13 の 7 判定 + ヘルパ 4 つ・(a-i)〜(a-vi) と期待値 8 変数・<code>grep -a</code>・3 つ目の step のファイル / 宣言の存在確認と 1 行内のブロックコメント除去）、「D-04 に未収載」のコメント 6 か所を収載済みに書き換え、抜粋の直後に一致の規則と T-F5a (a-1)〜(a-4) ↔ (a-i)〜(a-vi) の対応表を置いた。限界一覧に (A)-7〜(A)-11・(B)-5・(B)-6 を追加し、<code>code()</code> → <code>app_logger_code_lines()</code>・<code>danger</code> → <code>forbidden_interp</code> に名前を追随（2-13・2-14）。§4.9 の「同じ変更で直す」を期待値 8 変数の表に（2-15）。import を <code>package:drift/isolate.dart&#39; show DriftRemoteException</code> に改め <code>@experimental</code> の注記（§3.1・§4.9・§8.2.4。2-16）。§4.9 冒頭・message 規約・コード片のコメント・§8 #75・§8.2.4 を「既定の <code>DevelopmentFilter</code> では release / profile のログは出ない」前提に（2-17）。<code>sqlite3: ^2.6.0</code>（2-18）。#75 に <code>--obfuscate</code> の見直し条件（2-19）。<code>AppLifecycleSync._warn</code> を必須 3 引数 + <code>_warnMessage</code> に分割（§4.9・§5.3。4-25）。§5.1 <code>buildOverrides</code> 手順 1a と §8 #77（未捕捉例外の出力経路の差し替え。4-23。<strong>4-23 の (2) <code>driftRuntimeOptions.debugPrint</code> は drift 2.31.0 で release に到達しないことを確認したため差し替えない</strong>）。§8 #76（生成物の鮮度検査は条件付きの先送り。§4.7 から参照。4-2）。§8.1・§10 に追随タスク <strong>T-F6</strong> を追加。§9 に <strong>Q-1</strong>（Riverpod 3 の既定リトライを Provider ごとに切るか全体の既定で切るか）・<strong>Q-2</strong>（<code>FcmPushGateway</code> で APNs トークンを待つか）を挙げた</td>
+</tr>
+<tr>
+<td>2026-10-19</td>
+<td><strong>§9 の未決定事項 2 件の反映</strong>（開発者の委任により推奨案を採用）。<strong>Q-1 → §8 #78</strong>（(C)：<code>bootstrap.dart</code> を <code>ProviderScope(retry: noRetry, …)</code> にして app 全体の既定で切り、既存の個別指定とそのテストは残す。書き戻しは <code>app-ci.yml</code> の <strong>4 つ目の検査 step</strong>（<code>bootstrap.dart</code> のコード行の <code>ProviderScope(</code> と <code>retry: noRetry</code> がちょうど 1 件ずつ）で止める。§3.2・§4.7 の規則表に「自動リトライ」の行・§4.8 の抜粋に step と限界 (A)-12・§5.1 手順 3・§5.4.2・§8 #67・§8.1 / §10 T-F6（改修 4 → 5、完了条件に赤の確認と個別指定の残存確認）を追随）。<strong>Q-2 → §8 #79</strong>（(A)：<code>FcmPushGateway</code> の <code>subscribe</code> / <code>unsubscribe</code> は 15 秒のタイムアウトの内側で <code>getAPNSToken()</code> を 500 ms 間隔で待つ。待ちのまま時間切れは <code>debug</code> ログに 1 行残し、時間切れの後に購読操作を遅れて呼ばない。出典が非公式 1 件であることと T-G の実機確認での見直しの条件を #79 に記録。§4.6 にコード片・§6 の該当行・§10 T-G（= T-36。費用のため停止中）の成果物と完了条件 (c) を追随）。<strong>既存の誤りの訂正</strong>：自動リトライの所要時間「約 50 秒」を riverpod 3.0.3 の <code>defaultRetry</code> に合わせて「<strong>約 38 秒</strong>」に（§5.4.2・§5.4 のコード片・§8 #61）、§8.1 / §10 の T-F5a・T-F5b の状態を「未起票」→「<strong>T-53 / T-54・done</strong>（FOLLOWUPS 4-15）」に、§5.3 <code>_onLaunch</code> 手順 2 の catch を <code>on Exception</code> → <strong><code>on Object</code></strong> に（実装 <code>app_lifecycle_sync.dart</code> の理由＝依存先が <code>Error</code> を投げても手順 3 をスキップしない、に揃えた。§5.7「失敗時」・§8 #80）。<strong>§9 は「該当なし」</strong>。画面定義書・D-05・CLAUDE.md・<code>app/</code> は編集していない</td>
 </tr>
 </tbody></table>
 

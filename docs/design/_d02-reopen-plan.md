@@ -489,6 +489,22 @@ T-52（§10 Task J）の使い捨てワークフロー（run `39098907131`）で
 - 推奨：**案 C を第一候補**（追加の権限も外部送信も要らず、§8 #25 の既定の通知に乗る）。ただし挙動は T-52 と同じ方式の使い捨てワークフローで 1 回実測してから確定する。実測までの間は案 A の撤回文を入れる
 - 連動：§5.6（YAML とコメント）・§6・§7 冒頭 (d)（再実測の手順）・§8 #64・#70 の改訂、§10 に再実測のタスクを足す
 
+### J-18 追記：§8 #70 の代替として (d) step 単位の timeout を採る（A2 調査・PM 指示、2026-10-18）
+
+- **推奨を確定方向で (d) とする**（上の案 C と同じ）。比較表は `/Users/shunpei/orca/workspaces/CurtainCall/pm-handoff/d02-70-timeout-notify.md`（A2）。次善は (a) `gh issue create`（`issues: write` が要り #52 の改訂を伴う）
+- 実現の 2 形：
+  - (d-1) `collect` の各ステップに `timeout-minutes`（ジョブ単位の 15 分より短く、合計が 15 分を超えない配分）。**ステップの `timeout-minutes` 超過が step の failure・job の failure になるかは GitHub Docs に明記が無い → 未検証**
+  - (d-2) `収集・差分・確定・通知` ステップの `npm start` を coreutils の `timeout <秒> npm start` で包む。超過時は**終了コード 124** を返すのでステップは確実に failure になり、job も failure → 既定の失敗通知（§8 #25）の経路に載る。ジョブ単位の `timeout-minutes: 15` は最後の安全網として残す
+- **未検証（U-11）**：(d-1) の挙動（run の結論が failure になり失敗通知メールが届くか）。T-52 と同じ方式の使い捨てワークフロー（`workflow_dispatch` のみ・PR でマージ → 1 回実行 → 削除 PR）で 1 回実測する。(d-2) は終了コード 124 が非 0 なので failure は確実だが、メール到達は同じ実行で併せて確認する
+- **書き換え対象（「timeout = キャンセル」を前提にした記述。行番号は docs/d02-reopen の現行 D-02.md）**：
+  - §5.6 YAML：1340–1341（`実行サマリ` の `if: !cancelled()` のコメント「timeout-minutes 超過はジョブの『キャンセル』なのでこのステップは走らない」）、1457–1472（`detect-collect-timeout` ジョブ一式。(d) 採用後は残すか削るかを決める。ジョブ単位の上限に達した場合の安全網として残す案を推奨）、1479（`deploy-pages` のコメント「published が空文字＝キャンセル」）
+  - §5.6 表：1511（`published` が `unknown` / 空の行）、1526（`timeout-minutes` 超過の検知の行。全面改稿）
+  - §6：1649・1650（`collect` が `timeout-minutes: 15` を超えた (a)(b) の 2 行）、1651（`detect-collect-timeout` が起動しない行）
+  - §7 冒頭 (d)：1691（①〜⑤ の段。② ③ 不成立の記録と、(d) 用の再実測手順への差し替え）
+  - §8：#64（1852。timeout ＝ キャンセル → `detect-collect-timeout`）、#70（1856。代替の発動と (d) の採用を追記）
+  - §10：Task J の状態セル（実測済み・② ③ 不成立）と、(d) の実装・再実測のタスク行の追加
+  - 連動：§5.5 `main.ts` 手順 11 / §5.4 `CLOSE_TIMEOUT_MS` は timeout の主因候補として参照されるだけで変更不要（detect ジョブの echo 文言を移す場合のみ追随）
+
 ## 付録
 
 ### A-1 `formatErrorChain`（§4.7。P-02・J-3 推奨案 A）

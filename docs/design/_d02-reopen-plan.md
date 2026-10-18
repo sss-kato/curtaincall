@@ -471,6 +471,24 @@ C-3a は入力が ASCII のみなので、`truncateUtf16` のままでも K-6 �
 | V-2 | `collector/test/domain/category.test.ts` が CLAUDE.md・D-01 §7 のどこで認められたか（T-03 の申し送りの経緯） | `git log --follow collector/test/domain/category.test.ts`、T-03 のタスクファイル・PR、FOLLOWUPS | J-14 の補足（推奨には影響しない） |
 | V-3 | D-02 §5.1 手順 6-5〜6-7 の `warn` / `debug` のフィールド名（`publishedAt`・`category`・`thumbnail`）が設計書のどこにも無いこと（本節は 1031〜1038 行を読んで「無い」と判断した） | D-02 §4.7 の経路表・§6 を `"invalid publishedAt"`・`"unknown category"`・`"invalid thumbnail url"` で grep（本節執筆時の grep では 0 件） | T-9 の書き方（フィールド名を設計書に初めて書くことになる） |
 
+## T-52 の実測結果による追加項目（J-18。2026-10-18）
+
+T-52（§10 Task J）の使い捨てワークフロー（run `39098907131`）で §7 冒頭 (d) を実測した結果、**② と ③ が不成立**だった（① ④ ⑤ は成立。詳細は docs/tasks/T-52.md の完了報告）。
+
+| # | 前提 | 実測 | 影響する記述 |
+|---|---|---|---|
+| ② | ジョブ 1 つの失敗で実行全体の結論が `failure` になる | **不成立**。`detect-collect-timeout` が failure でも、キャンセルされたジョブがあると run の結論は `cancelled` | §5.6 `timeout-minutes` 超過の検知の行・`detect-collect-timeout` ジョブのコメント、§6 の該当行、§8 #64・#70 |
+| ③ | 失敗通知メールが届く | **不成立**（開発者が未着を確認）。run が cancelled なので GitHub の既定のワークフロー失敗通知（§8 #25）の対象にならない | 同上 |
+
+### J-18 timeout 検知の通知手段の再設計（要判断・開発者確認）
+
+§8 #70 の代替（「メールで届く」の記述を撤回）を適用し、timeout の通知手段を決め直す。
+- **案 A**：「メールで届く」を撤回し、Actions 画面の目視（cancelled の黄色）に頼ると明記する。`detect-collect-timeout` は「run 内で検知ジョブが赤くなり、ログに確認先が出る」役割に縮める（削除はしない）
+- **案 B**：`detect-collect-timeout` から通知を自前で出す（例：Issue を起票する `gh issue create`。`permissions: issues: write` が増える。外部サービスへの送信は費用・Secrets が増えるので採らない）
+- **案 C**：`collect` の `timeout-minutes` 超過を cancel ではなく失敗にする（ステップ単位の `timeout-minutes` を各ステップに置き、ジョブ単位の上限より先に切れるようにする。ステップの timeout は失敗扱いになり、既定の失敗通知の対象になる）。**要実測**（ステップ timeout 時の run の結論と通知）
+- 推奨：**案 C を第一候補**（追加の権限も外部送信も要らず、§8 #25 の既定の通知に乗る）。ただし挙動は T-52 と同じ方式の使い捨てワークフローで 1 回実測してから確定する。実測までの間は案 A の撤回文を入れる
+- 連動：§5.6（YAML とコメント）・§6・§7 冒頭 (d)（再実測の手順）・§8 #64・#70 の改訂、§10 に再実測のタスクを足す
+
 ## 付録
 
 ### A-1 `formatErrorChain`（§4.7。P-02・J-3 推奨案 A）

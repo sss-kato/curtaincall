@@ -66,7 +66,7 @@
 | T-56 | D-05 | T-T | E-18（バージョン行）の折り返しに対応する | app | T-53 | done |
 | T-57 | — | FOLLOWUPS 4-1 | minute_clock.g.dart の生成物の鮮度を回復する | app | — | done（取り下げ） |
 | T-58 | — | FOLLOWUPS 4-4 | git の子プロセスへ渡す環境変数を必要なものだけに絞る | collector | — | todo |
-| T-59 | — | FOLLOWUPS 4-5・4-6・4-9 | app テストの重複を整理する | app | — | in_progress |
+| T-59 | — | FOLLOWUPS 4-5・4-6・4-9 | app テストの重複を整理する | app | — | done |
 | T-60 | — | docs の乖離（A2） | README.md と docs/workflow.md を CLAUDE.md・スキル定義・コードの実態に合わせて改訂する | docs | — | done |
 
 ## 並行の組

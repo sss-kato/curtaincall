@@ -40,7 +40,7 @@
 | T-30 | D-05 | T-J | saved の UseCase | app | T-26 | done |
 | T-31 | D-05 | T-K | settings / notifications の UseCase | app | T-27 | done |
 | T-32 | D-05 | T-L | browser の UseCase | app | T-27 | done |
-| T-33 | D-05 | T-M | ホーム画面（S-01） | app | T-28, T-29, T-30, T-31, T-32, T-39, T-53, T-54 | todo |
+| T-33 | D-05 | T-M | ホーム画面（S-01） | app | T-28, T-29, T-30, T-31, T-32, T-39, T-53, T-54 | in_progress |
 | T-34 | D-05 | T-N | 保存画面（S-02） | app | T-28, T-30, T-32, T-33, T-39, T-53, T-54 | todo |
 | T-35 | D-05 | T-O | 設定画面（S-03） | app | T-28, T-29, T-31, T-32 | done |
 | T-36 | D-04 | T-G | FCM 実装（フェーズ 5、Apple Developer Program 加入後） | app | T-23 | todo |

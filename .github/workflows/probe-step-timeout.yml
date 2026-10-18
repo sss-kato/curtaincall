@@ -1,0 +1,29 @@
+# 使い捨て：D-02 reopen の U-11（steps[*].timeout-minutes 超過時の step・job・実行全体の結論と失敗通知メール）を
+# main で 1 回だけ実測する（§8 #70 の代替 (d)。T-52 と同じ方式）。
+# PR で main にマージ → gh workflow run で 1 回実行 → 別 PR で削除する。恒久的な成果物にしない。
+# 外部 action は使わない（§8 #52）。$GITHUB_OUTPUT へは書かない。
+name: probe-step-timeout
+on:
+  workflow_dispatch:
+permissions: {} # 何も読み書きしない（§8 #52 と同じ既定）
+concurrency:
+  group: probe-step-timeout # 本番の collect（group: collect）の待機列に入らない
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5 # ジョブ単位の timeout は発火させない（step 単位の timeout だけを測る）
+    permissions: {}
+    steps:
+      - name: sleep 120（step の timeout-minutes 1 で止まる）
+        timeout-minutes: 1
+        run: sleep 120
+      - name: "!cancelled() のステップ（step timeout がキャンセル扱いならスキップ、失敗扱いなら実行）"
+        if: ${{ !cancelled() }}
+        run: echo "U-11：step timeout の後も cancelled() は偽だった"
+      - name: failure() のステップ（step timeout が失敗扱いなら実行）
+        if: ${{ failure() }}
+        run: echo "U-11：step timeout の後に failure() が真だった"
+      - name: always() のステップ（対照）
+        if: ${{ always() }}
+        run: echo "対照：always() のステップは実行された"

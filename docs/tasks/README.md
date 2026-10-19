@@ -69,6 +69,7 @@
 | T-59 | — | FOLLOWUPS 4-5・4-6・4-9 | app テストの重複を整理する | app | — | done |
 | T-60 | — | docs の乖離（A2） | README.md と docs/workflow.md を CLAUDE.md・スキル定義・コードの実態に合わせて改訂する | docs | — | done |
 | T-61 | — | FOLLOWUPS 4-27・4-28 | riverpod 3 の既定リトライを無効化する（ホーム側） | app | T-33, T-34 | done |
+| T-62 | D-04 | T-F6 | D-04 の 2026-10-19 再開に実装を追随させる | app | T-53, T-54 | todo |
 
 ## 並行の組
 

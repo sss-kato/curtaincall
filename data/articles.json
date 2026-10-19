@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-18T17:32:10+09:00",
+  "generatedAt": "2026-10-19T21:54:08+09:00",
   "articles": [
     {
       "id": "9f835345e259904a",
@@ -1015,6 +1015,17 @@
       "contentHash": "dfe422d3f6f9fa93"
     },
     {
+      "id": "33bd1b441932f90a",
+      "companyId": "shiki",
+      "title": "劇団四季オリジナルグッズのご紹介",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/037446.html",
+      "category": "other",
+      "publishedAt": "2026-10-19T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
+      "contentHash": "5aeef51fc41ef876",
+      "fetchedAt": "2026-10-19T21:54:08+09:00"
+    },
+    {
       "id": "0ab16a6f364c9d0e",
       "companyId": "shiki",
       "title": "『バック・トゥ・ザ・フューチャー』東京公演 公演グッズのご紹介",
@@ -1120,9 +1131,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038045.html",
       "category": "other",
       "publishedAt": "2026-10-04T00:00:00+09:00",
+      "fetchedAt": "2026-10-04T21:13:27+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/MMhiroshima_news00-thumb-500x373-41679.jpg",
-      "contentHash": "bf8ccc7fef137f77",
-      "fetchedAt": "2026-10-04T21:13:27+09:00"
+      "contentHash": "bf8ccc7fef137f77"
     },
     {
       "id": "bbbeefa71444489b",

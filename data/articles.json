@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-20T13:36:07+09:00",
+  "generatedAt": "2026-10-20T18:56:22+09:00",
   "articles": [
     {
       "id": "9b14899c0c410247",
@@ -12,6 +12,26 @@
       "contentHash": "7781918b91606216",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-10-20T13:36:07+09:00"
+    },
+    {
+      "id": "00ceb64f8b579aa6",
+      "companyId": "takarazuka",
+      "title": "Le CINQ（ル・サンク）vol.258『エリザベート－愛と死の輪舞－』発売のご案内",
+      "url": "https://kageki.hankyu.co.jp/news/20261020_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-20T00:00:00+09:00",
+      "contentHash": "f816e86df8bde24c",
+      "fetchedAt": "2026-10-20T18:56:22+09:00"
+    },
+    {
+      "id": "055afeb4a9d8d359",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
+      "url": "https://kageki.hankyu.co.jp/news/20261020_005.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-20T00:00:00+09:00",
+      "contentHash": "f406c990ffa40fa2",
+      "fetchedAt": "2026-10-20T18:56:22+09:00"
     },
     {
       "id": "9397d8006ff09759",
@@ -204,8 +224,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261014_004.html",
       "category": "streaming",
       "publishedAt": "2026-10-14T00:00:00+09:00",
-      "contentHash": "f406c990ffa40fa2",
-      "fetchedAt": "2026-10-14T15:02:42+09:00"
+      "fetchedAt": "2026-10-14T15:02:42+09:00",
+      "contentHash": "f406c990ffa40fa2"
     },
     {
       "id": "88071af352b554c3",
@@ -254,8 +274,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261013_001.html",
       "category": "ticket",
       "publishedAt": "2026-10-13T00:00:00+09:00",
-      "contentHash": "95fd7cbe257c90db",
-      "fetchedAt": "2026-10-13T16:36:25+09:00"
+      "fetchedAt": "2026-10-13T16:36:25+09:00",
+      "contentHash": "95fd7cbe257c90db"
     },
     {
       "id": "6cc13e56a4ef56e8",
@@ -396,8 +416,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260901_004.html",
       "category": "other",
       "publishedAt": "2026-10-06T00:00:00+09:00",
-      "contentHash": "d52c549d313198cb",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "d52c549d313198cb",
       "updatedAt": "2026-10-06T11:52:22+09:00"
     },
     {
@@ -993,26 +1013,6 @@
       "publishedAt": "2026-08-28T00:00:00+09:00",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "f1e073029191029b"
-    },
-    {
-      "id": "59fdbd8b044f5f1d",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場内「レビューショップ」「劇場売店」期間限定商品の販売について",
-      "url": "https://kageki.hankyu.co.jp/news/20260828_003.html",
-      "category": "other",
-      "publishedAt": "2026-08-28T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "50368c0464c4d799"
-    },
-    {
-      "id": "57d3da30008603cb",
-      "companyId": "takarazuka",
-      "title": "＜公演時間＞星組 宝塚大劇場公演",
-      "url": "https://kageki.hankyu.co.jp/news/20260825_004.html",
-      "category": "schedule",
-      "publishedAt": "2026-08-25T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "85c02f9d1f6e6398"
     },
     {
       "id": "33bd1b441932f90a",

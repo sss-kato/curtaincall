@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-21T10:29:27+09:00",
+  "generatedAt": "2026-10-21T16:26:24+09:00",
   "articles": [
     {
       "id": "bf03e4212d47ca5e",
@@ -12,6 +12,26 @@
       "contentHash": "e99516884ad214a0",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-10-21T10:29:27+09:00"
+    },
+    {
+      "id": "725efcd294cbc4cf",
+      "companyId": "takarazuka",
+      "title": "「TAKARAZUKA Christmas Festa －心きらめく冬の祝祭－」の開催について",
+      "url": "https://kageki.hankyu.co.jp/news/20261021_10.html",
+      "category": "other",
+      "publishedAt": "2026-10-21T00:00:00+09:00",
+      "contentHash": "7dab33a16b99521e",
+      "fetchedAt": "2026-10-21T16:26:24+09:00"
+    },
+    {
+      "id": "ed5cd972fe583e3c",
+      "companyId": "takarazuka",
+      "title": "＜初日舞台映像＞花組公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://youtu.be/Q_cTCz_YNEU",
+      "category": "other",
+      "publishedAt": "2026-10-21T00:00:00+09:00",
+      "contentHash": "37bd1c1644a343e2",
+      "fetchedAt": "2026-10-21T16:26:24+09:00"
     },
     {
       "id": "7f19334aca837599",
@@ -235,8 +255,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261014_005.html",
       "category": "new_work",
       "publishedAt": "2026-10-14T00:00:00+09:00",
-      "contentHash": "d89cd28aa06e8a92",
-      "fetchedAt": "2026-10-14T20:40:13+09:00"
+      "fetchedAt": "2026-10-14T20:40:13+09:00",
+      "contentHash": "d89cd28aa06e8a92"
     },
     {
       "id": "35959fa80f788bbd",
@@ -994,26 +1014,6 @@
       "publishedAt": "2026-09-01T00:00:00+09:00",
       "contentHash": "a2f540182de2d902",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "7a7f1c576e2c4244",
-      "companyId": "takarazuka",
-      "title": "花組 退団者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260830_003.html",
-      "category": "person",
-      "publishedAt": "2026-08-30T00:00:00+09:00",
-      "contentHash": "b41229c07587d44a",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "ab0f3ba6a900cb05",
-      "companyId": "takarazuka",
-      "title": "＜カスタマイズCD＞星組新曲追加のお知らせ（キャトルレーヴ宝塚店）",
-      "url": "https://kageki.hankyu.co.jp/news/20260829_002.html",
-      "category": "other",
-      "publishedAt": "2026-08-29T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "f46792b937cca78f"
     },
     {
       "id": "33bd1b441932f90a",
@@ -2197,6 +2197,16 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "87dcc1d63889a85e",
+      "companyId": "shinkansen",
+      "title": "／髑髏城／【東京】11月公演 追加販売（先着）決定！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=13978",
+      "category": "other",
+      "publishedAt": "2026-10-21T12:00:00+09:00",
+      "contentHash": "8276c1ac1fcee70e",
+      "fetchedAt": "2026-10-21T16:26:24+09:00"
+    },
+    {
       "id": "103f8ee64feb95e6",
       "companyId": "shinkansen",
       "title": "／DOKURO77／オリジナルグッズ WEB販売決定！",
@@ -2293,8 +2303,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13727",
       "category": "streaming",
       "publishedAt": "2026-09-11T12:00:00+09:00",
-      "contentHash": "6ee6e199ac3b681c",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "6ee6e199ac3b681c"
     },
     {
       "id": "0a1a648ddba24e35",

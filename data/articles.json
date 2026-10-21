@@ -1,7 +1,28 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-20T18:56:22+09:00",
+  "generatedAt": "2026-10-21T10:29:27+09:00",
   "articles": [
+    {
+      "id": "bf03e4212d47ca5e",
+      "companyId": "takarazuka",
+      "title": "（追）ル・サンク特別編集 月組東急シアターオーブ公演『NINE』好評発売中！",
+      "url": "https://kageki.hankyu.co.jp/news/20260912_002.html",
+      "category": "other",
+      "publishedAt": "2026-10-21T00:00:00+09:00",
+      "contentHash": "e99516884ad214a0",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-21T10:29:27+09:00"
+    },
+    {
+      "id": "7f19334aca837599",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第1抽選方式」＞雪組 東京国際フォーラム ホールC公演『Monte-Cristo －le spectacle musical－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261021_003.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-21T00:00:00+09:00",
+      "contentHash": "f383cbbbb800b851",
+      "fetchedAt": "2026-10-21T10:29:27+09:00"
+    },
     {
       "id": "9b14899c0c410247",
       "companyId": "takarazuka",
@@ -875,16 +896,6 @@
       "contentHash": "ea16eed411cc6cf2"
     },
     {
-      "id": "bf03e4212d47ca5e",
-      "companyId": "takarazuka",
-      "title": "ル・サンク特別編集 月組東急シアターオーブ公演『NINE』発売のご案内",
-      "url": "https://kageki.hankyu.co.jp/news/20260912_002.html",
-      "category": "other",
-      "publishedAt": "2026-09-12T00:00:00+09:00",
-      "contentHash": "b361f5f11a20d715",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
       "id": "9fa0082625e4ceaa",
       "companyId": "takarazuka",
       "title": "＜公演時間＞月組 東急シアターオーブ公演",
@@ -1003,16 +1014,6 @@
       "publishedAt": "2026-08-29T00:00:00+09:00",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "f46792b937cca78f"
-    },
-    {
-      "id": "1e0983d80931a408",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場レストラン 星組公演特別メニューについて",
-      "url": "https://kageki.hankyu.co.jp/news/20260828_001.html",
-      "category": "other",
-      "publishedAt": "2026-08-28T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "f1e073029191029b"
     },
     {
       "id": "33bd1b441932f90a",
@@ -2084,9 +2085,9 @@
       "url": "https://www.tohostage.com/tamiou/",
       "category": "other",
       "publishedAt": "2026-07-13T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/2b22682f71ebb09a359541aad6108d0abb5623b88e0ae3b44eb78e6a326313e3.jpg",
-      "contentHash": "ec1d0fa5d8218ba0",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "ec1d0fa5d8218ba0"
     },
     {
       "id": "69c508becc8dcfe0",
@@ -2106,9 +2107,9 @@
       "url": "https://www.tohostage.com/meoto/",
       "category": "new_work",
       "publishedAt": "2026-06-30T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/9ba5e812c55ef75db078711b7ee45a2bf275d66553f83af7c17a6b373caf7c07.jpg",
-      "contentHash": "2244b11ab0ca6f9c"
+      "contentHash": "2244b11ab0ca6f9c",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "01d567fee3f3888a",

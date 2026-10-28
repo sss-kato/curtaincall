@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-29T03:46:11+09:00",
+  "generatedAt": "2026-10-29T08:05:16+09:00",
   "articles": [
     {
       "id": "a1cdb77b340163f2",
@@ -1009,14 +1009,14 @@
       "contentHash": "f406c990ffa40fa2"
     },
     {
-      "id": "6983602598cd6199",
+      "id": "973b24d45eec648f",
       "companyId": "takarazuka",
-      "title": "【お知らせ】なりすましTikTokアカウントにご注意ください",
-      "url": "https://kageki.hankyu.co.jp/news/20260920_10.html",
-      "category": "other",
+      "title": "（追）＜一般前売＞宙組 全国ツアー 刈谷市総合文化センター アイリス公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
+      "url": "https://kageki.hankyu.co.jp/news/20260919_001.html",
+      "category": "ticket",
       "publishedAt": "2026-09-20T00:00:00+09:00",
-      "contentHash": "173bd28a6ba39950",
-      "fetchedAt": "2026-10-29T03:46:11+09:00"
+      "contentHash": "86d97e418ffdabc1",
+      "fetchedAt": "2026-10-29T08:05:16+09:00"
     },
     {
       "id": "33bd1b441932f90a",

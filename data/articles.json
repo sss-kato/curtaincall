@@ -1,7 +1,230 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-23T16:20:41+09:00",
+  "generatedAt": "2026-10-28T14:23:13+09:00",
   "articles": [
+    {
+      "id": "a1cdb77b340163f2",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞宙組 全国ツアー 市川市文化会館公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
+      "url": "https://kageki.hankyu.co.jp/news/20261010_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "contentHash": "a621004fde68ac9e",
+      "fetchedAt": "2026-10-10T15:55:34+09:00",
+      "updatedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "57ac457577bcfeaf",
+      "companyId": "takarazuka",
+      "title": "（追）外部出演 タイ・バンコクで最大の訪日観光PRイベント「Visit Japan FIT Fair＃18」",
+      "url": "https://kageki.hankyu.co.jp/news/20260901_005.html",
+      "category": "other",
+      "publishedAt": "2026-10-22T00:00:00+09:00",
+      "contentHash": "30e48cb9e83108f4",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "e3cfe4a9ad14b621",
+      "companyId": "takarazuka",
+      "title": "（追）新サービス！宝塚歌劇デジタルカードコレクション「My Gallery（マイ ギャラリー）」",
+      "url": "https://kageki.hankyu.co.jp/news/20260915_002.html",
+      "category": "other",
+      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "contentHash": "e3335ff6f99881b2",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "05a7d71049399354",
+      "companyId": "takarazuka",
+      "title": "東京宝塚劇場チケットカウンターの営業について",
+      "url": "https://kageki.hankyu.co.jp/news/20261028_003.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-28T00:00:00+09:00",
+      "contentHash": "80b3478fe28b9c8e",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "e40098e7b9cb1693",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞星組 東京宝塚劇場公演",
+      "url": "https://kageki.hankyu.co.jp/news/20261028_002.html",
+      "category": "schedule",
+      "publishedAt": "2026-10-28T00:00:00+09:00",
+      "contentHash": "cdbb5e610ba51f44",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "13bc2f2cda82a862",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞宙組 全国ツアー公演",
+      "url": "https://kageki.hankyu.co.jp/news/20261027_001.html",
+      "category": "schedule",
+      "publishedAt": "2026-10-27T00:00:00+09:00",
+      "contentHash": "fbc4003741755f9d",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "1cf4a8c01cd1c05c",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”タカラット2倍キャンペーン実施＆パック販売のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261027_009.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-27T00:00:00+09:00",
+      "contentHash": "743e96e97aa73576",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "271828bf22bccc24",
+      "companyId": "takarazuka",
+      "title": "＜カスタマイズCD＞星組配信人気曲追加のお知らせ（キャトルレーヴ東京店）",
+      "url": "https://kageki.hankyu.co.jp/news/20261027_002.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-27T00:00:00+09:00",
+      "contentHash": "4e8ca4f865303a90",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "56d6c8d195e48bf9",
+      "companyId": "takarazuka",
+      "title": "宝塚歌劇カスタマープログラム システムメンテナンスについて",
+      "url": "https://kageki.hankyu.co.jp/news/20261027_10.html",
+      "category": "other",
+      "publishedAt": "2026-10-27T00:00:00+09:00",
+      "contentHash": "cdde17a619d945be",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "6cc02dba50b42f39",
+      "companyId": "takarazuka",
+      "title": "（追）「宝塚友の会」及び「宝塚歌劇共通ID＋」抽選申込再開と申込期間の変更（延長）について",
+      "url": "https://kageki.hankyu.co.jp/news/20261023_11.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-27T00:00:00+09:00",
+      "contentHash": "384195dcb362696b",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "c84c71f0fb1b5b34",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
+      "url": "https://kageki.hankyu.co.jp/news/20261027_010.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-27T00:00:00+09:00",
+      "contentHash": "f406c990ffa40fa2",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "15497b77c0d69baf",
+      "companyId": "takarazuka",
+      "title": "（追）サービス一部再開のご案内",
+      "url": "https://kageki.hankyu.co.jp/news/20261023_10.html",
+      "category": "other",
+      "publishedAt": "2026-10-24T00:00:00+09:00",
+      "contentHash": "0db793f367d9cab3",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "1d2b1f45f68897dd",
+      "companyId": "takarazuka",
+      "title": "＜初日舞台映像（ロング）＞花組公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://youtu.be/x2-1a2xuzuQ",
+      "category": "other",
+      "publishedAt": "2026-10-24T00:00:00+09:00",
+      "contentHash": "ff1806cf868c7b4c",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "9e5634869b4429bb",
+      "companyId": "takarazuka",
+      "title": "＜一部の配役決定＞雪組 梅田芸術劇場メインホール／東京国際フォーラム ホールC公演『Monte-Cristo －le spectacle musical－』",
+      "url": "https://kageki.hankyu.co.jp/revue/2026/montecristo/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-10-24T00:00:00+09:00",
+      "contentHash": "cc305360b7b20452",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "1094556827f4ed78",
+      "companyId": "takarazuka",
+      "title": "月組 退団者のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261023_002.html",
+      "category": "person",
+      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "contentHash": "ae7a74255c78e5c1",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "23f6293754d284d6",
+      "companyId": "takarazuka",
+      "title": "＜その他の配役決定＞月組 宝塚大劇場／東京宝塚劇場公演『天穹のアルテミス』",
+      "url": "https://kageki.hankyu.co.jp/revue/2026/tenkyuunoartemis/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "contentHash": "e8d1bf930c0dc0b9",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "502a91c7f55eeca4",
+      "companyId": "takarazuka",
+      "title": "＜ブルーレイ・CD＞鳳月杏 退団記念 メモリアルキャンペーン実施のお知らせ",
+      "url": "https://www.tca-pictures.net/shop/press/2610_hozuki_campaign.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "contentHash": "4948cda73cd9f146",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "8ee812f837528b4a",
+      "companyId": "takarazuka",
+      "title": "月組 宝塚大劇場／東京宝塚劇場公演 休演者のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261023_007.html",
+      "category": "other",
+      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "contentHash": "a24a617a3c0a1fd6",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "8f4a73c0e64e0a67",
+      "companyId": "takarazuka",
+      "title": "月組ミュージック・パフォーマンス",
+      "url": "https://kageki.hankyu.co.jp/news/20261023_004.html",
+      "category": "other",
+      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "contentHash": "438a140f7c4cc0c2",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "c7efaf827d6381cc",
+      "companyId": "takarazuka",
+      "title": "（宝塚友の会会員様対象）宝塚歌劇カスタマープログラムWチャンスについて",
+      "url": "https://kageki.hankyu.co.jp/news/20261023_005.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "contentHash": "52b5b6cfc120de95",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
+    {
+      "id": "07b81ac8c5dc8a32",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』",
+      "url": "https://kageki.hankyu.co.jp/news/20260801_005.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "contentHash": "6b916718c732d365",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "47165f6cf3e7fbc6",
+      "companyId": "takarazuka",
+      "title": "チケット不正転売禁止法違反による検挙事案について（2026年10月22日）",
+      "url": "https://kageki.hankyu.co.jp/news/20261022_004.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-22T00:00:00+09:00",
+      "contentHash": "b72e78b2e5a7954e",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
+    },
     {
       "id": "bf03e4212d47ca5e",
       "companyId": "takarazuka",
@@ -9,8 +232,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260912_002.html",
       "category": "other",
       "publishedAt": "2026-10-21T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "e99516884ad214a0",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-10-21T10:29:27+09:00"
     },
     {
@@ -20,8 +243,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261021_10.html",
       "category": "other",
       "publishedAt": "2026-10-21T00:00:00+09:00",
-      "fetchedAt": "2026-10-21T16:26:24+09:00",
-      "contentHash": "7dab33a16b99521e"
+      "contentHash": "7dab33a16b99521e",
+      "fetchedAt": "2026-10-21T16:26:24+09:00"
     },
     {
       "id": "ed5cd972fe583e3c",
@@ -40,8 +263,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261021_003.html",
       "category": "ticket",
       "publishedAt": "2026-10-21T00:00:00+09:00",
-      "fetchedAt": "2026-10-21T10:29:27+09:00",
-      "contentHash": "f383cbbbb800b851"
+      "contentHash": "f383cbbbb800b851",
+      "fetchedAt": "2026-10-21T10:29:27+09:00"
     },
     {
       "id": "9b14899c0c410247",
@@ -50,8 +273,8 @@
       "url": "https://shop.tca-pictures.net/shop/c/cbook/",
       "category": "other",
       "publishedAt": "2026-10-20T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "7781918b91606216",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-10-20T13:36:07+09:00"
     },
     {
@@ -61,8 +284,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261020_003.html",
       "category": "other",
       "publishedAt": "2026-10-20T00:00:00+09:00",
-      "fetchedAt": "2026-10-20T18:56:22+09:00",
-      "contentHash": "f816e86df8bde24c"
+      "contentHash": "f816e86df8bde24c",
+      "fetchedAt": "2026-10-20T18:56:22+09:00"
     },
     {
       "id": "055afeb4a9d8d359",
@@ -81,8 +304,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261020_001.html",
       "category": "ticket",
       "publishedAt": "2026-10-20T00:00:00+09:00",
-      "fetchedAt": "2026-10-20T13:36:07+09:00",
-      "contentHash": "4c800dd0795d7502"
+      "contentHash": "4c800dd0795d7502",
+      "fetchedAt": "2026-10-20T13:36:07+09:00"
     },
     {
       "id": "9f835345e259904a",
@@ -101,8 +324,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260331_10.html",
       "category": "other",
       "publishedAt": "2026-10-18T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "a0dc966520b65255"
+      "contentHash": "a0dc966520b65255",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "190844fbe07f2a55",
@@ -111,8 +334,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260818_001.html",
       "category": "other",
       "publishedAt": "2026-10-17T00:00:00+09:00",
-      "fetchedAt": "2026-10-17T10:14:16+09:00",
-      "contentHash": "7fbfedc0f701763a"
+      "contentHash": "7fbfedc0f701763a",
+      "fetchedAt": "2026-10-17T10:14:16+09:00"
     },
     {
       "id": "5fbf32b2303433f5",
@@ -121,8 +344,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261017_004.html",
       "category": "streaming",
       "publishedAt": "2026-10-17T00:00:00+09:00",
-      "fetchedAt": "2026-10-17T10:14:16+09:00",
-      "contentHash": "8716c780b5cf5b0d"
+      "contentHash": "8716c780b5cf5b0d",
+      "fetchedAt": "2026-10-17T10:14:16+09:00"
     },
     {
       "id": "98c725f0efb939c1",
@@ -131,8 +354,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261017_003.html",
       "category": "other",
       "publishedAt": "2026-10-17T00:00:00+09:00",
-      "fetchedAt": "2026-10-17T10:14:16+09:00",
-      "contentHash": "18e6d0b4a1a98626"
+      "contentHash": "18e6d0b4a1a98626",
+      "fetchedAt": "2026-10-17T10:14:16+09:00"
     },
     {
       "id": "89032087bd43e028",
@@ -141,8 +364,8 @@
       "url": "https://www.tca-pictures.net/square_cp/campaign/",
       "category": "streaming",
       "publishedAt": "2026-10-16T00:00:00+09:00",
-      "fetchedAt": "2026-10-16T20:12:45+09:00",
-      "contentHash": "2d4472f3bdec4ac0"
+      "contentHash": "2d4472f3bdec4ac0",
+      "fetchedAt": "2026-10-16T20:12:45+09:00"
     },
     {
       "id": "bc3e0e2504b5720b",
@@ -151,8 +374,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261016_006.html",
       "category": "streaming",
       "publishedAt": "2026-10-16T00:00:00+09:00",
-      "fetchedAt": "2026-10-16T20:12:45+09:00",
-      "contentHash": "73d1491089b25465"
+      "contentHash": "73d1491089b25465",
+      "fetchedAt": "2026-10-16T20:12:45+09:00"
     },
     {
       "id": "679fc24020c8b6d1",
@@ -161,8 +384,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261016_001.html",
       "category": "other",
       "publishedAt": "2026-10-16T00:00:00+09:00",
-      "fetchedAt": "2026-10-16T14:43:46+09:00",
-      "contentHash": "2845059a23b4ab48"
+      "contentHash": "2845059a23b4ab48",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
     },
     {
       "id": "94ab593ec270516d",
@@ -171,8 +394,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261016_003.html",
       "category": "other",
       "publishedAt": "2026-10-16T00:00:00+09:00",
-      "fetchedAt": "2026-10-16T14:43:46+09:00",
-      "contentHash": "2b80b28b342daccf"
+      "contentHash": "2b80b28b342daccf",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
     },
     {
       "id": "9e9e1bfac6a48cbf",
@@ -181,8 +404,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261016_002.html",
       "category": "other",
       "publishedAt": "2026-10-16T00:00:00+09:00",
-      "fetchedAt": "2026-10-16T14:43:46+09:00",
-      "contentHash": "50368c0464c4d799"
+      "contentHash": "50368c0464c4d799",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
     },
     {
       "id": "644bfec7cc461a57",
@@ -200,9 +423,9 @@
       "title": "（追）＜TAKARAZUKA REVUE MUSIC＞10月配信のお知らせ",
       "url": "https://kageki.hankyu.co.jp/news/20261013_003.html",
       "category": "streaming",
-      "publishedAt": "2026-10-15T00:00:00+09:00",
-      "fetchedAt": "2026-10-14T00:51:18+09:00",
+      "publishedAt": "2026-10-27T00:00:00+09:00",
       "contentHash": "9c12ab1f301397df",
+      "fetchedAt": "2026-10-14T00:51:18+09:00",
       "updatedAt": "2026-10-15T18:46:09+09:00"
     },
     {
@@ -212,8 +435,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261001_005.html",
       "category": "streaming",
       "publishedAt": "2026-10-15T00:00:00+09:00",
-      "fetchedAt": "2026-10-01T17:43:00+09:00",
       "contentHash": "d624fff4718fdbd4",
+      "fetchedAt": "2026-10-01T17:43:00+09:00",
       "updatedAt": "2026-10-15T18:46:09+09:00"
     },
     {
@@ -223,8 +446,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261001_003.html",
       "category": "other",
       "publishedAt": "2026-10-15T00:00:00+09:00",
-      "fetchedAt": "2026-10-01T17:43:00+09:00",
       "contentHash": "b4e197928c812e45",
+      "fetchedAt": "2026-10-01T17:43:00+09:00",
       "updatedAt": "2026-10-15T13:23:13+09:00"
     },
     {
@@ -234,8 +457,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260901_003.html",
       "category": "other",
       "publishedAt": "2026-10-15T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "c31412ab82c06e94",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-10-15T13:23:13+09:00"
     },
     {
@@ -245,8 +468,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260520_009.html",
       "category": "other",
       "publishedAt": "2026-10-15T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "4754219192ffd247"
+      "contentHash": "4754219192ffd247",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "7a989ab99c77c7d1",
@@ -305,8 +528,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261013_002.html",
       "category": "ticket",
       "publishedAt": "2026-10-13T00:00:00+09:00",
-      "fetchedAt": "2026-10-13T16:36:25+09:00",
-      "contentHash": "50923bfce1e9c91a"
+      "contentHash": "50923bfce1e9c91a",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
     },
     {
       "id": "28b909af71cb9963",
@@ -325,8 +548,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261013_005.html",
       "category": "schedule",
       "publishedAt": "2026-10-13T00:00:00+09:00",
-      "fetchedAt": "2026-10-13T16:36:25+09:00",
-      "contentHash": "d7bd94675cf31870"
+      "contentHash": "d7bd94675cf31870",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
     },
     {
       "id": "86bb28380e4f6a9e",
@@ -335,8 +558,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261013_004.html",
       "category": "other",
       "publishedAt": "2026-10-13T00:00:00+09:00",
-      "fetchedAt": "2026-10-13T16:36:25+09:00",
-      "contentHash": "5c986e88d4944299"
+      "contentHash": "5c986e88d4944299",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
     },
     {
       "id": "cc6c35455ed0c25a",
@@ -345,8 +568,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261010_001.html",
       "category": "ticket",
       "publishedAt": "2026-10-12T00:00:00+09:00",
-      "fetchedAt": "2026-10-10T22:31:31+09:00",
       "contentHash": "4c11c46fa7df808b",
+      "fetchedAt": "2026-10-10T22:31:31+09:00",
       "updatedAt": "2026-10-12T16:13:37+09:00"
     },
     {
@@ -356,18 +579,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261011_002.html",
       "category": "schedule",
       "publishedAt": "2026-10-11T00:00:00+09:00",
-      "fetchedAt": "2026-10-11T17:39:36+09:00",
-      "contentHash": "ff7895be0ac59932"
-    },
-    {
-      "id": "a1cdb77b340163f2",
-      "companyId": "takarazuka",
-      "title": "＜ライブ中継・ライブ配信＞宙組 全国ツアー 市川市文化会館公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
-      "url": "https://kageki.hankyu.co.jp/news/20261010_003.html",
-      "category": "streaming",
-      "publishedAt": "2026-10-10T00:00:00+09:00",
-      "fetchedAt": "2026-10-10T15:55:34+09:00",
-      "contentHash": "901c37ed2ae3fde2"
+      "contentHash": "ff7895be0ac59932",
+      "fetchedAt": "2026-10-11T17:39:36+09:00"
     },
     {
       "id": "d0790ba20de7e4c9",
@@ -376,18 +589,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261010_004.html",
       "category": "streaming",
       "publishedAt": "2026-10-10T00:00:00+09:00",
-      "fetchedAt": "2026-10-10T15:55:34+09:00",
-      "contentHash": "deea632194ceffff"
-    },
-    {
-      "id": "07b81ac8c5dc8a32",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260801_005.html",
-      "category": "streaming",
-      "publishedAt": "2026-10-10T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "6b916718c732d365"
+      "contentHash": "deea632194ceffff",
+      "fetchedAt": "2026-10-10T15:55:34+09:00"
     },
     {
       "id": "ed19e8acf7bdf7f8",
@@ -396,8 +599,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260919_003.html",
       "category": "streaming",
       "publishedAt": "2026-10-09T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "4e15daebc74ed307",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-10-09T17:51:06+09:00"
     },
     {
@@ -407,8 +610,8 @@
       "url": "https://shop.tca-pictures.net/shop/g/gTCAC-733-735/",
       "category": "other",
       "publishedAt": "2026-10-09T00:00:00+09:00",
-      "fetchedAt": "2026-10-09T10:57:20+09:00",
-      "contentHash": "a4e3117805e18e76"
+      "contentHash": "a4e3117805e18e76",
+      "fetchedAt": "2026-10-09T10:57:20+09:00"
     },
     {
       "id": "4db906bd56144630",
@@ -417,8 +620,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261008_001.html",
       "category": "ticket",
       "publishedAt": "2026-10-08T00:00:00+09:00",
-      "fetchedAt": "2026-10-08T10:46:24+09:00",
-      "contentHash": "28fba6016600a9b5"
+      "contentHash": "28fba6016600a9b5",
+      "fetchedAt": "2026-10-08T10:46:24+09:00"
     },
     {
       "id": "9956c87df6d36f6a",
@@ -427,8 +630,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261008_003.html",
       "category": "other",
       "publishedAt": "2026-10-08T00:00:00+09:00",
-      "fetchedAt": "2026-10-08T10:46:24+09:00",
-      "contentHash": "ed6a384a193a278b"
+      "contentHash": "ed6a384a193a278b",
+      "fetchedAt": "2026-10-08T10:46:24+09:00"
     },
     {
       "id": "17891212ff21b4fd",
@@ -478,8 +681,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261006_001.html",
       "category": "ticket",
       "publishedAt": "2026-10-06T00:00:00+09:00",
-      "fetchedAt": "2026-10-06T11:52:22+09:00",
-      "contentHash": "720032ee4ceced9d"
+      "contentHash": "720032ee4ceced9d",
+      "fetchedAt": "2026-10-06T11:52:22+09:00"
     },
     {
       "id": "14a8d8c0a174a01f",
@@ -488,8 +691,8 @@
       "url": "https://kageki.hankyu.co.jp/news/tv_radio.html",
       "category": "streaming",
       "publishedAt": "2026-10-06T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "8b95bc28f2e1ffe9"
+      "contentHash": "8b95bc28f2e1ffe9",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "d5fbd88d685d003a",
@@ -498,8 +701,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260704_003.html",
       "category": "other",
       "publishedAt": "2026-10-06T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "4e6d2f4e43e65b04"
+      "contentHash": "4e6d2f4e43e65b04",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "5ab87eb9de7c2238",
@@ -518,8 +721,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261003_002.html",
       "category": "ticket",
       "publishedAt": "2026-10-03T00:00:00+09:00",
-      "fetchedAt": "2026-10-03T21:26:58+09:00",
-      "contentHash": "1adc9e71dca8e5cb"
+      "contentHash": "1adc9e71dca8e5cb",
+      "fetchedAt": "2026-10-03T21:26:58+09:00"
     },
     {
       "id": "46386a0e44becd79",
@@ -528,8 +731,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261003_001.html",
       "category": "other",
       "publishedAt": "2026-10-03T00:00:00+09:00",
-      "fetchedAt": "2026-10-03T15:20:25+09:00",
-      "contentHash": "49ea22002ed903de"
+      "contentHash": "49ea22002ed903de",
+      "fetchedAt": "2026-10-03T15:20:25+09:00"
     },
     {
       "id": "150aec75ce3df439",
@@ -538,8 +741,8 @@
       "url": "https://www.tca-pictures.net/stage/2026/inazumakaikatan/",
       "category": "ticket",
       "publishedAt": "2026-10-02T00:00:00+09:00",
-      "fetchedAt": "2026-10-02T10:32:31+09:00",
-      "contentHash": "d84a7a2d225775e3"
+      "contentHash": "d84a7a2d225775e3",
+      "fetchedAt": "2026-10-02T10:32:31+09:00"
     },
     {
       "id": "9c1b2b85a9bced2a",
@@ -568,8 +771,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261001_002.html",
       "category": "streaming",
       "publishedAt": "2026-10-01T00:00:00+09:00",
-      "fetchedAt": "2026-10-01T10:59:58+09:00",
-      "contentHash": "ca0bb75ef7bf0713"
+      "contentHash": "ca0bb75ef7bf0713",
+      "fetchedAt": "2026-10-01T10:59:58+09:00"
     },
     {
       "id": "108cc6bec9fb9a1d",
@@ -608,8 +811,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260929_004.html",
       "category": "streaming",
       "publishedAt": "2026-09-29T00:00:00+09:00",
-      "fetchedAt": "2026-09-29T17:18:55+09:00",
-      "contentHash": "7e78e04bff170268"
+      "contentHash": "7e78e04bff170268",
+      "fetchedAt": "2026-09-29T17:18:55+09:00"
     },
     {
       "id": "56374204b59baccc",
@@ -638,8 +841,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260926_001.html",
       "category": "ticket",
       "publishedAt": "2026-09-27T00:00:00+09:00",
-      "fetchedAt": "2026-09-26T21:58:37+09:00",
       "contentHash": "7bbaf408cbdc0276",
+      "fetchedAt": "2026-09-26T21:58:37+09:00",
       "updatedAt": "2026-09-27T16:59:32+09:00"
     },
     {
@@ -691,8 +894,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260925_001.html",
       "category": "ticket",
       "publishedAt": "2026-09-25T00:00:00+09:00",
-      "fetchedAt": "2026-09-25T22:36:45+09:00",
-      "contentHash": "b6cf1a8d2545ef96"
+      "contentHash": "b6cf1a8d2545ef96",
+      "fetchedAt": "2026-09-25T22:36:45+09:00"
     },
     {
       "id": "161877df0658421f",
@@ -701,8 +904,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2026/elisabeth/correlation.html",
       "category": "other",
       "publishedAt": "2026-09-25T00:00:00+09:00",
-      "fetchedAt": "2026-09-25T16:37:31+09:00",
-      "contentHash": "0b5f47ab613bf259"
+      "contentHash": "0b5f47ab613bf259",
+      "fetchedAt": "2026-09-25T16:37:31+09:00"
     },
     {
       "id": "b0f90a25c4d5edd9",
@@ -711,8 +914,8 @@
       "url": "https://www.tca-pictures.net/stage/2026/rrr/",
       "category": "ticket",
       "publishedAt": "2026-09-25T00:00:00+09:00",
-      "fetchedAt": "2026-09-25T10:22:48+09:00",
-      "contentHash": "731bc95b0a405e9d"
+      "contentHash": "731bc95b0a405e9d",
+      "fetchedAt": "2026-09-25T10:22:48+09:00"
     },
     {
       "id": "27565e1874df6532",
@@ -731,8 +934,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260812_004.html",
       "category": "other",
       "publishedAt": "2026-09-24T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "7830ee883522efca",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-09-24T18:52:44+09:00"
     },
     {
@@ -772,8 +975,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260922_002.html",
       "category": "person",
       "publishedAt": "2026-09-22T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "aa1b00efcd14660b"
+      "contentHash": "aa1b00efcd14660b",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "b0a02690cc2cc5e9",
@@ -802,8 +1005,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260920_10.html",
       "category": "other",
       "publishedAt": "2026-09-20T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "173bd28a6ba39950"
+      "contentHash": "173bd28a6ba39950",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "6c9dc04dd5f21f2c",
@@ -814,206 +1017,6 @@
       "publishedAt": "2026-09-20T00:00:00+09:00",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "a670a71ef9f89b2f"
-    },
-    {
-      "id": "973b24d45eec648f",
-      "companyId": "takarazuka",
-      "title": "（追）＜一般前売＞宙組 全国ツアー 刈谷市総合文化センター アイリス公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
-      "url": "https://kageki.hankyu.co.jp/news/20260919_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-09-20T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "86d97e418ffdabc1"
-    },
-    {
-      "id": "3b2d2a782ca777d5",
-      "companyId": "takarazuka",
-      "title": "【テレビ】フジテレビ「STAR」（FNS歌謡祭 アーカイブ映像）",
-      "url": "https://kageki.hankyu.co.jp/news/20260918_001.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-18T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "45d7f3c815d2ae8f"
-    },
-    {
-      "id": "6ed6e627e66be0f6",
-      "companyId": "takarazuka",
-      "title": "公演ラインアップ【宝塚大劇場／東京宝塚劇場公演】＜2027年5月～8月・星組『あぶない刑事』『PURE LOVE!!』＞",
-      "url": "https://kageki.hankyu.co.jp/news/20260918_003.html",
-      "category": "new_work",
-      "publishedAt": "2026-09-18T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "4f45557f0c6e70b0"
-    },
-    {
-      "id": "8907c7d6fbb184f0",
-      "companyId": "takarazuka",
-      "title": "花組公演 三井住友VISAカード ミュージカル『エリザベート－愛と死の輪舞－』前夜祭",
-      "url": "https://kageki.hankyu.co.jp/news/20260918_1.html",
-      "category": "other",
-      "publishedAt": "2026-09-18T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "877cfed72e300a11"
-    },
-    {
-      "id": "0c097fbdf04d904d",
-      "companyId": "takarazuka",
-      "title": "＜PR映像＞月組公演『天穹のアルテミス』『Belle Époque』",
-      "url": "https://youtu.be/8FcWqfKqZoU",
-      "category": "other",
-      "publishedAt": "2026-09-17T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "a2eaf3116f1df2da"
-    },
-    {
-      "id": "88be8f2a58c6ec73",
-      "companyId": "takarazuka",
-      "title": "＜その他の配役決定＞宙組 全国ツアー公演『再会－風が残した君の名前－』",
-      "url": "https://kageki.hankyu.co.jp/revue/2026/saikai/cast.html",
-      "category": "cast",
-      "publishedAt": "2026-09-17T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "cadc510b6ccdca11"
-    },
-    {
-      "id": "6ce63a844202b94f",
-      "companyId": "takarazuka",
-      "title": "＜宝塚友の会 チケット先行販売「抽選方式」＞宝塚友の会 会員様限定 特別イベント『トークスペシャルin宝塚』花組",
-      "url": "https://kageki.hankyu.co.jp/news/20260916_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-09-16T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "6bb072eb9ca31a3b"
-    },
-    {
-      "id": "e3cfe4a9ad14b621",
-      "companyId": "takarazuka",
-      "title": "新サービス！宝塚歌劇デジタルカードコレクション「My Gallery（マイ ギャラリー）」",
-      "url": "https://kageki.hankyu.co.jp/news/20260915_002.html",
-      "category": "other",
-      "publishedAt": "2026-09-15T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "bc1a37e9a1bbfe74"
-    },
-    {
-      "id": "f98d78703b7458f5",
-      "companyId": "takarazuka",
-      "title": "（追）＜動画配信サービス タカラヅカ・オン・デマンド＞9月15日配信開始のラインアップ（ゴールデン・リバティ（'25年月組・東京・千秋楽）オーヴァチュア！（'25年雪組・東京・千秋楽）他）",
-      "url": "https://kageki.hankyu.co.jp/news/20260901_007.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-15T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "b8985347eed50521"
-    },
-    {
-      "id": "cec692ffc97b71b0",
-      "companyId": "takarazuka",
-      "title": "宝塚友の会「ステージトーク in 東京」宙組 無料配信の実施について",
-      "url": "https://kageki.hankyu.co.jp/news/20260913_002.html",
-      "category": "ticket",
-      "publishedAt": "2026-09-13T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "ea16eed411cc6cf2"
-    },
-    {
-      "id": "9fa0082625e4ceaa",
-      "companyId": "takarazuka",
-      "title": "＜公演時間＞月組 東急シアターオーブ公演",
-      "url": "https://kageki.hankyu.co.jp/news/20260910_001.html",
-      "category": "schedule",
-      "publishedAt": "2026-09-10T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "b12568fae42d5641"
-    },
-    {
-      "id": "1ccbb4990a59eca1",
-      "companyId": "takarazuka",
-      "title": "＜公演時間＞雪組 東京宝塚劇場公演",
-      "url": "https://kageki.hankyu.co.jp/news/20260909_001.html",
-      "category": "schedule",
-      "publishedAt": "2026-09-09T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "1b70698d2e392976"
-    },
-    {
-      "id": "935f9c87704aaafe",
-      "companyId": "takarazuka",
-      "title": "東京宝塚劇場チケットカウンターの営業について",
-      "url": "https://kageki.hankyu.co.jp/news/20260909_002.html",
-      "category": "ticket",
-      "publishedAt": "2026-09-09T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "80b3478fe28b9c8e"
-    },
-    {
-      "id": "12182844633c330f",
-      "companyId": "takarazuka",
-      "title": "＜初日舞台映像（ロング）＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://youtu.be/lDE-D5p6d_4",
-      "category": "other",
-      "publishedAt": "2026-09-08T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "365c0a77a6d10dfa"
-    },
-    {
-      "id": "dbd4d673dcb61b39",
-      "companyId": "takarazuka",
-      "title": "＜カスタマイズCD＞雪組主題歌・配信人気曲追加のお知らせ（キャトルレーヴ東京店）",
-      "url": "https://kageki.hankyu.co.jp/news/20260908_001.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-08T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "eea28e4e9caed5ce"
-    },
-    {
-      "id": "a2b93591cc92ee08",
-      "companyId": "takarazuka",
-      "title": "（追）＜一般前売＞宙組 全国ツアー 市川市文化会館公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
-      "url": "https://kageki.hankyu.co.jp/news/20260905_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-09-06T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "598e59dc96c3fbd7"
-    },
-    {
-      "id": "5bf3bb6dd2d0f016",
-      "companyId": "takarazuka",
-      "title": "（宝塚友の会会員様対象）宝塚歌劇カスタマープログラムWチャンスについて",
-      "url": "https://kageki.hankyu.co.jp/news/20260904_003.html",
-      "category": "ticket",
-      "publishedAt": "2026-09-04T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "52b5b6cfc120de95"
-    },
-    {
-      "id": "57ac457577bcfeaf",
-      "companyId": "takarazuka",
-      "title": "外部出演 タイ・バンコクで最大の訪日観光PRイベント「Visit Japan FIT Fair＃18」",
-      "url": "https://kageki.hankyu.co.jp/news/20260901_005.html",
-      "category": "other",
-      "publishedAt": "2026-09-01T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "22e793ac6251cae1"
-    },
-    {
-      "id": "78a86f4cfde1b267",
-      "companyId": "takarazuka",
-      "title": "（追）ライブマルチアングル配信の実施について",
-      "url": "https://kageki.hankyu.co.jp/news/20260809_007.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-01T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "f9192a8817ee3061"
-    },
-    {
-      "id": "eb7e62a7264e03dc",
-      "companyId": "takarazuka",
-      "title": "＜タカラヅカ・スカイ・ステージ＞10月ラインアップのお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260901_001.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-01T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "a2f540182de2d902"
     },
     {
       "id": "33bd1b441932f90a",

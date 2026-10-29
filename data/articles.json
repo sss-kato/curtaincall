@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-29T11:21:11+09:00",
+  "generatedAt": "2026-10-29T18:46:31+09:00",
   "articles": [
     {
       "id": "84ee9736a45e9aaa",
@@ -11,6 +11,16 @@
       "publishedAt": "2026-10-29T00:00:00+09:00",
       "contentHash": "6108bfa79cb6afa4",
       "fetchedAt": "2026-10-29T11:21:11+09:00"
+    },
+    {
+      "id": "6cc02dba50b42f39",
+      "companyId": "takarazuka",
+      "title": "（追）「宝塚友の会」及び「宝塚歌劇共通ID＋」抽選申込再開と申込期間の変更（延長）について",
+      "url": "https://kageki.hankyu.co.jp/news/20261023_11.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-29T00:00:00+09:00",
+      "contentHash": "384195dcb362696b",
+      "fetchedAt": "2026-10-28T14:23:13+09:00"
     },
     {
       "id": "a1cdb77b340163f2",
@@ -112,18 +122,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261027_10.html",
       "category": "other",
       "publishedAt": "2026-10-27T00:00:00+09:00",
-      "contentHash": "cdde17a619d945be",
-      "fetchedAt": "2026-10-28T14:23:13+09:00"
-    },
-    {
-      "id": "6cc02dba50b42f39",
-      "companyId": "takarazuka",
-      "title": "（追）「宝塚友の会」及び「宝塚歌劇共通ID＋」抽選申込再開と申込期間の変更（延長）について",
-      "url": "https://kageki.hankyu.co.jp/news/20261023_11.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-27T00:00:00+09:00",
-      "contentHash": "384195dcb362696b",
-      "fetchedAt": "2026-10-28T14:23:13+09:00"
+      "fetchedAt": "2026-10-28T14:23:13+09:00",
+      "contentHash": "cdde17a619d945be"
     },
     {
       "id": "c84c71f0fb1b5b34",
@@ -1789,6 +1789,16 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "1ee5b106bbd374b9",
+      "companyId": "horipro",
+      "title": "【重要】ホリプロステージ ゴールド会員（有料会員） 新規入会 受付停止のお知らせ／2026年10月29日発表",
+      "url": "https://horipro-stage.jp/news/info_20261029/",
+      "category": "other",
+      "publishedAt": "2026-10-29T15:12:25+09:00",
+      "contentHash": "7bf490b0d13dbe07",
+      "fetchedAt": "2026-10-29T18:46:31+09:00"
+    },
+    {
       "id": "367e4ac3541b385b",
       "companyId": "horipro",
       "title": "ダンスエンターテイメント演劇『PASSION ― 北斎の描く夢 ―』ご来場のお客様へのご案内",
@@ -1885,8 +1895,8 @@
       "url": "https://horipro-stage.jp/news/kumikyoku2027_ticket/",
       "category": "ticket",
       "publishedAt": "2026-08-14T17:59:00+09:00",
-      "contentHash": "917587c55d2acde8",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "917587c55d2acde8"
     },
     {
       "id": "50443bd052daeef1",

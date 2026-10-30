@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-29T18:46:31+09:00",
+  "generatedAt": "2026-10-30T10:50:15+09:00",
   "articles": [
+    {
+      "id": "ee7be768696ae9ce",
+      "companyId": "takarazuka",
+      "title": "東京宝塚劇場 星組公演特別メニューについて",
+      "url": "https://kageki.hankyu.co.jp/news/20261030_002.html",
+      "category": "other",
+      "publishedAt": "2026-10-30T00:00:00+09:00",
+      "contentHash": "3d21f72e246214fb",
+      "fetchedAt": "2026-10-30T10:50:15+09:00"
+    },
     {
       "id": "84ee9736a45e9aaa",
       "companyId": "takarazuka",
@@ -1009,16 +1019,6 @@
       "contentHash": "9804ada53fb75cae"
     },
     {
-      "id": "d4986b32a4421de2",
-      "companyId": "takarazuka",
-      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
-      "url": "https://kageki.hankyu.co.jp/news/20260922_003.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-22T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "f406c990ffa40fa2"
-    },
-    {
       "id": "33bd1b441932f90a",
       "companyId": "shiki",
       "title": "劇団四季オリジナルグッズのご紹介",
@@ -1949,6 +1949,17 @@
       "contentHash": "0831ddf44a688a39"
     },
     {
+      "id": "07ddeba59455c837",
+      "companyId": "toho",
+      "title": "2027年6・7月 シアタークリエ ミュージカル『長い長い夜』上演決定！",
+      "url": "https://www.tohostage.com/lln/",
+      "category": "new_work",
+      "publishedAt": "2026-10-30T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_lln2027.jpg",
+      "contentHash": "e16be9b5b2bfa43c",
+      "fetchedAt": "2026-10-30T10:50:15+09:00"
+    },
+    {
       "id": "431cbb85822e1391",
       "companyId": "toho",
       "title": "『レジェンド・オブ・ミュージカル』第9回の開催が決定しました！",
@@ -2120,9 +2131,9 @@
       "url": "https://www.tohostage.com/meoto/",
       "category": "new_work",
       "publishedAt": "2026-06-30T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/9ba5e812c55ef75db078711b7ee45a2bf275d66553f83af7c17a6b373caf7c07.jpg",
-      "contentHash": "2244b11ab0ca6f9c",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "2244b11ab0ca6f9c"
     },
     {
       "id": "01d567fee3f3888a",

@@ -1,7 +1,58 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-30T10:50:15+09:00",
+  "generatedAt": "2026-10-30T17:29:18+09:00",
   "articles": [
+    {
+      "id": "590f15c3f87477b9",
+      "companyId": "takarazuka",
+      "title": "（追）＜一般前売＞宙組 全国ツアー 福岡サンパレス ホテル＆ホール公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
+      "url": "https://kageki.hankyu.co.jp/news/20261003_002.html",
+      "category": "ticket",
+      "publishedAt": "2026-10-30T00:00:00+09:00",
+      "contentHash": "7baffe139d32a99c",
+      "fetchedAt": "2026-10-03T21:26:58+09:00",
+      "updatedAt": "2026-10-30T17:29:18+09:00"
+    },
+    {
+      "id": "472ea94732ddcc9f",
+      "companyId": "takarazuka",
+      "title": "公演ラインアップ【宝塚大劇場／東京宝塚劇場公演】＜2027年6月～10月・花組『わたしの幸せな結婚』『MANHATTAN FOLLIES』＞",
+      "url": "https://kageki.hankyu.co.jp/news/20261030_005.html",
+      "category": "new_work",
+      "publishedAt": "2026-10-30T00:00:00+09:00",
+      "contentHash": "d3b5551c919b92aa",
+      "fetchedAt": "2026-10-30T17:29:18+09:00"
+    },
+    {
+      "id": "6c05c3529272ad1f",
+      "companyId": "takarazuka",
+      "title": "（追）星組 宝塚大劇場／東京宝塚劇場公演 休演者のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20260823_002.html",
+      "category": "other",
+      "publishedAt": "2026-10-30T00:00:00+09:00",
+      "contentHash": "d178baa371a0e6d7",
+      "fetchedAt": "2026-10-30T17:29:18+09:00"
+    },
+    {
+      "id": "e40da0cccff5be83",
+      "companyId": "takarazuka",
+      "title": "花組 宝塚大劇場公演 休演者のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261030_006.html",
+      "category": "other",
+      "publishedAt": "2026-10-30T00:00:00+09:00",
+      "contentHash": "dce19e11bbdc47f6",
+      "fetchedAt": "2026-10-30T17:29:18+09:00"
+    },
+    {
+      "id": "e4a3b8bb26049da9",
+      "companyId": "takarazuka",
+      "title": "（追）瀬央ゆりあ ディナーショー",
+      "url": "https://kageki.hankyu.co.jp/news/20260730_002.html",
+      "category": "other",
+      "publishedAt": "2026-10-30T00:00:00+09:00",
+      "contentHash": "ff34692d9b246a1b",
+      "fetchedAt": "2026-10-30T17:29:18+09:00"
+    },
     {
       "id": "ee7be768696ae9ce",
       "companyId": "takarazuka",
@@ -192,8 +243,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2026/tenkyuunoartemis/cast.html",
       "category": "cast",
       "publishedAt": "2026-10-23T00:00:00+09:00",
-      "contentHash": "e8d1bf930c0dc0b9",
-      "fetchedAt": "2026-10-28T14:23:13+09:00"
+      "fetchedAt": "2026-10-28T14:23:13+09:00",
+      "contentHash": "e8d1bf930c0dc0b9"
     },
     {
       "id": "502a91c7f55eeca4",
@@ -745,16 +796,6 @@
       "contentHash": "4f29148f6ccb7a50"
     },
     {
-      "id": "590f15c3f87477b9",
-      "companyId": "takarazuka",
-      "title": "＜一般前売＞宙組 全国ツアー 福岡サンパレス ホテル＆ホール公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
-      "url": "https://kageki.hankyu.co.jp/news/20261003_002.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-03T00:00:00+09:00",
-      "contentHash": "1adc9e71dca8e5cb",
-      "fetchedAt": "2026-10-03T21:26:58+09:00"
-    },
-    {
       "id": "46386a0e44becd79",
       "companyId": "takarazuka",
       "title": "宝塚歌劇公式アプリ「宝塚歌劇Pocket」における推奨動作環境の変更について",
@@ -977,46 +1018,6 @@
       "publishedAt": "2026-09-24T00:00:00+09:00",
       "fetchedAt": "2026-09-24T18:52:44+09:00",
       "contentHash": "86b02f98c8dd6ab7"
-    },
-    {
-      "id": "d1bacf64650e9573",
-      "companyId": "takarazuka",
-      "title": "＜公演時間＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』新人公演",
-      "url": "https://kageki.hankyu.co.jp/news/20260924_001.html",
-      "category": "schedule",
-      "publishedAt": "2026-09-24T00:00:00+09:00",
-      "fetchedAt": "2026-09-24T13:32:13+09:00",
-      "contentHash": "94d541e06cc6a197"
-    },
-    {
-      "id": "9fb72b21be9f5375",
-      "companyId": "takarazuka",
-      "title": "＜主な配役決定（新人公演）＞花組 宝塚大劇場／東京宝塚劇場公演『エリザベート－愛と死の輪舞－』新人公演",
-      "url": "https://kageki.hankyu.co.jp/revue/2026/elisabeth/cast.html",
-      "category": "cast",
-      "publishedAt": "2026-09-23T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "161a31e777b996f9"
-    },
-    {
-      "id": "673b8f76b88a3d76",
-      "companyId": "takarazuka",
-      "title": "宙組 退団者のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260922_002.html",
-      "category": "person",
-      "publishedAt": "2026-09-22T00:00:00+09:00",
-      "contentHash": "aa1b00efcd14660b",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "b0a02690cc2cc5e9",
-      "companyId": "takarazuka",
-      "title": "＜その他の配役決定＞宙組 梅田芸術劇場シアター・ドラマシティ／KAAT神奈川芸術劇場公演『酔いどれ御免！』",
-      "url": "https://kageki.hankyu.co.jp/revue/2026/yoidoregomen/cast.html",
-      "category": "cast",
-      "publishedAt": "2026-09-22T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "9804ada53fb75cae"
     },
     {
       "id": "33bd1b441932f90a",

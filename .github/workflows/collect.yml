@@ -213,7 +213,7 @@ jobs:
           ref: main                  # 既定の github.sha は collect の push より前の commit なので明示する（これを落とすと古い data/ を配信する）
           persist-credentials: false # このジョブは push しないのでトークンを .git/config に残さない
       - name: Pages 用にアップロード
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa   # v3.0.1
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9   # v5.0.0
         with:
           path: data                        # data/ をサイトのルートとして公開（D-01 §4.7）
       - id: deploy

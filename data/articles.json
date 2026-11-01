@@ -1,7 +1,37 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-01T11:04:46+09:00",
+  "generatedAt": "2026-11-01T18:05:39+09:00",
   "articles": [
+    {
+      "id": "10416dc19cd0be0d",
+      "companyId": "takarazuka",
+      "title": "宝塚友の会「ステージトーク in 東京」雪組 無料配信の実施について",
+      "url": "https://kageki.hankyu.co.jp/news/20261101_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-01T00:00:00+09:00",
+      "contentHash": "c56209ef0406237d",
+      "fetchedAt": "2026-11-01T18:05:39+09:00"
+    },
+    {
+      "id": "c4e90481b399562c",
+      "companyId": "takarazuka",
+      "title": "＜動画配信サービス タカラヅカ・オン・デマンド＞11月1日配信開始のラインアップ（Jubilee（'25年花組・東京・千秋楽）他）",
+      "url": "https://kageki.hankyu.co.jp/news/20261101_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-01T00:00:00+09:00",
+      "contentHash": "ba9080fbfcb9fe30",
+      "fetchedAt": "2026-11-01T18:05:39+09:00"
+    },
+    {
+      "id": "cde5198d3832ba23",
+      "companyId": "takarazuka",
+      "title": "＜タカラヅカ・スカイ・ステージ＞『エリザベート－愛と死の輪舞－』20作品 12ヵ月連続放送！12月ラインアップのお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261101_004.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-01T00:00:00+09:00",
+      "contentHash": "2b16c4b445d877dc",
+      "fetchedAt": "2026-11-01T18:05:39+09:00"
+    },
     {
       "id": "95783abc93fa1b57",
       "companyId": "takarazuka",
@@ -119,7 +149,7 @@
       "title": "（追）＜ライブ中継・ライブ配信＞宙組 全国ツアー 市川市文化会館公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
       "url": "https://kageki.hankyu.co.jp/news/20261010_003.html",
       "category": "streaming",
-      "publishedAt": "2026-10-23T00:00:00+09:00",
+      "publishedAt": "2026-11-01T00:00:00+09:00",
       "contentHash": "a621004fde68ac9e",
       "fetchedAt": "2026-10-10T15:55:34+09:00",
       "updatedAt": "2026-10-28T14:23:13+09:00"
@@ -987,36 +1017,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "f96fdc2c341e708a",
       "updatedAt": "2026-09-25T22:36:45+09:00"
-    },
-    {
-      "id": "a451b26a23226c75",
-      "companyId": "takarazuka",
-      "title": "＜一般前売＞花組 宝塚大劇場公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20260925_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-09-25T00:00:00+09:00",
-      "contentHash": "b6cf1a8d2545ef96",
-      "fetchedAt": "2026-09-25T22:36:45+09:00"
-    },
-    {
-      "id": "161877df0658421f",
-      "companyId": "takarazuka",
-      "title": "＜人物相関図 公開＞花組公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/revue/2026/elisabeth/correlation.html",
-      "category": "other",
-      "publishedAt": "2026-09-25T00:00:00+09:00",
-      "contentHash": "0b5f47ab613bf259",
-      "fetchedAt": "2026-09-25T16:37:31+09:00"
-    },
-    {
-      "id": "b0f90a25c4d5edd9",
-      "companyId": "takarazuka",
-      "title": "＜ブルーレイ・DVD・CD予約受付開始のお知らせ＞星組宝塚大劇場公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://www.tca-pictures.net/stage/2026/rrr/",
-      "category": "ticket",
-      "publishedAt": "2026-09-25T00:00:00+09:00",
-      "contentHash": "731bc95b0a405e9d",
-      "fetchedAt": "2026-09-25T10:22:48+09:00"
     },
     {
       "id": "33bd1b441932f90a",

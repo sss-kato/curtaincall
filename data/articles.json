@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-02T09:31:46+09:00",
+  "generatedAt": "2026-11-02T16:34:10+09:00",
   "articles": [
     {
       "id": "10416dc19cd0be0d",
@@ -1789,6 +1789,16 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "83ba1aca670d7117",
+      "companyId": "horipro",
+      "title": "【重要】ミュージカル『ジャック・ザ・リッパー』出演者変更のお知らせ",
+      "url": "https://horipro-stage.jp/news/info20261102/",
+      "category": "other",
+      "publishedAt": "2026-11-02T11:07:57+09:00",
+      "contentHash": "2d472b16f9783210",
+      "fetchedAt": "2026-11-02T16:34:10+09:00"
+    },
+    {
       "id": "1ee5b106bbd374b9",
       "companyId": "horipro",
       "title": "【重要】ホリプロステージ ゴールド会員（有料会員） 新規入会 受付停止のお知らせ／2026年10月29日発表",
@@ -1885,8 +1895,8 @@
       "url": "https://horipro-stage.jp/news/nikolatesla2026_information/",
       "category": "new_work",
       "publishedAt": "2026-08-31T16:59:00+09:00",
-      "contentHash": "18d1406f41be6132",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "18d1406f41be6132"
     },
     {
       "id": "cc4904135c9a1801",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-01T18:05:39+09:00",
+  "generatedAt": "2026-11-02T09:31:46+09:00",
   "articles": [
     {
       "id": "10416dc19cd0be0d",
@@ -1949,6 +1949,17 @@
       "contentHash": "0831ddf44a688a39"
     },
     {
+      "id": "538225a7e08c2ee2",
+      "companyId": "toho",
+      "title": "2027年2・3月 シアタークリエ ミュージカル『GHOST CLUB』上演決定！",
+      "url": "https://www.tohostage.com/ghostclub/",
+      "category": "new_work",
+      "publishedAt": "2026-10-31T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_ghostclub2027.jpg",
+      "contentHash": "a98bec1e9328bcaa",
+      "fetchedAt": "2026-11-02T09:31:46+09:00"
+    },
+    {
       "id": "07ddeba59455c837",
       "companyId": "toho",
       "title": "2027年6・7月 シアタークリエ ミュージカル『長い長い夜』上演決定！",
@@ -2120,9 +2131,9 @@
       "url": "https://www.tohostage.com/moulinmusical_japan/",
       "category": "new_work",
       "publishedAt": "2026-07-10T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/f972867d2ad60294abe9dad0bd8095639d06d2875c4e64501a352d236523d417.jpg",
-      "contentHash": "d4b479eccf116ffe",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "d4b479eccf116ffe"
     },
     {
       "id": "27beb62926f3ee05",

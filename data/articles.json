@@ -1,7 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-02T16:34:10+09:00",
+  "generatedAt": "2026-11-03T10:30:51+09:00",
   "articles": [
+    {
+      "id": "69007b6219e3c1e6",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第2抽選方式」＞雪組 東京国際フォーラム ホールC公演『Monte-Cristo －le spectacle musical－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261103_002.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-03T00:00:00+09:00",
+      "contentHash": "72e586581d12282a",
+      "fetchedAt": "2026-11-03T10:30:51+09:00"
+    },
+    {
+      "id": "ee6e6b87360c40fd",
+      "companyId": "takarazuka",
+      "title": "宝塚歌劇Webチケットサービス システムメンテナンスのご案内",
+      "url": "https://kageki.hankyu.co.jp/news/20261103_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-03T00:00:00+09:00",
+      "contentHash": "f6d6c1fde452ade3",
+      "fetchedAt": "2026-11-03T10:30:51+09:00"
+    },
     {
       "id": "10416dc19cd0be0d",
       "companyId": "takarazuka",
@@ -414,8 +434,8 @@
       "url": "https://shop.tca-pictures.net/shop/c/cbook/",
       "category": "other",
       "publishedAt": "2026-10-20T00:00:00+09:00",
-      "contentHash": "7781918b91606216",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "7781918b91606216",
       "updatedAt": "2026-10-20T13:36:07+09:00"
     },
     {
@@ -995,28 +1015,6 @@
       "publishedAt": "2026-09-27T00:00:00+09:00",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "15efa212fb142bf1"
-    },
-    {
-      "id": "6ab10ee3740f1e6d",
-      "companyId": "takarazuka",
-      "title": "（再）宝塚大劇場 西駐車場9月26日（土）および9月27日（日）の営業について",
-      "url": "https://kageki.hankyu.co.jp/news/20260919_002.html",
-      "category": "other",
-      "publishedAt": "2026-09-25T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "4bc573bf6f07ec45",
-      "updatedAt": "2026-09-25T22:36:45+09:00"
-    },
-    {
-      "id": "eb7cea1f140fc51a",
-      "companyId": "takarazuka",
-      "title": "（追）＜TAKARAZUKA REVUE MUSIC＞9月配信のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260915_004.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-25T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "contentHash": "f96fdc2c341e708a",
-      "updatedAt": "2026-09-25T22:36:45+09:00"
     },
     {
       "id": "33bd1b441932f90a",

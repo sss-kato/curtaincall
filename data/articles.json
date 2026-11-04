@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-04T14:59:59+09:00",
+  "generatedAt": "2026-11-04T23:18:18+09:00",
   "articles": [
+    {
+      "id": "4a4c19134aa512bc",
+      "companyId": "takarazuka",
+      "title": "【テレビ】雪組生「ベストヒット歌謡祭2026」出演のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261104_10.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-04T00:00:00+09:00",
+      "contentHash": "f0db18660e8a71cc",
+      "fetchedAt": "2026-11-04T23:18:18+09:00"
+    },
     {
       "id": "0c408450c2db8956",
       "companyId": "takarazuka",
@@ -200,8 +210,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261010_003.html",
       "category": "streaming",
       "publishedAt": "2026-11-01T00:00:00+09:00",
-      "contentHash": "a621004fde68ac9e",
       "fetchedAt": "2026-10-10T15:55:34+09:00",
+      "contentHash": "a621004fde68ac9e",
       "updatedAt": "2026-10-28T14:23:13+09:00"
     },
     {
@@ -233,8 +243,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261028_004.html",
       "category": "new_work",
       "publishedAt": "2026-10-28T00:00:00+09:00",
-      "contentHash": "ec6b6c49a81e0124",
-      "fetchedAt": "2026-10-28T21:38:55+09:00"
+      "fetchedAt": "2026-10-28T21:38:55+09:00",
+      "contentHash": "ec6b6c49a81e0124"
     },
     {
       "id": "05a7d71049399354",
@@ -1004,16 +1014,6 @@
       "publishedAt": "2026-09-29T00:00:00+09:00",
       "fetchedAt": "2026-09-29T10:45:14+09:00",
       "contentHash": "13f320f9a0d81845"
-    },
-    {
-      "id": "b670cb358027499b",
-      "companyId": "takarazuka",
-      "title": "＜出演者決定＞星組 東京建物 Brillia HALL／梅田芸術劇場シアター・ドラマシティ公演『I am Heathcliff』",
-      "url": "https://kageki.hankyu.co.jp/revue/2027/iamheathcliff/cast.html",
-      "category": "cast",
-      "publishedAt": "2026-09-29T00:00:00+09:00",
-      "fetchedAt": "2026-09-29T10:45:14+09:00",
-      "contentHash": "bad7d7d979ca7aa3"
     },
     {
       "id": "33bd1b441932f90a",

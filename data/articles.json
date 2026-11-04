@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-03T18:24:57+09:00",
+  "generatedAt": "2026-11-04T14:59:59+09:00",
   "articles": [
+    {
+      "id": "0c408450c2db8956",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「抽選方式」＞雪組 宝塚バウホール公演『Snowing!!』",
+      "url": "https://kageki.hankyu.co.jp/news/20261104_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-04T00:00:00+09:00",
+      "contentHash": "13153de6e15ff34b",
+      "fetchedAt": "2026-11-04T14:59:59+09:00"
+    },
     {
       "id": "02988a50cd081076",
       "companyId": "takarazuka",
@@ -1006,17 +1016,6 @@
       "contentHash": "bad7d7d979ca7aa3"
     },
     {
-      "id": "530fb01c36eeec52",
-      "companyId": "takarazuka",
-      "title": "（追）＜一般前売＞星組 東京宝塚劇場公演『RRR × TAKA”R”AZUKA ～√Rama～』",
-      "url": "https://kageki.hankyu.co.jp/news/20260926_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-09-27T00:00:00+09:00",
-      "contentHash": "7bbaf408cbdc0276",
-      "fetchedAt": "2026-09-26T21:58:37+09:00",
-      "updatedAt": "2026-09-27T16:59:32+09:00"
-    },
-    {
       "id": "33bd1b441932f90a",
       "companyId": "shiki",
       "title": "劇団四季オリジナルグッズのご紹介",
@@ -2007,9 +2006,9 @@
       "url": "https://www.tohostage.com/tamiou/stream.html",
       "category": "streaming",
       "publishedAt": "2026-10-06T00:00:00+09:00",
+      "fetchedAt": "2026-10-06T19:04:31+09:00",
       "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_tamiou2026_3.jpg",
-      "contentHash": "e777de59c745edb7",
-      "fetchedAt": "2026-10-06T19:04:31+09:00"
+      "contentHash": "e777de59c745edb7"
     },
     {
       "id": "e81e9fb7b82e8343",
@@ -2139,9 +2138,9 @@
       "url": "https://www.tohostage.com/moulinmusical_japan/",
       "category": "new_work",
       "publishedAt": "2026-07-10T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/f972867d2ad60294abe9dad0bd8095639d06d2875c4e64501a352d236523d417.jpg",
-      "contentHash": "d4b479eccf116ffe"
+      "contentHash": "d4b479eccf116ffe",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "27beb62926f3ee05",

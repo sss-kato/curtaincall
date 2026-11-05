@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-05T11:11:44+09:00",
+  "generatedAt": "2026-11-05T19:42:01+09:00",
   "articles": [
     {
       "id": "9b14899c0c410247",
@@ -12,6 +12,16 @@
       "contentHash": "9bed182101800560",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-11-05T11:11:44+09:00"
+    },
+    {
+      "id": "6ac477cfa7e456ed",
+      "companyId": "takarazuka",
+      "title": "宝塚友の会イベント 宝塚大劇場「2027年 新春鏡開き」について",
+      "url": "https://kageki.hankyu.co.jp/news/20261105_003.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-05T00:00:00+09:00",
+      "contentHash": "b69b3d694d67b993",
+      "fetchedAt": "2026-11-05T19:42:01+09:00"
     },
     {
       "id": "14a8d8c0a174a01f",
@@ -1004,16 +1014,6 @@
       "publishedAt": "2026-09-29T00:00:00+09:00",
       "contentHash": "7e78e04bff170268",
       "fetchedAt": "2026-09-29T17:18:55+09:00"
-    },
-    {
-      "id": "56374204b59baccc",
-      "companyId": "takarazuka",
-      "title": "＜出演者決定＞星組 東京国際フォーラム ホールC／梅田芸術劇場メインホール公演『大奥』",
-      "url": "https://kageki.hankyu.co.jp/revue/2027/ooku/cast.html",
-      "category": "cast",
-      "publishedAt": "2026-09-29T00:00:00+09:00",
-      "fetchedAt": "2026-09-29T10:45:14+09:00",
-      "contentHash": "13f320f9a0d81845"
     },
     {
       "id": "33bd1b441932f90a",

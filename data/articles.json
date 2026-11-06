@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-06T15:20:54+09:00",
+  "generatedAt": "2026-11-06T23:56:16+09:00",
   "articles": [
     {
       "id": "725efcd294cbc4cf",
@@ -1787,6 +1787,16 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "454e757571d6e15f",
+      "companyId": "horipro",
+      "title": "【11月9日(月)より全国で発売】サントリーTAG LIVE LABEL×ミュージカル『ジャック・ザ・リッパー』オリジナルラベル缶販売決定！",
+      "url": "https://horipro-stage.jp/news/jacktheripper20261104/",
+      "category": "other",
+      "publishedAt": "2026-11-06T16:59:00+09:00",
+      "contentHash": "32460c3f55e7005a",
+      "fetchedAt": "2026-11-06T23:56:16+09:00"
+    },
+    {
       "id": "83ba1aca670d7117",
       "companyId": "horipro",
       "title": "【重要】ミュージカル『ジャック・ザ・リッパー』出演者変更のお知らせ",
@@ -1883,8 +1893,8 @@
       "url": "https://horipro-stage.jp/news/secretstage2026_information/",
       "category": "other",
       "publishedAt": "2026-09-03T16:59:24+09:00",
-      "contentHash": "08ef28aedfbd07fa",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "08ef28aedfbd07fa"
     },
     {
       "id": "9033f9a8944744ac",

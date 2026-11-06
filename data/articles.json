@@ -1,7 +1,58 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-05T19:42:01+09:00",
+  "generatedAt": "2026-11-06T15:20:54+09:00",
   "articles": [
+    {
+      "id": "725efcd294cbc4cf",
+      "companyId": "takarazuka",
+      "title": "（追）「TAKARAZUKA Christmas Festa －心きらめく冬の祝祭－」の開催について",
+      "url": "https://kageki.hankyu.co.jp/news/20261021_10.html",
+      "category": "other",
+      "publishedAt": "2026-11-06T00:00:00+09:00",
+      "contentHash": "1bdc8b0d447508b7",
+      "fetchedAt": "2026-10-21T16:26:24+09:00",
+      "updatedAt": "2026-11-06T15:20:54+09:00"
+    },
+    {
+      "id": "0132d9811a7aaa0b",
+      "companyId": "takarazuka",
+      "title": "宝塚歌劇オーケストラ楽員募集のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261106_002.html",
+      "category": "other",
+      "publishedAt": "2026-11-06T00:00:00+09:00",
+      "contentHash": "ed6a384a193a278b",
+      "fetchedAt": "2026-11-06T15:20:54+09:00"
+    },
+    {
+      "id": "7136b15bf8d8f078",
+      "companyId": "takarazuka",
+      "title": "＜ブルーレイ・DVD・CD予約受付開始のお知らせ＞花組宝塚大劇場公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://www.tca-pictures.net/stage/2026/elisabeth/",
+      "category": "ticket",
+      "publishedAt": "2026-11-06T00:00:00+09:00",
+      "contentHash": "15bbbdd99c5e3a32",
+      "fetchedAt": "2026-11-06T15:20:54+09:00"
+    },
+    {
+      "id": "723a0494642c8d59",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞宙組 梅田芸術劇場シアター・ドラマシティ公演",
+      "url": "https://kageki.hankyu.co.jp/news/20261106_001.html",
+      "category": "schedule",
+      "publishedAt": "2026-11-06T00:00:00+09:00",
+      "contentHash": "6af4695f03003cd2",
+      "fetchedAt": "2026-11-06T15:20:54+09:00"
+    },
+    {
+      "id": "cdc7a8fc030fb96e",
+      "companyId": "takarazuka",
+      "title": "＜カスタマイズCD＞花組主題歌追加のお知らせ（キャトルレーヴ宝塚店）",
+      "url": "https://kageki.hankyu.co.jp/news/20261106_004.html",
+      "category": "other",
+      "publishedAt": "2026-11-06T00:00:00+09:00",
+      "contentHash": "eef78e26bf54e233",
+      "fetchedAt": "2026-11-06T15:20:54+09:00"
+    },
     {
       "id": "9b14899c0c410247",
       "companyId": "takarazuka",
@@ -90,8 +141,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261103_001.html",
       "category": "ticket",
       "publishedAt": "2026-11-03T00:00:00+09:00",
-      "contentHash": "f6d6c1fde452ade3",
-      "fetchedAt": "2026-11-03T10:30:51+09:00"
+      "fetchedAt": "2026-11-03T10:30:51+09:00",
+      "contentHash": "f6d6c1fde452ade3"
     },
     {
       "id": "10416dc19cd0be0d",
@@ -171,8 +222,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261030_005.html",
       "category": "new_work",
       "publishedAt": "2026-10-30T00:00:00+09:00",
-      "contentHash": "d3b5551c919b92aa",
-      "fetchedAt": "2026-10-30T17:29:18+09:00"
+      "fetchedAt": "2026-10-30T17:29:18+09:00",
+      "contentHash": "d3b5551c919b92aa"
     },
     {
       "id": "6c05c3529272ad1f",
@@ -467,16 +518,6 @@
       "contentHash": "e99516884ad214a0",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "updatedAt": "2026-10-21T10:29:27+09:00"
-    },
-    {
-      "id": "725efcd294cbc4cf",
-      "companyId": "takarazuka",
-      "title": "「TAKARAZUKA Christmas Festa －心きらめく冬の祝祭－」の開催について",
-      "url": "https://kageki.hankyu.co.jp/news/20261021_10.html",
-      "category": "other",
-      "publishedAt": "2026-10-21T00:00:00+09:00",
-      "contentHash": "7dab33a16b99521e",
-      "fetchedAt": "2026-10-21T16:26:24+09:00"
     },
     {
       "id": "ed5cd972fe583e3c",
@@ -974,46 +1015,6 @@
       "publishedAt": "2026-10-01T00:00:00+09:00",
       "contentHash": "ca0bb75ef7bf0713",
       "fetchedAt": "2026-10-01T10:59:58+09:00"
-    },
-    {
-      "id": "108cc6bec9fb9a1d",
-      "companyId": "takarazuka",
-      "title": "＜宝塚友の会 チケット先行販売「第1抽選方式」＞月組 宝塚大劇場公演『天穹のアルテミス』『Belle Époque』",
-      "url": "https://kageki.hankyu.co.jp/news/20260930_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-09-30T00:00:00+09:00",
-      "fetchedAt": "2026-09-30T15:34:30+09:00",
-      "contentHash": "df6aaf599c5456b9"
-    },
-    {
-      "id": "064082137320c604",
-      "companyId": "takarazuka",
-      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
-      "url": "https://kageki.hankyu.co.jp/news/20260929_006.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-29T00:00:00+09:00",
-      "fetchedAt": "2026-09-29T17:18:55+09:00",
-      "contentHash": "f406c990ffa40fa2"
-    },
-    {
-      "id": "0b6f82066ba75e5e",
-      "companyId": "takarazuka",
-      "title": "＜公演時間＞雪組公演『ポーの一族』新人公演",
-      "url": "https://kageki.hankyu.co.jp/news/20260929_003.html",
-      "category": "schedule",
-      "publishedAt": "2026-09-29T00:00:00+09:00",
-      "fetchedAt": "2026-09-29T17:18:55+09:00",
-      "contentHash": "48acd282cc555de7"
-    },
-    {
-      "id": "ba54a8f580f222cd",
-      "companyId": "takarazuka",
-      "title": "【テレビ】日本テレビ「ヒルナンデス！」出演のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20260929_004.html",
-      "category": "streaming",
-      "publishedAt": "2026-09-29T00:00:00+09:00",
-      "contentHash": "7e78e04bff170268",
-      "fetchedAt": "2026-09-29T17:18:55+09:00"
     },
     {
       "id": "33bd1b441932f90a",
@@ -2239,6 +2240,26 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "51f2a333a7f877f8",
+      "companyId": "shinkansen",
+      "title": "／DOKURO77／特別番組《後編》11月7日(土)U-NEXTにて配信開始&《登城印スタンプ》がLAST STAND会場にも登場決定！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=14000",
+      "category": "streaming",
+      "publishedAt": "2026-11-06T12:01:00+09:00",
+      "contentHash": "c144af0de547cd02",
+      "fetchedAt": "2026-11-06T15:20:54+09:00"
+    },
+    {
+      "id": "bfedbae240326bff",
+      "companyId": "shinkansen",
+      "title": "／髑髏城／【東京】ライブビューイング（生中継）12/16(水)、17(木)開催決定！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=13952",
+      "category": "new_work",
+      "publishedAt": "2026-11-06T12:00:00+09:00",
+      "contentHash": "24544771bca0986f",
+      "fetchedAt": "2026-11-06T15:20:54+09:00"
+    },
+    {
       "id": "00b907116d8ce5c8",
       "companyId": "shinkansen",
       "title": "／髑髏城／製作発表ダイジェスト公開！",
@@ -2325,8 +2346,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13828",
       "category": "ticket",
       "publishedAt": "2026-09-17T11:01:00+09:00",
-      "contentHash": "695c0e8b6b55e432",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "695c0e8b6b55e432"
     },
     {
       "id": "0e734c7df23347a6",
@@ -2335,8 +2356,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13807",
       "category": "streaming",
       "publishedAt": "2026-09-17T11:00:00+09:00",
-      "contentHash": "d9da48de08c1ec64",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "d9da48de08c1ec64"
     },
     {
       "id": "21eaf7eeae438336",

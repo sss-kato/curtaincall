@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-07T16:00:03+09:00",
+  "generatedAt": "2026-11-07T22:53:14+09:00",
   "articles": [
     {
       "id": "518c49386e569fd8",
@@ -1007,14 +1007,14 @@
       "contentHash": "3142898259e7a800"
     },
     {
-      "id": "4827fa1e45fff030",
+      "id": "7b2d221235bb9314",
       "companyId": "takarazuka",
-      "title": "宝塚友の会「チケット先行販売のお知らせ」について",
-      "url": "https://kageki.hankyu.co.jp/news/20261001_004.html",
-      "category": "ticket",
+      "title": "＜タカラヅカ・スカイ・ステージ＞11月ラインアップのお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261001_002.html",
+      "category": "streaming",
       "publishedAt": "2026-10-01T00:00:00+09:00",
-      "fetchedAt": "2026-10-01T10:59:58+09:00",
-      "contentHash": "f4c86768d7df206e"
+      "contentHash": "ca0bb75ef7bf0713",
+      "fetchedAt": "2026-11-07T22:53:14+09:00"
     },
     {
       "id": "33bd1b441932f90a",

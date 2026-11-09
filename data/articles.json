@@ -1,7 +1,37 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-08T19:08:27+09:00",
+  "generatedAt": "2026-11-09T16:51:11+09:00",
   "articles": [
+    {
+      "id": "759b385208c860e3",
+      "companyId": "takarazuka",
+      "title": "月組 次期トップスター、トップ娘役について",
+      "url": "https://kageki.hankyu.co.jp/news/20261109_003.html",
+      "category": "person",
+      "publishedAt": "2026-11-09T00:00:00+09:00",
+      "contentHash": "05512de8439a50d8",
+      "fetchedAt": "2026-11-09T16:51:11+09:00"
+    },
+    {
+      "id": "7718232592887176",
+      "companyId": "takarazuka",
+      "title": "組替えについて",
+      "url": "https://kageki.hankyu.co.jp/news/20261109_004.html",
+      "category": "person",
+      "publishedAt": "2026-11-09T00:00:00+09:00",
+      "contentHash": "85c75fcd0de3c80e",
+      "fetchedAt": "2026-11-09T16:51:11+09:00"
+    },
+    {
+      "id": "8709f4545d9f827a",
+      "companyId": "takarazuka",
+      "title": "公演ラインアップ【全国ツアー公演】＜2027年5月～6月・月組『エールの残照』『Belle Époque』＞",
+      "url": "https://kageki.hankyu.co.jp/news/20261109_002.html",
+      "category": "new_work",
+      "publishedAt": "2026-11-09T00:00:00+09:00",
+      "contentHash": "156e7b7187054cbb",
+      "fetchedAt": "2026-11-09T16:51:11+09:00"
+    },
     {
       "id": "86bb28380e4f6a9e",
       "companyId": "takarazuka",
@@ -313,8 +343,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261029_001.html",
       "category": "other",
       "publishedAt": "2026-10-29T00:00:00+09:00",
-      "contentHash": "6108bfa79cb6afa4",
-      "fetchedAt": "2026-10-29T11:21:11+09:00"
+      "fetchedAt": "2026-10-29T11:21:11+09:00",
+      "contentHash": "6108bfa79cb6afa4"
     },
     {
       "id": "6cc02dba50b42f39",
@@ -882,8 +912,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261010_004.html",
       "category": "streaming",
       "publishedAt": "2026-10-10T00:00:00+09:00",
-      "contentHash": "deea632194ceffff",
-      "fetchedAt": "2026-10-10T15:55:34+09:00"
+      "fetchedAt": "2026-10-10T15:55:34+09:00",
+      "contentHash": "deea632194ceffff"
     },
     {
       "id": "ed19e8acf7bdf7f8",
@@ -986,36 +1016,6 @@
       "publishedAt": "2026-10-06T00:00:00+09:00",
       "contentHash": "4e6d2f4e43e65b04",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "5ab87eb9de7c2238",
-      "companyId": "takarazuka",
-      "title": "＜公演時間＞月組 KAAT神奈川芸術劇場公演",
-      "url": "https://kageki.hankyu.co.jp/news/20261004_001.html",
-      "category": "schedule",
-      "publishedAt": "2026-10-04T00:00:00+09:00",
-      "fetchedAt": "2026-10-04T14:39:24+09:00",
-      "contentHash": "4f29148f6ccb7a50"
-    },
-    {
-      "id": "46386a0e44becd79",
-      "companyId": "takarazuka",
-      "title": "宝塚歌劇公式アプリ「宝塚歌劇Pocket」における推奨動作環境の変更について",
-      "url": "https://kageki.hankyu.co.jp/news/20261003_001.html",
-      "category": "other",
-      "publishedAt": "2026-10-03T00:00:00+09:00",
-      "contentHash": "49ea22002ed903de",
-      "fetchedAt": "2026-10-03T15:20:25+09:00"
-    },
-    {
-      "id": "150aec75ce3df439",
-      "companyId": "takarazuka",
-      "title": "＜ブルーレイ予約受付開始のお知らせ＞月組兵庫県立芸術文化センター公演『稲妻開化譚－イナズマカイカタン－』",
-      "url": "https://www.tca-pictures.net/stage/2026/inazumakaikatan/",
-      "category": "ticket",
-      "publishedAt": "2026-10-02T00:00:00+09:00",
-      "contentHash": "d84a7a2d225775e3",
-      "fetchedAt": "2026-10-02T10:32:31+09:00"
     },
     {
       "id": "33bd1b441932f90a",
@@ -1968,6 +1968,17 @@
       "contentHash": "0831ddf44a688a39"
     },
     {
+      "id": "198bd1342180f0ba",
+      "companyId": "toho",
+      "title": "2027年4・5月 シアタークリエ 『Nostalgic Cabaret』上演決定！",
+      "url": "https://www.tohostage.com/nostalgic_cabaret/",
+      "category": "new_work",
+      "publishedAt": "2026-11-09T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_nostalgic_cabaret2027.jpg",
+      "contentHash": "6751d48c3f8525c2",
+      "fetchedAt": "2026-11-09T16:51:11+09:00"
+    },
+    {
       "id": "538225a7e08c2ee2",
       "companyId": "toho",
       "title": "2027年2・3月 シアタークリエ ミュージカル『GHOST CLUB』上演決定！",
@@ -2150,9 +2161,9 @@
       "url": "https://www.tohostage.com/moulinmusical_japan/",
       "category": "new_work",
       "publishedAt": "2026-07-10T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/f972867d2ad60294abe9dad0bd8095639d06d2875c4e64501a352d236523d417.jpg",
-      "contentHash": "d4b479eccf116ffe",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "d4b479eccf116ffe"
     },
     {
       "id": "27beb62926f3ee05",
@@ -2251,6 +2262,16 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "6f9e07b754f5528b",
+      "companyId": "shinkansen",
+      "title": "／髑髏城／【東京】11月公演分 注釈付き指定席販売（先着）決定！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=14030",
+      "category": "other",
+      "publishedAt": "2026-11-09T12:00:00+09:00",
+      "contentHash": "0c8b8f8388f0979f",
+      "fetchedAt": "2026-11-09T16:51:11+09:00"
+    },
+    {
       "id": "51f2a333a7f877f8",
       "companyId": "shinkansen",
       "title": "／DOKURO77／特別番組《後編》11月7日(土)U-NEXTにて配信開始&《登城印スタンプ》がLAST STAND会場にも登場決定！",
@@ -2347,8 +2368,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13840",
       "category": "cast",
       "publishedAt": "2026-09-17T11:02:00+09:00",
-      "contentHash": "c13550d250b53e7e",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "c13550d250b53e7e"
     },
     {
       "id": "08de8f73599557a7",

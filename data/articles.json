@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-09T16:51:11+09:00",
+  "generatedAt": "2026-11-10T03:40:17+09:00",
   "articles": [
     {
       "id": "759b385208c860e3",
@@ -1968,6 +1968,18 @@
       "contentHash": "0831ddf44a688a39"
     },
     {
+      "id": "383842644c13922d",
+      "companyId": "toho",
+      "title": "第3回目を迎える『Songwriters' SHOWCASE』の開催が決定しました。",
+      "url": "https://www.tohostage.com/writing_program/",
+      "category": "other",
+      "publishedAt": "2026-11-09T00:00:00+09:00",
+      "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_writing_program2026_2.jpg",
+      "contentHash": "39dae807eb46647b",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "updatedAt": "2026-11-10T03:40:17+09:00"
+    },
+    {
       "id": "198bd1342180f0ba",
       "companyId": "toho",
       "title": "2027年4・5月 シアタークリエ 『Nostalgic Cabaret』上演決定！",
@@ -2230,16 +2242,6 @@
       "fetchedAt": "2026-09-24T13:32:13+09:00",
       "thumbnail": "https://www.toho.co.jp/images/93c656ccaef585315ee23a17bdbf4ad76eccc51dbf5d200d674ab4903815bf7e.jpg",
       "contentHash": "38cec487ce8b7a45"
-    },
-    {
-      "id": "383842644c13922d",
-      "companyId": "toho",
-      "title": "ミュージカル作家・作曲家育成プログラム「Musical Theater Writing Program」の実施が決定しました。",
-      "url": "https://www.tohostage.com/writing_program/",
-      "category": "other",
-      "publishedAt": "2026-04-20T00:00:00+09:00",
-      "contentHash": "ecbcfc4ace784944",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "4291806b225f79cd",

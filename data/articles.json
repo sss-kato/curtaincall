@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-10T10:58:11+09:00",
+  "generatedAt": "2026-11-10T18:37:40+09:00",
   "articles": [
+    {
+      "id": "879a855786d30ef5",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
+      "url": "https://kageki.hankyu.co.jp/news/20261110_002.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-10T00:00:00+09:00",
+      "contentHash": "f406c990ffa40fa2",
+      "fetchedAt": "2026-11-10T18:37:40+09:00"
+    },
     {
       "id": "ea3704e654200c5b",
       "companyId": "takarazuka",
@@ -192,8 +202,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261103_004.html",
       "category": "other",
       "publishedAt": "2026-11-03T00:00:00+09:00",
-      "contentHash": "b2a3eafe57c657a3",
-      "fetchedAt": "2026-11-03T18:24:57+09:00"
+      "fetchedAt": "2026-11-03T18:24:57+09:00",
+      "contentHash": "b2a3eafe57c657a3"
     },
     {
       "id": "035c28e7e793f191",
@@ -202,8 +212,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261103_006.html",
       "category": "streaming",
       "publishedAt": "2026-11-03T00:00:00+09:00",
-      "contentHash": "f406c990ffa40fa2",
-      "fetchedAt": "2026-11-03T18:24:57+09:00"
+      "fetchedAt": "2026-11-03T18:24:57+09:00",
+      "contentHash": "f406c990ffa40fa2"
     },
     {
       "id": "69007b6219e3c1e6",
@@ -212,8 +222,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261103_002.html",
       "category": "ticket",
       "publishedAt": "2026-11-03T00:00:00+09:00",
-      "contentHash": "72e586581d12282a",
-      "fetchedAt": "2026-11-03T10:30:51+09:00"
+      "fetchedAt": "2026-11-03T10:30:51+09:00",
+      "contentHash": "72e586581d12282a"
     },
     {
       "id": "ee6e6b87360c40fd",
@@ -998,24 +1008,14 @@
       "updatedAt": "2026-10-06T11:52:22+09:00"
     },
     {
-      "id": "f3f1c4742db5ba4b",
+      "id": "d5fbd88d685d003a",
       "companyId": "takarazuka",
-      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
-      "url": "https://kageki.hankyu.co.jp/news/20261006_006.html",
-      "category": "streaming",
+      "title": "（追）外部出演「HiGH&LOW THE 戦国 LOVE&HATE」",
+      "url": "https://kageki.hankyu.co.jp/news/20260704_003.html",
+      "category": "other",
       "publishedAt": "2026-10-06T00:00:00+09:00",
-      "fetchedAt": "2026-10-06T19:04:31+09:00",
-      "contentHash": "f406c990ffa40fa2"
-    },
-    {
-      "id": "dd6c594b5803c345",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞月組 宝塚大劇場公演『天穹のアルテミス』『Belle Époque』",
-      "url": "https://kageki.hankyu.co.jp/news/20261006_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-06T00:00:00+09:00",
-      "contentHash": "720032ee4ceced9d",
-      "fetchedAt": "2026-10-06T11:52:22+09:00"
+      "contentHash": "4e6d2f4e43e65b04",
+      "fetchedAt": "2026-11-10T18:37:40+09:00"
     },
     {
       "id": "33bd1b441932f90a",
@@ -2264,6 +2264,26 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "c97e95ddf399efac",
+      "companyId": "shinkansen",
+      "title": "／髑髏城／公演グッズ詳細決定！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=14027",
+      "category": "other",
+      "publishedAt": "2026-11-10T15:00:00+09:00",
+      "contentHash": "3657519e9d40b423",
+      "fetchedAt": "2026-11-10T18:37:40+09:00"
+    },
+    {
+      "id": "6b30ab47356076ad",
+      "companyId": "shinkansen",
+      "title": "／DOKURO77／VAC会員限定『髑髏城の七人』シリーズ10本パック配信決定！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=14080",
+      "category": "streaming",
+      "publishedAt": "2026-11-10T12:00:00+09:00",
+      "contentHash": "a36f08fc6bad0436",
+      "fetchedAt": "2026-11-10T18:37:40+09:00"
+    },
+    {
       "id": "6f9e07b754f5528b",
       "companyId": "shinkansen",
       "title": "／髑髏城／【東京】11月公演分 注釈付き指定席販売（先着）決定！",
@@ -2350,8 +2370,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13917",
       "category": "other",
       "publishedAt": "2026-09-20T15:14:42+09:00",
-      "contentHash": "97141b62e93096ac",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "97141b62e93096ac"
     },
     {
       "id": "0e7885ed3f17bc5f",
@@ -2360,8 +2380,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13893",
       "category": "new_work",
       "publishedAt": "2026-09-17T16:02:20+09:00",
-      "contentHash": "e5f0e9b621ceebba",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "e5f0e9b621ceebba"
     },
     {
       "id": "d4055d53fb2bac07",

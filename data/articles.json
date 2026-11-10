@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-10T03:40:17+09:00",
+  "generatedAt": "2026-11-10T10:58:11+09:00",
   "articles": [
+    {
+      "id": "ea3704e654200c5b",
+      "companyId": "takarazuka",
+      "title": "＜ブルーレイ予約受付開始のお知らせ＞宙組シアター・ドラマシティ公演『酔いどれ御免！』",
+      "url": "https://shop.tca-pictures.net/shop/g/gTCAB-314/",
+      "category": "ticket",
+      "publishedAt": "2026-11-10T00:00:00+09:00",
+      "contentHash": "d21833b36a252d3f",
+      "fetchedAt": "2026-11-10T10:58:11+09:00"
+    },
     {
       "id": "759b385208c860e3",
       "companyId": "takarazuka",
@@ -111,8 +121,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261106_001.html",
       "category": "schedule",
       "publishedAt": "2026-11-06T00:00:00+09:00",
-      "contentHash": "6af4695f03003cd2",
-      "fetchedAt": "2026-11-06T15:20:54+09:00"
+      "fetchedAt": "2026-11-06T15:20:54+09:00",
+      "contentHash": "6af4695f03003cd2"
     },
     {
       "id": "cdc7a8fc030fb96e",
@@ -1006,16 +1016,6 @@
       "publishedAt": "2026-10-06T00:00:00+09:00",
       "contentHash": "720032ee4ceced9d",
       "fetchedAt": "2026-10-06T11:52:22+09:00"
-    },
-    {
-      "id": "d5fbd88d685d003a",
-      "companyId": "takarazuka",
-      "title": "（追）外部出演「HiGH&LOW THE 戦国 LOVE&HATE」",
-      "url": "https://kageki.hankyu.co.jp/news/20260704_003.html",
-      "category": "other",
-      "publishedAt": "2026-10-06T00:00:00+09:00",
-      "contentHash": "4e6d2f4e43e65b04",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "33bd1b441932f90a",

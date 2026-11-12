@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-11T23:00:32+09:00",
+  "generatedAt": "2026-11-12T11:49:43+09:00",
   "articles": [
+    {
+      "id": "c6f9219569c136a1",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞花組公演『エリザベート－愛と死の輪舞－』新人公演",
+      "url": "https://kageki.hankyu.co.jp/news/20261112_001.html",
+      "category": "schedule",
+      "publishedAt": "2026-11-12T00:00:00+09:00",
+      "contentHash": "6901878f9e53f58f",
+      "fetchedAt": "2026-11-12T11:49:43+09:00"
+    },
     {
       "id": "4a4c19134aa512bc",
       "companyId": "takarazuka",
@@ -1005,16 +1015,6 @@
       "category": "ticket",
       "publishedAt": "2026-10-08T00:00:00+09:00",
       "contentHash": "28fba6016600a9b5",
-      "fetchedAt": "2026-10-08T10:46:24+09:00"
-    },
-    {
-      "id": "9956c87df6d36f6a",
-      "companyId": "takarazuka",
-      "title": "宝塚歌劇オーケストラ楽員募集のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20261008_003.html",
-      "category": "other",
-      "publishedAt": "2026-10-08T00:00:00+09:00",
-      "contentHash": "ed6a384a193a278b",
       "fetchedAt": "2026-10-08T10:46:24+09:00"
     },
     {

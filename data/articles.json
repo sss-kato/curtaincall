@@ -1,7 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-12T11:49:43+09:00",
+  "generatedAt": "2026-11-12T19:53:08+09:00",
   "articles": [
+    {
+      "id": "9e5634869b4429bb",
+      "companyId": "takarazuka",
+      "title": "＜その他の配役決定＞雪組 梅田芸術劇場メインホール／東京国際フォーラム ホールC公演『Monte-Cristo －le spectacle musical－』",
+      "url": "https://kageki.hankyu.co.jp/revue/2026/montecristo/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-11-12T00:00:00+09:00",
+      "contentHash": "0f7110948cef4f59",
+      "fetchedAt": "2026-10-28T14:23:13+09:00",
+      "updatedAt": "2026-11-12T19:53:08+09:00"
+    },
     {
       "id": "c6f9219569c136a1",
       "companyId": "takarazuka",
@@ -561,16 +572,6 @@
       "fetchedAt": "2026-10-28T14:23:13+09:00"
     },
     {
-      "id": "9e5634869b4429bb",
-      "companyId": "takarazuka",
-      "title": "＜一部の配役決定＞雪組 梅田芸術劇場メインホール／東京国際フォーラム ホールC公演『Monte-Cristo －le spectacle musical－』",
-      "url": "https://kageki.hankyu.co.jp/revue/2026/montecristo/cast.html",
-      "category": "cast",
-      "publishedAt": "2026-10-24T00:00:00+09:00",
-      "fetchedAt": "2026-10-28T14:23:13+09:00",
-      "contentHash": "cc305360b7b20452"
-    },
-    {
       "id": "1094556827f4ed78",
       "companyId": "takarazuka",
       "title": "月組 退団者のお知らせ",
@@ -627,8 +628,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261023_005.html",
       "category": "ticket",
       "publishedAt": "2026-10-23T00:00:00+09:00",
-      "contentHash": "52b5b6cfc120de95",
-      "fetchedAt": "2026-10-28T14:23:13+09:00"
+      "fetchedAt": "2026-10-28T14:23:13+09:00",
+      "contentHash": "52b5b6cfc120de95"
     },
     {
       "id": "07b81ac8c5dc8a32",
@@ -1008,14 +1009,14 @@
       "fetchedAt": "2026-10-09T10:57:20+09:00"
     },
     {
-      "id": "4db906bd56144630",
+      "id": "9956c87df6d36f6a",
       "companyId": "takarazuka",
-      "title": "チケットの不正転売禁止について",
-      "url": "https://kageki.hankyu.co.jp/news/20261008_001.html",
-      "category": "ticket",
+      "title": "宝塚歌劇オーケストラ楽員募集のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261008_003.html",
+      "category": "other",
       "publishedAt": "2026-10-08T00:00:00+09:00",
-      "contentHash": "28fba6016600a9b5",
-      "fetchedAt": "2026-10-08T10:46:24+09:00"
+      "contentHash": "ed6a384a193a278b",
+      "fetchedAt": "2026-11-12T19:53:08+09:00"
     },
     {
       "id": "33bd1b441932f90a",
@@ -1024,9 +1025,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037446.html",
       "category": "other",
       "publishedAt": "2026-10-19T00:00:00+09:00",
-      "fetchedAt": "2026-10-19T21:54:08+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "5aeef51fc41ef876"
+      "contentHash": "5aeef51fc41ef876",
+      "fetchedAt": "2026-10-19T21:54:08+09:00"
     },
     {
       "id": "0ab16a6f364c9d0e",
@@ -1035,9 +1036,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/036717.html",
       "category": "other",
       "publishedAt": "2026-10-16T00:00:00+09:00",
-      "fetchedAt": "2026-10-16T14:43:46+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2024/01/BTTF_news_thmn-thumb-500x373-35153.jpg",
-      "contentHash": "a7b7cf27ef9a7a62"
+      "contentHash": "a7b7cf27ef9a7a62",
+      "fetchedAt": "2026-10-16T14:43:46+09:00"
     },
     {
       "id": "dab2bea7724d80e4",
@@ -1046,9 +1047,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037818.html",
       "category": "other",
       "publishedAt": "2026-10-16T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/36189a2185a3b440b2866909a5d4dc1206902f10-thumb-500x373-40278.jpg",
-      "contentHash": "4922c3472e321472"
+      "contentHash": "4922c3472e321472",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "639530587e1e92f4",
@@ -1057,9 +1058,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038056.html",
       "category": "other",
       "publishedAt": "2026-10-13T00:00:00+09:00",
-      "fetchedAt": "2026-10-13T16:36:25+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "0b9fe12165c880b4"
+      "contentHash": "0b9fe12165c880b4",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
     },
     {
       "id": "d46766c1e75f5af8",
@@ -1068,9 +1069,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038053.html",
       "category": "new_work",
       "publishedAt": "2026-10-13T00:00:00+09:00",
-      "fetchedAt": "2026-10-13T16:36:25+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/261013_pha_london40th_thum-thumb-500x373-41710.jpg",
-      "contentHash": "e75c107bdbc030ff"
+      "contentHash": "e75c107bdbc030ff",
+      "fetchedAt": "2026-10-13T16:36:25+09:00"
     },
     {
       "id": "14cb771d1a340b1b",
@@ -1079,9 +1080,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/036642.html",
       "category": "other",
       "publishedAt": "2026-10-09T00:00:00+09:00",
-      "fetchedAt": "2026-10-09T17:51:06+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "f9ed6518abf9aa20"
+      "contentHash": "f9ed6518abf9aa20",
+      "fetchedAt": "2026-10-09T17:51:06+09:00"
     },
     {
       "id": "6d5c1bd0186bbef9",
@@ -1090,9 +1091,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038054.html",
       "category": "other",
       "publishedAt": "2026-10-09T00:00:00+09:00",
-      "fetchedAt": "2026-10-09T17:51:06+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "f58e896bb1230636"
+      "contentHash": "f58e896bb1230636",
+      "fetchedAt": "2026-10-09T17:51:06+09:00"
     },
     {
       "id": "8d40a884a7641829",
@@ -1101,9 +1102,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038052.html",
       "category": "ticket",
       "publishedAt": "2026-10-09T00:00:00+09:00",
-      "fetchedAt": "2026-10-09T17:51:06+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/05/3bf0bab97df29e1ca6a2c710cebc0f5a1fb42520-thumb-500x373-40769.jpg",
-      "contentHash": "b9cd8a65d6e7f508"
+      "contentHash": "b9cd8a65d6e7f508",
+      "fetchedAt": "2026-10-09T17:51:06+09:00"
     },
     {
       "id": "7ea1a2da504b7f55",
@@ -1112,9 +1113,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037849.html",
       "category": "other",
       "publishedAt": "2026-10-09T00:00:00+09:00",
-      "fetchedAt": "2026-10-09T10:57:20+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/09ce5ab2e3d25cb0f135ae6a502d0fff8f65049e-thumb-500x373-40451.jpg",
-      "contentHash": "ae386293456bc66c"
+      "contentHash": "ae386293456bc66c",
+      "fetchedAt": "2026-10-09T10:57:20+09:00"
     },
     {
       "id": "ec5192600c3ad1f2",
@@ -1123,9 +1124,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038048.html",
       "category": "other",
       "publishedAt": "2026-10-07T00:00:00+09:00",
-      "fetchedAt": "2026-10-07T17:31:45+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/261007_hnd_osaka_thum-thumb-500x373-41704.jpg",
-      "contentHash": "2dfcf96ba40cb57a"
+      "contentHash": "2dfcf96ba40cb57a",
+      "fetchedAt": "2026-10-07T17:31:45+09:00"
     },
     {
       "id": "0b324c9b9211a732",
@@ -2096,9 +2097,9 @@
       "url": "https://www.tohostage.com/kingdom2/stream2.html",
       "category": "streaming",
       "publishedAt": "2026-09-29T00:00:00+09:00",
+      "fetchedAt": "2026-09-29T17:18:55+09:00",
       "thumbnail": "https://www.toho.co.jp/stage/topics/stage_topics_kingdom2_2026.jpg",
-      "contentHash": "57a0dcf48608e868",
-      "fetchedAt": "2026-09-29T17:18:55+09:00"
+      "contentHash": "57a0dcf48608e868"
     },
     {
       "id": "c89e1a49365622d5",
@@ -2151,9 +2152,9 @@
       "url": "https://www.tohostage.com/kingdom2/stream.html",
       "category": "streaming",
       "publishedAt": "2026-07-31T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/4e996c81db3e3b7fc872639dde873f32a9d58dd82a3eb4c8d47353e5082aaf18.jpg",
-      "contentHash": "e7ffc39df422642f",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "e7ffc39df422642f"
     },
     {
       "id": "183fb828a0066086",
@@ -2173,9 +2174,9 @@
       "url": "https://www.tohostage.com/moulinmusical_japan/",
       "category": "new_work",
       "publishedAt": "2026-07-10T00:00:00+09:00",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.toho.co.jp/images/f972867d2ad60294abe9dad0bd8095639d06d2875c4e64501a352d236523d417.jpg",
-      "contentHash": "d4b479eccf116ffe"
+      "contentHash": "d4b479eccf116ffe",
+      "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
       "id": "27beb62926f3ee05",
@@ -2262,6 +2263,16 @@
       "publishedAt": "2026-03-03T00:00:00+09:00",
       "contentHash": "a49e549006df1557",
       "fetchedAt": "2026-09-23T16:00:04+09:00"
+    },
+    {
+      "id": "79258093bff1c9a8",
+      "companyId": "shinkansen",
+      "title": "／髑髏城／【東京】当日券販売について",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=14127",
+      "category": "other",
+      "publishedAt": "2026-11-12T12:00:00+09:00",
+      "contentHash": "211f75f21daa4041",
+      "fetchedAt": "2026-11-12T19:53:08+09:00"
     },
     {
       "id": "c97e95ddf399efac",
@@ -2360,8 +2371,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13880",
       "category": "other",
       "publishedAt": "2026-09-25T11:00:00+09:00",
-      "contentHash": "2991e8c2a89534c4",
-      "fetchedAt": "2026-09-25T16:37:31+09:00"
+      "fetchedAt": "2026-09-25T16:37:31+09:00",
+      "contentHash": "2991e8c2a89534c4"
     },
     {
       "id": "4c7c67295c4e3eb1",

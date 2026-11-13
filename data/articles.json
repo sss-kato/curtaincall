@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-13T09:06:30+09:00",
+  "generatedAt": "2026-11-13T15:28:51+09:00",
   "articles": [
     {
       "id": "9e5634869b4429bb",
@@ -1009,14 +1009,14 @@
       "fetchedAt": "2026-10-09T10:57:20+09:00"
     },
     {
-      "id": "9956c87df6d36f6a",
+      "id": "4db906bd56144630",
       "companyId": "takarazuka",
-      "title": "宝塚歌劇オーケストラ楽員募集のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20261008_003.html",
-      "category": "other",
+      "title": "チケットの不正転売禁止について",
+      "url": "https://kageki.hankyu.co.jp/news/20261008_001.html",
+      "category": "ticket",
       "publishedAt": "2026-10-08T00:00:00+09:00",
-      "contentHash": "ed6a384a193a278b",
-      "fetchedAt": "2026-11-13T09:06:30+09:00"
+      "contentHash": "28fba6016600a9b5",
+      "fetchedAt": "2026-11-13T15:28:51+09:00"
     },
     {
       "id": "33bd1b441932f90a",
@@ -1789,6 +1789,16 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "952c1c9abe7923d6",
+      "companyId": "horipro",
+      "title": "ミュージカル『スリル・ミー』東京公演チケット販売詳細",
+      "url": "https://horipro-stage.jp/news/thrillme2027_ticket/",
+      "category": "ticket",
+      "publishedAt": "2026-11-13T11:59:00+09:00",
+      "contentHash": "a0013b2a1b685bdd",
+      "fetchedAt": "2026-11-13T15:28:51+09:00"
+    },
+    {
       "id": "454e757571d6e15f",
       "companyId": "horipro",
       "title": "【11月9日(月)より全国で発売】サントリーTAG LIVE LABEL×ミュージカル『ジャック・ザ・リッパー』オリジナルラベル缶販売決定！",
@@ -1865,8 +1875,8 @@
       "url": "https://horipro-stage.jp/news/thisisthemoment2026_information/",
       "category": "other",
       "publishedAt": "2026-10-02T16:11:31+09:00",
-      "contentHash": "69c63ab697ec894e",
-      "fetchedAt": "2026-10-02T17:22:01+09:00"
+      "fetchedAt": "2026-10-02T17:22:01+09:00",
+      "contentHash": "69c63ab697ec894e"
     },
     {
       "id": "35278bb3e553390d",
@@ -2265,6 +2275,16 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "4639accd5a982e4e",
+      "companyId": "shinkansen",
+      "title": "／髑髏城／上演時間のお知らせ",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=14088",
+      "category": "schedule",
+      "publishedAt": "2026-11-13T12:00:00+09:00",
+      "contentHash": "a1333375cbb8a311",
+      "fetchedAt": "2026-11-13T15:28:51+09:00"
+    },
+    {
       "id": "79258093bff1c9a8",
       "companyId": "shinkansen",
       "title": "／髑髏城／【東京】当日券販売について",
@@ -2361,8 +2381,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13931",
       "category": "ticket",
       "publishedAt": "2026-10-01T18:00:00+09:00",
-      "contentHash": "a0cf3bf32214336a",
-      "fetchedAt": "2026-10-02T01:17:23+09:00"
+      "fetchedAt": "2026-10-02T01:17:23+09:00",
+      "contentHash": "a0cf3bf32214336a"
     },
     {
       "id": "be367a0cefd258ba",

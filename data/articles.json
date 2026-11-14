@@ -1,7 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-14T11:13:08+09:00",
+  "generatedAt": "2026-11-14T19:04:39+09:00",
   "articles": [
+    {
+      "id": "67dbd49b1f30981e",
+      "companyId": "takarazuka",
+      "title": "「宝塚歌劇の殿堂」入館料金の改定について",
+      "url": "https://kageki.hankyu.co.jp/news/20261114_002.html",
+      "category": "other",
+      "publishedAt": "2026-11-14T00:00:00+09:00",
+      "contentHash": "c66bfc090f344458",
+      "fetchedAt": "2026-11-14T19:04:39+09:00"
+    },
+    {
+      "id": "c38f767d4aa280f5",
+      "companyId": "takarazuka",
+      "title": "＜一般前売＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261114_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-14T00:00:00+09:00",
+      "contentHash": "0e3227bd0cf13b4d",
+      "fetchedAt": "2026-11-14T19:04:39+09:00"
+    },
     {
       "id": "683d00377268f468",
       "companyId": "takarazuka",
@@ -182,8 +202,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2027/thelondonway/cast.html",
       "category": "cast",
       "publishedAt": "2026-11-07T00:00:00+09:00",
-      "contentHash": "2fbf550933711fac",
-      "fetchedAt": "2026-11-07T16:00:03+09:00"
+      "fetchedAt": "2026-11-07T16:00:03+09:00",
+      "contentHash": "2fbf550933711fac"
     },
     {
       "id": "725efcd294cbc4cf",
@@ -996,27 +1016,6 @@
       "publishedAt": "2026-10-11T00:00:00+09:00",
       "contentHash": "ff7895be0ac59932",
       "fetchedAt": "2026-10-11T17:39:36+09:00"
-    },
-    {
-      "id": "d0790ba20de7e4c9",
-      "companyId": "takarazuka",
-      "title": "＜ライブ配信＞宙組 梅田芸術劇場シアター・ドラマシティ公演『酔いどれ御免！』",
-      "url": "https://kageki.hankyu.co.jp/news/20261010_004.html",
-      "category": "streaming",
-      "publishedAt": "2026-10-10T00:00:00+09:00",
-      "fetchedAt": "2026-10-10T15:55:34+09:00",
-      "contentHash": "deea632194ceffff"
-    },
-    {
-      "id": "ed19e8acf7bdf7f8",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞花組公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20260919_003.html",
-      "category": "streaming",
-      "publishedAt": "2026-11-13T00:00:00+09:00",
-      "contentHash": "4e15daebc74ed307",
-      "fetchedAt": "2026-09-23T16:00:04+09:00",
-      "updatedAt": "2026-10-09T17:51:06+09:00"
     },
     {
       "id": "33bd1b441932f90a",
@@ -2275,6 +2274,16 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "96523069247c0a83",
+      "companyId": "shinkansen",
+      "title": "／髑髏城／東京公演「特製お弁当」及び「夢見酒」販売等に関するお知らせ",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=14238",
+      "category": "other",
+      "publishedAt": "2026-11-14T15:00:00+09:00",
+      "contentHash": "0895c3f5cb197ad6",
+      "fetchedAt": "2026-11-14T19:04:39+09:00"
+    },
+    {
       "id": "0c2646bc40655574",
       "companyId": "shinkansen",
       "title": "／髑髏城／東京公演あす開幕！舞台映像・写真・コメントあり！",
@@ -2371,8 +2380,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=13962",
       "category": "new_work",
       "publishedAt": "2026-10-23T12:00:00+09:00",
-      "contentHash": "34279d4c4ab82d9d",
-      "fetchedAt": "2026-10-23T16:20:41+09:00"
+      "fetchedAt": "2026-10-23T16:20:41+09:00",
+      "contentHash": "34279d4c4ab82d9d"
     },
     {
       "id": "87dcc1d63889a85e",

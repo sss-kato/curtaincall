@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-14T19:04:39+09:00",
+  "generatedAt": "2026-11-15T01:32:06+09:00",
   "articles": [
     {
       "id": "67dbd49b1f30981e",
@@ -41,6 +41,16 @@
       "publishedAt": "2026-11-14T00:00:00+09:00",
       "contentHash": "f9192a8817ee3061",
       "fetchedAt": "2026-11-11T23:00:32+09:00"
+    },
+    {
+      "id": "ed19e8acf7bdf7f8",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞花組公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20260919_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-13T00:00:00+09:00",
+      "contentHash": "4e15daebc74ed307",
+      "fetchedAt": "2026-11-15T01:32:06+09:00"
     },
     {
       "id": "b88e6e6decaefe65",
@@ -1006,16 +1016,6 @@
       "contentHash": "4c11c46fa7df808b",
       "fetchedAt": "2026-10-10T22:31:31+09:00",
       "updatedAt": "2026-10-12T16:13:37+09:00"
-    },
-    {
-      "id": "2ba11d72168666cd",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場各施設の営業体制（花組公演期間）について",
-      "url": "https://kageki.hankyu.co.jp/news/20261011_002.html",
-      "category": "schedule",
-      "publishedAt": "2026-10-11T00:00:00+09:00",
-      "contentHash": "ff7895be0ac59932",
-      "fetchedAt": "2026-10-11T17:39:36+09:00"
     },
     {
       "id": "33bd1b441932f90a",

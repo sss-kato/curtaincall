@@ -1,7 +1,38 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-15T01:32:06+09:00",
+  "generatedAt": "2026-11-15T18:10:05+09:00",
   "articles": [
+    {
+      "id": "c38f767d4aa280f5",
+      "companyId": "takarazuka",
+      "title": "（追）＜一般前売＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261114_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-15T00:00:00+09:00",
+      "contentHash": "00ed19904844544d",
+      "fetchedAt": "2026-11-14T19:04:39+09:00",
+      "updatedAt": "2026-11-15T18:10:05+09:00"
+    },
+    {
+      "id": "49564c1a90b3427f",
+      "companyId": "takarazuka",
+      "title": "宝塚歌劇デジタルカードコレクション「 My Gallery（マイ ギャラリー）」新パック登場！",
+      "url": "https://kageki.hankyu.co.jp/news/20261115_003.html",
+      "category": "other",
+      "publishedAt": "2026-11-15T00:00:00+09:00",
+      "contentHash": "9dcf079458bbf67e",
+      "fetchedAt": "2026-11-15T18:10:05+09:00"
+    },
+    {
+      "id": "fac5b36e52224481",
+      "companyId": "takarazuka",
+      "title": "宝塚友の会「トークスペシャル in 宝塚」花組 無料配信の実施について",
+      "url": "https://kageki.hankyu.co.jp/news/20261115_002.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-15T00:00:00+09:00",
+      "contentHash": "1f156fcef9a93a5a",
+      "fetchedAt": "2026-11-15T18:10:05+09:00"
+    },
     {
       "id": "67dbd49b1f30981e",
       "companyId": "takarazuka",
@@ -10,16 +41,6 @@
       "category": "other",
       "publishedAt": "2026-11-14T00:00:00+09:00",
       "contentHash": "c66bfc090f344458",
-      "fetchedAt": "2026-11-14T19:04:39+09:00"
-    },
-    {
-      "id": "c38f767d4aa280f5",
-      "companyId": "takarazuka",
-      "title": "＜一般前売＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20261114_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-11-14T00:00:00+09:00",
-      "contentHash": "0e3227bd0cf13b4d",
       "fetchedAt": "2026-11-14T19:04:39+09:00"
     },
     {
@@ -912,8 +933,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260901_003.html",
       "category": "other",
       "publishedAt": "2026-10-15T00:00:00+09:00",
-      "contentHash": "c31412ab82c06e94",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "c31412ab82c06e94",
       "updatedAt": "2026-10-15T13:23:13+09:00"
     },
     {
@@ -995,27 +1016,6 @@
       "publishedAt": "2026-10-13T00:00:00+09:00",
       "fetchedAt": "2026-10-13T16:36:25+09:00",
       "contentHash": "95fd7cbe257c90db"
-    },
-    {
-      "id": "6cc13e56a4ef56e8",
-      "companyId": "takarazuka",
-      "title": "＜公演時間＞花組 宝塚大劇場公演",
-      "url": "https://kageki.hankyu.co.jp/news/20261013_005.html",
-      "category": "schedule",
-      "publishedAt": "2026-10-13T00:00:00+09:00",
-      "contentHash": "d7bd94675cf31870",
-      "fetchedAt": "2026-10-13T16:36:25+09:00"
-    },
-    {
-      "id": "cc6c35455ed0c25a",
-      "companyId": "takarazuka",
-      "title": "（追）＜一般前売＞宙組 KAAT神奈川芸術劇場公演『酔いどれ御免！』",
-      "url": "https://kageki.hankyu.co.jp/news/20261010_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-12T00:00:00+09:00",
-      "contentHash": "4c11c46fa7df808b",
-      "fetchedAt": "2026-10-10T22:31:31+09:00",
-      "updatedAt": "2026-10-12T16:13:37+09:00"
     },
     {
       "id": "33bd1b441932f90a",

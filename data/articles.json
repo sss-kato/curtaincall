@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-16T01:57:26+09:00",
+  "generatedAt": "2026-11-16T18:25:46+09:00",
   "articles": [
+    {
+      "id": "1c62ce1c719c0d7f",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞宙組 KAAT神奈川芸術劇場公演",
+      "url": "https://kageki.hankyu.co.jp/news/20261116_001.html",
+      "category": "schedule",
+      "publishedAt": "2026-11-16T00:00:00+09:00",
+      "contentHash": "b4513e67f7e72ad4",
+      "fetchedAt": "2026-11-16T18:25:46+09:00"
+    },
     {
       "id": "c38f767d4aa280f5",
       "companyId": "takarazuka",
@@ -1006,16 +1016,6 @@
       "publishedAt": "2026-10-13T00:00:00+09:00",
       "contentHash": "d7bd94675cf31870",
       "fetchedAt": "2026-11-16T01:57:26+09:00"
-    },
-    {
-      "id": "1ed2a0640db9ce6c",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20261013_002.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-13T00:00:00+09:00",
-      "contentHash": "50923bfce1e9c91a",
-      "fetchedAt": "2026-10-13T16:36:25+09:00"
     },
     {
       "id": "33bd1b441932f90a",

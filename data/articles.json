@@ -1,7 +1,47 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-17T05:16:27+09:00",
+  "generatedAt": "2026-11-17T12:40:23+09:00",
   "articles": [
+    {
+      "id": "1b1936236c077ab9",
+      "companyId": "takarazuka",
+      "title": "＜出演者決定＞花組 日本青年館ホール ／梅田芸術劇場シアター・ドラマシティ 公演『にぎたつの海に月出づ』",
+      "url": "https://kageki.hankyu.co.jp/revue/2027/nigitatsunoumi/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-11-17T00:00:00+09:00",
+      "contentHash": "cde1e62a02993760",
+      "fetchedAt": "2026-11-17T12:40:23+09:00"
+    },
+    {
+      "id": "3c4e72389a7bd2a6",
+      "companyId": "takarazuka",
+      "title": "＜公演時間＞星組公演『RRR × TAKA”R”AZUKA ～√Rama～』新人公演",
+      "url": "https://kageki.hankyu.co.jp/news/20261117_002.html",
+      "category": "schedule",
+      "publishedAt": "2026-11-17T00:00:00+09:00",
+      "contentHash": "94d541e06cc6a197",
+      "fetchedAt": "2026-11-17T12:40:23+09:00"
+    },
+    {
+      "id": "554939b97642b682",
+      "companyId": "takarazuka",
+      "title": "＜出演者決定＞花組 Kanadevia Hall ／梅田芸術劇場メインホール公演『Ave Mare!』",
+      "url": "https://kageki.hankyu.co.jp/revue/2027/avemare/cast.html",
+      "category": "cast",
+      "publishedAt": "2026-11-17T00:00:00+09:00",
+      "contentHash": "73a39dfd0ca40abf",
+      "fetchedAt": "2026-11-17T12:40:23+09:00"
+    },
+    {
+      "id": "b563ca0b05a8006c",
+      "companyId": "takarazuka",
+      "title": "組替えについて",
+      "url": "https://kageki.hankyu.co.jp/news/20261117_003.html",
+      "category": "person",
+      "publishedAt": "2026-11-17T00:00:00+09:00",
+      "contentHash": "85c75fcd0de3c80e",
+      "fetchedAt": "2026-11-17T12:40:23+09:00"
+    },
     {
       "id": "1c62ce1c719c0d7f",
       "companyId": "takarazuka",
@@ -976,46 +1016,6 @@
       "publishedAt": "2026-10-14T00:00:00+09:00",
       "fetchedAt": "2026-10-14T15:02:42+09:00",
       "contentHash": "f406c990ffa40fa2"
-    },
-    {
-      "id": "88071af352b554c3",
-      "companyId": "takarazuka",
-      "title": "＜宝塚友の会 チケット先行販売「抽選方式」＞雪組 梅田芸術劇場メインホール公演『Monte-Cristo －le spectacle musical－』",
-      "url": "https://kageki.hankyu.co.jp/news/20261014_002.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-14T00:00:00+09:00",
-      "fetchedAt": "2026-10-14T10:04:48+09:00",
-      "contentHash": "75bf3ec7fa15a58a"
-    },
-    {
-      "id": "b10aed9a3b2613a0",
-      "companyId": "takarazuka",
-      "title": "＜宝塚友の会 チケット先行販売「抽選方式」＞宝塚友の会 会員様限定 特別イベント『ステージトークin東京』星組",
-      "url": "https://kageki.hankyu.co.jp/news/20261014_003.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-14T00:00:00+09:00",
-      "fetchedAt": "2026-10-14T10:04:48+09:00",
-      "contentHash": "245d2ab476ebe026"
-    },
-    {
-      "id": "ff8737118c825360",
-      "companyId": "takarazuka",
-      "title": "＜宝塚友の会 チケット先行販売「第2抽選方式」＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20261014_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-14T00:00:00+09:00",
-      "fetchedAt": "2026-10-14T10:04:48+09:00",
-      "contentHash": "572c8a95d747529e"
-    },
-    {
-      "id": "1ed2a0640db9ce6c",
-      "companyId": "takarazuka",
-      "title": "＜宝塚歌劇共通ID＋ チケット先行販売＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20261013_002.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-13T00:00:00+09:00",
-      "contentHash": "50923bfce1e9c91a",
-      "fetchedAt": "2026-11-17T05:16:27+09:00"
     },
     {
       "id": "33bd1b441932f90a",

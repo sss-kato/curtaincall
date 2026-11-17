@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-17T12:40:23+09:00",
+  "generatedAt": "2026-11-17T22:04:50+09:00",
   "articles": [
+    {
+      "id": "7f24067dc8560d33",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
+      "url": "https://kageki.hankyu.co.jp/news/20261117_006.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-17T00:00:00+09:00",
+      "contentHash": "f406c990ffa40fa2",
+      "fetchedAt": "2026-11-17T22:04:50+09:00"
+    },
     {
       "id": "1b1936236c077ab9",
       "companyId": "takarazuka",
@@ -202,8 +212,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261110_002.html",
       "category": "streaming",
       "publishedAt": "2026-11-10T00:00:00+09:00",
-      "contentHash": "f406c990ffa40fa2",
-      "fetchedAt": "2026-11-10T18:37:40+09:00"
+      "fetchedAt": "2026-11-10T18:37:40+09:00",
+      "contentHash": "f406c990ffa40fa2"
     },
     {
       "id": "ea3704e654200c5b",
@@ -242,8 +252,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261109_002.html",
       "category": "new_work",
       "publishedAt": "2026-11-09T00:00:00+09:00",
-      "contentHash": "156e7b7187054cbb",
-      "fetchedAt": "2026-11-09T16:51:11+09:00"
+      "fetchedAt": "2026-11-09T16:51:11+09:00",
+      "contentHash": "156e7b7187054cbb"
     },
     {
       "id": "86bb28380e4f6a9e",
@@ -1006,16 +1016,6 @@
       "publishedAt": "2026-10-14T00:00:00+09:00",
       "fetchedAt": "2026-10-14T20:40:13+09:00",
       "contentHash": "d89cd28aa06e8a92"
-    },
-    {
-      "id": "35959fa80f788bbd",
-      "companyId": "takarazuka",
-      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
-      "url": "https://kageki.hankyu.co.jp/news/20261014_004.html",
-      "category": "streaming",
-      "publishedAt": "2026-10-14T00:00:00+09:00",
-      "fetchedAt": "2026-10-14T15:02:42+09:00",
-      "contentHash": "f406c990ffa40fa2"
     },
     {
       "id": "33bd1b441932f90a",
@@ -1814,8 +1814,8 @@
       "url": "https://horipro-stage.jp/news/info20261102/",
       "category": "other",
       "publishedAt": "2026-11-02T11:07:57+09:00",
-      "contentHash": "2d472b16f9783210",
-      "fetchedAt": "2026-11-02T16:34:10+09:00"
+      "fetchedAt": "2026-11-02T16:34:10+09:00",
+      "contentHash": "2d472b16f9783210"
     },
     {
       "id": "1ee5b106bbd374b9",
@@ -1874,8 +1874,8 @@
       "url": "https://horipro-stage.jp/news/thisisthemoment2026_information/",
       "category": "other",
       "publishedAt": "2026-10-02T16:11:31+09:00",
-      "fetchedAt": "2026-10-02T17:22:01+09:00",
-      "contentHash": "69c63ab697ec894e"
+      "contentHash": "69c63ab697ec894e",
+      "fetchedAt": "2026-10-02T17:22:01+09:00"
     },
     {
       "id": "35278bb3e553390d",

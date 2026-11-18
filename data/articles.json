@@ -1,7 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-17T22:04:50+09:00",
+  "generatedAt": "2026-11-18T12:36:02+09:00",
   "articles": [
+    {
+      "id": "1348f3e66476fa1b",
+      "companyId": "takarazuka",
+      "title": "＜ブルーレイ予約受付開始のお知らせ＞宙組全国ツアー公演『再会－風が残した君の名前－』『Diamond IMPULSE』",
+      "url": "https://www.tca-pictures.net/stage/2026/saikai/",
+      "category": "ticket",
+      "publishedAt": "2026-11-18T00:00:00+09:00",
+      "contentHash": "552f3c100e35535f",
+      "fetchedAt": "2026-11-18T12:36:02+09:00"
+    },
+    {
+      "id": "f7789fc53c353032",
+      "companyId": "takarazuka",
+      "title": "宝塚歌劇×宝塚ホテル・宝塚大劇場 コラボレーション企画の開催について",
+      "url": "https://kageki.hankyu.co.jp/news/20261118_003.html",
+      "category": "other",
+      "publishedAt": "2026-11-18T00:00:00+09:00",
+      "contentHash": "da10909973b6914f",
+      "fetchedAt": "2026-11-18T12:36:02+09:00"
+    },
     {
       "id": "7f24067dc8560d33",
       "companyId": "takarazuka",
@@ -273,8 +293,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261108_003.html",
       "category": "other",
       "publishedAt": "2026-11-08T00:00:00+09:00",
-      "contentHash": "ee5088547e8256e8",
-      "fetchedAt": "2026-11-08T19:08:27+09:00"
+      "fetchedAt": "2026-11-08T19:08:27+09:00",
+      "contentHash": "ee5088547e8256e8"
     },
     {
       "id": "8b413a3371ce17b5",
@@ -996,26 +1016,6 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00",
       "contentHash": "c31412ab82c06e94",
       "updatedAt": "2026-10-15T13:23:13+09:00"
-    },
-    {
-      "id": "73be3c98085633cb",
-      "companyId": "takarazuka",
-      "title": "（追）美穂圭子 ディナーショー",
-      "url": "https://kageki.hankyu.co.jp/news/20260520_009.html",
-      "category": "other",
-      "publishedAt": "2026-10-15T00:00:00+09:00",
-      "contentHash": "4754219192ffd247",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "7a989ab99c77c7d1",
-      "companyId": "takarazuka",
-      "title": "公演ラインアップ【Kanadevia Hall公演／梅田芸術劇場メインホール公演】＜2027年4月・花組『Ave Mare!』＞",
-      "url": "https://kageki.hankyu.co.jp/news/20261014_005.html",
-      "category": "new_work",
-      "publishedAt": "2026-10-14T00:00:00+09:00",
-      "fetchedAt": "2026-10-14T20:40:13+09:00",
-      "contentHash": "d89cd28aa06e8a92"
     },
     {
       "id": "33bd1b441932f90a",

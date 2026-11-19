@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-19T21:48:31+09:00",
+  "generatedAt": "2026-11-20T06:21:36+09:00",
   "articles": [
     {
       "id": "23f6293754d284d6",
@@ -977,6 +977,16 @@
       "fetchedAt": "2026-10-17T10:14:16+09:00"
     },
     {
+      "id": "9e9e1bfac6a48cbf",
+      "companyId": "takarazuka",
+      "title": "宝塚大劇場内「レビューショップ」「劇場売店」期間限定商品の販売について",
+      "url": "https://kageki.hankyu.co.jp/news/20261016_002.html",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "50368c0464c4d799",
+      "fetchedAt": "2026-11-20T06:21:36+09:00"
+    },
+    {
       "id": "89032087bd43e028",
       "companyId": "takarazuka",
       "title": "（追）＜動画配信サービス “TAKARAZUKA SQUARE【タカスク】\"＞公演連動タカスクおためしキャンペーンスタート！",
@@ -1004,16 +1014,6 @@
       "category": "other",
       "publishedAt": "2026-10-16T00:00:00+09:00",
       "contentHash": "2845059a23b4ab48",
-      "fetchedAt": "2026-10-16T14:43:46+09:00"
-    },
-    {
-      "id": "94ab593ec270516d",
-      "companyId": "takarazuka",
-      "title": "モロゾフ「宝塚大劇場オリジナル アーモンドスカッチクッキー」「宝塚大劇場オリジナル フェイバリット」発売のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20261016_003.html",
-      "category": "other",
-      "publishedAt": "2026-10-16T00:00:00+09:00",
-      "contentHash": "2b80b28b342daccf",
       "fetchedAt": "2026-10-16T14:43:46+09:00"
     },
     {

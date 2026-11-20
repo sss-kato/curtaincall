@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-20T20:17:00+09:00",
+  "generatedAt": "2026-11-21T04:58:03+09:00",
   "articles": [
     {
       "id": "cdaf7456f22f36c2",
@@ -1008,14 +1008,14 @@
       "fetchedAt": "2026-10-17T10:14:16+09:00"
     },
     {
-      "id": "679fc24020c8b6d1",
+      "id": "89032087bd43e028",
       "companyId": "takarazuka",
-      "title": "宝塚大劇場レストラン 花組公演特別メニューについて",
-      "url": "https://kageki.hankyu.co.jp/news/20261016_001.html",
-      "category": "other",
+      "title": "（追）＜動画配信サービス “TAKARAZUKA SQUARE【タカスク】\"＞公演連動タカスクおためしキャンペーンスタート！",
+      "url": "https://www.tca-pictures.net/square_cp/campaign/",
+      "category": "streaming",
       "publishedAt": "2026-10-16T00:00:00+09:00",
-      "contentHash": "2845059a23b4ab48",
-      "fetchedAt": "2026-11-20T20:17:00+09:00"
+      "contentHash": "2d4472f3bdec4ac0",
+      "fetchedAt": "2026-11-21T04:58:03+09:00"
     },
     {
       "id": "33bd1b441932f90a",

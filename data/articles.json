@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-20T06:21:36+09:00",
+  "generatedAt": "2026-11-20T11:58:33+09:00",
   "articles": [
+    {
+      "id": "cdaf7456f22f36c2",
+      "companyId": "takarazuka",
+      "title": "サービス一部再開のご案内",
+      "url": "https://kageki.hankyu.co.jp/news/20261120_10.html",
+      "category": "other",
+      "publishedAt": "2026-11-20T00:00:00+09:00",
+      "contentHash": "6d027bdd120ed557",
+      "fetchedAt": "2026-11-20T11:58:33+09:00"
+    },
     {
       "id": "23f6293754d284d6",
       "companyId": "takarazuka",
@@ -977,6 +987,16 @@
       "fetchedAt": "2026-10-17T10:14:16+09:00"
     },
     {
+      "id": "94ab593ec270516d",
+      "companyId": "takarazuka",
+      "title": "モロゾフ「宝塚大劇場オリジナル アーモンドスカッチクッキー」「宝塚大劇場オリジナル フェイバリット」発売のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261016_003.html",
+      "category": "other",
+      "publishedAt": "2026-10-16T00:00:00+09:00",
+      "contentHash": "2b80b28b342daccf",
+      "fetchedAt": "2026-11-20T11:58:33+09:00"
+    },
+    {
       "id": "9e9e1bfac6a48cbf",
       "companyId": "takarazuka",
       "title": "宝塚大劇場内「レビューショップ」「劇場売店」期間限定商品の販売について",
@@ -995,26 +1015,6 @@
       "publishedAt": "2026-10-16T00:00:00+09:00",
       "contentHash": "2d4472f3bdec4ac0",
       "fetchedAt": "2026-10-16T20:12:45+09:00"
-    },
-    {
-      "id": "bc3e0e2504b5720b",
-      "companyId": "takarazuka",
-      "title": "タイ大手映像配信プラットフォーム「TrueID」にて宝塚歌劇の動画コンテンツの配信開始！",
-      "url": "https://kageki.hankyu.co.jp/news/20261016_006.html",
-      "category": "streaming",
-      "publishedAt": "2026-10-16T00:00:00+09:00",
-      "contentHash": "73d1491089b25465",
-      "fetchedAt": "2026-10-16T20:12:45+09:00"
-    },
-    {
-      "id": "679fc24020c8b6d1",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場レストラン 花組公演特別メニューについて",
-      "url": "https://kageki.hankyu.co.jp/news/20261016_001.html",
-      "category": "other",
-      "publishedAt": "2026-10-16T00:00:00+09:00",
-      "contentHash": "2845059a23b4ab48",
-      "fetchedAt": "2026-10-16T14:43:46+09:00"
     },
     {
       "id": "33bd1b441932f90a",

@@ -1,7 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-21T10:20:56+09:00",
+  "generatedAt": "2026-11-21T18:35:14+09:00",
   "articles": [
+    {
+      "id": "f67e7e692399c149",
+      "companyId": "takarazuka",
+      "title": "＜一般前売＞雪組 東京国際フォーラム ホールC公演『Monte-Cristo －le spectacle musical－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261121_001.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-21T00:00:00+09:00",
+      "contentHash": "a4da838ca83996fb",
+      "fetchedAt": "2026-11-21T18:35:14+09:00"
+    },
+    {
+      "id": "ed19e8acf7bdf7f8",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞花組公演『エリザベート－愛と死の輪舞－』",
+      "url": "https://kageki.hankyu.co.jp/news/20260919_003.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-21T00:00:00+09:00",
+      "contentHash": "4e15daebc74ed307",
+      "fetchedAt": "2026-11-15T01:32:06+09:00"
+    },
     {
       "id": "cdaf7456f22f36c2",
       "companyId": "takarazuka",
@@ -32,16 +52,6 @@
       "publishedAt": "2026-11-20T00:00:00+09:00",
       "contentHash": "27ff7249b98821da",
       "fetchedAt": "2026-11-20T20:17:00+09:00"
-    },
-    {
-      "id": "ed19e8acf7bdf7f8",
-      "companyId": "takarazuka",
-      "title": "（追）＜ライブ中継・ライブ配信＞花組公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20260919_003.html",
-      "category": "streaming",
-      "publishedAt": "2026-11-20T00:00:00+09:00",
-      "contentHash": "4e15daebc74ed307",
-      "fetchedAt": "2026-11-15T01:32:06+09:00"
     },
     {
       "id": "23f6293754d284d6",
@@ -913,8 +923,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20260912_002.html",
       "category": "other",
       "publishedAt": "2026-10-21T00:00:00+09:00",
-      "contentHash": "e99516884ad214a0",
       "fetchedAt": "2026-09-23T16:00:04+09:00",
+      "contentHash": "e99516884ad214a0",
       "updatedAt": "2026-10-21T10:29:27+09:00"
     },
     {
@@ -1006,16 +1016,6 @@
       "publishedAt": "2026-10-17T00:00:00+09:00",
       "contentHash": "18e6d0b4a1a98626",
       "fetchedAt": "2026-10-17T10:14:16+09:00"
-    },
-    {
-      "id": "679fc24020c8b6d1",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場レストラン 花組公演特別メニューについて",
-      "url": "https://kageki.hankyu.co.jp/news/20261016_001.html",
-      "category": "other",
-      "publishedAt": "2026-10-16T00:00:00+09:00",
-      "contentHash": "2845059a23b4ab48",
-      "fetchedAt": "2026-11-21T10:20:56+09:00"
     },
     {
       "id": "33bd1b441932f90a",

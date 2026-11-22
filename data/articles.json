@@ -1,16 +1,27 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-21T18:35:14+09:00",
+  "generatedAt": "2026-11-22T20:01:57+09:00",
   "articles": [
     {
       "id": "f67e7e692399c149",
       "companyId": "takarazuka",
-      "title": "＜一般前売＞雪組 東京国際フォーラム ホールC公演『Monte-Cristo －le spectacle musical－』",
+      "title": "（追）＜一般前売＞雪組 東京国際フォーラム ホールC公演『Monte-Cristo －le spectacle musical－』",
       "url": "https://kageki.hankyu.co.jp/news/20261121_001.html",
       "category": "ticket",
-      "publishedAt": "2026-11-21T00:00:00+09:00",
-      "contentHash": "a4da838ca83996fb",
-      "fetchedAt": "2026-11-21T18:35:14+09:00"
+      "publishedAt": "2026-11-22T00:00:00+09:00",
+      "contentHash": "30f3a7026e44beef",
+      "fetchedAt": "2026-11-21T18:35:14+09:00",
+      "updatedAt": "2026-11-22T20:01:57+09:00"
+    },
+    {
+      "id": "30834d3a69eac1f6",
+      "companyId": "takarazuka",
+      "title": "「Sポイント」サービスシステム 緊急システムメンテナンスにともなう一部サービスの利用制限について",
+      "url": "https://kageki.hankyu.co.jp/news/20261122_10.html",
+      "category": "other",
+      "publishedAt": "2026-11-22T00:00:00+09:00",
+      "contentHash": "023641b76d44e82e",
+      "fetchedAt": "2026-11-22T20:01:57+09:00"
     },
     {
       "id": "ed19e8acf7bdf7f8",
@@ -144,8 +155,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261119_007.html",
       "category": "ticket",
       "publishedAt": "2026-11-19T00:00:00+09:00",
-      "contentHash": "f6d6c1fde452ade3",
-      "fetchedAt": "2026-11-19T12:09:15+09:00"
+      "fetchedAt": "2026-11-19T12:09:15+09:00",
+      "contentHash": "f6d6c1fde452ade3"
     },
     {
       "id": "05e14682522689e6",
@@ -519,8 +530,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261106_004.html",
       "category": "other",
       "publishedAt": "2026-11-06T00:00:00+09:00",
-      "contentHash": "eef78e26bf54e233",
-      "fetchedAt": "2026-11-06T15:20:54+09:00"
+      "fetchedAt": "2026-11-06T15:20:54+09:00",
+      "contentHash": "eef78e26bf54e233"
     },
     {
       "id": "6ac477cfa7e456ed",
@@ -793,8 +804,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261027_001.html",
       "category": "schedule",
       "publishedAt": "2026-10-27T00:00:00+09:00",
-      "contentHash": "fbc4003741755f9d",
-      "fetchedAt": "2026-10-28T14:23:13+09:00"
+      "fetchedAt": "2026-10-28T14:23:13+09:00",
+      "contentHash": "fbc4003741755f9d"
     },
     {
       "id": "1cf4a8c01cd1c05c",
@@ -1006,16 +1017,6 @@
       "publishedAt": "2026-10-17T00:00:00+09:00",
       "fetchedAt": "2026-10-17T10:14:16+09:00",
       "contentHash": "8716c780b5cf5b0d"
-    },
-    {
-      "id": "98c725f0efb939c1",
-      "companyId": "takarazuka",
-      "title": "＜カスタマイズCD＞花組新曲追加のお知らせ（キャトルレーヴ宝塚店）",
-      "url": "https://kageki.hankyu.co.jp/news/20261017_003.html",
-      "category": "other",
-      "publishedAt": "2026-10-17T00:00:00+09:00",
-      "contentHash": "18e6d0b4a1a98626",
-      "fetchedAt": "2026-10-17T10:14:16+09:00"
     },
     {
       "id": "33bd1b441932f90a",

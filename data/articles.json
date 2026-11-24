@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-22T20:01:57+09:00",
+  "generatedAt": "2026-11-25T02:28:22+09:00",
   "articles": [
+    {
+      "id": "90414361ee4a9d7c",
+      "companyId": "takarazuka",
+      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
+      "url": "https://kageki.hankyu.co.jp/news/20261124_001.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-24T00:00:00+09:00",
+      "contentHash": "f406c990ffa40fa2",
+      "fetchedAt": "2026-11-25T02:28:22+09:00"
+    },
     {
       "id": "f67e7e692399c149",
       "companyId": "takarazuka",
@@ -205,8 +215,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261117_006.html",
       "category": "streaming",
       "publishedAt": "2026-11-17T00:00:00+09:00",
-      "contentHash": "f406c990ffa40fa2",
-      "fetchedAt": "2026-11-17T22:04:50+09:00"
+      "fetchedAt": "2026-11-17T22:04:50+09:00",
+      "contentHash": "f406c990ffa40fa2"
     },
     {
       "id": "1b1936236c077ab9",
@@ -215,8 +225,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2027/nigitatsunoumi/cast.html",
       "category": "cast",
       "publishedAt": "2026-11-17T00:00:00+09:00",
-      "contentHash": "cde1e62a02993760",
-      "fetchedAt": "2026-11-17T12:40:23+09:00"
+      "fetchedAt": "2026-11-17T12:40:23+09:00",
+      "contentHash": "cde1e62a02993760"
     },
     {
       "id": "3c4e72389a7bd2a6",
@@ -225,8 +235,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261117_002.html",
       "category": "schedule",
       "publishedAt": "2026-11-17T00:00:00+09:00",
-      "contentHash": "94d541e06cc6a197",
-      "fetchedAt": "2026-11-17T12:40:23+09:00"
+      "fetchedAt": "2026-11-17T12:40:23+09:00",
+      "contentHash": "94d541e06cc6a197"
     },
     {
       "id": "554939b97642b682",
@@ -235,8 +245,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2027/avemare/cast.html",
       "category": "cast",
       "publishedAt": "2026-11-17T00:00:00+09:00",
-      "contentHash": "73a39dfd0ca40abf",
-      "fetchedAt": "2026-11-17T12:40:23+09:00"
+      "fetchedAt": "2026-11-17T12:40:23+09:00",
+      "contentHash": "73a39dfd0ca40abf"
     },
     {
       "id": "b563ca0b05a8006c",
@@ -255,8 +265,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261116_001.html",
       "category": "schedule",
       "publishedAt": "2026-11-16T00:00:00+09:00",
-      "contentHash": "b4513e67f7e72ad4",
-      "fetchedAt": "2026-11-16T18:25:46+09:00"
+      "fetchedAt": "2026-11-16T18:25:46+09:00",
+      "contentHash": "b4513e67f7e72ad4"
     },
     {
       "id": "c38f767d4aa280f5",
@@ -448,8 +458,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261013_004.html",
       "category": "other",
       "publishedAt": "2026-11-08T00:00:00+09:00",
-      "contentHash": "cd59e679ac5455e8",
       "fetchedAt": "2026-10-13T16:36:25+09:00",
+      "contentHash": "cd59e679ac5455e8",
       "updatedAt": "2026-11-08T19:08:27+09:00"
     },
     {
@@ -1007,16 +1017,6 @@
       "publishedAt": "2026-10-17T00:00:00+09:00",
       "contentHash": "7fbfedc0f701763a",
       "fetchedAt": "2026-10-17T10:14:16+09:00"
-    },
-    {
-      "id": "5fbf32b2303433f5",
-      "companyId": "takarazuka",
-      "title": "＜タカラヅカ・スカイ・ステージ＞『エリザベート－愛と死の輪舞－』20作品 12ヵ月連続放送！のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20261017_004.html",
-      "category": "streaming",
-      "publishedAt": "2026-10-17T00:00:00+09:00",
-      "fetchedAt": "2026-10-17T10:14:16+09:00",
-      "contentHash": "8716c780b5cf5b0d"
     },
     {
       "id": "33bd1b441932f90a",
@@ -1789,6 +1789,16 @@
       "contentHash": "7e8ccd3b2231b2ca"
     },
     {
+      "id": "474e83f6af747cc2",
+      "companyId": "horipro",
+      "title": "【抽選でご招待】舞台『組曲虐殺』製作発表12月15日(火)開催決定！",
+      "url": "https://horipro-stage.jp/news/kumikyoku20261124/",
+      "category": "new_work",
+      "publishedAt": "2026-11-24T16:59:00+09:00",
+      "contentHash": "f17f8f9bdca01285",
+      "fetchedAt": "2026-11-25T02:28:22+09:00"
+    },
+    {
       "id": "952c1c9abe7923d6",
       "companyId": "horipro",
       "title": "ミュージカル『スリル・ミー』東京公演チケット販売詳細",
@@ -1875,8 +1885,8 @@
       "url": "https://horipro-stage.jp/news/thisisthemoment2026_information/",
       "category": "other",
       "publishedAt": "2026-10-02T16:11:31+09:00",
-      "contentHash": "69c63ab697ec894e",
-      "fetchedAt": "2026-10-02T17:22:01+09:00"
+      "fetchedAt": "2026-10-02T17:22:01+09:00",
+      "contentHash": "69c63ab697ec894e"
     },
     {
       "id": "35278bb3e553390d",

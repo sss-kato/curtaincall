@@ -1,7 +1,38 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-25T02:28:22+09:00",
+  "generatedAt": "2026-11-25T11:13:17+09:00",
   "articles": [
+    {
+      "id": "30834d3a69eac1f6",
+      "companyId": "takarazuka",
+      "title": "（追）【復旧】「Sポイント」サービスシステム 緊急システムメンテナンスにともなう一部サービスの利用制限について",
+      "url": "https://kageki.hankyu.co.jp/news/20261122_10.html",
+      "category": "other",
+      "publishedAt": "2026-11-25T00:00:00+09:00",
+      "contentHash": "0ef35623b4753b10",
+      "fetchedAt": "2026-11-22T20:01:57+09:00",
+      "updatedAt": "2026-11-25T11:13:17+09:00"
+    },
+    {
+      "id": "aefb379fc78621bb",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第1抽選方式」＞星組 東京国際フォーラム ホールC公演『大奥』",
+      "url": "https://kageki.hankyu.co.jp/news/20261125_003.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-25T00:00:00+09:00",
+      "contentHash": "864b95e3a2af2f6e",
+      "fetchedAt": "2026-11-25T11:13:17+09:00"
+    },
+    {
+      "id": "c3eb0f286f54f384",
+      "companyId": "takarazuka",
+      "title": "＜宝塚友の会 チケット先行販売「第1抽選方式」＞宙組 宝塚大劇場公演『The London Way』『Ivresse Vague』",
+      "url": "https://kageki.hankyu.co.jp/news/20261125_004.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-25T00:00:00+09:00",
+      "contentHash": "d5b67bceb847e536",
+      "fetchedAt": "2026-11-25T11:13:17+09:00"
+    },
     {
       "id": "90414361ee4a9d7c",
       "companyId": "takarazuka",
@@ -22,16 +53,6 @@
       "contentHash": "30f3a7026e44beef",
       "fetchedAt": "2026-11-21T18:35:14+09:00",
       "updatedAt": "2026-11-22T20:01:57+09:00"
-    },
-    {
-      "id": "30834d3a69eac1f6",
-      "companyId": "takarazuka",
-      "title": "「Sポイント」サービスシステム 緊急システムメンテナンスにともなう一部サービスの利用制限について",
-      "url": "https://kageki.hankyu.co.jp/news/20261122_10.html",
-      "category": "other",
-      "publishedAt": "2026-11-22T00:00:00+09:00",
-      "contentHash": "023641b76d44e82e",
-      "fetchedAt": "2026-11-22T20:01:57+09:00"
     },
     {
       "id": "ed19e8acf7bdf7f8",
@@ -997,26 +1018,6 @@
       "publishedAt": "2026-10-18T00:00:00+09:00",
       "fetchedAt": "2026-10-18T17:32:10+09:00",
       "contentHash": "98aa3a313a776a2f"
-    },
-    {
-      "id": "b51cc8af48611f9c",
-      "companyId": "takarazuka",
-      "title": "（再）出演者を含む宝塚歌劇関係者に対する無断撮影への対応について",
-      "url": "https://kageki.hankyu.co.jp/news/20260331_10.html",
-      "category": "other",
-      "publishedAt": "2026-10-18T00:00:00+09:00",
-      "contentHash": "a0dc966520b65255",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
-    },
-    {
-      "id": "190844fbe07f2a55",
-      "companyId": "takarazuka",
-      "title": "（再）「阪急17番街presents 心躍る宝塚歌劇衣装展」開催について",
-      "url": "https://kageki.hankyu.co.jp/news/20260818_001.html",
-      "category": "other",
-      "publishedAt": "2026-10-17T00:00:00+09:00",
-      "contentHash": "7fbfedc0f701763a",
-      "fetchedAt": "2026-10-17T10:14:16+09:00"
     },
     {
       "id": "33bd1b441932f90a",

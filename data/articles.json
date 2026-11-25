@@ -1,7 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-25T11:13:17+09:00",
+  "generatedAt": "2026-11-25T21:33:58+09:00",
   "articles": [
+    {
+      "id": "b88e6e6decaefe65",
+      "companyId": "takarazuka",
+      "title": "（追）＜TAKARAZUKA REVUE MUSIC＞11月配信のお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261113_001.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-25T00:00:00+09:00",
+      "contentHash": "87ee3afcc2a95dbd",
+      "fetchedAt": "2026-11-14T00:17:33+09:00",
+      "updatedAt": "2026-11-25T21:33:58+09:00"
+    },
     {
       "id": "30834d3a69eac1f6",
       "companyId": "takarazuka",
@@ -12,6 +23,16 @@
       "contentHash": "0ef35623b4753b10",
       "fetchedAt": "2026-11-22T20:01:57+09:00",
       "updatedAt": "2026-11-25T11:13:17+09:00"
+    },
+    {
+      "id": "977b955a8bf893e4",
+      "companyId": "takarazuka",
+      "title": "宝塚歌劇デジタルカードコレクション「 My Gallery（マイ ギャラリー）」新パック登場！",
+      "url": "https://kageki.hankyu.co.jp/news/mygallery_packagedeal.html",
+      "category": "other",
+      "publishedAt": "2026-11-25T00:00:00+09:00",
+      "contentHash": "9dcf079458bbf67e",
+      "fetchedAt": "2026-11-25T21:33:58+09:00"
     },
     {
       "id": "aefb379fc78621bb",
@@ -307,8 +328,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261115_003.html",
       "category": "other",
       "publishedAt": "2026-11-15T00:00:00+09:00",
-      "contentHash": "9dcf079458bbf67e",
-      "fetchedAt": "2026-11-15T18:10:05+09:00"
+      "fetchedAt": "2026-11-15T18:10:05+09:00",
+      "contentHash": "9dcf079458bbf67e"
     },
     {
       "id": "fac5b36e52224481",
@@ -349,16 +370,6 @@
       "publishedAt": "2026-11-14T00:00:00+09:00",
       "contentHash": "f9192a8817ee3061",
       "fetchedAt": "2026-11-11T23:00:32+09:00"
-    },
-    {
-      "id": "b88e6e6decaefe65",
-      "companyId": "takarazuka",
-      "title": "＜TAKARAZUKA REVUE MUSIC＞11月配信のお知らせ",
-      "url": "https://kageki.hankyu.co.jp/news/20261113_001.html",
-      "category": "streaming",
-      "publishedAt": "2026-11-13T00:00:00+09:00",
-      "contentHash": "077841dde160deb3",
-      "fetchedAt": "2026-11-14T00:17:33+09:00"
     },
     {
       "id": "9e5634869b4429bb",
@@ -1008,16 +1019,6 @@
       "publishedAt": "2026-10-20T00:00:00+09:00",
       "fetchedAt": "2026-10-20T13:36:07+09:00",
       "contentHash": "4c800dd0795d7502"
-    },
-    {
-      "id": "9f835345e259904a",
-      "companyId": "takarazuka",
-      "title": "宝塚大劇場 西駐車場10月23日（金）の営業について",
-      "url": "https://kageki.hankyu.co.jp/news/20261018_002.html",
-      "category": "other",
-      "publishedAt": "2026-10-18T00:00:00+09:00",
-      "fetchedAt": "2026-10-18T17:32:10+09:00",
-      "contentHash": "98aa3a313a776a2f"
     },
     {
       "id": "33bd1b441932f90a",

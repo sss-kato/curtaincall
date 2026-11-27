@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-27T17:03:52+09:00",
+  "generatedAt": "2026-11-28T03:04:55+09:00",
   "articles": [
     {
       "id": "f6da9b7476ef2dee",
@@ -1020,6 +1020,116 @@
       "publishedAt": "2026-10-21T00:00:00+09:00",
       "fetchedAt": "2026-10-21T10:29:27+09:00",
       "contentHash": "f383cbbbb800b851"
+    },
+    {
+      "id": "1abd6bba02c46956",
+      "companyId": "shiki",
+      "title": "『エルコスの祈り』東京公演 明日28日（土）「四季の会」会員先行予約開始！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038091.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-27T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2023/04/elcos_mtthmn-thumb-500x373-33427.jpg",
+      "contentHash": "98434694ae580796",
+      "fetchedAt": "2026-11-28T03:04:55+09:00"
+    },
+    {
+      "id": "70a9f3762f0a3763",
+      "companyId": "shiki",
+      "title": "「四季の会」会員限定『ノートルダムの鐘』横浜公演 事前抽選販売について",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038079.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-27T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/09ce5ab2e3d25cb0f135ae6a502d0fff8f65049e-thumb-500x373-40451.jpg",
+      "contentHash": "47e939fa59af1da9",
+      "fetchedAt": "2026-11-28T03:04:55+09:00"
+    },
+    {
+      "id": "12594d472d15b935",
+      "companyId": "shiki",
+      "title": "『キャッツ』福岡公演に向け、出演経験キャストが福岡でPR活動を行いました",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038081.html",
+      "category": "cast",
+      "publishedAt": "2026-11-26T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/11/261117_cats_media_pr-thumb-500x373-41791.jpg",
+      "contentHash": "8283e2b74fdc0451",
+      "fetchedAt": "2026-11-28T03:04:55+09:00"
+    },
+    {
+      "id": "16097c2453910b48",
+      "companyId": "shiki",
+      "title": "『マンマ・ミーア！』広島公演が千秋楽を迎えました",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038083.html",
+      "category": "other",
+      "publishedAt": "2026-11-24T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/11/MM01_hiroshima_news_thum-thumb-500x373-41804.jpg",
+      "contentHash": "87a640603c288802",
+      "fetchedAt": "2026-11-28T03:04:55+09:00"
+    },
+    {
+      "id": "9bf1cb1550b896f1",
+      "companyId": "shiki",
+      "title": "2027年版「劇団四季カレンダー」発売のお知らせ",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038082.html",
+      "category": "other",
+      "publishedAt": "2026-11-18T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/11/2027calendar_cover-thumb-500x373-41799.jpg",
+      "contentHash": "333a3af63e26ce76",
+      "fetchedAt": "2026-11-28T03:04:55+09:00"
+    },
+    {
+      "id": "54b17236d76825c3",
+      "companyId": "shiki",
+      "title": "「四季の会」会員限定『オペラ座の怪人』名古屋公演 事前抽選販売について",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038042.html",
+      "category": "ticket",
+      "publishedAt": "2026-11-12T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2025/09/operaza_mtthmn_2025_LWE-thumb-500x373-39301.jpg",
+      "contentHash": "73dd05519a762807",
+      "fetchedAt": "2026-11-28T03:04:55+09:00"
+    },
+    {
+      "id": "f102972b21c8945f",
+      "companyId": "shiki",
+      "title": "『ロボット・イン・ザ・ガーデン』東京公演が開幕しました！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038080.html",
+      "category": "other",
+      "publishedAt": "2026-11-07T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/11/e8d98f79fcfb5c1f2362f9868fa213dbbb2f4d62-thumb-500x373-41777.jpg",
+      "contentHash": "0356ab2017d24f87",
+      "fetchedAt": "2026-11-28T03:04:55+09:00"
+    },
+    {
+      "id": "73012cb06746fb3c",
+      "companyId": "shiki",
+      "title": "『マンマ・ミーア！』が日本上演通算3500回を達成！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038077.html",
+      "category": "other",
+      "publishedAt": "2026-11-05T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/11/261104MMhiroshima_3500_thmn-thumb-500x373-41770.jpg",
+      "contentHash": "79d53d1b2cb99706",
+      "fetchedAt": "2026-11-28T03:04:55+09:00"
+    },
+    {
+      "id": "322475116ffc4cdd",
+      "companyId": "shiki",
+      "title": "『ロボット・イン・ザ・ガーデン』東京公演 公演グッズのご紹介",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038078.html",
+      "category": "other",
+      "publishedAt": "2026-11-04T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/05/RIG_mtthmn_2026-thumb-500x373-40818.jpg",
+      "contentHash": "195de57f5e9af5a2",
+      "fetchedAt": "2026-11-28T03:04:55+09:00"
+    },
+    {
+      "id": "e2ea68608b65e10f",
+      "companyId": "shiki",
+      "title": "『ゴースト＆レディ』、2027年1月に映画館上映決定！",
+      "url": "https://www.shiki.jp/navi/news/renewinfo/038076.html",
+      "category": "streaming",
+      "publishedAt": "2026-10-30T00:00:00+09:00",
+      "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2024/11/gal_mtthmn-thumb-500x373-37144.jpg",
+      "contentHash": "591ad68ac280959d",
+      "fetchedAt": "2026-11-28T03:04:55+09:00"
     },
     {
       "id": "33bd1b441932f90a",

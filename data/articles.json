@@ -1,7 +1,38 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-25T21:33:58+09:00",
+  "generatedAt": "2026-11-27T17:03:52+09:00",
   "articles": [
+    {
+      "id": "f6da9b7476ef2dee",
+      "companyId": "takarazuka",
+      "title": "（追）＜ライブ中継・ライブ配信＞雪組 東京国際フォーラム ホールC公演『Monte-Cristo －le spectacle musical－』",
+      "url": "https://kageki.hankyu.co.jp/news/20261111_004.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-27T00:00:00+09:00",
+      "contentHash": "354678a545aaf9df",
+      "fetchedAt": "2026-11-11T23:00:32+09:00",
+      "updatedAt": "2026-11-27T17:03:52+09:00"
+    },
+    {
+      "id": "3d4c4491282c8c88",
+      "companyId": "takarazuka",
+      "title": "公演ラインアップ【宝塚バウホール公演】＜2027年5月～6月・月組『カナリア』＞",
+      "url": "https://kageki.hankyu.co.jp/news/20261127_004.html",
+      "category": "new_work",
+      "publishedAt": "2026-11-27T00:00:00+09:00",
+      "contentHash": "92aca349febf0b23",
+      "fetchedAt": "2026-11-27T17:03:52+09:00"
+    },
+    {
+      "id": "c33e14ba43e81f8d",
+      "companyId": "takarazuka",
+      "title": "＜タカラヅカ・スカイ・ステージ＞『エリザベート－愛と死の輪舞－』20作品 12ヵ月連続放送！1月～4月ラインアップのお知らせ",
+      "url": "https://kageki.hankyu.co.jp/news/20261127_001.html",
+      "category": "streaming",
+      "publishedAt": "2026-11-27T00:00:00+09:00",
+      "contentHash": "5c9af90c1eb88616",
+      "fetchedAt": "2026-11-27T17:03:52+09:00"
+    },
     {
       "id": "b88e6e6decaefe65",
       "companyId": "takarazuka",
@@ -92,8 +123,8 @@
       "url": "https://kageki.hankyu.co.jp/news/20261120_10.html",
       "category": "other",
       "publishedAt": "2026-11-20T00:00:00+09:00",
-      "contentHash": "0db793f367d9cab3",
       "fetchedAt": "2026-11-20T11:58:33+09:00",
+      "contentHash": "0db793f367d9cab3",
       "updatedAt": "2026-11-20T20:17:00+09:00"
     },
     {
@@ -123,8 +154,8 @@
       "url": "https://kageki.hankyu.co.jp/revue/2026/tenkyuunoartemis/cast.html",
       "category": "cast",
       "publishedAt": "2026-11-19T00:00:00+09:00",
-      "contentHash": "0659264cf55e496e",
       "fetchedAt": "2026-10-28T14:23:13+09:00",
+      "contentHash": "0659264cf55e496e",
       "updatedAt": "2026-11-19T21:48:31+09:00"
     },
     {
@@ -424,16 +455,6 @@
       "fetchedAt": "2026-11-11T23:00:32+09:00"
     },
     {
-      "id": "f6da9b7476ef2dee",
-      "companyId": "takarazuka",
-      "title": "＜ライブ中継・ライブ配信＞雪組 東京国際フォーラム ホールC公演『Monte-Cristo －le spectacle musical－』",
-      "url": "https://kageki.hankyu.co.jp/news/20261111_004.html",
-      "category": "streaming",
-      "publishedAt": "2026-11-11T00:00:00+09:00",
-      "contentHash": "acf50bd4ad996408",
-      "fetchedAt": "2026-11-11T23:00:32+09:00"
-    },
-    {
       "id": "879a855786d30ef5",
       "companyId": "takarazuka",
       "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
@@ -530,7 +551,7 @@
       "title": "（追）「TAKARAZUKA Christmas Festa －心きらめく冬の祝祭－」の開催について",
       "url": "https://kageki.hankyu.co.jp/news/20261021_10.html",
       "category": "other",
-      "publishedAt": "2026-11-20T00:00:00+09:00",
+      "publishedAt": "2026-11-27T00:00:00+09:00",
       "contentHash": "1bdc8b0d447508b7",
       "fetchedAt": "2026-10-21T16:26:24+09:00",
       "updatedAt": "2026-11-06T15:20:54+09:00"
@@ -1001,35 +1022,15 @@
       "contentHash": "f383cbbbb800b851"
     },
     {
-      "id": "055afeb4a9d8d359",
-      "companyId": "takarazuka",
-      "title": "動画配信サービス“TAKARAZUKA SQUARE【タカスク】”ラインアップ更新！",
-      "url": "https://kageki.hankyu.co.jp/news/20261020_005.html",
-      "category": "streaming",
-      "publishedAt": "2026-10-20T00:00:00+09:00",
-      "fetchedAt": "2026-10-20T18:56:22+09:00",
-      "contentHash": "f406c990ffa40fa2"
-    },
-    {
-      "id": "9397d8006ff09759",
-      "companyId": "takarazuka",
-      "title": "＜宝塚友の会 チケット先行販売「第3抽選方式」＞花組 東京宝塚劇場公演『エリザベート－愛と死の輪舞－』",
-      "url": "https://kageki.hankyu.co.jp/news/20261020_001.html",
-      "category": "ticket",
-      "publishedAt": "2026-10-20T00:00:00+09:00",
-      "fetchedAt": "2026-10-20T13:36:07+09:00",
-      "contentHash": "4c800dd0795d7502"
-    },
-    {
       "id": "33bd1b441932f90a",
       "companyId": "shiki",
       "title": "劇団四季オリジナルグッズのご紹介",
       "url": "https://www.shiki.jp/navi/news/renewinfo/037446.html",
       "category": "other",
       "publishedAt": "2026-10-19T00:00:00+09:00",
+      "fetchedAt": "2026-10-19T21:54:08+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "5aeef51fc41ef876",
-      "fetchedAt": "2026-10-19T21:54:08+09:00"
+      "contentHash": "5aeef51fc41ef876"
     },
     {
       "id": "0ab16a6f364c9d0e",
@@ -1038,9 +1039,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/036717.html",
       "category": "other",
       "publishedAt": "2026-10-16T00:00:00+09:00",
+      "fetchedAt": "2026-10-16T14:43:46+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2024/01/BTTF_news_thmn-thumb-500x373-35153.jpg",
-      "contentHash": "a7b7cf27ef9a7a62",
-      "fetchedAt": "2026-10-16T14:43:46+09:00"
+      "contentHash": "a7b7cf27ef9a7a62"
     },
     {
       "id": "dab2bea7724d80e4",
@@ -1049,9 +1050,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037818.html",
       "category": "other",
       "publishedAt": "2026-10-16T00:00:00+09:00",
+      "fetchedAt": "2026-09-23T16:00:04+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/36189a2185a3b440b2866909a5d4dc1206902f10-thumb-500x373-40278.jpg",
-      "contentHash": "4922c3472e321472",
-      "fetchedAt": "2026-09-23T16:00:04+09:00"
+      "contentHash": "4922c3472e321472"
     },
     {
       "id": "639530587e1e92f4",
@@ -1060,9 +1061,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038056.html",
       "category": "other",
       "publishedAt": "2026-10-13T00:00:00+09:00",
+      "fetchedAt": "2026-10-13T16:36:25+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "0b9fe12165c880b4",
-      "fetchedAt": "2026-10-13T16:36:25+09:00"
+      "contentHash": "0b9fe12165c880b4"
     },
     {
       "id": "d46766c1e75f5af8",
@@ -1071,9 +1072,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038053.html",
       "category": "new_work",
       "publishedAt": "2026-10-13T00:00:00+09:00",
+      "fetchedAt": "2026-10-13T16:36:25+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/261013_pha_london40th_thum-thumb-500x373-41710.jpg",
-      "contentHash": "e75c107bdbc030ff",
-      "fetchedAt": "2026-10-13T16:36:25+09:00"
+      "contentHash": "e75c107bdbc030ff"
     },
     {
       "id": "14cb771d1a340b1b",
@@ -1082,9 +1083,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/036642.html",
       "category": "other",
       "publishedAt": "2026-10-09T00:00:00+09:00",
+      "fetchedAt": "2026-10-09T17:51:06+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "f9ed6518abf9aa20",
-      "fetchedAt": "2026-10-09T17:51:06+09:00"
+      "contentHash": "f9ed6518abf9aa20"
     },
     {
       "id": "6d5c1bd0186bbef9",
@@ -1093,9 +1094,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038054.html",
       "category": "other",
       "publishedAt": "2026-10-09T00:00:00+09:00",
+      "fetchedAt": "2026-10-09T17:51:06+09:00",
       "thumbnail": "https://www.shiki.jp/navi/shared/images/noimage_1.png",
-      "contentHash": "f58e896bb1230636",
-      "fetchedAt": "2026-10-09T17:51:06+09:00"
+      "contentHash": "f58e896bb1230636"
     },
     {
       "id": "8d40a884a7641829",
@@ -1104,9 +1105,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038052.html",
       "category": "ticket",
       "publishedAt": "2026-10-09T00:00:00+09:00",
+      "fetchedAt": "2026-10-09T17:51:06+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/05/3bf0bab97df29e1ca6a2c710cebc0f5a1fb42520-thumb-500x373-40769.jpg",
-      "contentHash": "b9cd8a65d6e7f508",
-      "fetchedAt": "2026-10-09T17:51:06+09:00"
+      "contentHash": "b9cd8a65d6e7f508"
     },
     {
       "id": "7ea1a2da504b7f55",
@@ -1115,9 +1116,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/037849.html",
       "category": "other",
       "publishedAt": "2026-10-09T00:00:00+09:00",
+      "fetchedAt": "2026-10-09T10:57:20+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/03/09ce5ab2e3d25cb0f135ae6a502d0fff8f65049e-thumb-500x373-40451.jpg",
-      "contentHash": "ae386293456bc66c",
-      "fetchedAt": "2026-10-09T10:57:20+09:00"
+      "contentHash": "ae386293456bc66c"
     },
     {
       "id": "ec5192600c3ad1f2",
@@ -1126,9 +1127,9 @@
       "url": "https://www.shiki.jp/navi/news/renewinfo/038048.html",
       "category": "other",
       "publishedAt": "2026-10-07T00:00:00+09:00",
+      "fetchedAt": "2026-10-07T17:31:45+09:00",
       "thumbnail": "https://www.shiki.jp/navi/news/assets_c/2026/10/261007_hnd_osaka_thum-thumb-500x373-41704.jpg",
-      "contentHash": "2dfcf96ba40cb57a",
-      "fetchedAt": "2026-10-07T17:31:45+09:00"
+      "contentHash": "2dfcf96ba40cb57a"
     },
     {
       "id": "0b324c9b9211a732",
@@ -2287,6 +2288,26 @@
       "fetchedAt": "2026-09-23T16:00:04+09:00"
     },
     {
+      "id": "0d10443b34a7420c",
+      "companyId": "shinkansen",
+      "title": "／髑髏城／【東京】桟敷席・１等席（カメラ機材開放分）販売（先着）決定！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=14368",
+      "category": "other",
+      "publishedAt": "2026-11-27T12:00:00+09:00",
+      "contentHash": "506d2682f31820fa",
+      "fetchedAt": "2026-11-27T17:03:52+09:00"
+    },
+    {
+      "id": "474a70cf2243c9b3",
+      "companyId": "shinkansen",
+      "title": "／爆烈忠臣蔵／出演者関連作品の“バクレツ笑撃パック”配信決定！",
+      "url": "https://blog.vi-shinkansen.co.jp/?p=14347",
+      "category": "streaming",
+      "publishedAt": "2026-11-27T12:00:00+09:00",
+      "contentHash": "8c9c502cb8aeb5d7",
+      "fetchedAt": "2026-11-27T17:03:52+09:00"
+    },
+    {
       "id": "79661a548192cdad",
       "companyId": "shinkansen",
       "title": "／髑髏城／公演Tシャツの販売延期に関するお知らせ *2026.11.19追記あり",
@@ -2374,8 +2395,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=14027",
       "category": "other",
       "publishedAt": "2026-11-10T15:00:00+09:00",
-      "contentHash": "3657519e9d40b423",
-      "fetchedAt": "2026-11-10T18:37:40+09:00"
+      "fetchedAt": "2026-11-10T18:37:40+09:00",
+      "contentHash": "3657519e9d40b423"
     },
     {
       "id": "6b30ab47356076ad",
@@ -2384,8 +2405,8 @@
       "url": "https://blog.vi-shinkansen.co.jp/?p=14080",
       "category": "streaming",
       "publishedAt": "2026-11-10T12:00:00+09:00",
-      "contentHash": "a36f08fc6bad0436",
-      "fetchedAt": "2026-11-10T18:37:40+09:00"
+      "fetchedAt": "2026-11-10T18:37:40+09:00",
+      "contentHash": "a36f08fc6bad0436"
     },
     {
       "id": "6f9e07b754f5528b",
